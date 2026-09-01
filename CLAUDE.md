@@ -2,6 +2,36 @@
 
 Hướng dẫn cho Claude Code khi làm việc trong thư mục này.
 
+## Nguyên tắc bắt buộc: CLAUDE.md là file lịch sử dự án, luôn phải cập nhật
+
+File này **không chỉ là hướng dẫn tĩnh** — nó là **nhật ký lịch sử sống** của toàn bộ dự án: mọi nội
+dung nghiệp vụ, mọi thay đổi kỹ thuật, mọi vấn đề đã trao đổi và đã chốt với người dùng/người vận
+hành. Đây là quy tắc áp dụng cho **mọi phiên làm việc trong thư mục này, không có ngoại lệ**:
+
+1. **Sau mỗi lượt trao đổi có phát sinh quyết định, thay đổi, hoặc phát hiện mới** (không chỉ khi
+   người dùng yêu cầu rõ ràng "cập nhật CLAUDE.md") — thêm ngay 1 mục mới (hoặc sửa mục đã có nếu
+   cùng chủ đề) vào file này **trước khi coi công việc là xong**, không để dồn qua phiên sau rồi quên.
+2. **Không tự tóm tắt/diễn giải khi ghi lại yêu cầu gốc của người dùng** — trích **nguyên văn** (dùng
+   dấu ngoặc kép hoặc block quote) các câu người dùng đã nói để chốt quyết định, kèm theo phần diễn
+   giải/triển khai bên dưới. Đây là cách toàn bộ file này đã được viết từ đầu — giữ nguyên phong cách.
+3. **Mỗi mục mới nên có cấu trúc**: (a) bối cảnh/nguyên văn yêu cầu hoặc câu hỏi, (b) quyết định đã
+   chốt hoặc đã triển khai, (c) lỗi/vấn đề phát hiện được trong lúc làm (nếu có) và cách đã sửa, (d)
+   kiểm thử đã chạy để xác minh (nếu có code/prototype liên quan). Không bỏ qua phần (c)/(d) chỉ vì
+   muốn viết gọn — đây chính là phần giúp phiên sau không lặp lại sai lầm hoặc nghi ngờ nhầm việc đã
+   xong.
+4. **Khi phát hiện 2 tài liệu/2 mục mâu thuẫn nhau**, không âm thầm chọn 1 bên — ghi rõ trong CLAUDE.md
+   mục nào là "nguồn đúng nhất hiện tại", mục nào đã bị thay thế/lỗi thời (theo đúng cách các mục
+   "Phản hồi vòng N" trong file này đã làm với các tài liệu #1–#4).
+5. **Cập nhật đoạn "Trạng thái" ở đầu file** (ngay dưới mục này) mỗi khi có vòng thay đổi mới đáng kể
+   — vẫn giữ các mốc cũ, chỉ nối thêm mốc mới nhất, không xoá lịch sử.
+6. **Câu hỏi còn mở, chưa được người dùng trả lời** — ghi vào mục "Câu hỏi mở còn lại" (không tự suy
+   đoán rồi ghi như đã chốt), và khi người dùng trả lời, chuyển từ "mở" sang "đã chốt" ngay tại đúng
+   mục đó (xem cách mục "Câu hỏi mở còn lại" đánh dấu `~~gạch ngang~~` các câu đã có câu trả lời).
+7. Nguyên tắc này áp dụng cho **cả những thay đổi nhỏ** (1 nút, 1 field, 1 CSS rule) lẫn thay đổi lớn
+   (schema, luồng nghiệp vụ) — vì trong dự án này, nhiều lần chính các thay đổi tưởng nhỏ (VD 1 trường
+   `so_luong_khai` bị thiếu, 1 modal đóng nhầm khi kéo chuột) lại phản ánh 1 vấn đề nghiệp vụ/kỹ thuật
+   lớn hơn nếu không được ghi lại rõ ràng.
+
 ## Dự án này là gì
 
 Đây là thư mục **đặc tả nghiệp vụ** (chưa có code) cho module mới **"Sửa chữa bảo hành"** (nội bộ
