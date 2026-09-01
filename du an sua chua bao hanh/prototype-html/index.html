@@ -25,10 +25,20 @@
   --orange-700:#9a3412; --orange-600:#c2410c; --orange-500:#ea580c; --orange-100:#ffedd5;
   --violet-700:#5b21b6; --violet-600:#7c3aed; --violet-500:#8b5cf6; --violet-100:#f1ebfe;
   --gray-600:#4b5563; --gray-100:#eef0f3;
-  --bg:#f2f6f9; --surface:#ffffff; --surface-100:#f5f8fa; --surface-200:#e9eff3;
+  /* Yeu cau 02/09/2026 muc 4: "vung du lieu va nen dang khong ro rang, chinh lai gam mau lam noi
+     bat vung lam viec, vung xem thong tin." Do thu (xem bao cao): --bg (f2f6f9) va --surface-100
+     (f5f8fa) cu chi lech nhau ~1-3/255 moi kenh RGB - gan nhu KHONG the phan biet bang mat thuong,
+     khien "vung noi/inset" (VD 2 the "Khach hang"/"Ky thuat" trong modal chi tiet, StatCard, header
+     bang) trong nhu dinh lien vao nen trang thay vi doc duoc la 1 lop rieng. Da tach lai thanh 1 bac
+     thang do sang RO RET hon, tang dan: --bg (nen trang, mo nhat nhat) < --surface-100 (vung inset
+     trong 1 card - "vung xem thong tin tham khao") < --surface (card chinh, trang tinh - "vung lam
+     viec") < --surface-200 (vung nhan manh/disabled, dam nhat trong 4 muc). Nghien cuu tham khao:
+     "surface elevation" pattern (dashboard color scheme guides, 2025) - phan tang bang MAU NEN thay
+     vi chi dua vao shadow. */
+  --bg:#e7edf3; --surface:#ffffff; --surface-100:#eef2f6; --surface-200:#e1e8ee;
   --sidebar-from:#052033; --sidebar-to:#06304a; --sidebar-ink:#fff;
   --sidebar-ink-mid:rgba(255,255,255,.8); --sidebar-ink-dim:rgba(255,255,255,.58); --sidebar-highlight:rgba(255,255,255,.14);
-  --line:#e1eaf0; --ink-900:#0f2536; --ink-700:#24374a; --ink-600:#4c6478; --ink-500:#62798c; --ink-400:#8ca0af;
+  --line:#d7e1e9; --ink-900:#0f2536; --ink-700:#24374a; --ink-600:#4c6478; --ink-500:#62798c; --ink-400:#8ca0af;
   --font-display:'Manrope',-apple-system,'Segoe UI',sans-serif;
   --font-body:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,monospace;
@@ -117,7 +127,9 @@ footer.note{max-width:1180px;margin:0 auto;padding:6px 18px 32px;font-size:11px;
 
 /* ---------- Card / typography ---------- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;
-  box-shadow:0 1px 2px rgba(15,37,54,.04);}
+  /* Tang do "noi" cua card so voi nen trang (yeu cau 02/09/2026 muc 4) - shadow cu 0.04 opacity gan
+     nhu vo hinh, dung 2 lop (mem+gan) de card doc ro la 1 "vung lam viec" rieng, khong dinh vao nen. */
+  box-shadow:0 1px 2px rgba(15,37,54,.04), 0 4px 14px rgba(15,37,54,.06);}
 .card h2{font-family:var(--font-display);margin:0 0 14px;font-size:16px;font-weight:800;color:var(--ink-900);}
 .card h3{font-family:var(--font-display);margin:0 0 10px;font-size:13px;font-weight:700;color:var(--ink-600);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -198,23 +210,51 @@ tr:hover td{background:var(--surface-100);}
 .banner.green{background:var(--teal-100);color:var(--teal-700);border:1px solid #a7e3bb;}
 .empty{padding:30px;text-align:center;color:var(--ink-400);font-size:13px;}
 
-/* ---------- Modal (port Modal.tsx: overlay blur, rounded-2xl, header/footer border) ---------- */
-.modal-bg{position:fixed;inset:0;background:rgba(6,32,51,.45);backdrop-filter:blur(2px);display:flex;align-items:center;
-  justify-content:center;z-index:100;padding:16px;}
-.modal{background:var(--surface);border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow:hidden;
+/* ---------- Modal (yeu cau 02/09/2026: "mo popup giao dien tran man hinh chu khong chi mo nho nho
+   o giua"). TU PHAN BIEN sau khi thu nghiem: neu bat CA 35 modal trong app deu tran man hinh nhu
+   nhau, cac modal xac nhan don gian (VD "Bao su co tiep nhan" chi co 1 select + 1 textarea) bi keo
+   thanh 1 panel gan-full-HD voi noi dung nam lot tha o goc tren-trai, phan con lai la khoang trong
+   rong - tu no lai tao ra 1 van de UX moi (xem anh chup lai truoc khi chot, da luu trong bao cao).
+   => Quyet dinh: 2 kich co modal ro rang thay vi 1 kich co ep cho tat ca, dung cho dung noi dung:
+   - MAC DINH (".modal", khong co class phu): kich co theo NOI DUNG nhu truoc nhung TANG dang ke
+     (520px -> 760px, 88vh -> 90vh) - du cho moi form/xac nhan/cai dat, khong con qua chat nhu cu
+     nhung cung khong de trong panel rong nhu full.
+   - ".modal--full" (chi gan cho cac man CHI TIET nhieu du lieu that su - hien tai la
+     openDetailUnitModal/openDetailTraModal, xem tham so thu 3 cua openModal()): panel gan-kin-man-
+     hinh tren desktop (chiem het vien nhin tru 24px le), dung cho dung loai noi dung ma nghien cuu
+     UX khuyen nghi cho full-screen dialog ("noi dung lon, phuc tap, can tap trung cao" - xem CLAUDE.md
+     muc lien quan cho nguon tham khao). Tren MOI mobile, ca 2 loai deu tran man hinh nhu nhau (man
+     hinh nho khong con khai niem "modal vua" hop ly - dong bo voi .mobile-sheet da co san). */
+.modal-bg{position:fixed;inset:0;background:rgba(6,32,51,.45);backdrop-filter:blur(2px);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:var(--surface);border-radius:16px;max-width:760px;width:100%;max-height:90vh;overflow:hidden;
   display:flex;flex-direction:column;box-shadow:0 20px 45px rgba(6,32,51,.25);animation:fadeSlide .22s ease-out;}
-.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);flex-shrink:0;}
-.modal h3{font-family:var(--font-display);margin:0;font-size:15px;font-weight:800;color:var(--ink-900);}
-.modal-body{overflow-y:auto;padding:20px;}
-.modal-close{cursor:pointer;color:var(--ink-400);font-size:18px;line-height:1;background:none;border:none;width:32px;height:32px;
+.modal.modal--full{position:fixed;inset:24px;margin:0 auto;max-width:1300px;max-height:none;width:auto;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 24px;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--surface-100);}
+.modal h3{font-family:var(--font-display);margin:0;font-size:17px;font-weight:800;color:var(--ink-900);}
+.modal-body{flex:1;overflow-y:auto;padding:24px 28px;}
+/* Form 1 cot (khong nam trong grid nhieu cot) gioi han do rong de de doc, khong keo dai het panel
+   full - modal mac dinh (760px) da du hep de rule nay it tac dung, chu yeu phat huy o modal--full. */
+.modal-body .field:not(.grid2 .field):not(.grid3 .field){max-width:640px;}
+.modal-close{cursor:pointer;color:var(--ink-400);font-size:20px;line-height:1;background:none;border:none;width:36px;height:36px;
   border-radius:8px;flex-shrink:0;}
-.modal-close:hover{background:var(--surface-100);}
+.modal-close:hover{background:var(--surface-200);}
+@media (max-width:767px){
+  .modal-bg{padding:0;}
+  .modal{inset:0;position:fixed;border-radius:0;max-width:none;max-height:none;width:100%;}
+  .modal-head{padding:14px 16px;}
+  .modal-body{padding:16px;}
+}
 
 /* ---------- Toast ---------- */
 .toast-wrap{position:fixed;bottom:18px;right:18px;z-index:200;display:flex;flex-direction:column;gap:8px;}
 /* Fix QA 31/08/2026: khi mobile sheet dang mo (VD "Them don bao hanh"), day toast-wrap len tren
    thanh CTA dinh day (.ms-cta) de khong che mat nut hanh dong chinh. */
 body.mobile-sheet-open .toast-wrap{bottom:84px;}
+/* Yeu cau 02/09/2026: modal chi tiet gio tran man hinh tren mobile (inset:0) - toast can duoc day
+   len tuong tu de khong de sat mep duoi panel, chi ap dung o mobile vi desktop modal van chua
+   inset:24px (van con khoang trong ben ngoai de toast hien binh thuong). */
+@media (max-width:767px){ body.modal-open .toast-wrap{bottom:24px;} }
 .toast{background:var(--ocean-900);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:500;
   box-shadow:0 8px 20px rgba(6,32,51,.3);display:flex;align-items:center;gap:8px;animation:fadeSlide .2s ease-out;}
 .toast::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal-500);flex-shrink:0;}
@@ -280,6 +320,15 @@ a.link:hover{text-decoration:underline;}
 }
 /* Responsive Tables & Bulk Actions Layout */
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+/* Vi bang gio dua vao cuon ngang thay vi xuong dong (yeu cau 1 dong) - thanh cuon mac dinh cua he
+   dieu hanh (overlay scrollbar, rat mo/an) khien nguoi dung khong nhan ra con du lieu ben phai. Ep
+   hien 1 thanh cuon mong nhung LUON THAY (khong doi hover) de de nhan biet, thay vi dua vao thanh
+   cuon an cua trinh duyet. */
+.table-responsive { scrollbar-width: thin; scrollbar-color: var(--ocean-400) var(--surface-100); }
+.table-responsive::-webkit-scrollbar { height: 8px; }
+.table-responsive::-webkit-scrollbar-track { background: var(--surface-100); }
+.table-responsive::-webkit-scrollbar-thumb { background: var(--ocean-400); border-radius: 8px; }
+.table-responsive::-webkit-scrollbar-thumb:hover { background: var(--ocean-500); }
 table.tinh-te { width: 100%; border-collapse: collapse; background: var(--surface); text-align: left; }
 table.tinh-te th { background: var(--surface-100); color: var(--ink-500); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 2px solid var(--line); }
 table.tinh-te td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 13px; color: var(--ink-700); }
@@ -290,6 +339,19 @@ table.tinh-te tr.selected td { background: var(--ocean-100); }
 tr.clickable-row { cursor: pointer; transition: background 0.15s; }
 tr.clickable-row:hover td { background: var(--ocean-100); }
 table.tinh-te tr:last-child td { border-bottom: none; }
+/* Yeu cau nguoi dung (02/09/2026): "tat ca giao dien du an dang table deu tim phuong an chuyen het
+   ve 1 dong, khong tao thanh 2 dong (ca web va mobile)". Huong da chon (xem CLAUDE.md muc tuong
+   ung): KHONG cat/an bot du lieu - giu nguyen white-space:nowrap tren moi o + header, dua vao
+   .table-responsive (overflow-x:auto co san) de cuon ngang khi noi dung rong hon khung nhin, thay vi
+   de trinh duyet tu xuong dong. Day la khuyen nghi chuan cho bang du lieu dac (xem CSS-Tricks/
+   LogRocket: "horizontal scrolling container" > tu wrap text). Rieng o mo ta dai (VD "Mo ta loi")
+   da duoc ellipsis + title="..." rieng tung noi, khong dua vao rule nowrap chung nay. */
+table.tinh-te, .table-responsive table { white-space: nowrap; }
+/* Nut hanh dong trong 1 o (.btnrow dung flex-wrap:wrap mac dinh cho form binh thuong) tung la nguyen
+   nhan chinh khien 1 dong bang "vo" thanh 2 dong truc quan (nut thu 2 roi xuong duoi nut dau) du ban
+   than chu khong wrap - vi flex-wrap la co che khac voi white-space, khong bi chan boi nowrap o tren.
+   Chan rieng truong hop nay: moi nhom nut trong o bang phai nam tren 1 hang, cham la cuon ngang. */
+.table-responsive td .btnrow, table.tinh-te td .btnrow { flex-wrap: nowrap; }
 .bulk-bar { background: var(--ocean-950); color: #fff; padding: 10px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(5,32,51,0.15); animation: fadeSlide 0.2s ease-out; }
 .bulk-bar .btn { border-color: rgba(255,255,255,0.2); }
 .bulk-bar .btn:hover { background: var(--ocean-800); }
@@ -627,31 +689,18 @@ function openParentFirstUnitDetail(scId){
   openDetailUnitModal(kids[0].id);
 }
 /* ---------- UI CHI TIẾT HIỆN ĐẠI (Yêu cầu 5: Hiển thị đầy đủ database trường thông tin, xem 2s-3s tìm ra vấn đề) ---------- */
-function openDetailUnitModal(unitId) {
-  const u = findCT(unitId);
-  const p = findPhieuSC(u.parent_id);
-  const g = p.phieu_gui_id ? findPhieuGui(p.phieu_gui_id) : null;
-  const c = p.case_id ? findCase(p.case_id) : null;
-  const lkGoc = findLK(p.ma_lk);
-  const lkThucTe = unitEffectiveLk(u);
-  const b = unitStatusBadge(u.trang_thai);
-  
-  const w = (lkGoc && p.case_id) ? warrantyCheck(p.case_id, p.ma_lk) : {expired:false};
-  
-  const stateLogs = DB.logs.filter(l => l.entity_type === 'phieu_sc_ct' && l.entity_id === unitId);
-  
-  const imagesHtml = `
-    ${imgRow('Ảnh lỗi từ KTV lúc gửi', p.anh_loi)}
-    ${imgRow('Ảnh trước khi thao tác sửa (NV)', u.anh_truoc)}
-    ${imgRow('Ảnh sau khi hoàn tất sửa (NV)', u.anh_sau)}
-    ${imgRow('Ảnh linh kiện lỗi tháo ra (NV)', u.anh_loi_thuc_te)}
-  `;
-
-  const timelineHtml = stateLogs.length === 0 ? '<div class="fine">Chưa có lịch sử diễn biến.</div>' : `
-    <div class="logbox" style="max-height: 140px;">
-      ${stateLogs.map(l => `
+/* Yeu cau 02/09/2026 muc 3: "Luu day du moi log va trong giao dien UI chi tiet se tach thanh cac
+   mang du lieu rieng biet, co vung hien log rieng." Truoc day openDetailUnitModal() CHI doc
+   DB.logs loc theo entity_type='phieu_sc_ct' cua rieng don vi nay - bo sot toan bo lich su cua
+   CHUOI cha no thuoc ve (phieu_sc - don cha, phieu_gui - phieu gui hang, phieu_tra - phieu tra ve),
+   du addLog() thuc te da ghi ca 4 entity_type nay (xem grep "addLog(" xuyen file). Ham dung chung
+   nay ve 1 "vung log" doc lap, dung lai cho ca 4 nguon thay vi lap code 4 lan. */
+function renderLogBlock(title, logs){
+  const body = logs.length === 0 ? '<div class="fine" style="font-style:italic;">Chưa có diễn biến.</div>' : `
+    <div class="logbox" style="max-height:180px;">
+      ${logs.map(l => `
         <div style="margin-bottom:4px;padding-bottom:4px;border-bottom:1px dashed var(--border);">
-          <span style="font-weight:700;color:var(--ink-700);">${l.thoi_gian}</span>: 
+          <span style="font-weight:700;color:var(--ink-700);">${l.thoi_gian}</span>:
           <span class="badge b-blue" style="font-size:10px;padding:1px 5px;">${l.tu_trang_thai || 'Khởi tạo'} ➔ ${l.den_trang_thai}</span>
           <div class="fine" style="margin-top:1px;">Người làm: <b>${esc(DB.users.find(x=>x.email===l.nguoi_thuc_hien)?.ten || l.nguoi_thuc_hien)}</b></div>
           ${l.ghi_chu ? `<div style="color:var(--ink-600);font-style:italic;margin-top:1px;">📝 ${esc(l.ghi_chu)}</div>` : ''}
@@ -659,6 +708,56 @@ function openDetailUnitModal(unitId) {
       `).join('')}
     </div>
   `;
+  return `<div class="card" style="padding:10px 12px;background:var(--surface-100);border-radius:12px;margin-bottom:0;">
+    <h3 style="margin-bottom:6px;font-size:11.5px;color:var(--ocean-700);">${title} <span class="fine">(${logs.length})</span></h3>
+    ${body}
+  </div>`;
+}
+function openDetailUnitModal(unitId) {
+  const u = findCT(unitId);
+  const p = findPhieuSC(u.parent_id);
+  const g = p.phieu_gui_id ? findPhieuGui(p.phieu_gui_id) : null;
+  const tr = u.phieu_tra_id ? findTra(u.phieu_tra_id) : null;
+  const c = p.case_id ? findCase(p.case_id) : null;
+  const lkGoc = findLK(p.ma_lk);
+  const lkThucTe = unitEffectiveLk(u);
+  const b = unitStatusBadge(u.trang_thai);
+
+  const w = (lkGoc && p.case_id) ? warrantyCheck(p.case_id, p.ma_lk) : {expired:false};
+
+  const imagesHtml = `
+    ${imgRow('Ảnh lỗi từ KTV lúc gửi', p.anh_loi)}
+    ${imgRow('Ảnh trước khi thao tác sửa (NV)', u.anh_truoc)}
+    ${imgRow('Ảnh sau khi hoàn tất sửa (NV)', u.anh_sau)}
+    ${imgRow('Ảnh linh kiện lỗi tháo ra (NV)', u.anh_loi_thuc_te)}
+  `;
+
+  /* 4 "mang du lieu rieng biet" theo dung yeu cau - moi nguon log giu vung hien thi rieng, KHONG
+     gop chung 1 danh sach (se lam mat ngu canh "log nay thuoc cap nao": don vi/don cha/phieu gui/
+     phieu tra). Chi hien khoi nao thuc su co du lieu lien quan (g/tr co the null). */
+  const logBlocks = [
+    renderLogBlock('📦 Nhật ký đơn vị bảo hành này', DB.logs.filter(l=>l.entity_type==='phieu_sc_ct'&&l.entity_id===unitId)),
+    renderLogBlock('🗂️ Nhật ký đơn cha (' + p.id + ')', DB.logs.filter(l=>l.entity_type==='phieu_sc'&&l.entity_id===p.id)),
+  ];
+  if(g) logBlocks.push(renderLogBlock('🚚 Nhật ký phiếu gửi (' + g.id + ')', DB.logs.filter(l=>l.entity_type==='phieu_gui'&&l.entity_id===g.id)));
+  if(tr) logBlocks.push(renderLogBlock('↩️ Nhật ký phiếu trả (' + tr.id + ')', DB.logs.filter(l=>l.entity_type==='phieu_tra'&&l.entity_id===tr.id)));
+
+  /* Ghi nhan noi bo cua Admin BH ve KTV bao cao sai thong tin (yeu cau 31/08/2026 muc 2) - CO CHU
+     DICH tach rieng khoi ghi_chu_log/timeline, va CHI hien cho vai tro co quyen giam sat (adminbh/
+     qtri/quanly) - khong hien cho chinh KTV/NV/Kho/Ke toan dang xem, vi day la du lieu "danh gia noi
+     bo, co the dung de xu ly vi pham bao cao sai sau nay" (nguyen van yeu cau), khong phai thong tin
+     nghiep vu can moi vai tro deu thay. */
+  const meRole = currentUser()?.vai_tro;
+  const canSeeNoiBo = ['adminbh','qtri','quanly'].includes(meRole);
+  const baoCaoSai = p.bao_cao_sai_thong_tin || [];
+  const noiBoHtml = (canSeeNoiBo && baoCaoSai.length>0) ? `
+    <div class="card" style="padding:10px 12px;background:var(--coral-100);border-radius:12px;margin-top:10px;">
+      <h3 style="margin-bottom:6px;font-size:11.5px;color:var(--coral-700);">🐞 Ghi nhận nội bộ: KTV báo cáo sai thông tin (${baoCaoSai.length}) <span class="fine">— chỉ Admin BH/Quản lý thấy mục này</span></h3>
+      <div class="logbox" style="max-height:140px;background:#fff;">
+        ${baoCaoSai.map(l=>`<div style="margin-bottom:4px;"><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(x=>x.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}
+      </div>
+    </div>
+  ` : '';
 
   const detailHtml = `
     <div class="banner ${w.expired?'red':'blue'}" style="margin-bottom:14px;padding:8px 12px;">
@@ -723,17 +822,18 @@ function openDetailUnitModal(unitId) {
 
     ${imagesHtml}
 
-    <div style="margin-top:10px;">
-      <h3 style="font-size:12.5px;color:var(--ocean-700);margin-bottom:6px;">⌛ Nhật ký trạng thái (Timeline)</h3>
-      ${timelineHtml}
+    <div style="margin-top:14px;">
+      <h3 style="font-size:13px;color:var(--ink-900);margin-bottom:8px;">⌛ Nhật ký &amp; lịch sử diễn biến</h3>
+      <div class="grid2">${logBlocks.join('')}</div>
+      ${noiBoHtml}
     </div>
 
     ${g ? `
-      <div id="glm_unit_wrap" style="margin-top:10px;">
-        <h3 style="font-size:12.5px;color:var(--ocean-700);margin-bottom:6px;">💬 Trao đổi / Phản hồi của đơn hàng</h3>
+      <div id="glm_unit_wrap" style="margin-top:14px;">
+        <h3 style="font-size:13px;color:var(--ink-900);margin-bottom:8px;">💬 Trao đổi / Phản hồi của đơn hàng</h3>
         ${(g.ghi_chu_log||[]).length===0 ? '<div class="fine" style="font-style:italic;">Chưa có trao đổi nào.</div>' :
-          `<div class="logbox" style="max-height: 100px; margin-bottom:6px;">${g.ghi_chu_log.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`}
-        <div class="field" style="margin-top:4px; display:flex; gap:8px;">
+          `<div class="logbox" style="max-height: 140px; margin-bottom:6px;">${g.ghi_chu_log.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`}
+        <div class="field" style="margin-top:4px; display:flex; gap:8px; max-width:none;">
           <input type="text" id="glm_unit_txt" placeholder="Nhập ghi chú nhanh..." style="flex:1;height:34px;">
           <button class="btn small" onclick="addGhiChuLogFromDetail('${g.id}', '${unitId}')" style="height:34px;">Gửi</button>
         </div>
@@ -744,7 +844,7 @@ function openDetailUnitModal(unitId) {
       <button class="btn secondary" onclick="closeModal()">Đóng chi tiết</button>
     </div>
   `;
-  openModal(`Chi tiết đơn bảo hành con: ${unitId}`, detailHtml);
+  openModal(`Chi tiết đơn bảo hành con: ${unitId}`, detailHtml, true);
 }
 
 function addGhiChuLogFromDetail(guiId, unitId) {
@@ -793,7 +893,7 @@ function openDetailTraModal(traId) {
           return `
             <tr>
               <td><b style="font-family:var(--font-mono);">${d.id}</b></td>
-              <td>${esc(c?.khach_hang || p.ten_khach_hang || 'Khách lẻ')}<div class="fine">${esc(c?.sdt || p.sdt_khach_hang || '')}</div></td>
+              <td>${esc(c?.khach_hang || p.ten_khach_hang || 'Khách lẻ')} <span class="fine">· ${esc(c?.sdt || p.sdt_khach_hang || '')}</span></td>
               <td><b>${lk ? esc(lk.ten) : 'Cả sản phẩm'}</b>${d.ma_lk_thuc_te && d.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue" style="font-size:8.5px;padding:1px 4px;">Đã đổi LK</span>':''}</td>
               <td><span class="badge b-green">${HUONG_XU_LY_LABEL[d.huong_xu_ly] || d.huong_xu_ly}</span></td>
             </tr>
@@ -851,7 +951,7 @@ function openDetailTraModal(traId) {
       <button class="btn secondary" onclick="closeModal()">Đóng</button>
     </div>
   `;
-  openModal(`Chi tiết phiếu trả bảo hành: ${traId}`, body);
+  openModal(`Chi tiết phiếu trả bảo hành: ${traId}`, body, true);
 }
 
 function resetData(){ seedData(); location.hash='#/home'; render(); toast('Da nap lai du lieu mau.'); }
@@ -1278,6 +1378,7 @@ function renderKtvTaoPhieu(){
     <h2>Phieu gui hang cua toi</h2>
     <div class="btnrow"><button class="btn" onclick="createPhieuGui()">+ Tao phieu gui moi</button></div>
     ${mine.length===0?'<div class="empty">Chua co phieu nao.</div>':`
+    <div class="table-responsive">
     <table><thead><tr><th>Ma phieu</th><th>Ngay tao</th><th>Hinh thuc gui</th><th>Trang thai</th><th>So don ben trong</th><th></th></tr></thead>
     <tbody>${mine.map(g=>{
       const sc = scOfPhieuGui(g.id);
@@ -1291,7 +1392,8 @@ function renderKtvTaoPhieu(){
         <td>${sc.length}</td>
         <td onclick="event.stopPropagation();"><a class="link" href="#/ktv/tao-phieu?id=${g.id}">Mo</a>${(g.trang_thai==='nhap'&&sc.length===0)?` · <a class="link" style="color:#dc2626;" onclick="deletePhieuGui('${g.id}')">Xoa</a>`:''}</td>
       </tr>`;
-    }).join('')}</tbody></table>`}
+    }).join('')}</tbody></table>
+    </div>`}
   </div>
   ${detailHtml}
   `;
@@ -1362,6 +1464,7 @@ function renderPhieuGuiDetail(id){
     <h3>Danh sach don bao hanh trong phieu (${sc.length})</h3>
     ${canEdit?`<button class="btn small" onclick="openAddDonModal('${g.id}')">+ Them don bao hanh</button>`:''}
     ${sc.length===0?'<div class="empty">Chua co don nao.</div>':`
+    <div class="table-responsive">
     <table><thead><tr><th>ID</th><th>Case / Khach hang</th><th>Linh kien</th><th>SL khai</th><th>Doi tru de xuat</th><th>Trang thai</th><th></th></tr></thead>
     <tbody>${sc.map(s=>{
       const c = findCase(s.case_id); const lk = findLK(s.ma_lk);
@@ -1369,14 +1472,15 @@ function renderPhieuGuiDetail(id){
       const coChiTiet = childrenOf(s.id).length>0;
       return `<tr ${coChiTiet?`class="clickable-row" onclick="openParentFirstUnitDetail('${s.id}')"`:''}>
         <td>${s.id}</td>
-        <td>${esc(c?.khach_hang||'')}<div class="fine">${s.case_id}</div></td>
+        <td>${esc(c?.khach_hang||'')} <span class="fine">· ${s.case_id}</span></td>
         <td>${lk?esc(lk.ten):'<i>Ca san pham</i>'}</td>
         <td>${s.so_luong_khai}</td>
         <td><span class="fine">${esc(LOAI_DOI_TRU_LABEL[s.loai_doi_tru_de_xuat]||'-')}</span></td>
         <td><span class="badge ${rt.cls}">${rt.label}</span></td>
         <td onclick="event.stopPropagation();">${canEdit?`<a class="link" onclick="removeDon('${s.id}')">Xoa</a>`:''}</td>
       </tr>`;
-    }).join('')}</tbody></table>`}
+    }).join('')}</tbody></table>
+    </div>`}
 
     ${canEdit && sc.length>0 ? `<div class="btnrow"><button class="btn green" onclick="openConfirmGuiModal('${g.id}')">Xac nhan da gui xe</button></div>`:''}
 
@@ -1749,10 +1853,10 @@ function ktvTraCuuRowsHtml(){
     return `
       <tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
         <td><b style="font-family:var(--font-mono);">${u.id}</b></td>
-        <td>${esc(c?.khach_hang||'Khách lẻ')}<div class="fine">${esc(c?.sdt||p.sdt_khach_hang||'')}</div></td>
+        <td>${esc(c?.khach_hang||'Khách lẻ')} <span class="fine">· ${esc(c?.sdt||p.sdt_khach_hang||'')}</span></td>
         <td><b>${lk ? esc(lk.ten) : 'Cả sản phẩm'}</b>${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk ? ' <span class="badge b-blue" style="font-size:9px;padding:1px 4px;">Đã đổi LK</span>':''}</td>
         <td>${esc(LOAI_DOI_TRU_LABEL[u.loai_doi_tru || p.loai_doi_tru_de_xuat] || '-')}</td>
-        <td><a class="link" onclick="event.stopPropagation(); location.hash='#/ktv/tao-phieu?id='+encodeURIComponent('${g.id}')">${g.id}</a><div class="fine">${g.ngay_gui_xe}</div></td>
+        <td><a class="link" onclick="event.stopPropagation(); location.hash='#/ktv/tao-phieu?id='+encodeURIComponent('${g.id}')">${g.id}</a> <span class="fine">· ${g.ngay_gui_xe}</span></td>
         <td>${slaBadge(u.updated_at)}</td>
         <td><span class="badge ${b.cls}">${b.label}</span></td>
         <td onclick="event.stopPropagation();">${actionBtn}</td>
@@ -1969,6 +2073,7 @@ function renderKhoTiepNhan(){
     <h2>Diem tiep nhan kho — theo ma tra cuu (moi phieu = 1 thung)</h2>
     <div class="btnrow" style="margin-top:0;margin-bottom:10px;"><button class="btn secondary small" onclick="openCameraScanModal()">📷 Quet ma bang camera</button></div>
     ${pending.length===0?'<div class="empty">Khong co phieu nao dang cho tiep nhan.</div>':`
+    <div class="table-responsive">
     <table><thead><tr><th>Ma phieu</th><th>KTV</th><th>So don</th><th>Cho</th><th>Trao doi / ghi chu</th><th></th></tr></thead>
     <tbody>${pending.map(g=>{
       const logCount = (g.ghi_chu_log||[]).length;
@@ -1983,12 +2088,13 @@ function renderKhoTiepNhan(){
           <button class="btn small red secondary" onclick="openSuCoModal('${g.id}')">Bao su co</button>
         </div></td>
       </tr>`;
-    }).join('')}</tbody></table>`}
+    }).join('')}</tbody></table>
+    </div>`}
   </div>
   <div class="card">
     <h3>Da tiep nhan gan day</h3>
-    ${received.length===0?'<div class="empty">Chua co.</div>':`<table><thead><tr><th>Ma phieu</th><th>Nguoi nhan</th><th>Thoi gian</th></tr></thead>
-    <tbody>${received.map(g=>`<tr class="clickable-row" onclick="openGhiChuLogModal('${g.id}')"><td>${g.id}</td><td>${esc(g.nguoi_nhan_kho)}</td><td>${fmtDate(g.thoi_gian_nhan_kho)}</td></tr>`).join('')}</tbody></table>`}
+    ${received.length===0?'<div class="empty">Chua co.</div>':`<div class="table-responsive"><table><thead><tr><th>Ma phieu</th><th>Nguoi nhan</th><th>Thoi gian</th></tr></thead>
+    <tbody>${received.map(g=>`<tr class="clickable-row" onclick="openGhiChuLogModal('${g.id}')"><td>${g.id}</td><td>${esc(g.nguoi_nhan_kho)}</td><td>${fmtDate(g.thoi_gian_nhan_kho)}</td></tr>`).join('')}</tbody></table></div>`}
   </div>`;
 }
 /* Luong trao doi CHUNG cho phieu gui (yeu cau 22/08/2026 muc 3: Admin BH phai doc duoc ghi chu hu
@@ -2336,7 +2442,7 @@ function renderKhoDongGoi(){
           <td><span class="badge b-purple">${LOAI_DOI_TRU_LABEL[t.loai_doi_tru] || t.loai_doi_tru}</span></td>
           <td><b>${esc(ktvDisplayName(t.ktv_nhan))}</b></td>
           <td><b>${dong.length}</b> dòng LK</td>
-          <td>MISA: ${esc(t.ma_misa || '-')}<div class="fine">Đơn hàng: ${esc(t.ma_don_hang || '-')}</div></td>
+          <td><span class="fine">MISA:</span> ${esc(t.ma_misa || '-')} <span class="fine">· Đơn hàng:</span> ${esc(t.ma_don_hang || '-')}</td>
           <td>${slaBadge(t.updated_at)}</td>
           <td onclick="event.stopPropagation();">${actionCell}</td>
         </tr>
@@ -2507,10 +2613,10 @@ function renderAdminUnifiedTable(){
     rows += `<tr class="clickable-row" onclick="location.hash='#/admin/phan-loai?gui=${s.phieu_gui_id}';render();">
       <td></td>
       <td><b>${s.id}</b></td>
-      <td>${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')}<div class="fine">${s.phieu_gui_id}</div></td>
+      <td>${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')} <span class="fine">· ${s.phieu_gui_id}</span></td>
       <td>${esc(info.khach_hang)}</td>
       <td>${esc(lk?.ten||'Ca san pham')}</td>
-      <td class="fine" style="max-width:220px;">${esc(s.mo_ta_loi)}</td>
+      <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(s.mo_ta_loi)}">${esc(s.mo_ta_loi)}</td>
       <td>${slaBadge(g?.admin_thoi_gian_nhan)}</td>
       <td><span class="badge b-amber">Cho xac nhan SL (khai ${s.so_luong_khai})</span></td>
       <td onclick="event.stopPropagation();"><button class="btn small" onclick="openSoLuongThucNhanModal('${s.id}')">Xac nhan SL</button></td>
@@ -2524,7 +2630,7 @@ function renderAdminUnifiedTable(){
     const b = unitStatusBadge(u.trang_thai);
     const nguon = isKhachLe
       ? '<span class="badge b-purple">Khach le</span>'
-      : `${esc(DB.users.find(x=>x.email===findPhieuGui(p.phieu_gui_id)?.nguoi_tao)?.ten||'')}<div class="fine">${p.phieu_gui_id}</div>`;
+      : `${esc(DB.users.find(x=>x.email===findPhieuGui(p.phieu_gui_id)?.nguoi_tao)?.ten||'')} <span class="fine">· ${p.phieu_gui_id}</span>`;
     let checkboxCell = '<td></td>';
     let actionCell;
     if(u.trang_thai==='cho_bo_sung_tt'){
@@ -2544,7 +2650,7 @@ function renderAdminUnifiedTable(){
       <td>${nguon}</td>
       <td>${esc(info.khach_hang)}</td>
       <td>${esc(lk?.ten||'Ca san pham')}${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue">Da doi LK</span>':''}</td>
-      <td class="fine" style="max-width:220px;">${esc(p.mo_ta_loi)}</td>
+      <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</td>
       <td>${slaBadge(u.updated_at)}</td>
       <td><span class="badge ${b.cls}">${b.label}</span></td>
       <td onclick="event.stopPropagation();">${actionCell}</td>
@@ -2557,7 +2663,7 @@ function renderAdminUnifiedTable(){
   </div>
   ${renderAdminBulkBar()}
   ${totalRows===0?'<div class="empty">Khong co don nao can xu ly ngay luc nay.</div>':`
-  <div style="overflow-x:auto;">
+  <div class="table-responsive">
   <table><thead><tr><th></th><th>ID</th><th>Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Mo ta loi</th><th>SLA</th><th>Trang thai</th><th>Hanh dong</th></tr></thead>
   <tbody>${rows}</tbody></table>
   </div>`}`;
@@ -3043,6 +3149,7 @@ function renderAdminPhieuTra(){
     const draftsOfType = DB.phieu_tra.filter(t=>t.ktv_nhan===sel && t.trang_thai==='nhap' && t.loai_doi_tru===loai);
     return `<h3>${LOAI_DOI_TRU_LABEL[loai]} — don san sang gom phieu tra (${units.length})</h3>
     ${units.length===0?'<div class="empty small">Khong co.</div>':`
+    <div class="table-responsive">
     <table><thead><tr><th></th><th>ID</th><th>Khach hang</th><th>Linh kien</th><th>Huong xu ly</th><th>Thao tac nhanh</th></tr></thead>
     <tbody>${units.map(u=>{
       const p=findPhieuSC(u.parent_id); const info=caseOrManualInfo(p);
@@ -3052,6 +3159,7 @@ function renderAdminPhieuTra(){
         <button class="btn small secondary" onclick="openTaoPhieuTraNhanhModal('${u.id}','kho')" title="Tu tao 1 phieu tra rieng, bo qua gom nhieu don + duyet ke toan, chuyen thang cho Kho dong goi">⚡ Giao truc tiep Kho</button>
       </div></td></tr>`;
     }).join('')}</tbody></table>
+    </div>
     <div class="btnrow">
       <button class="btn small" onclick="taoPhieuTraMoi('${sel}','${loai}')">Tao phieu tra moi (${LOAI_DOI_TRU_LABEL[loai]})</button>
       ${draftsOfType.length>0?`<select id="draftSelect_${loai}">${draftsOfType.map(t=>`<option value="${t.id}">${t.id}</option>`).join('')}</select><button class="btn small secondary" onclick="themVaoPhieuTra('${loai}')">Them vao phieu nhap da chon</button>`:''}
@@ -3299,7 +3407,7 @@ function renderNvViecCuaToi(){
         <tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
           <td><input type="checkbox" onchange="toggleNvUnitSelect('${u.id}', this.checked)" ${NV_SELECTED_UNITS.has(u.id)?'checked':''}></td>
           <td><b style="font-family:var(--font-mono);">${u.id}</b></td>
-          <td>${esc(c?.khach_hang || p.ten_khach_hang || 'Khách lẻ')}<div class="fine">SĐT: ${esc(c?.sdt || p.sdt_khach_hang || '')}</div></td>
+          <td>${esc(c?.khach_hang || p.ten_khach_hang || 'Khách lẻ')} <span class="fine">· SĐT: ${esc(c?.sdt || p.sdt_khach_hang || '')}</span></td>
           <td><b>${lk ? esc(lk.ten) : 'Cả sản phẩm'}</b>${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk ? ' <span class="badge b-blue" style="font-size:9px;padding:1px 4px;">Đã đổi LK</span>':''}</td>
           <td class="fine" style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</td>
           <td>${slaBadge(u.updated_at)}</td>
@@ -3458,7 +3566,7 @@ function renderKeToanDuyet(){
           <td><b style="font-family:var(--font-mono);">${t.id}</b></td>
           <td><b>${esc(ktvDisplayName(t.ktv_nhan))}</b></td>
           <td><span class="badge b-purple">${LOAI_DOI_TRU_LABEL[t.loai_doi_tru] || t.loai_doi_tru}</span></td>
-          <td>MISA: ${esc(t.ma_misa || '-')}<div class="fine">Đơn hàng: ${esc(t.ma_don_hang || '-')}</div></td>
+          <td><span class="fine">MISA:</span> ${esc(t.ma_misa || '-')} <span class="fine">· Đơn hàng:</span> ${esc(t.ma_don_hang || '-')}</td>
           <td><b>${dong.length}</b> dòng LK</td>
           <td>${slaBadge(t.updated_at)}</td>
           <td onclick="event.stopPropagation();">${actionCell}</td>
@@ -3520,7 +3628,7 @@ function submitTuChoi(traId){
 /* =========================================================
    MODAL
    ========================================================= */
-function openModal(title, bodyHtml){
+function openModal(title, bodyHtml, full){
   /* Fix 31/08/2026: xoa modal cu (neu co) TRUOC khi tao modal moi - truoc do openModal() luon
      appendChild them 1 the moi ma khong bao gio go the cu, nen cac man "mo lai chinh minh de lam
      moi noi dung" (VD submitBaoCaoSai() goi lai openBaoCaoSaiModal(), submitGhiChuLogModal() goi lai
@@ -3529,7 +3637,11 @@ function openModal(title, bodyHtml){
      doc nham du lieu cua modal cu da an, khong phai modal dang hien thi tren man hinh. */
   const old = document.getElementById('activeModal'); if(old) old.remove();
   const bg = document.createElement('div'); bg.className='modal-bg'; bg.id='activeModal';
-  bg.innerHTML = `<div class="modal"><div class="modal-head"><h3>${esc(title)}</h3><button class="modal-close focus-ring" onclick="closeModal()">&times;</button></div><div class="modal-body">${bodyHtml}</div></div>`;
+  /* Tham so thu 3 "full" (yeu cau 02/09/2026 - xem chu thich CSS ".modal--full" o tren): CHI cac
+     man chi tiet nhieu du lieu (openDetailUnitModal/openDetailTraModal) truyen true, con lai giu
+     kich co mac dinh (da tang tu 520px len 760px) de khong bien 1 modal xac nhan 2 truong thanh 1
+     panel gan-full-man-hinh voi phan lon la khoang trong. */
+  bg.innerHTML = `<div class="modal${full?' modal--full':''}"><div class="modal-head"><h3>${esc(title)}</h3><button class="modal-close focus-ring" onclick="closeModal()">&times;</button></div><div class="modal-body">${bodyHtml}</div></div>`;
   /* Chi dong khi CA mousedown VA click deu bat dau tu chinh nen (bg) - tranh truong hop nguoi dung
      bam-keo chon chu ben trong modal roi tha chuot ra ngoai lam mat du lieu dang nhap (phan hoi
      21/08/2026, muc 7) */
@@ -3537,9 +3649,14 @@ function openModal(title, bodyHtml){
   bg.addEventListener('mousedown', e=>{ downOnBg = (e.target===bg); });
   bg.addEventListener('click', e=>{ if(e.target===bg && downOnBg) closeModal(); downOnBg=false; });
   document.body.appendChild(bg);
+  /* Yeu cau 02/09/2026: modal gio tran man hinh tren mobile (giong .mobile-sheet) - danh dau body
+     de toast (z-index cao hon, van hien duoc) khong de len sat mep duoi panel, dung 1 co che voi
+     body.mobile-sheet-open da co san truoc do. */
+  document.body.classList.add('modal-open');
 }
 function closeModal(){
   const m=document.getElementById('activeModal'); if(m) m.remove();
+  document.body.classList.remove('modal-open');
   const s=document.getElementById('activeMobileSheet'); if(s) s.remove();
   document.body.classList.remove('mobile-sheet-open');
 }

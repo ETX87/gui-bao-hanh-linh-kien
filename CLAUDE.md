@@ -62,7 +62,9 @@ nguồn mới nhất, ghi đè lên #4 ở những điểm xung đột**. Sau đ
 Chrome thật (31/08/2026, 5 lỗi tìm được đều đã sửa), 1 vòng đối chiếu 50 action AppSheet gốc
 (31/08/2026, 7 tính năng mới), và 1 vòng 4 yêu cầu UI/vai trò (01/09/2026: xem trước giao diện mobile,
 viền màu phân biệt ô nhập được, click-vào-dòng-để-mở-chi-tiết cho mọi bảng, 2 vai trò mới `qtri`/
-`quanly`) — xem 3 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
+`quanly`), và 1 vòng 4 yêu cầu UI toàn hệ thống (02/09/2026: bảng luôn 1 dòng không xuống dòng, modal
+chi tiết tràn màn hình, log gộp đủ 4 nguồn tách vùng riêng biệt, chỉnh lại gam màu nền/card cho rõ
+ranh giới) — xem 4 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1009,6 +1011,128 @@ thật): overlay mobile preview responsive đúng thật (không phải giả l�
 đúng viền xanh trên các ô `<select>`, màn "Tổng quan hệ thống"/"Tra cứu mọi đơn hàng" của vai trò
 `quanly` hiện đúng dữ liệu nhiều KTV khác nhau cùng lúc, form "Thêm đơn bảo hành" của KTV hiện đúng
 viền xanh trên input ngày/select/text.
+
+## 4 yêu cầu UI toàn hệ thống (02/09/2026) — bảng 1 dòng, modal tràn màn hình, log đầy đủ, gam màu
+
+Nguyên văn 4 yêu cầu người dùng gửi cùng lúc, kèm chỉ đạo quy trình rõ ràng ("phân tích toàn bộ dự án
+→ đánh giá lại từng yêu cầu → kiểm tra tính khả thi → tìm kiếm thông tin online → đưa phương án → tự
+phản biện → lập kế hoạch → triển khai → tái đánh giá → báo cáo chi tiết"):
+
+1. *"tất cả giao diện dự án dạng table => đều tìm phương án chuyển hết về 1 dòng, không tạo thành 2
+   dòng. (cả web và mobile)"*
+2. *"Khi mở giao diện UI trên web thì sẽ mở popup giao diện tràn màn hình chứ không chỉ mở nhỏ nhỏ ở
+   giữa."*
+3. *"Lưu đầy đủ mọi log và trong giao diện UI chi tiết sẽ tách thành các mảng dữ liệu riêng biệt, có
+   vùng hiện log riêng."*
+4. *"Xem lại gam màu, hiện tại các vùng dữ liệu, và nền đang không rõ ràng. Chỉnh lại gam màu để làm
+   nổi bật vùng làm việc, vùng xem thông tin => căn chỉnh lại màu và giao diện cho toàn hệ thống."*
+
+Đã tra cứu tham khảo trước khi quyết định phương án (không tự bịa quy ước UI): CSS-Tricks/LogRocket
+về kỹ thuật bảng dữ liệu không xuống dòng (khuyến nghị `white-space:nowrap` + container cuộn ngang,
+không phải ép chữ xuống dòng); so sánh modal căn giữa vs full-screen dialog (khuyến nghị: modal nhỏ
+cho xác nhận/form đơn giản, full-screen cho nội dung lớn/phức tạp cần tập trung cao — **không phải
+"mọi modal đều full"**); mẫu UI "Activity Log"/timeline audit trail (nhiều nguồn log tách riêng theo
+timestamp + người thực hiện); nguyên tắc "surface elevation" cho dashboard 2025 (phân tầng bằng MÀU
+NỀN giữa các lớp, không chỉ dựa vào shadow).
+
+**1. Bảng luôn 1 dòng (web + mobile).** Rà soát toàn bộ ~14 bảng danh sách dữ liệu thật trong file
+(không tính các bảng key-value 2 cột trong modal chi tiết, vốn cố ý giữ wrap cho các trường mô tả dài
+như "Địa chỉ"/"Mô tả lỗi"):
+- Tìm thấy 9 chỗ `<td>` xếp 2 dòng theo kiểu `Tên chính<div class="fine">Phụ</div>` (VD "Nguyễn Văn Ký"
+  xuống dòng rồi mới tới mã case bên dưới) — chuyển hết thành 1 dòng dùng dấu `·` phân cách
+  (`Tên chính · Phụ`, dùng `<span>` thay `<div>`).
+- 2 cột "Mô tả lỗi" (bảng thống nhất Admin BH) chưa có ellipsis như 1 bảng khác đã làm đúng từ trước
+  (Kế toán/NV) — đã thêm `white-space:nowrap;overflow:hidden;text-overflow:ellipsis` + `title="..."`
+  để xem đủ khi hover, đồng bộ với pattern đã có.
+- Thêm CSS toàn cục `table.tinh-te, .table-responsive table { white-space: nowrap; }` — dựa hẳn vào
+  `.table-responsive` (cuộn ngang, đã có sẵn từ vòng refactor Gemini) thay vì để trình duyệt tự xuống
+  dòng, đúng khuyến nghị đã tra cứu.
+- **Phát hiện quan trọng nhất của mục này**: nút hành động trong 1 ô (`.btnrow`, dùng `flex-wrap:wrap`
+  mặc định cho form thường) mới là thủ phạm chính khiến 1 dòng bảng "vỡ" thành 2 dòng trực quan (nút
+  thứ 2 rớt xuống dưới nút đầu) — cơ chế này **khác** `white-space`, không bị chặn bởi rule nowrap ở
+  trên. Đã thêm riêng `.table-responsive td .btnrow, table.tinh-te td .btnrow { flex-wrap: nowrap; }`.
+- 5 bảng còn thiếu container cuộn ngang (`renderKtvTaoPhieu`, `renderPhieuGuiDetail`, `renderKhoTiepNhan`
+  x2, `renderAdminUnifiedTable`, `readyTable` trong `renderAdminPhieuTra`) đã được bọc thêm
+  `<div class="table-responsive">`.
+- **Tự phản biện phát hiện thêm 1 vấn đề phụ**: dựa hẳn vào cuộn ngang thay vì xuống dòng có nghĩa
+  người dùng phải BIẾT là còn dữ liệu ở bên phải — nhưng thanh cuộn overlay mặc định của hệ điều hành
+  (mỏng, gần như trong suốt, chỉ hiện khi hover) không đủ rõ để nhận ra. Đã thêm CSS ép hiện 1 thanh
+  cuộn mỏng nhưng **luôn thấy** cho `.table-responsive` (`scrollbar-width:thin` + `::-webkit-scrollbar`
+  tô màu `--ocean-400`) thay vì để thanh cuộn ẩn mặc định.
+
+**2. Modal tràn màn hình.** **Tự phản biện quan trọng nhất của cả đợt này**: bản nháp đầu tiên cho
+**toàn bộ 35 modal** trong app đều tràn màn hình như nhau — chụp thử ngay 1 modal xác nhận đơn giản
+("Báo sự cố tiếp nhận", chỉ 1 select + 1 textarea) thì lộ ra vấn đề mới: nội dung nằm lọt thỏm ở góc
+trên-trái 1 panel gần-full-HD, phần còn lại là khoảng trống rỗng — đúng loại lỗi UX mà tài liệu tham
+khảo đã cảnh báo ("modal nhỏ dành cho thông tin ít, tránh làm người dùng choáng ngợp"). Đã sửa lại
+theo **2 kích cỡ rõ ràng** thay vì ép 1 kích cỡ cho tất cả:
+- **Mặc định** (`.modal`, không thêm gì): kích cỡ theo nội dung như cũ nhưng **tăng đáng kể**
+  (520px → 760px, 88vh → 90vh) — áp dụng cho 33/35 modal (mọi form nhập liệu, xác nhận, cài đặt) —
+  đủ rộng rãi hơn hẳn bản cũ nhưng không để trống khoảng trắng vô nghĩa.
+- **`.modal--full`** (tham số thứ 3 mới của `openModal(title, bodyHtml, full)`): panel gần kín màn
+  hình (chừa 24px lề) trên desktop — **chỉ gán cho `openDetailUnitModal`/`openDetailTraModal`**, 2 màn
+  thật sự nhiều dữ liệu (đúng loại nội dung tài liệu tham khảo khuyến nghị dùng full-screen dialog) —
+  đây chính là 2 màn người dùng khả năng cao đã thấy chật chội khi phàn nàn (trước đó ép gọn trong
+  520px nhưng chứa 2 cột thông tin + timeline + khung chat).
+- Trên **mobile, mọi modal đều tràn màn hình như nhau** (không phân biệt mặc định/full) — màn hình
+  nhỏ không còn khái niệm "modal vừa" hợp lý, đồng bộ với `.mobile-sheet` đã có từ vòng redesign UI
+  trước.
+- Thêm rule `.modal-body .field:not(.grid2 .field):not(.grid3 .field){max-width:640px;}` để form 1
+  cột (không nằm trong layout nhiều cột) không bị kéo giãn hết bề rộng panel, giữ độ dài dòng dễ đọc.
+- Đồng bộ luôn: `openModal()` gắn thêm class `body.modal-open` (song song `body.mobile-sheet-open` đã
+  có) để đẩy `.toast-wrap` lên một chút trên mobile, tránh toast đè lên mép dưới panel giờ đã tràn hết
+  màn hình.
+
+**3. Log đầy đủ, tách vùng riêng biệt.** Rà lại `openDetailUnitModal()`: trước đó **chỉ đọc `DB.logs`
+lọc theo `entity_type='phieu_sc_ct'` của riêng đơn vị đang xem** — bỏ sót hoàn toàn lịch sử của cả
+chuỗi cha nó thuộc về, dù `addLog()` trên thực tế đã ghi đủ 4 `entity_type` xuyên suốt file
+(`phieu_gui`, `phieu_sc`, `phieu_sc_ct`, `phieu_tra` — xác nhận bằng `grep "addLog("`). Đã sửa:
+- Hàm dùng chung mới `renderLogBlock(title, logs)` — mỗi nguồn log là **1 khối riêng có tiêu đề + số
+  đếm riêng**, không gộp chung 1 danh sách (đúng nguyên văn "tách thành các mảng dữ liệu riêng biệt,
+  có vùng hiện log riêng").
+- 4 khối hiện đủ khi có dữ liệu liên quan: 📦 Nhật ký đơn vị bảo hành này (`phieu_sc_ct`), 🗂️ Nhật ký
+  đơn cha (`phieu_sc`, mới thêm), 🚚 Nhật ký phiếu gửi (`phieu_gui`, mới thêm — chỉ hiện nếu đơn thuộc
+  1 phiếu gửi thật, không hiện với đơn dịch vụ tính phí/khách lẻ), ↩️ Nhật ký phiếu trả (`phieu_tra`,
+  mới thêm — chỉ hiện nếu đơn đã được gộp vào 1 phiếu trả). Xếp dạng lưới 2 cột (`.grid2`), tự xuống
+  1 cột trên mobile.
+- Mục "💬 Trao đổi / Phản hồi của đơn hàng" (`ghi_chu_log` của phiếu gửi, có sẵn từ trước) giữ nguyên
+  vị trí riêng, không gộp vào 4 khối trên — đây là hội thoại tự do, khác bản chất với log trạng thái.
+- **Phát hiện thêm 1 nguồn dữ liệu chưa từng hiện ở đâu cả**: `phieu_sc.bao_cao_sai_thong_tin` (ghi
+  nhận nội bộ "KTV báo cáo sai thông tin", thêm từ vòng đối chiếu AppSheet 31/08/2026) trước giờ chỉ
+  ghi được qua modal riêng, **không có màn nào đọc lại được** trong ngữ cảnh 1 đơn vị cụ thể. Đã thêm
+  vào modal chi tiết, nhưng có **quyết định phân quyền chủ động** (tự quyết, không hỏi lại vì đã có
+  ngữ cảnh rõ từ tên gọi + mục đích ghi ở vòng 31/08): mục này **chỉ hiện cho vai trò giám sát**
+  (`adminbh`/`qtri`/`quanly`), **ẩn với chính KTV đang bị ghi nhận** — vì bản chất dữ liệu là "đánh giá
+  nội bộ, có thể dùng xử lý vi phạm báo cáo sau này" (nguyên văn từ vòng 31/08), không phải thông tin
+  nghiệp vụ cần công khai cho người bị đánh giá.
+
+**4. Gam màu.** Đo thử bằng mã hex trước khi sửa (không đoán): `--bg` (nền trang, `#f2f6f9`) và
+`--surface-100` (nền vùng lồng bên trong 1 card, `#f5f8fa`) **chỉ lệch nhau ~1-3/255 mỗi kênh RGB** —
+gần như không phân biệt được bằng mắt thường, đúng nguyên nhân gốc của "vùng dữ liệu và nền không rõ
+ràng". Đã tách lại thành 1 thang độ sáng rõ rệt hơn, tăng dần theo đúng nguyên tắc "surface elevation"
+đã tra cứu (phân tầng bằng màu nền, không chỉ shadow):
+- `--bg`: `#f2f6f9` → `#e7edf3` (nền trang, tầng mờ nhất).
+- `--surface-100`: `#f5f8fa` → `#eef2f6` (vùng lồng/tham khảo bên trong 1 card).
+- `--surface-200`: `#e9eff3` → `#e1e8ee` (vùng nhấn mạnh/disabled, đậm nhất trong 4 mức).
+- `--line`: `#e1eaf0` → `#d7e1e9` (viền card/bảng rõ hơn 1 chút).
+- `.card` shadow: từ 1 lớp gần như vô hình (`0 1px 2px rgba(...,.04)`) → 2 lớp (`0 1px 2px` +
+  `0 4px 14px rgba(...,.06)`) để card "nổi" rõ hơn khỏi nền, không chỉ dựa vào viền mảnh.
+- **Cố ý KHÔNG đổi** các tông chữ phụ (`--ink-400`/`--fine`/`--muted`) — đây là phần chữ mờ có chủ đích
+  theo nguyên tắc "mute khi không quan trọng" đã áp dụng nhất quán từ vòng redesign UI, không phải lỗi
+  cần sửa; yêu cầu lần này tập trung vào "nền"/"vùng dữ liệu" (bố cục), không phải độ đậm chữ.
+
+**Kiểm thử đã chạy:** test mới `test_ui_overhaul.js` (jsdom) xác minh riêng cả 4 mục — không còn
+pattern `<td>` xếp chồng 2 dòng, các bảng còn thiếu đã có `.table-responsive`, CSS nowrap + chặn
+`.btnrow` bể dòng đã tồn tại; `openDetailUnitModal`/`openDetailTraModal` có class `.modal--full`,
+modal đơn giản (`openSuCoModal`) thì không, mở modal 2 lần liên tiếp không để lại nhiều `#activeModal`
+(giữ nguyên fix cũ); modal chi tiết có đủ các khối log riêng biệt (đơn vị/đơn cha/phiếu gửi) xếp dạng
+lưới 2 cột; "Ghi nhận nội bộ" hiện đúng cho `adminbh`, ẩn đúng với `ktv`; token màu mới đã áp dụng.
+Chạy lại toàn bộ 11 bộ test trước đó (bao gồm QR/camera, QA-fixes, AppSheet, roles mới) — **0 lỗi,
+không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật) ở cả desktop (1500px, 1200px) và
+mobile (390px): bảng cuộn ngang đúng thay vì vỡ dòng (đo thêm `scrollWidth`/`clientWidth` qua
+`page.evaluate` để chắc chắn không chỉ là "nhìn có vẻ đúng"), modal chi tiết tràn gần hết màn hình với
+4 khối log rõ ràng, modal đơn giản không còn khoảng trống vô nghĩa sau khi sửa theo hướng 2 kích cỡ,
+gam màu mới cho thấy ranh giới card/nền/vùng lồng rõ hơn hẳn ở mọi màn đã chụp thử.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
