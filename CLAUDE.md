@@ -64,7 +64,8 @@ Chrome thật (31/08/2026, 5 lỗi tìm được đều đã sửa), 1 vòng đ�
 viền màu phân biệt ô nhập được, click-vào-dòng-để-mở-chi-tiết cho mọi bảng, 2 vai trò mới `qtri`/
 `quanly`), và 1 vòng 4 yêu cầu UI toàn hệ thống (02/09/2026: bảng luôn 1 dòng không xuống dòng, modal
 chi tiết tràn màn hình, log gộp đủ 4 nguồn tách vùng riêng biệt, chỉnh lại gam màu nền/card cho rõ
-ranh giới) — xem 4 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
+ranh giới), rồi tiếp theo là đổi menu mobile từ drawer sang bottom tab bar cố định (02/09/2026, cùng
+ngày) — xem 5 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1133,6 +1134,58 @@ mobile (390px): bảng cuộn ngang đúng thay vì vỡ dòng (đo thêm `scrol
 `page.evaluate` để chắc chắn không chỉ là "nhìn có vẻ đúng"), modal chi tiết tràn gần hết màn hình với
 4 khối log rõ ràng, modal đơn giản không còn khoảng trống vô nghĩa sau khi sửa theo hướng 2 kích cỡ,
 gam màu mới cho thấy ranh giới card/nền/vùng lồng rõ hơn hẳn ở mọi màn đã chụp thử.
+
+## Menu mobile chuyển xuống bottom (02/09/2026)
+
+Nguyên văn yêu cầu (gửi ngay sau vòng "4 yêu cầu UI toàn hệ thống" ở trên): *"giao diện mobile chuyển
+menu xuống bottom."*
+
+Trước đó, ở màn hình điện thoại thật (≤767px, đúng ngưỡng "mobile" chuẩn của app), menu điều hướng là
+1 drawer trượt từ trái, mở bằng nút hamburger trên topbar — ẩn mặc định, phải bấm mới thấy. Đã đổi
+sang **bottom tab bar cố định ở đáy màn hình** (mẫu điều hướng chuẩn của app di động — Instagram, Grab,
+Shopee...), luôn hiển thị, không cần mở/đóng:
+
+- **Chỉ áp dụng đúng ngưỡng ≤767px** (điện thoại thật) — vùng tablet 768–900px **vẫn giữ nguyên**
+  drawer/hamburger cũ (màn đủ rộng, drawer không bị chật, đổi sẽ không có lợi gì thêm).
+- `renderBottomNav()` (hàm mới) **dùng lại đúng 1 nguồn dữ liệu** `ROUTES_BY_ROLE` +
+  `workloadItems()` với `renderSidebar()` đã có — không định nghĩa danh sách menu lần 2 phải bảo trì
+  song song. Số mục tối đa 1 vai trò hiện có là 4 (Trang chủ + 3 màn, vai trò `ktv`/`adminbh`) — vừa
+  khít 1 hàng ngang, không cần cơ chế "Xem thêm".
+- Icon + nhãn xếp dọc trong mỗi nút (mẫu bottom-tab chuẩn), mục đang mở tô sáng, giữ nguyên chấm đỏ
+  báo "có việc cần làm" trên icon Trang chủ (đã có từ sidebar, mang nguyên sang).
+- Dùng nền gradient navy giống hệt sidebar (không tạo thêm 1 tông màu thứ 3), giữ nhất quán ngôn ngữ
+  thị giác đã có.
+- `env(safe-area-inset-bottom)` cho thanh này (tránh bị home-indicator iPhone che khuất) + thêm
+  padding-bottom cho `.main-col` để nội dung trang không bị thanh cố định này đè lên ở cuối trang.
+- Ẩn hẳn nút hamburger + drawer cũ ở ≤767px (không còn 2 cơ chế điều hướng chồng nhau).
+
+**1 lỗi thật phát hiện ngay khi kiểm thử bằng Puppeteer (Chrome thật)** — bản đầu tiên chụp thử ở
+390px thì thanh menu **hoàn toàn không hiện**, dù `renderBottomNav()` sinh đúng HTML (đã log kiểm tra
+`innerHTML` xác nhận đủ 4 thẻ `<a>`). Debug bằng `getComputedStyle` thì `.bottom-nav` báo
+`display:"none"` dù đang ở 390px. Nguyên nhân: **thứ tự CSS trong file bị đảo ngược** — rule
+`.bottom-nav{display:none;...}` (mặc định) được viết SAU rule `@media(max-width:767px){.bottom-nav
+{display:flex;}}`, mà 2 rule có cùng độ đặc tả (1 class), nên **rule đứng sau trong nguồn luôn thắng
+bất kể `@media` có khớp hay không** — 1 lỗi CSS cascade kinh điển, không phải lỗi logic JS. Đã sửa
+bằng cách đảo lại đúng thứ tự (rule mặc định `display:none` viết TRƯỚC, override `display:flex` trong
+`@media` viết SAU) — verify lại bằng đúng `getComputedStyle` sau khi sửa, ảnh chụp xác nhận thanh menu
+hiện đúng.
+
+Cùng lúc đó, phát hiện thêm 1 vấn đề phụ cần xử lý để tránh hồi quy: khi thanh bottom-nav **luôn hiện
+thường trực** trên mọi trang mobile (khác với trước đây, khi menu chỉ xuất hiện lúc bấm hamburger),
+toast (`.toast-wrap`, mặc định `bottom:18px`) sẽ đè lên thanh menu mỗi khi hiện. Đã thêm 1 rule mới
+`body:not(.mobile-sheet-open):not(.modal-open) .toast-wrap{bottom:74px;}` (chỉ áp dụng ở trạng thái
+bình thường — khi có mobile-sheet/modal đang mở phủ kín màn hình thì 2 rule cũ đã có từ trước vẫn
+đúng, vì lúc đó bottom-nav bị modal che khuất phía sau, không còn liên quan).
+
+**Kiểm thử đã chạy:** `test_bottom_nav.js` (jsdom) — xác nhận đủ số mục theo từng vai trò, dùng đúng
+dữ liệu `ROUTES_BY_ROLE` (không tạo nguồn riêng), chấm đỏ báo việc cần làm hiện đúng, trạng thái
+"active" cập nhật đúng khi đổi hash, và có test riêng canh đúng **thứ tự 2 rule CSS** trong file (để
+lỗi thứ tự y hệt không lặp lại âm thầm ở lần sửa sau). Chạy lại toàn bộ 12 bộ test trước đó — 0 lỗi,
+không hồi quy. Xác nhận thêm bằng ảnh chụp Puppeteer thật: bottom nav hiện đúng ở 390px với đủ
+icon/nhãn/chấm đỏ, bấm vào 1 mục điều hướng đúng trang + tô sáng đúng mục, ở 820px (tablet) drawer cũ
+vẫn mở được bình thường (không bị ảnh hưởng), toast hiện rõ phía trên thanh menu không bị che, và mở
+modal chi tiết (full-screen) trên mobile che đúng thanh menu phía sau (không bị lộ 2 lớp điều hướng
+chồng nhau).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

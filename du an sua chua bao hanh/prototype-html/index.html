@@ -100,6 +100,38 @@ h1,h2,h3{font-family:var(--font-display);}
   .sidebar.collapsed .si-label{display:inline;}
   .sidebar-collapse-btn{display:none;}
 }
+/* Yeu cau nguoi dung (02/09/2026): "giao dien mobile chuyen menu xuong bottom" - o man hinh dien
+   thoai that (<=767px, dung nguong "mobile" chuan da dung xuyen suot app - isMobileViewport(),
+   .mobile-sheet, .topbar-desktop-only), menu dieu huong chinh chuyen han xuong 1 thanh co dinh o
+   DAY man hinh (bottom tab bar - dung mau dark navy giong sidebar de dong bo ngon ngu thi giac, thay
+   vi mo lai 1 mau thu 3), thay cho drawer/hamburger truot tu trai (van giu nguyen cho tablet 768-
+   900px, o do man hinh du rong de drawer khong bi chat). Bottom nav dung LAI dung 1 nguon du lieu
+   ROUTES_BY_ROLE voi sidebar (xem renderBottomNav()), khong tao danh sach menu thu 2 phai bao tri
+   song song. So luong muc toi da 1 vai tro hien co la 4 (Trang chu + 3 man) - vua khit 1 hang ngang,
+   khong can co che "More". */
+/* QUAN TRONG ve THU TU: dinh nghia mac dinh (display:none) phai dung TRUOC @media ben duoi - 2 rule
+   cung do dac ta (0,1,0) nen rule dung SAU trong nguon thang, bat ke @media co khop hay khong; dat
+   nguoc lai se khien .bottom-nav khong bao gio hien duoc du dung man hinh mobile (da tu bat gap loi
+   nay khi kiem thu bang Puppeteer that - man hinh 390px khong thay thanh menu, do computed display
+   van la "none"). */
+.bottom-nav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:linear-gradient(180deg,var(--sidebar-from),var(--sidebar-to) 60%);
+  padding:4px 2px calc(4px + env(safe-area-inset-bottom));
+  box-shadow:0 -3px 12px rgba(5,32,51,.28);}
+.bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:6px 2px;border-radius:10px;color:var(--sidebar-ink-dim);text-decoration:none;position:relative;
+  font-size:10px;font-weight:700;min-width:0;}
+.bottom-nav-item .bn-icon{font-size:18px;line-height:1;}
+.bottom-nav-item .bn-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bottom-nav-item.active{color:var(--sidebar-ink);background:var(--sidebar-highlight);}
+.bottom-nav-item .bn-dot{position:absolute;top:2px;right:22%;width:8px;height:8px;border-radius:50%;
+  background:var(--coral-500);border:1.5px solid var(--sidebar-to);}
+@media (max-width:767px){
+  .hamburger{display:none !important;}
+  .sidebar,.sidebar-overlay{display:none !important;}
+  .main-col{padding-bottom:calc(60px + env(safe-area-inset-bottom));}
+  .bottom-nav{display:flex;}
+}
 .main-col{flex:1;min-width:0;display:flex;flex-direction:column;}
 .topbar{height:60px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;
   padding:0 16px;position:sticky;top:0;z-index:40;flex-wrap:nowrap;}
@@ -255,6 +287,12 @@ body.mobile-sheet-open .toast-wrap{bottom:84px;}
    len tuong tu de khong de sat mep duoi panel, chi ap dung o mobile vi desktop modal van chua
    inset:24px (van con khoang trong ben ngoai de toast hien binh thuong). */
 @media (max-width:767px){ body.modal-open .toast-wrap{bottom:24px;} }
+/* Yeu cau 02/09/2026: menu chuyen xuong ".bottom-nav" co dinh o day man hinh mobile - can day toast
+   len tren no o TRANG THAI BINH THUONG (khong co modal/sheet nao mo). Khi sheet/modal dang mo, 2 rule
+   ben tren da lo (chung phu kin toan man hinh, "de len tren" bottom-nav bi che khuat phia sau khong
+   con y nghia) nen dat truoc rule nay (thu tu CSS: rule sau ghi de rule truoc neu cung do uu tien -
+   :not() giup rule nay KHONG ap dung khi 1 trong 2 class kia dang co, tranh ghi de nham). */
+@media (max-width:767px){ body:not(.mobile-sheet-open):not(.modal-open) .toast-wrap{bottom:74px;} }
 .toast{background:var(--ocean-900);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:500;
   box-shadow:0 8px 20px rgba(6,32,51,.3);display:flex;align-items:center;gap:8px;animation:fadeSlide .2s ease-out;}
 .toast::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal-500);flex-shrink:0;}
@@ -382,6 +420,7 @@ table.tinh-te, .table-responsive table { white-space: nowrap; }
   </div>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+<div id="bottomNavWrap"></div>
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
@@ -1245,12 +1284,36 @@ function renderSidebar(){
     </aside>`;
   document.getElementById('sidebarWrap').innerHTML = html;
 }
+/* Bottom tab bar cho man hinh dien thoai that (<=767px, xem CSS ".bottom-nav") - yeu cau 02/09/2026
+   "giao dien mobile chuyen menu xuong bottom". Dung LAI dung 1 nguon du lieu ROUTES_BY_ROLE +
+   workloadItems() voi renderSidebar() o tren (khong dinh nghia menu 1 lan thu 2) - CHI khac ve markup
+   hien thi (icon+nhan xep doc thay vi hang ngang, khong co nhom "Chung"/"Man hinh cua ban" vi 1 hang
+   ngang khong co cho chua tieu de nhom). Luon render (khong kiem tra be rong o day) vi CSS da tu an/
+   hien dung theo media query - render du du lieu, de CSS quyet dinh hien thi, tranh sai lech khi
+   nguoi dung xoay man hinh/resize ma khong render() lai. */
+function renderBottomNav(){
+  const role = currentUser().vai_tro;
+  const routes = ROUTES_BY_ROLE[role];
+  const cur = location.hash || '#/home';
+  const wl = workloadItems();
+  const totalCount = wl.reduce((s,i)=>s+i.count,0);
+  const items = [['#/home','Trang chủ','🏠', totalCount>0]].concat(routes.map(([h,label,icon])=>[h,label,icon,false]));
+  const html = `<nav class="bottom-nav">
+    ${items.map(([h,label,icon,dot])=>`
+      <a class="bottom-nav-item${cur.startsWith(h)?' active':''}" href="${h}">
+        <span class="bn-icon">${icon}${dot?'<span class="bn-dot"></span>':''}</span>
+        <span class="bn-label">${label}</span>
+      </a>`).join('')}
+  </nav>`;
+  document.getElementById('bottomNavWrap').innerHTML = html;
+}
 
 window.addEventListener('hashchange', render);
 
 function render(){
   if(!location.hash){ location.hash = '#/home'; }
   renderSidebar();
+  renderBottomNav();
   closeMobileSidebar();
   const route = location.hash.split('?')[0];
   const el = document.getElementById('content');
