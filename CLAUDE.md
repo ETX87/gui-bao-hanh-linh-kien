@@ -67,8 +67,9 @@ chi tiết tràn màn hình, log gộp đủ 4 nguồn tách vùng riêng biệt
 ranh giới), rồi tiếp theo là đổi menu mobile từ drawer sang bottom tab bar cố định (02/09/2026, cùng
 ngày), rồi sort log mới nhất lên đầu + 1 vòng đánh giá lại visual hierarchy toàn hệ thống (02/09/2026:
 badge SLA phân 3 mức khẩn cấp, khu vực "Việc của tôi" nổi bật hẳn khỏi số liệu tham khảo, trường chỉ-
-xem không còn trông như ô nhập bị khoá) — xem 6 mục cuối cùng phía dưới (theo đúng thứ tự thời gian)
-để có chi tiết đầy đủ.
+xem không còn trông như ô nhập bị khoá), rồi cuối cùng chuyển nút thao tác của 2 "UI chi tiết" lên
+top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu) — xem 7 mục cuối cùng phía
+dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1260,6 +1261,37 @@ không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome th�
 đỏ nổi bật hẳn khỏi các badge pastel còn lại (so sánh trực tiếp trước/sau cho thấy khác biệt rõ rệt),
 form Phân loại với nhãn nhóm đọc được rõ ràng, và chi tiết phiếu gửi KTV với 4 trường lịch sử không
 còn trông như ô nhập bị khoá trong khi trường thực sự sửa được vẫn nổi bật viền xanh như cũ.
+
+## Nút thao tác chuyển lên top tiêu đề của UI chi tiết (02/09/2026)
+
+Nguyên văn yêu cầu: *"trên bản web các nút tao tác, chuyển về top tiêu đề của UI chi tiết."*
+
+Bối cảnh: 2 "UI chi tiết" (`openDetailUnitModal`/`openDetailTraModal`, dùng `.modal--full` — panel gần
+kín màn hình từ vòng sửa "modal tràn màn hình" ở trên) trước đó chỉ có **đúng 1 nút** ("Đóng chi
+tiết"/"Đóng"), đặt ở **cuối cùng** sau khi đã cuộn qua hết toàn bộ nội dung (2 cột thông tin, ảnh,
+lưới log, khung trao đổi) — với panel giờ đã dài hơn nhiều (do vòng sửa trước), phải cuộn hết xuống
+đáy mới bấm được nút này.
+
+Đã thêm tham số thứ 4 cho `openModal(title, bodyHtml, full, headerActions)` — `headerActions` là HTML
+của nhóm nút, được chèn vào `.modal-head` (giữa tiêu đề và nút đóng ×) thay vì cuối `.modal-body`.
+`.modal-head` có `flex-shrink:0` (không cuộn theo nội dung, đã có sẵn từ đầu) nên nút đặt ở đây **luôn
+nhìn thấy được bất kể đang cuộn tới đâu** trong panel. CSS `.modal-head` đổi từ
+`justify-content:space-between` (chỉ hợp với 2 phần tử) sang `h3{flex:1}` (chiếm hết khoảng trống còn
+lại, tự ellipsis nếu tiêu đề dài) + `.modal-head-actions{flex-shrink:0}` (nhóm nút + nút đóng đều dính
+sát phải, không co lại). Cả 2 hàm `openDetailUnitModal`/`openDetailTraModal` chuyển nút "Đóng chi
+tiết"/"Đóng" từ `.btnrow` cuối nội dung sang tham số `headerActions` này — không thêm chức năng gì
+mới, chỉ đổi vị trí đúng như yêu cầu. 33/35 modal còn lại (form/xác nhận thường, không phải "UI chi
+tiết") không gọi tham số này, giữ nguyên hành vi cũ (không có `headerActions` thì `openModal()` không
+render div phụ nào, không ảnh hưởng).
+
+**Kiểm thử đã chạy:** `test_modal_header_actions.js` (jsdom) — xác nhận nút đã có trong `.modal-head`
+và **không còn** trong `.modal-body` cho cả 2 modal, bấm nút trong header vẫn đóng được modal đúng
+(`closeModal()`), và modal thường (`openSuCoModal`, không truyền `headerActions`) không bị thêm nhầm
+div `.modal-head-actions` rỗng. Chạy lại toàn bộ 15 bộ test trước đó — 0 lỗi, không hồi quy. Xác nhận
+thêm bằng ảnh chụp Puppeteer (Chrome thật): nút "Đóng chi tiết" hiện đúng cạnh tiêu đề trên desktop,
+**vẫn hiện nguyên vị trí sau khi cuộn sâu xuống cuối nội dung** (ảnh chụp trước/sau cuộn để đối
+chứng — đây chính là mục đích của yêu cầu), và trên mobile (390px) tiêu đề tự ellipsis, nút + × vẫn
+đủ chỗ trên 1 hàng, không tràn/xuống dòng.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
