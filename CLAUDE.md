@@ -65,7 +65,10 @@ viền màu phân biệt ô nhập được, click-vào-dòng-để-mở-chi-ti�
 `quanly`), và 1 vòng 4 yêu cầu UI toàn hệ thống (02/09/2026: bảng luôn 1 dòng không xuống dòng, modal
 chi tiết tràn màn hình, log gộp đủ 4 nguồn tách vùng riêng biệt, chỉnh lại gam màu nền/card cho rõ
 ranh giới), rồi tiếp theo là đổi menu mobile từ drawer sang bottom tab bar cố định (02/09/2026, cùng
-ngày) — xem 5 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
+ngày), rồi sort log mới nhất lên đầu + 1 vòng đánh giá lại visual hierarchy toàn hệ thống (02/09/2026:
+badge SLA phân 3 mức khẩn cấp, khu vực "Việc của tôi" nổi bật hẳn khỏi số liệu tham khảo, trường chỉ-
+xem không còn trông như ô nhập bị khoá) — xem 6 mục cuối cùng phía dưới (theo đúng thứ tự thời gian)
+để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1186,6 +1189,77 @@ icon/nhãn/chấm đỏ, bấm vào 1 mục điều hướng đúng trang + tô 
 vẫn mở được bình thường (không bị ảnh hưởng), toast hiện rõ phía trên thanh menu không bị che, và mở
 modal chi tiết (full-screen) trên mobile che đúng thanh menu phía sau (không bị lộ 2 lớp điều hướng
 chồng nhau).
+
+## Sort log mới nhất lên đầu + đánh giá lại toàn bộ visual hierarchy (02/09/2026)
+
+Nguyên văn 2 yêu cầu, gửi cùng lúc với chỉ đạo quy trình đầy đủ (*"khám phá các giao diện đẹp trên thế
+giới => phân tích các màn hình hiện tại => lên kế hoạch thay đổi... => phản biện lại thay đổi => chốt
+kế hoạch => đưa ra bản chỉnh sửa cuối cùng => chỉnh sửa => tái đánh giá và => báo cáo kết quả"*):
+
+1. *"các log lịch sử sort ngày mới nhất lên trên cùng."*
+2. *"Với vai trò người dùng, hãy đánh giá lại toàn bộ giao diện hiện tại, tôi thấy rất khó nhìn. ví dụ
+   như nhìn nhanh không thể xác định được vùng dữ liệu mình cần quan tâm, vùng cần nhập liệu."*
+
+**1. Sort log.** Thêm hàm dùng chung `sortLogsDesc(logs)` (parse `new Date()`, không sửa mảng gốc —
+chỉ đổi THỨ TỰ HIỂN THỊ, không đổi thứ tự lưu trong `DB`) — áp dụng cho toàn bộ 7 nơi từng hiển thị
+log theo đúng thứ tự chèn (insertion order) trước đó: 4 khối `renderLogBlock()` trong modal chi tiết
+đơn vị (đơn vị/đơn cha/phiếu gửi/phiếu trả), timeline trong `openDetailTraModal`, và mọi nơi hiện
+`ghi_chu_log` (4 chỗ)/`bao_cao_sai_thong_tin` (2 chỗ).
+
+**2. Đánh giá lại visual hierarchy.** Đã tra cứu nguyên tắc thiết kế dashboard/enterprise UI 2025-2026
+trước khi sửa (không tự đoán): "kích cỡ/độ đậm làm việc nhiều hơn màu sắc khi quét nhanh", "dành màu
+rực rỡ CHỈ cho cảnh báo/bất thường thật sự — tránh hiệu ứng cầu vồng", "trường chỉ-xem nên đọc được rõ
+như trường có thể sửa, không nên làm mờ đi chỉ vì disabled" (nguồn: UXPin, Aaron Gustafson "Web Form
+Conundrum", secretGeek "Don't make readonly fields less readable"). Sau đó chụp ảnh Chrome thật nhiều
+màn hình (Trang chủ, bảng hàng đợi, form Phân loại, modal chi tiết, chi tiết phiếu gửi KTV) để phân
+tích cụ thể — không phán đoán suông. Phát hiện 3 vấn đề cốt lõi rồi mới sửa:
+
+- **Tín hiệu khẩn cấp phổ biến nhất (badge SLA `slaBadge()`) không có bậc thang.** Trước đó CHỈ 2 mức
+  (đúng hạn = xám, quá hạn = pastel đỏ) — 1 đơn quá hạn 25 giờ và 1 đơn quá hạn **333 giờ (13+ ngày)**
+  hiện ra **giống hệt nhau**, không cách nào phân biệt độ khẩn cấp bằng mắt thường dù đây là tín hiệu
+  xuất hiện ở gần như mọi bảng/hàng đợi trong app. Đã thêm mức thứ 3: quá hạn **trên 72 giờ** (gấp 3
+  lần mức SLA chuẩn 24h của hệ thống) chuyển sang badge **nền đặc + chữ trắng** (`.b-red-solid`, icon
+  ⚠) — khác hẳn các badge pastel còn lại, dùng đúng tinh thần "màu mạnh dành riêng cho cảnh báo thật".
+  `isOverdue()` (hàm riêng dùng để bắt buộc nhập lý do chậm) **giữ nguyên không đổi** — chỉ đổi phần
+  hiển thị, không đụng logic nghiệp vụ.
+- **"Việc của tôi" (khu vực CẦN LÀM NGAY) và "Tổng quan tất cả hàng đợi" (số liệu THAM KHẢO) trông
+  giống hệt nhau về độ nổi bật** — chỉ khác nhau ở dòng chữ tiêu đề, không có gì buộc mắt dừng lại ở
+  khu vực quan trọng hơn trước. Đã thêm modifier `.card-action` (viền trái đỏ cam đậm + tiêu đề đổi
+  màu + icon 🔥) — **chỉ gắn khi thực sự có việc đang chờ** (rỗng thì giữ nguyên card trung tính, không
+  "báo động giả"). Đồng thời tô màu số liệu lớn (`.sc-value`) trong StatCard theo đúng tông cảnh báo
+  khi khác 0 (trước đó số luôn màu đen trung tính, chỉ 1 chấm tròn 8px góc trên phân biệt màu — quá
+  nhỏ để "quét nhanh" nhận ra).
+- **Nhãn nhóm trường trong form dài** (VD "PHÂN LOẠI BẢO HÀNH" / "XỬ LÝ & PHÂN CÔNG" trong form Phân
+  loại) dùng nhầm class `.fine` (vốn dành cho chú thích phụ, màu rất nhạt 11px) — gần như vô hình, mất
+  tác dụng phân tách section. Tách riêng thành class `.form-section-label` (màu ocean-700 + gạch chân
+  màu) để thực sự đọc được như 1 tiêu đề phụ.
+- **Trường disabled/readonly bị làm mờ quá mức, gây hiểu lầm hai chiều**: vừa trông như "1 ô nhập bị
+  lỗi/khoá" (viền rõ + con trỏ "not-allowed", dễ khiến người dùng thử bấm rồi thắc mắc sao không gõ
+  được) vừa làm chữ **khó đọc hơn** dữ liệu vẫn cần tham khảo (màu ink-400 rất nhạt) — đúng 2 lỗi mà
+  tài liệu tham khảo cảnh báo. Đã bỏ viền (border-color:transparent — không còn trông như "ô nhập bị
+  khoá"), đổi con trỏ sang `default` (bớt hàm ý "bị chặn"), và **tăng** độ tương phản chữ lên ink-700
+  (rõ hơn hẳn ink-400 cũ) vì đây vẫn là dữ liệu người dùng cần đọc, chỉ là không sửa được.
+- Bump nhẹ độ đậm/viền của `.workload-pill` (font-weight 700→800, thêm viền màu theo tông) và
+  `.req::after` (dấu `*` bắt buộc, đậm hơn) — hỗ trợ thêm cho nguyên tắc "độ đậm > màu sắc khi quét".
+
+**Tự phản biện trước khi chốt phạm vi:** cân nhắc chuyển hẳn các trường disabled/readonly sang plain
+text (đúng khuyến nghị mạnh nhất trong tài liệu tham khảo) thay vì chỉ làm mềm CSS ô input — quyết
+định **không làm** ở vòng này vì đòi hỏi tách lại markup theo `canEdit` ở nhiều màn hình khác nhau
+(rủi ro/công sức lớn hơn nhiều so với 1 thay đổi CSS thuần), trong khi bản CSS đã đủ giải quyết đúng
+triệu chứng người dùng nêu ra (nhầm là ô nhập được, chữ khó đọc) — ghi nhận đây là hướng cải tiến tiếp
+theo nếu người dùng muốn làm triệt để hơn, không tự ý làm rộng phạm vi khi chưa được yêu cầu.
+
+**Kiểm thử đã chạy:** `test_log_sort.js` (jsdom, xác nhận `sortLogsDesc()` sắp đúng + không sửa mảng
+gốc, và modal chi tiết thực sự hiện log mới nhất trước log cũ dù thứ tự chèn ngược lại) và
+`test_ui_hierarchy.js` (xác nhận 3 mức `slaBadge()` đúng ngưỡng, `isOverdue()` không bị ảnh hưởng,
+`.card-action` gắn đúng theo có/không có việc — test cả 2 nhánh, kể cả vai trò `quanly` luôn rỗng việc
+để đảm bảo nhánh "không nổi bật" cũng đúng, `.form-section-label` xuất hiện đúng trong form Phân loại,
+và rule CSS input disabled/readonly đúng như kỳ vọng). Chạy lại toàn bộ 13 bộ test trước đó — **0 lỗi,
+không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật) trước/sau: Trang chủ với card
+"Việc của tôi" viền đỏ cam nổi bật rõ khỏi "Tổng quan" trung tính, bảng hàng đợi với badge SLA nền đặc
+đỏ nổi bật hẳn khỏi các badge pastel còn lại (so sánh trực tiếp trước/sau cho thấy khác biệt rõ rệt),
+form Phân loại với nhãn nhóm đọc được rõ ràng, và chi tiết phiếu gửi KTV với 4 trường lịch sử không
+còn trông như ô nhập bị khoá trong khi trường thực sự sửa được vẫn nổi bật viền xanh như cũ.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

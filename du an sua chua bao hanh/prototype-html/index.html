@@ -164,6 +164,14 @@ footer.note{max-width:1180px;margin:0 auto;padding:6px 18px 32px;font-size:11px;
   box-shadow:0 1px 2px rgba(15,37,54,.04), 0 4px 14px rgba(15,37,54,.06);}
 .card h2{font-family:var(--font-display);margin:0 0 14px;font-size:16px;font-weight:800;color:var(--ink-900);}
 .card h3{font-family:var(--font-display);margin:0 0 10px;font-size:13px;font-weight:700;color:var(--ink-600);}
+/* Yeu cau nguoi dung (02/09/2026): the "Viec cua toi" (danh sach viec CAN LAM NGAY cua chinh nguoi
+   dang xem) va the "Tong quan tat ca hang doi" (so lieu THAM KHAO chung) truoc day dung CHUNG 1 kieu
+   card trung tinh, chi khac o phan chu - phai doc het tieu de moi biet cai nao la "vung can quan tam
+   ngay" - vi pham nguyen tac "kich co/do dam phai lam viec truoc mau sac khi quet nhanh". Them modifier
+   ".card-action" (vien trai mau coral dam) - CHI gan khi thuc su co viec dang cho (mine.length>0),
+   khong gan khi rong (khong co gi can quan tam thi khong can noi bat). */
+.card.card-action{border-left:4px solid var(--coral-500);}
+.card.card-action h3{color:var(--coral-700);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 @media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
@@ -184,13 +192,30 @@ select:not(:disabled),
 textarea:not(:disabled):not([readonly]){
   border-color:var(--ocean-400);
 }
+/* Yeu cau nguoi dung (02/09/2026): "kho phan biet vung du lieu can quan tam, vung can nhap lieu".
+   O disabled/readonly TRUOC DAY van giu day du hinh dang 1 "o form" (vien ro + nen xam + con tro
+   "khong duoc phep") - nhin qua de bi tuong nham la 1 o nhap con dung duoc, chi la dang loi ("tai
+   sao go khong duoc?"), thay vi hieu ngay day chi la DU LIEU THAM KHAO da chot khong doi duoc nua.
+   Da nghien cuu tham khao (Aaron Gustafson - "Web Form Conundrum", secretGeek - "Don't make readonly
+   fields less readable"): bo VIEN (dau hieu "day la o nhap" chinh no nam o vien mau), doi con tro tu
+   "not-allowed" (ham y "co the thao tac nhung bi chan") sang "default" (ham y trung tinh hon), VA
+   quan trong nhat - TANG do tuong phan chu tu ink-400 (mo, kho doc) len ink-700 (ro rang) vi nguoi
+   dung VAN CAN doc duoc gia tri (VD ma van don, ngay gui) du khong sua duoc - lam mo chu chi vi
+   disabled la phan tac dung, khong phai loi UX dung. */
 input:disabled,input[readonly],select:disabled,textarea:disabled,textarea[readonly]{
-  background:var(--surface-200);color:var(--ink-400);border-color:var(--line);cursor:not-allowed;
+  background:var(--surface-100);color:var(--ink-700);border-color:transparent;cursor:default;
 }
 input:focus,select:focus,textarea:focus{outline:2px solid var(--ocean-500);outline-offset:1px;border-color:var(--ocean-500);}
 textarea{resize:vertical;min-height:56px;}
 .field{margin-bottom:12px;}
-.req::after{content:" *";color:var(--coral-500);}
+.req::after{content:" *";color:var(--coral-600);font-weight:900;font-size:13px;}
+/* Nhan nhom truong trong 1 form dai (VD "PHAN LOAI BAO HANH" / "XU LY & PHAN CONG" trong form Phan
+   loai) - truoc day dung chung class ".fine" (mau ink-400 rat nhat, 11px) von danh cho chu thich phu,
+   khien nhan nhom gan nhu vo hinh, khong con dong vai tro phan tach section ro rang nhu du dinh. Tach
+   thanh class rieng, dung mau nhan (ocean-700) + duong ke duoi de thuc su doc duoc nhu 1 tieu de phu. */
+.form-section-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:800;
+  color:var(--ocean-700);margin:14px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--ocean-100);}
+.form-section-label:first-child{margin-top:0;}
 
 /* ---------- Buttons ---------- */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid transparent;
@@ -228,6 +253,15 @@ tr:hover td{background:var(--surface-100);}
 .b-amber{background:var(--amber-100);color:var(--amber-700);}
 .b-red{background:var(--coral-100);color:var(--coral-700);}
 .b-purple{background:var(--violet-100);color:var(--violet-700);}
+/* Yeu cau nguoi dung (02/09/2026): "nhin nhanh khong the xac dinh duoc vung du lieu minh can quan
+   tam" - tin hieu khan cap PHO BIEN NHAT xuyen suot app la badge SLA (slaBadge()), nhung truoc day
+   moi muc qua han (25h hay 333h - qua han 13+ NGAY) deu dung chung 1 mau pastel .b-red nhu nhau,
+   khong co bac thang do khan cap nao ca (dung nghien cuu da tra cuu: "mau sac ruc ro nen danh rieng
+   cho canh bao that su khan cap", "kich co/do dam nhat dong vai tro lon hon mau sac khi can quet
+   nhanh"). Them 1 muc "khan cap that su" moi, dung nen dac mau + chu trang (khac han cac badge pastel
+   con lai trong app) - CO CHU DICH chi dung cho dung truong hop nay, khong lam dai tra cac badge
+   khac, dung tinh than "dung mau manh 1 cach tiet kiem". */
+.b-red-solid{background:var(--coral-600);color:#fff;font-weight:800;}
 
 .muted{color:var(--ink-500);}
 .small{font-size:12px;}
@@ -320,16 +354,28 @@ a.link:hover{text-decoration:underline;}
 .sc-value{font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--ink-900);}
 .dot-gray{background:var(--ink-400);} .dot-blue{background:var(--ocean-500);} .dot-green{background:var(--teal-500);}
 .dot-amber{background:var(--amber-500);} .dot-red{background:var(--coral-500);} .dot-purple{background:var(--violet-500);}
+/* Yeu cau nguoi dung (02/09/2026): so lieu (.sc-value) truoc day LUON mau den trung tinh (ink-900)
+   bat ke tone canh bao gi - chi co 1 cham tron 8px o goc tren phan biet mau, qua nho de "nhin nhanh"
+   nhu nghien cuu khuyen nghi ("mau sac dong vai tro truyen dat trang thai" - can dat o noi de thay
+   nhat, khong phai 1 cham nho o goc). Khi the KHONG bi muted (tuc count>0, dang co viec that), to
+   mau con so lon theo dung tone - mat nguoi dung bat duoc ngay "co so mau do/cam" ma khong can doc
+   nhan. The .muted (count=0) khong doi gi (van ink-900 nhat, dung nguyen tac "mute khi = 0" da co). */
+.stat-card:not(.muted) .sc-value.tone-gray{color:var(--ink-700);}
+.stat-card:not(.muted) .sc-value.tone-blue{color:var(--ocean-600);}
+.stat-card:not(.muted) .sc-value.tone-green{color:var(--teal-600);}
+.stat-card:not(.muted) .sc-value.tone-amber{color:var(--amber-600);}
+.stat-card:not(.muted) .sc-value.tone-red{color:var(--coral-600);}
+.stat-card:not(.muted) .sc-value.tone-purple{color:var(--violet-600);}
 
 .workload-strip{display:flex;flex-wrap:wrap;gap:8px;}
-.workload-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 8px 7px 14px;font-size:12.5px;
-  font-weight:700;border:none;cursor:pointer;transition:filter .15s;font-family:var(--font-body);}
-.workload-pill:hover{filter:brightness(.97);}
-.workload-pill.tone-red{background:var(--coral-100);color:var(--coral-700);}
-.workload-pill.tone-amber{background:var(--amber-100);color:var(--amber-700);}
-.workload-pill.tone-blue{background:var(--ocean-100);color:var(--ocean-700);}
-.workload-pill.tone-purple{background:var(--violet-100);color:var(--violet-700);}
-.workload-pill.tone-gray{background:var(--surface-200);color:var(--gray-600);}
+.workload-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 10px 8px 16px;font-size:13.5px;
+  font-weight:800;border:1.5px solid transparent;cursor:pointer;transition:filter .15s,transform .1s;font-family:var(--font-body);}
+.workload-pill:hover{filter:brightness(.97);transform:translateY(-1px);}
+.workload-pill.tone-red{background:var(--coral-100);color:var(--coral-700);border-color:#f3b8b8;}
+.workload-pill.tone-amber{background:var(--amber-100);color:var(--amber-700);border-color:#eecb8f;}
+.workload-pill.tone-blue{background:var(--ocean-100);color:var(--ocean-700);border-color:#a9d6ee;}
+.workload-pill.tone-purple{background:var(--violet-100);color:var(--violet-700);border-color:#d4c3f8;}
+.workload-pill.tone-gray{background:var(--surface-200);color:var(--gray-600);border-color:var(--line);}
 .wp-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;
   border-radius:50%;color:#fff;font-size:11px;font-weight:800;}
 .tone-red .wp-count{background:var(--coral-500);} .tone-amber .wp-count{background:var(--amber-500);}
@@ -482,6 +528,14 @@ function addLog(entity_type, entity_id, tu, den, ghi_chu){
     thoi_gian: nowStr(), ghi_chu: ghi_chu||''
   });
 }
+/* Yeu cau nguoi dung (02/09/2026): "cac log lich su sort ngay moi nhat len tren cung." Ham dung
+   chung cho MOI noi hien danh sach log/ghi chu theo thoi gian (DB.logs, ghi_chu_log, bao_cao_sai_
+   thong_tin...) - luon tra ve BAN SAO da sap xep giam dan theo thoi_gian (moi nhat truoc), khong sua
+   mang goc (tranh lam lech thu tu luu trong DB, chi doi thu tu HIEN THI). Parse bang new Date() thay
+   vi so sanh chuoi truc tiep de dung bat ke dinh dang gio phut giay co day du hay khong. */
+function sortLogsDesc(logs){
+  return (logs||[]).slice().sort((a,b)=> new Date(b.thoi_gian) - new Date(a.thoi_gian));
+}
 
 function save(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
 function load(){
@@ -596,11 +650,18 @@ function hoursSince(dateStr){
   return (Date.now() - t) / 3600000;
 }
 function isOverdue(dateStr){ return hoursSince(dateStr) > 24; }
+/* Yeu cau nguoi dung (02/09/2026, "danh gia lai toan bo giao dien...khong the xac dinh duoc vung du
+   lieu can quan tam"): truoc day CHI co 2 muc (dung han = xam, qua han = pastel do), du 1 muc "qua
+   han 333h" (13+ NGAY) va "qua han 25h" (moi qua 1 tieng) deu hien GIONG HET NHAU - khong co cach
+   nao phan biet do khan cap bang mat thuong. Them muc thu 3: qua han QUA NGUONG 72h (gap 3 lan muc
+   SLA 24h chuan cua he thong, xem CLAUDE.md "Phan hoi vong 2 muc 4") chuyen sang badge nen dac +
+   chu trang (.b-red-solid) + icon canh bao khac han, thay vi chi doi mau chu nhat nhat. */
 function slaBadge(dateStr){
   if(!dateStr) return '';
   const h = hoursSince(dateStr);
-  const overdue = h>24;
-  return `<span class="badge ${overdue?'b-red':'b-gray'}" title="Thời gian chờ xử lý">${overdue?'⏱ Quá hạn ':'⏱ '}${Math.floor(h)}h</span>`;
+  if(h<=24) return `<span class="badge b-gray" title="Thời gian chờ xử lý">⏱ ${Math.floor(h)}h</span>`;
+  if(h<=72) return `<span class="badge b-amber" title="Quá hạn SLA 24h">⏱ Quá hạn ${Math.floor(h)}h</span>`;
+  return `<span class="badge b-red-solid" title="Quá hạn nghiêm trọng — trên 3 lần mức SLA 24h chuẩn">⚠ Quá hạn ${Math.floor(h)}h</span>`;
 }
 
 /* ---------- Time Filtering (Yêu cầu 4: Lọc theo tuần, theo tháng để giới hạn dữ liệu lớn) ---------- */
@@ -734,7 +795,8 @@ function openParentFirstUnitDetail(scId){
    CHUOI cha no thuoc ve (phieu_sc - don cha, phieu_gui - phieu gui hang, phieu_tra - phieu tra ve),
    du addLog() thuc te da ghi ca 4 entity_type nay (xem grep "addLog(" xuyen file). Ham dung chung
    nay ve 1 "vung log" doc lap, dung lai cho ca 4 nguon thay vi lap code 4 lan. */
-function renderLogBlock(title, logs){
+function renderLogBlock(title, logsIn){
+  const logs = sortLogsDesc(logsIn);
   const body = logs.length === 0 ? '<div class="fine" style="font-style:italic;">Chưa có diễn biến.</div>' : `
     <div class="logbox" style="max-height:180px;">
       ${logs.map(l => `
@@ -788,7 +850,7 @@ function openDetailUnitModal(unitId) {
      nghiep vu can moi vai tro deu thay. */
   const meRole = currentUser()?.vai_tro;
   const canSeeNoiBo = ['adminbh','qtri','quanly'].includes(meRole);
-  const baoCaoSai = p.bao_cao_sai_thong_tin || [];
+  const baoCaoSai = sortLogsDesc(p.bao_cao_sai_thong_tin);
   const noiBoHtml = (canSeeNoiBo && baoCaoSai.length>0) ? `
     <div class="card" style="padding:10px 12px;background:var(--coral-100);border-radius:12px;margin-top:10px;">
       <h3 style="margin-bottom:6px;font-size:11.5px;color:var(--coral-700);">🐞 Ghi nhận nội bộ: KTV báo cáo sai thông tin (${baoCaoSai.length}) <span class="fine">— chỉ Admin BH/Quản lý thấy mục này</span></h3>
@@ -871,7 +933,7 @@ function openDetailUnitModal(unitId) {
       <div id="glm_unit_wrap" style="margin-top:14px;">
         <h3 style="font-size:13px;color:var(--ink-900);margin-bottom:8px;">💬 Trao đổi / Phản hồi của đơn hàng</h3>
         ${(g.ghi_chu_log||[]).length===0 ? '<div class="fine" style="font-style:italic;">Chưa có trao đổi nào.</div>' :
-          `<div class="logbox" style="max-height: 140px; margin-bottom:6px;">${g.ghi_chu_log.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`}
+          `<div class="logbox" style="max-height: 140px; margin-bottom:6px;">${sortLogsDesc(g.ghi_chu_log).map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`}
         <div class="field" style="margin-top:4px; display:flex; gap:8px; max-width:none;">
           <input type="text" id="glm_unit_txt" placeholder="Nhập ghi chú nhanh..." style="flex:1;height:34px;">
           <button class="btn small" onclick="addGhiChuLogFromDetail('${g.id}', '${unitId}')" style="height:34px;">Gửi</button>
@@ -912,7 +974,7 @@ function openDetailTraModal(traId) {
     that_lac_da_den_bu:['Thất lạc - đã đền bù','b-gray']
   };
   const st = stMap[t.trang_thai] || ['?','b-gray'];
-  const logs = DB.logs.filter(l => l.entity_type === 'phieu_tra' && l.entity_id === traId);
+  const logs = sortLogsDesc(DB.logs.filter(l => l.entity_type === 'phieu_tra' && l.entity_id === traId));
 
   const lkTableHtml = `
     <table style="width:100%;font-size:12px;margin-top:6px;">
@@ -1402,8 +1464,8 @@ function renderHome(){
     <h2>${ROLE_ICON[me.vai_tro]||''} Xin chào, ${esc(me.ten)}</h2>
     <div class="fine">Vai trò: ${roleLabel(me.vai_tro)}${me.mien?(' · Miền '+esc(me.mien)):''} · ${esc(me.email)}</div>
   </div>
-  <div class="card">
-    <h3>Việc của tôi</h3>
+  <div class="card${mine.length>0?' card-action':''}">
+    <h3>${mine.length>0?'🔥 ':''}Việc của tôi</h3>
     ${mine.length===0
       ? '<div class="empty">🎉 Không có việc nào đang chờ bạn xử lý ngay lúc này.</div>'
       : `<div class="workload-strip">${mine.map(i=>`
@@ -1417,7 +1479,7 @@ function renderHome(){
       ${items.map(i=>`
         <div class="stat-card${i.count===0?' muted':''}" onclick="location.hash='${i.hash}';render();">
           <div class="sc-top"><span class="sc-label">${esc(i.label)}</span><span class="sc-dot ${toneDot[i.tone]}"></span></div>
-          <div class="sc-value">${i.count}</div>
+          <div class="sc-value tone-${i.tone}">${i.count}</div>
         </div>`).join('')}
     </div>
   </div>`;
@@ -1475,7 +1537,7 @@ function renderPhieuGuiDetail(id){
   const needBoSung = sc.filter(s=> childrenOf(s.id).some(c=>c.trang_thai==='cho_bo_sung_tt'));
 
   const logHtml = (g.ghi_chu_log||[]).length===0 ? '<div class="fine">Chua co ghi chu nao.</div>' :
-    `<div class="logbox">${g.ghi_chu_log.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`;
+    `<div class="logbox">${sortLogsDesc(g.ghi_chu_log).map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`;
 
   return `
   <div class="card">
@@ -2166,7 +2228,7 @@ function renderKhoTiepNhan(){
 function openGhiChuLogModal(guiId){
   const g = findPhieuGui(guiId);
   const logHtml = (g.ghi_chu_log||[]).length===0 ? '<div class="fine">Chua co trao doi nao.</div>' :
-    `<div class="logbox">${g.ghi_chu_log.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`;
+    `<div class="logbox">${sortLogsDesc(g.ghi_chu_log).map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`;
   openModal('Trao doi ve phieu '+guiId, `
     ${g.su_co_tiep_nhan?`<div class="banner red"><b>⚠ Kho da bao su co:</b> ${esc(g.su_co_ly_do)} — ${esc(g.su_co_ghi_chu)}</div>`:''}
     ${logHtml}
@@ -2754,7 +2816,7 @@ function renderAdminGuiDetail(guiId){
       ${coTheDayLai?`<button class="btn small secondary" style="float:right;" onclick="adminDayLaiChuaTiepNhan('${guiId}')">↩ Day lai chua tiep nhan</button>`:''}
     </h2>
     ${g.su_co_tiep_nhan?`<div class="banner red">⚠ Kho da bao su co tiep nhan: <b>${esc(g.su_co_ly_do)}</b> — ${esc(g.su_co_ghi_chu)}. (Chi la canh bao, van xu ly binh thuong duoc.)</div>`:''}
-    ${(g.ghi_chu_log||[]).length>0?`<div class="banner blue"><b>Ghi chu/phan hoi tu KTV:</b><br>${g.ghi_chu_log.map(l=>`${fmtDate(l.thoi_gian)}: ${esc(l.noi_dung)}`).join('<br>')}</div>`:''}
+    ${(g.ghi_chu_log||[]).length>0?`<div class="banner blue"><b>Ghi chu/phan hoi tu KTV:</b><br>${sortLogsDesc(g.ghi_chu_log).map(l=>`${fmtDate(l.thoi_gian)}: ${esc(l.noi_dung)}`).join('<br>')}</div>`:''}
     ${scList.length===0?'<div class="empty">Khong co don nao.</div>':scList.map(s=>renderParentCard(s)).join('')}
   </div>`;
 }
@@ -2887,7 +2949,7 @@ function phanLoaiFormHtml(w, since, unit){
   return `
     ${isOverdue(since)?lyDoChamFieldHtml('m'):''}
     ${w.expired?`<div class="banner red"><b>⚠ SAN PHAM NAY DA HET THOI GIAN BAO HANH</b> (${w.months} thang, het han ${w.limitDate}). Day CHI la canh bao — mail/ma phe duyet chi bat buoc neu ban chon "Ngoai bao hanh" ben duoi (chot 21/08/2026, vong 2).</div>`:''}
-    <div class="fine" style="text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:6px;">Phan loai bao hanh</div>
+    <div class="form-section-label">Phan loai bao hanh</div>
     ${lkThucTeHtml}
     <div class="field"><label class="req">Loai bao hanh</label>
       <select id="m_loaibh" onchange="onLoaiBHChange()"><option value="trong_bh">Trong bao hanh</option><option value="ngoai_bh">Ngoai bao hanh</option></select></div>
@@ -2896,7 +2958,7 @@ function phanLoaiFormHtml(w, since, unit){
       <label style="margin-top:6px;">Ma phe duyet (tuy chon)</label><input type="text" id="m_maphePD">
     </div>
     <hr class="divider">
-    <div class="fine" style="text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:6px;">Xu ly &amp; phan cong</div>
+    <div class="form-section-label">Xu ly &amp; phan cong</div>
     <div class="field"><label class="req">Loai doi tru cho KTV</label>
       <select id="m_loaidoitru">
         <option value="doi_tra" ${dexuatDoiTru!=='tru_cong_no'?'selected':''}>Doi tra</option>
@@ -3048,7 +3110,7 @@ function submitYeuCauBoSung(scId){
    muc dich xu ly vi pham sau nay, khac voi log trang thai thong thuong. */
 function openBaoCaoSaiModal(scId){
   const s = findPhieuSC(scId);
-  const list = s.bao_cao_sai_thong_tin||[];
+  const list = sortLogsDesc(s.bao_cao_sai_thong_tin);
   const logHtml = list.length===0 ? '<div class="fine">Chua co ghi nhan nao.</div>' :
     `<div class="logbox">${list.map(l=>`<div><b>${fmtDate(l.thoi_gian)}</b> — ${esc(DB.users.find(u=>u.email===l.tac_gia)?.ten||l.tac_gia)}: ${esc(l.noi_dung)}</div>`).join('')}</div>`;
   openModal('KTV bao cao sai thong tin — '+scId, `
