@@ -68,10 +68,12 @@ ranh giới), rồi tiếp theo là đổi menu mobile từ drawer sang bottom t
 ngày), rồi sort log mới nhất lên đầu + 1 vòng đánh giá lại visual hierarchy toàn hệ thống (02/09/2026:
 badge SLA phân 3 mức khẩn cấp, khu vực "Việc của tôi" nổi bật hẳn khỏi số liệu tham khảo, trường chỉ-
 xem không còn trông như ô nhập bị khoá), rồi cuối cùng chuyển nút thao tác của 2 "UI chi tiết" lên
-top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu), và gần nhất là 1 vòng 3 yêu
+top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu), và tiếp theo là 1 vòng 3 yêu
 cầu (03/09/2026): lời chào rút gọn lên topbar, gộp 2 settings admin về 1 trang `#/qtri/cai-dat`, và
-sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc từng tab — xem 8 mục cuối cùng phía
-dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
+sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc từng tab, rồi gần nhất là cột Trạng
+thái chuyển lên vị trí 2 trong mọi bảng + UI chi tiết đơn bảo hành có đầy đủ nút thao tác cố định ở
+footer (03/09/2026, cùng ngày) — xem 9 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có
+chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1360,6 +1362,81 @@ toàn bộ 17 bộ test — **0 lỗi, không hồi quy**. Xác nhận thêm b�
 Trang chủ thu gọn mặc định với huy hiệu góc icon đúng số liệu, so sánh cạnh-nhau bảng dữ liệu thu gọn
 vs mở rộng cho thấy rõ nội dung giãn thêm, trang Cài đặt hệ thống hiện đủ 2 danh mục dạng lưới, và
 mobile (390px) không bị ảnh hưởng (greeting ẩn đúng theo thiết kế, bottom-nav không đổi).
+
+## Cột trạng thái lên vị trí 2 + đầy đủ nút thao tác trong UI chi tiết (03/09/2026)
+
+Nguyên văn 2 yêu cầu (gửi liên tiếp, không chờ yêu cầu trước xong):
+
+1. *"cột trạng thái đẩy sang vị trí thứ 2 để tiện cho người dùng kiểm soát thông tin cần thiết."*
+2. *"tôi muốn trong giao diện chi tiết của đơn bảo hành có đầy đủ các chức năng thao tác cho đơn bảo
+   hành. Các nút này sẽ cố định ở top hoặc bottom (tùy thiết kế thuận tiện cho người dùng)."*
+
+**1. Cột "Trạng thái" → vị trí 2.** Rà toàn bộ file, tìm đúng 7 bảng có cột Trạng thái (không tính
+các bảng key-value 2 cột trong modal chi tiết — không áp dụng khái niệm "cột" ở đó): "Phiếu gửi hàng
+của tôi", "Danh sách đơn trong phiếu gửi", "Tra cứu tiến độ" (KTV), "Xác nhận nhận hàng trả" (KTV),
+bảng thống nhất Admin BH, "Việc của tôi" (NV), "Tra cứu mọi đơn hàng" (Quản lý). Ở mọi bảng, đưa
+Trạng thái lên **ngay sau cột định danh chính** (ID/Mã đơn vị/Mã phiếu) — cột checkbox chọn hàng loạt
+(nếu có) không tính là "vị trí 1" vì đó là control thao tác, không phải dữ liệu. 3 bảng khác có cấu
+trúc theo TAB riêng cho từng trạng thái (Kế toán duyệt, Kho đóng gói — trạng thái đã ngầm hiểu qua
+tab đang mở) **cố ý không có cột Trạng thái**, không thuộc phạm vi thay đổi này.
+
+Nhân tiện sửa 1 lỗi nhỏ tự phát hiện: `colspan="8"` ở dòng "Không tìm thấy đơn nào khớp" của bảng
+"Tra cứu mọi đơn hàng" (Quản lý) trong khi bảng chỉ có 7 cột — chỉnh lại đúng `colspan="7"`.
+
+**2. UI chi tiết đơn bảo hành có đầy đủ nút thao tác.** Trước đó `openDetailUnitModal()` (màn "Chi
+tiết đơn bảo hành con") là màn **thuần đọc** — chỉ có nút "Đóng chi tiết" (đã chuyển lên header ở
+vòng trước), mọi thao tác nghiệp vụ (Phân loại, Yêu cầu bổ sung, Chẩn đoán...) chỉ bấm được từ đúng
+dòng trong bảng danh sách, phải đóng chi tiết rồi quay lại bảng mới làm được. Đã thêm hàm dùng chung
+**`unitActionButtonsHtml(u, p)`** — gom **đúng các nút đã có sẵn** (không viết lại logic nghiệp vụ,
+chỉ gọi lại đúng các hàm `open*Modal()`/`xacNhanHoanTat()` đã tồn tại và đã test từ trước), hiện đúng
+theo **vai trò đang đăng nhập + trạng thái hiện tại của đơn vị** — đồng bộ 1-đối-1 với điều kiện đã
+dùng trong `renderAdminUnifiedTable()`/`renderNvViecCuaToi()`/`ktvTraCuuRowsHtml()` để bảng và modal
+chi tiết không bao giờ lệch nhau về "khi nào nút này xuất hiện":
+
+| Vai trò | Trạng thái đơn vị | Nút hiện ra |
+|---|---|---|
+| Admin BH | `cho_phan_loai` | Phân loại, Yêu cầu bổ sung (trừ khách lẻ), 🐞 Báo cáo sai (trừ khách lẻ) |
+| Admin BH | `admin_can_xem_lai` | Phân loại lại, 🐞 Báo cáo sai (trừ khách lẻ) — **không** có "Yêu cầu bổ sung" (xem lỗi đã sửa bên dưới) |
+| Admin BH | `cho_admin_xac_nhan` | ✔️ Xác nhận hoàn tất, Yêu cầu làm lại |
+| Admin BH | `san_sang_gom_phieu_tra` và chưa thuộc phiếu trả nào | ⚡ Trả trực tiếp KTV, ⚡ Giao trực tiếp Kho |
+| KTV | `cho_bo_sung_tt` và đúng người tạo phiếu gửi | ✍️ Bổ sung thông tin |
+| NV | `cho_chan_doan` và đúng NV được gán | 🔧 Chẩn đoán |
+| `quanly`/`qtri`/vai trò khác không khớp điều kiện trên | — | Không có nút nào (đúng tinh thần "chỉ xem") |
+
+**Vị trí: đặt ở thanh footer riêng (`.modal-foot`), không gộp vào header.** Tự cân nhắc giữa 2
+phương án cố định top/bottom mà yêu cầu cho phép tự chọn: header đã có sẵn tiêu đề + nút "Đóng chi
+tiết" — nếu nhồi thêm 2-3 nút nghiệp vụ vào cùng 1 hàng sẽ chật, đặc biệt trên mobile. Theo đúng quy
+ước phổ biến "header = điều hướng/đóng, footer = vùng hành động chính" (thanh CTA đáy của Gmail, các
+app thương mại điện tử), đã thêm tham số thứ 5 `footerActions` cho `openModal()`, render thành 1
+`<div class="modal-foot">` **không cuộn** (giống `.modal-head`) ngay dưới `.modal-body`. Chỉ render
+khi có ít nhất 1 nút phù hợp — đơn đã kết thúc hoặc vai trò không có quyền thao tác thì không có
+thanh này, tránh 1 thanh trống vô nghĩa.
+
+**1 lỗi có thật phát hiện + đã sửa trong lúc build (không phải do tính năng mới gây ra, đã tồn tại từ
+trước):** `openYeuCauBoSungModal(scId)` bên trong chỉ tìm đơn vị đang **đúng** `cho_phan_loai`
+(`childrenOf(scId).filter(c=>c.trang_thai==='cho_phan_loai')`) — nhưng bảng thống nhất Admin BH trước
+đó vẫn hiện nút "Yêu cầu bổ sung" cho **cả** `admin_can_xem_lai`, bấm vào chỉ nhận `alert()` báo lỗi
+"Không có đơn vị nào ở trạng thái chờ phân loại" mà không làm gì cả — 1 nút hiện ra nhưng luôn là ngõ
+cụt cho riêng trường hợp đó. Đã sửa đồng bộ ở cả 2 nơi (bảng thống nhất và modal chi tiết mới): chỉ
+hiện "Yêu cầu bổ sung" khi đúng `trang_thai==='cho_phan_loai'`.
+
+**Phạm vi cố ý chưa làm:** chỉ áp dụng cho `openDetailUnitModal()` ("Chi tiết đơn bảo hành con")
+đúng theo đúng nghĩa "đơn bảo hành" trong yêu cầu — **chưa** mở rộng sang `openDetailTraModal()`
+("Chi tiết phiếu trả bảo hành", 1 loại UI chi tiết khác, quản lý entity `phieu_tra` chứ không phải
+`phieu_sc_ct`) dù cơ chế `footerActions` dùng chung được ngay nếu cần (Kế toán Duyệt/Từ chối, Kho
+đóng gói/gửi, KTV xác nhận nhận). Sẽ làm nếu người dùng yêu cầu tiếp.
+
+**Kiểm thử đã chạy:** `test_detail_footer_actions.js` (jsdom) — dựng 1 đơn thật qua đủ luồng
+(tạo phiếu gửi → Kho tiếp nhận → Admin tiếp nhận nội bộ → xác nhận SL) rồi kiểm tra đúng nút hiện ra
+ở **từng bước trạng thái** (cho_phan_loai → phân loại xong sang cho_chan_doan → NV chẩn đoán xong
+sang cho_admin_xac_nhan → xác nhận hoàn tất xong sang san_sang_gom_phieu_tra), xác nhận bấm nút
+"Phân loại" từ trong modal chi tiết mở đúng form thật (không chỉ hiện thị), xác nhận NV khác (không
+được gán) và vai trò `quanly` mở cùng đơn thì **không** thấy nút nào, và xác nhận đơn đã có
+`phieu_tra_id` thì ẩn đúng 2 nút "tạo phiếu trả nhanh" (tránh tạo trùng). Chạy lại toàn bộ 17 bộ test
+trước đó — **0 lỗi, không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật): thanh footer
+hiện đúng nút theo từng trường hợp (khách lẻ chỉ 1 nút, đơn KTV thường đủ 3 nút xếp gọn 1 hàng), vẫn
+cố định đúng vị trí khi cuộn sâu nội dung, và hoạt động đúng trên mobile (390px) — header/footer đều
+cố định, chỉ phần giữa cuộn.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

@@ -341,11 +341,22 @@ tr:hover td{background:var(--surface-100);}
 .modal-close{cursor:pointer;color:var(--ink-400);font-size:20px;line-height:1;background:none;border:none;width:36px;height:36px;
   border-radius:8px;flex-shrink:0;}
 .modal-close:hover{background:var(--surface-200);}
+/* Yeu cau nguoi dung (03/09/2026): "giao dien chi tiet cua don bao hanh co day du cac chuc nang thao
+   tac ... cac nut nay se co dinh o top hoac bottom (tuy thiet ke thuan tien)". Da chon BOTTOM (thanh
+   footer dinh day, khong cuon theo noi dung - giong .modal-head) cho NHOM NUT NGHIEP VU theo dung
+   trang thai/vai tro (co the toi 2-3 nut cung luc, VD "Phan loai" + "Yeu cau bo sung" + "🐞 Bao cao
+   sai"), de KHONG canh tranh cho voi tieu de + nut "Dong chi tiet" da co san tren header - giu dung
+   quy uoc pho bien "header = dieu huong/dong, footer = vung hanh dong chinh" (VD thanh CTA cua Gmail/
+   cac app thuong mai dien tu). CHI render khi co it nhat 1 nut phu hop (unitActionButtonsHtml() tra
+   ve chuoi rong neu vai tro/trang thai hien tai khong co thao tac gi), tranh 1 thanh trong vo nghia. */
+.modal-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 24px;border-top:1px solid var(--line);
+  flex-shrink:0;background:var(--surface-100);}
 @media (max-width:767px){
   .modal-bg{padding:0;}
   .modal{inset:0;position:fixed;border-radius:0;max-width:none;max-height:none;width:100%;}
   .modal-head{padding:14px 16px;}
   .modal-body{padding:16px;}
+  .modal-foot{padding:10px 16px calc(10px + env(safe-area-inset-bottom));}
 }
 
 /* ---------- Toast ---------- */
@@ -873,6 +884,47 @@ function renderLogBlock(title, logsIn){
     ${body}
   </div>`;
 }
+/* Yeu cau nguoi dung (03/09/2026): "giao dien chi tiet cua don bao hanh co day du cac chuc nang thao
+   tac cho don bao hanh". Truoc do openDetailUnitModal() la man THUAN DOC (chi co nut "Dong chi
+   tiet") - moi thao tac nghiep vu (Phan loai, Yeu cau bo sung, Chan doan...) chi bam duoc tu dong
+   trong bang danh sach, phai dong chi tiet roi quay lai bang moi lam duoc. Ham nay gom lai DUNG cac
+   nut da co san (KHONG code lai logic nghiep vu, chi goi lai dung cac ham open*Modal()/xacNhanHoanTat()
+   da ton tai va da test), theo dung dieu kien vai tro + trang thai hien tai cua don vi - dong bo
+   1-doi-1 voi dieu kien da dung trong renderAdminUnifiedTable()/renderNvViecCuaToi()/ktvTraCuuRowsHtml()
+   de khong lech logic giua bang va modal chi tiet. Tra ve chuoi rong neu vai tro dang xem khong co
+   thao tac gi voi don vi nay (VD vai tro quanly/qtri chi xem, hoac don da ket thuc). */
+function unitActionButtonsHtml(u, p){
+  const me = currentUser();
+  const role = me.vai_tro;
+  const isKhachLe = !p.phieu_gui_id;
+  const btns = [];
+  if(role==='adminbh'){
+    if(u.trang_thai==='cho_phan_loai' || u.trang_thai==='admin_can_xem_lai'){
+      btns.push(`<button class="btn small" onclick="openPhanLoaiModal('${u.id}')">${u.trang_thai==='admin_can_xem_lai'?'Phân loại lại':'Phân loại'}</button>`);
+      /* openYeuCauBoSungModal() chi tim duoc don vi dang DUNG 'cho_phan_loai' (xem submitYeuCauBoSung)
+         - khong hien nut nay cho 'admin_can_xem_lai' de tranh bam vao chi nhan alert loi, khac voi
+         bang thong nhat truoc day hien ca 2 truong hop nhu nhau (da sua luon dong bo ben bang). */
+      if(u.trang_thai==='cho_phan_loai' && !isKhachLe){
+        btns.push(`<button class="btn small secondary" onclick="openYeuCauBoSungModal('${p.id}')">Yêu cầu bổ sung</button>`);
+      }
+      if(!isKhachLe){
+        const soBaoCaoSai = (p.bao_cao_sai_thong_tin||[]).length;
+        btns.push(`<button class="btn small secondary" onclick="openBaoCaoSaiModal('${p.id}')" title="Ghi nhận KTV báo cáo sai thông tin">🐞 Báo cáo sai${soBaoCaoSai>0?' ('+soBaoCaoSai+')':''}</button>`);
+      }
+    } else if(u.trang_thai==='cho_admin_xac_nhan'){
+      btns.push(`<button class="btn small green" onclick="xacNhanHoanTat('${u.id}')">✔️ Xác nhận hoàn tất</button>`);
+      btns.push(`<button class="btn small red" onclick="openYeuCauLamLaiModal('${u.id}')">Yêu cầu làm lại</button>`);
+    } else if(u.trang_thai==='san_sang_gom_phieu_tra' && !u.phieu_tra_id){
+      btns.push(`<button class="btn small secondary" onclick="openTaoPhieuTraNhanhModal('${u.id}','ktv')" title="Tự tạo 1 phiếu trả riêng, chuyển thẳng cho KTV xác nhận">⚡ Trả trực tiếp KTV</button>`);
+      btns.push(`<button class="btn small secondary" onclick="openTaoPhieuTraNhanhModal('${u.id}','kho')" title="Tự tạo 1 phiếu trả riêng, chuyển thẳng cho Kho đóng gói">⚡ Giao trực tiếp Kho</button>`);
+    }
+  } else if(role==='ktv' && u.trang_thai==='cho_bo_sung_tt' && p.nguoi_tao===me.email){
+    btns.push(`<button class="btn small amber" onclick="openBoSungModal('${p.id}')">✍️ Bổ sung thông tin</button>`);
+  } else if(role==='nv' && u.trang_thai==='cho_chan_doan' && u.nguoi_sua_chua===me.email){
+    btns.push(`<button class="btn small" onclick="openChanDoanModal('${u.id}')">🔧 Chẩn đoán</button>`);
+  }
+  return btns.join('');
+}
 function openDetailUnitModal(unitId) {
   const u = findCT(unitId);
   const p = findPhieuSC(u.parent_id);
@@ -1000,10 +1052,13 @@ function openDetailUnitModal(unitId) {
       </div>
     ` : ''}
   `;
-  /* Yeu cau 02/09/2026: nut thao tac ("Dong chi tiet") chuyen len modal-head (canh tieu de) thay vi
-     nam cuoi noi dung - modal-head khong cuon, luon nhin thay du cuon toi dau trong panel dai. */
+  /* Yeu cau 02/09/2026: nut "Dong chi tiet" chuyen len modal-head (canh tieu de) thay vi nam cuoi
+     noi dung - modal-head khong cuon, luon nhin thay du cuon toi dau trong panel dai.
+     Yeu cau 03/09/2026: nhom nut nghiep vu (Phan loai/Chan doan/Xac nhan hoan tat/...) dat trong
+     thanh footer rieng ".modal-foot" o day modal, xem unitActionButtonsHtml() o tren. */
   openModal(`Chi tiết đơn bảo hành con: ${unitId}`, detailHtml, true,
-    `<button class="btn secondary small" onclick="closeModal()">Đóng chi tiết</button>`);
+    `<button class="btn secondary small" onclick="closeModal()">Đóng chi tiết</button>`,
+    unitActionButtonsHtml(u, p));
 }
 
 function addGhiChuLogFromDetail(guiId, unitId) {
@@ -1585,16 +1640,16 @@ function renderKtvTaoPhieu(){
     <div class="btnrow"><button class="btn" onclick="createPhieuGui()">+ Tao phieu gui moi</button></div>
     ${mine.length===0?'<div class="empty">Chua co phieu nao.</div>':`
     <div class="table-responsive">
-    <table><thead><tr><th>Ma phieu</th><th>Ngay tao</th><th>Hinh thuc gui</th><th>Trang thai</th><th>So don ben trong</th><th></th></tr></thead>
+    <table><thead><tr><th>Ma phieu</th><th>Trang thai</th><th>Ngay tao</th><th>Hinh thuc gui</th><th>So don ben trong</th><th></th></tr></thead>
     <tbody>${mine.map(g=>{
       const sc = scOfPhieuGui(g.id);
       const stMap={nhap:['Nhap','b-gray'],da_gui:['Da gui','b-blue'],da_tiep_nhan:['Kho da tiep nhan','b-green']};
       const st = stMap[g.trang_thai]||['?','b-gray'];
       return `<tr class="clickable-row" onclick="location.hash='#/ktv/tao-phieu?id=${g.id}'">
         <td><a class="link" href="#/ktv/tao-phieu?id=${g.id}" onclick="event.stopPropagation();">${g.id}</a></td>
+        <td><span class="badge ${st[1]}">${st[0]}</span> ${g.su_co_tiep_nhan?'<span class="badge b-red">! Su co tiep nhan</span>':''}</td>
         <td>${fmtDate(g.ngay_tao)}</td>
         <td>${g.hinh_thuc_gui==='xe_noi_bo'?'Xe noi bo':'Giao van ngoai'}</td>
-        <td><span class="badge ${st[1]}">${st[0]}</span> ${g.su_co_tiep_nhan?'<span class="badge b-red">! Su co tiep nhan</span>':''}</td>
         <td>${sc.length}</td>
         <td onclick="event.stopPropagation();"><a class="link" href="#/ktv/tao-phieu?id=${g.id}">Mo</a>${(g.trang_thai==='nhap'&&sc.length===0)?` · <a class="link" style="color:#dc2626;" onclick="deletePhieuGui('${g.id}')">Xoa</a>`:''}</td>
       </tr>`;
@@ -1671,18 +1726,18 @@ function renderPhieuGuiDetail(id){
     ${canEdit?`<button class="btn small" onclick="openAddDonModal('${g.id}')">+ Them don bao hanh</button>`:''}
     ${sc.length===0?'<div class="empty">Chua co don nao.</div>':`
     <div class="table-responsive">
-    <table><thead><tr><th>ID</th><th>Case / Khach hang</th><th>Linh kien</th><th>SL khai</th><th>Doi tru de xuat</th><th>Trang thai</th><th></th></tr></thead>
+    <table><thead><tr><th>ID</th><th>Trang thai</th><th>Case / Khach hang</th><th>Linh kien</th><th>SL khai</th><th>Doi tru de xuat</th><th></th></tr></thead>
     <tbody>${sc.map(s=>{
       const c = findCase(s.case_id); const lk = findLK(s.ma_lk);
       const rt = rollupTrangThaiCha(s.id);
       const coChiTiet = childrenOf(s.id).length>0;
       return `<tr ${coChiTiet?`class="clickable-row" onclick="openParentFirstUnitDetail('${s.id}')"`:''}>
         <td>${s.id}</td>
+        <td><span class="badge ${rt.cls}">${rt.label}</span></td>
         <td>${esc(c?.khach_hang||'')} <span class="fine">· ${s.case_id}</span></td>
         <td>${lk?esc(lk.ten):'<i>Ca san pham</i>'}</td>
         <td>${s.so_luong_khai}</td>
         <td><span class="fine">${esc(LOAI_DOI_TRU_LABEL[s.loai_doi_tru_de_xuat]||'-')}</span></td>
-        <td><span class="badge ${rt.cls}">${rt.label}</span></td>
         <td onclick="event.stopPropagation();">${canEdit?`<a class="link" onclick="removeDon('${s.id}')">Xoa</a>`:''}</td>
       </tr>`;
     }).join('')}</tbody></table>
@@ -2059,12 +2114,12 @@ function ktvTraCuuRowsHtml(){
     return `
       <tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
         <td><b style="font-family:var(--font-mono);">${u.id}</b></td>
+        <td><span class="badge ${b.cls}">${b.label}</span></td>
         <td>${esc(c?.khach_hang||'Khách lẻ')} <span class="fine">· ${esc(c?.sdt||p.sdt_khach_hang||'')}</span></td>
         <td><b>${lk ? esc(lk.ten) : 'Cả sản phẩm'}</b>${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk ? ' <span class="badge b-blue" style="font-size:9px;padding:1px 4px;">Đã đổi LK</span>':''}</td>
         <td>${esc(LOAI_DOI_TRU_LABEL[u.loai_doi_tru || p.loai_doi_tru_de_xuat] || '-')}</td>
         <td><a class="link" onclick="event.stopPropagation(); location.hash='#/ktv/tao-phieu?id='+encodeURIComponent('${g.id}')">${g.id}</a> <span class="fine">· ${g.ngay_gui_xe}</span></td>
         <td>${slaBadge(u.updated_at)}</td>
-        <td><span class="badge ${b.cls}">${b.label}</span></td>
         <td onclick="event.stopPropagation();">${actionBtn}</td>
       </tr>
     `;
@@ -2093,12 +2148,12 @@ function renderKtvTraCuu(){
           <thead>
             <tr>
               <th>Mã đơn vị</th>
+              <th>Trạng thái</th>
               <th>Khách hàng</th>
               <th>Sản phẩm / Linh kiện</th>
               <th>Đối trừ</th>
               <th>Phiếu gửi</th>
               <th>Thời gian chờ</th>
-              <th>Trạng thái</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -2202,11 +2257,11 @@ function renderKtvNhanHang(){
         <tr class="clickable-row" onclick="openDetailTraModal('${t.id}')">
           ${checkboxCell}
           <td><b style="font-family:var(--font-mono);">${t.id}</b></td>
+          <td><span class="badge ${st[1]}">${st[0]}</span></td>
           <td><span class="badge b-purple">${esc(LOAI_DOI_TRU_LABEL[t.loai_doi_tru] || t.loai_doi_tru)}</span></td>
           <td><b>${dong.length}</b> dòng LK</td>
           <td>${esc(t.ma_van_don || '(Không có)')}</td>
           <td>${slaBadge(t.updated_at)}</td>
-          <td><span class="badge ${st[1]}">${st[0]}</span></td>
           <td onclick="event.stopPropagation();">${actionCell}</td>
         </tr>
       `;
@@ -2223,11 +2278,11 @@ function renderKtvNhanHang(){
             <tr>
               <th style="width:30px;"></th>
               <th>Mã phiếu trả</th>
+              <th>Trạng thái</th>
               <th>Loại đối trừ</th>
               <th>Số lượng LK</th>
               <th>Mã vận đơn/Xe</th>
               <th>Thời gian chờ</th>
-              <th>Trạng thái</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -2819,12 +2874,12 @@ function renderAdminUnifiedTable(){
     rows += `<tr class="clickable-row" onclick="location.hash='#/admin/phan-loai?gui=${s.phieu_gui_id}';render();">
       <td></td>
       <td><b>${s.id}</b></td>
+      <td><span class="badge b-amber">Cho xac nhan SL (khai ${s.so_luong_khai})</span></td>
       <td>${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')} <span class="fine">· ${s.phieu_gui_id}</span></td>
       <td>${esc(info.khach_hang)}</td>
       <td>${esc(lk?.ten||'Ca san pham')}</td>
       <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(s.mo_ta_loi)}">${esc(s.mo_ta_loi)}</td>
       <td>${slaBadge(g?.admin_thoi_gian_nhan)}</td>
-      <td><span class="badge b-amber">Cho xac nhan SL (khai ${s.so_luong_khai})</span></td>
       <td onclick="event.stopPropagation();"><button class="btn small" onclick="openSoLuongThucNhanModal('${s.id}')">Xac nhan SL</button></td>
     </tr>`;
   });
@@ -2844,21 +2899,26 @@ function renderAdminUnifiedTable(){
     } else {
       checkboxCell = `<td onclick="event.stopPropagation();"><input type="checkbox" onchange="toggleUnitSelect('${u.id}', this.checked)" ${ADMIN_SELECTED_UNITS.has(u.id)?'checked':''}></td>`;
       const soBaoCaoSai = (p.bao_cao_sai_thong_tin||[]).length;
+      /* Fix 03/09/2026: openYeuCauBoSungModal() ben trong CHI tim don vi dang dung 'cho_phan_loai'
+         (xem submitYeuCauBoSung) - truoc day nut nay van hien ca khi trang_thai='admin_can_xem_lai',
+         bam vao chi nhan alert loi "Khong co don vi nao..." khong lam gi ca. Sieu ra dieu kien them
+         trang_thai==='cho_phan_loai' de khop dung logic ben trong, dong bo voi unitActionButtonsHtml()
+         moi them trong modal chi tiet (cung 1 dieu kien, khong lech giua bang va modal). */
       actionCell = `<div class="btnrow" style="margin-top:0;">
         <button class="btn small" onclick="openPhanLoaiModal('${u.id}')">${u.trang_thai==='admin_can_xem_lai'?'Phan loai lai':'Phan loai'}</button>
-        ${isKhachLe?'':`<button class="btn small secondary" onclick="openYeuCauBoSungModal('${p.id}')">Yeu cau bo sung</button>
+        ${isKhachLe?'':`${u.trang_thai==='cho_phan_loai'?`<button class="btn small secondary" onclick="openYeuCauBoSungModal('${p.id}')">Yeu cau bo sung</button>`:''}
         <button class="btn small secondary" onclick="openBaoCaoSaiModal('${p.id}')" title="Ghi nhan KTV bao cao sai thong tin">🐞${soBaoCaoSai>0?' '+soBaoCaoSai:''}</button>`}
       </div>`;
     }
     rows += `<tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
       ${checkboxCell}
       <td><b>${u.id}</b>${w.expired?' <span class="badge b-red">Het han BH</span>':''}${u.trang_thai==='admin_can_xem_lai'?' <span class="badge b-red">NV tra lai</span>':''}</td>
+      <td><span class="badge ${b.cls}">${b.label}</span></td>
       <td>${nguon}</td>
       <td>${esc(info.khach_hang)}</td>
       <td>${esc(lk?.ten||'Ca san pham')}${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue">Da doi LK</span>':''}</td>
       <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</td>
       <td>${slaBadge(u.updated_at)}</td>
-      <td><span class="badge ${b.cls}">${b.label}</span></td>
       <td onclick="event.stopPropagation();">${actionCell}</td>
     </tr>`;
   });
@@ -2870,7 +2930,7 @@ function renderAdminUnifiedTable(){
   ${renderAdminBulkBar()}
   ${totalRows===0?'<div class="empty">Khong co don nao can xu ly ngay luc nay.</div>':`
   <div class="table-responsive">
-  <table><thead><tr><th></th><th>ID</th><th>Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Mo ta loi</th><th>SLA</th><th>Trang thai</th><th>Hanh dong</th></tr></thead>
+  <table><thead><tr><th></th><th>ID</th><th>Trang thai</th><th>Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Mo ta loi</th><th>SLA</th><th>Hanh dong</th></tr></thead>
   <tbody>${rows}</tbody></table>
   </div>`}`;
 }
@@ -3613,15 +3673,15 @@ function renderNvViecCuaToi(){
         <tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
           <td><input type="checkbox" onchange="toggleNvUnitSelect('${u.id}', this.checked)" ${NV_SELECTED_UNITS.has(u.id)?'checked':''}></td>
           <td><b style="font-family:var(--font-mono);">${u.id}</b></td>
+          <td>
+            ${u.ly_do_yeu_cau_lam_lai
+              ? `<span class="badge b-red" title="Admin yêu cầu làm lại: ${esc(u.ly_do_yeu_cau_lam_lai)}">⚠️ Làm lại</span>`
+              : `<span class="badge b-blue">Chờ sửa</span>`}
+          </td>
           <td>${esc(c?.khach_hang || p.ten_khach_hang || 'Khách lẻ')} <span class="fine">· SĐT: ${esc(c?.sdt || p.sdt_khach_hang || '')}</span></td>
           <td><b>${lk ? esc(lk.ten) : 'Cả sản phẩm'}</b>${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk ? ' <span class="badge b-blue" style="font-size:9px;padding:1px 4px;">Đã đổi LK</span>':''}</td>
           <td class="fine" style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</td>
           <td>${slaBadge(u.updated_at)}</td>
-          <td>
-            ${u.ly_do_yeu_cau_lam_lai 
-              ? `<span class="badge b-red" title="Admin yêu cầu làm lại: ${esc(u.ly_do_yeu_cau_lam_lai)}">⚠️ Làm lại</span>` 
-              : `<span class="badge b-blue">Chờ sửa</span>`}
-          </td>
           <td onclick="event.stopPropagation();">${actionCell}</td>
         </tr>
       `;
@@ -3638,11 +3698,11 @@ function renderNvViecCuaToi(){
             <tr>
               <th style="width:30px;"></th>
               <th>Mã đơn vị</th>
+              <th>Trạng thái</th>
               <th>Khách hàng</th>
               <th>Sản phẩm / Linh kiện thực tế</th>
               <th>Mô tả lỗi KTV</th>
               <th>Thời gian chờ</th>
-              <th>Trạng thái</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -3834,7 +3894,7 @@ function submitTuChoi(traId){
 /* =========================================================
    MODAL
    ========================================================= */
-function openModal(title, bodyHtml, full, headerActions){
+function openModal(title, bodyHtml, full, headerActions, footerActions){
   /* Fix 31/08/2026: xoa modal cu (neu co) TRUOC khi tao modal moi - truoc do openModal() luon
      appendChild them 1 the moi ma khong bao gio go the cu, nen cac man "mo lai chinh minh de lam
      moi noi dung" (VD submitBaoCaoSai() goi lai openBaoCaoSaiModal(), submitGhiChuLogModal() goi lai
@@ -3849,8 +3909,13 @@ function openModal(title, bodyHtml, full, headerActions){
      panel gan-full-man-hinh voi phan lon la khoang trong.
      Tham so thu 4 "headerActions" (yeu cau 02/09/2026: "cac nut thao tac chuyen ve top tieu de cua
      UI chi tiet") - HTML cua nhom nut hanh dong, dat trong modal-head (khong cuon) thay vi cuoi
-     modal-body (phai cuon het moi bam duoc, dac biet voi modal--full gio da rat dai). */
-  bg.innerHTML = `<div class="modal${full?' modal--full':''}"><div class="modal-head"><h3>${esc(title)}</h3>${headerActions?`<div class="modal-head-actions">${headerActions}</div>`:''}<button class="modal-close focus-ring" onclick="closeModal()">&times;</button></div><div class="modal-body">${bodyHtml}</div></div>`;
+     modal-body (phai cuon het moi bam duoc, dac biet voi modal--full gio da rat dai).
+     Tham so thu 5 "footerActions" (yeu cau 03/09/2026: "UI chi tiet co day du chuc nang thao tac,
+     cac nut nay co dinh o top hoac bottom") - HTML cua NHOM NUT NGHIEP VU (co the toi 2-3 nut, doi
+     theo trang thai/vai tro), dat trong 1 thanh ".modal-foot" rieng o DAY modal, cung khong cuon -
+     tach khoi headerActions (chi danh cho "Dong chi tiet") de khong don qua nhieu nut chung 1 hang
+     voi tieu de. */
+  bg.innerHTML = `<div class="modal${full?' modal--full':''}"><div class="modal-head"><h3>${esc(title)}</h3>${headerActions?`<div class="modal-head-actions">${headerActions}</div>`:''}<button class="modal-close focus-ring" onclick="closeModal()">&times;</button></div><div class="modal-body">${bodyHtml}</div>${footerActions?`<div class="modal-foot">${footerActions}</div>`:''}</div>`;
   /* Chi dong khi CA mousedown VA click deu bat dau tu chinh nen (bg) - tranh truong hop nguoi dung
      bam-keo chon chu ben trong modal roi tha chuot ra ngoai lam mat du lieu dang nhap (phan hoi
      21/08/2026, muc 7) */
@@ -4036,7 +4101,7 @@ function quanLyTraCuuFilteredUnits(){
 }
 function quanLyTraCuuRowsHtml(){
   const units = quanLyTraCuuFilteredUnits();
-  if(units.length===0) return `<tr><td colspan="8" class="empty">Khong tim thay don nao khop.</td></tr>`;
+  if(units.length===0) return `<tr><td colspan="7" class="empty">Khong tim thay don nao khop.</td></tr>`;
   return units.map(u=>{
     const p = findPhieuSC(u.parent_id);
     const info = caseOrManualInfo(p);
@@ -4045,12 +4110,12 @@ function quanLyTraCuuRowsHtml(){
     const isKhachLe = !p.phieu_gui_id;
     return `<tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
       <td><b style="font-family:var(--font-mono);">${u.id}</b></td>
+      <td><span class="badge ${b.cls}">${b.label}</span></td>
       <td>${isKhachLe?'<span class="badge b-purple">Khach le</span>':esc(ktvDisplayName(phieuScKtvKey(p)))}</td>
       <td>${esc(info.khach_hang)}</td>
       <td><b>${lk?esc(lk.ten):'Ca san pham'}</b>${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue" style="font-size:9px;padding:1px 4px;">Da doi LK</span>':''}</td>
       <td>${esc(LOAI_DOI_TRU_LABEL[u.loai_doi_tru||p.loai_doi_tru_de_xuat]||'-')}</td>
       <td>${slaBadge(u.updated_at)}</td>
-      <td><span class="badge ${b.cls}">${b.label}</span></td>
     </tr>`;
   }).join('');
 }
@@ -4071,7 +4136,7 @@ function renderQuanLyTraCuu(){
     </div>
     <div class="table-responsive">
       <table class="tinh-te">
-        <thead><tr><th>Ma don vi</th><th>KTV / Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Doi tru</th><th>Thoi gian</th><th>Trang thai</th></tr></thead>
+        <thead><tr><th>Ma don vi</th><th>Trang thai</th><th>KTV / Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Doi tru</th><th>Thoi gian</th></tr></thead>
         <tbody id="ql_tbody">${quanLyTraCuuRowsHtml()}</tbody>
       </table>
     </div>
