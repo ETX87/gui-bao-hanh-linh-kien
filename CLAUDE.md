@@ -90,11 +90,14 @@ Workers+D1 độc lập, khiến giả định cũ "build bảo hành bên trong
 "Liên hệ với hệ thống chính") **lỗi thời** — hướng mới: bảo hành là 1 Worker+D1 độc lập thứ 3 tên
 `suachua` (đã xác nhận domain `suachua.dichvu3t.workers.dev` **đã online thật**), liên kết cả 2 hệ
 kia qua partner API + cơ chế **"đẩy" (push sync)** tự động cho dữ liệu tham chiếu (KTV/Khu vực/danh
-mục linh kiện — `linh-kien-app` chủ động gọi sang khi có thay đổi) — cả 5 câu hỏi mở vòng đầu đã
-được chốt cùng ngày (xem mục "Chốt 5 câu hỏi mở..." bên dưới), chỉ còn 1 câu hỏi mới (vị trí mã
-nguồn thật của Worker `suachua`) — xem file riêng
+mục linh kiện — `linh-kien-app` chủ động gọi sang khi có thay đổi) — **cả 6/6 câu hỏi mở đã được
+chốt (04/09/2026)**, kể cả câu hỏi mới về vị trí mã nguồn (chính thư mục này sẽ là nguồn cho
+`suachua`, Worker đang online hiện chỉ là bản rỗng/placeholder). Phát hiện thêm: cơ chế "đẩy" nói
+trên **không cần thiết kế mới** — đã có sẵn mẫu thật đang chạy giữa `linh-kien-app`↔`dvbh`
+(`dvbhSyncClient.ts`, cron mỗi giờ + con trỏ tăng dần, thêm 28/08/2026) — chỉ cần nhân bản thêm
+`suachua` làm đích gửi thứ 2 — xem mục "Câu hỏi #6 chốt xong..." bên dưới. Xem file riêng
 `du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` (đầy đủ phân tích + kế
-hoạch từng bước, **CHƯA triển khai gì**, đang chờ câu trả lời cho câu hỏi mới trước khi scaffold).
+hoạch từng bước, **CHƯA triển khai gì** — sẵn sàng cho Giai đoạn 1 khi được yêu cầu).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1828,6 +1831,46 @@ hồi nếu 1 lần đẩy bị lỡ.
 
 Không phát sinh lỗi/vấn đề nào trong lúc làm — đây vẫn là phân tích/lập kế hoạch thuần tuý, chưa viết
 code/migration nào. **Chưa chạy kiểm thử** (không có gì để test ở vòng này).
+
+## Câu hỏi #6 chốt xong + phát hiện cơ chế đẩy đã có sẵn thật giữa linh-kien-app↔dvbh (04/09/2026)
+
+Người dùng trả lời câu hỏi #6 (vị trí mã nguồn thật của Worker `suachua`):
+
+> a + b
+
+**[ĐÃ CHỐT]** Cả 2 đúng cùng lúc: **(a)** chính thư mục `gui-bao-hanh-linh-kien` này sẽ trở thành
+nguồn cho Worker `suachua` (đúng dự đoán từ bằng chứng `logo sua chua 3t.png` đã tìm thấy vòng
+trước), **(b)** Worker đang online hiện tại chỉ là bản **rỗng/placeholder** giữ chỗ tên miền — toàn bộ
+`backend/`+`frontend/`+migration D1 thật vẫn cần viết từ đầu trong chính thư mục này. **Không còn câu
+hỏi mở nào về mặt quyết định nghiệp vụ** — sẵn sàng cho Giai đoạn 1 khi được yêu cầu.
+
+**Phát hiện quan trọng thêm** (phiên tiếp tục sau khi người dùng hết hạn mức sử dụng rồi quay lại,
+đúng lúc `linh-kien-app/wrangler.jsonc` đã đổi trên đĩa so với lần đọc trước): cơ chế "đẩy" (push
+sync) mà báo cáo trước đó **tự thiết kế từ đầu** (đề xuất `waitUntil()` mỗi lần ghi + nút "Đồng bộ lại
+toàn bộ" dự phòng) hoá ra **đã có sẵn, đã build xong và đang chạy thật** — chỉ khác đích: giữa
+`linh-kien-app` và `dvbh`, không phải `suachua`. Bằng chứng đọc trực tiếp:
+- `linh-kien-app/backend/src/lib/dvbhSyncClient.ts` (thêm 28/08/2026, phản hồi gốc: *"khi cập nhật
+  danh sách ktv hoặc cập nhật danh sách linh kiện, sẽ bắn API về web dvbh để cập nhật bổ sung dữ liệu
+  mới nhất"* — cùng bản chất yêu cầu với `suachua` hôm qua) — cơ chế thật là **cron mỗi giờ
+  (`triggers.crons: ["0 * * * *"]`) + con trỏ tăng dần** (`dvbh_sync_state.last_synced_at`, migration
+  `0012_dvbh_sync_state.sql`), không phải đẩy tức thời theo từng lần ghi: đọc các dòng
+  `ngay_cap_nhat > con_tro`, gửi theo lô 200 dòng qua Service Binding, chỉ advance con trỏ khi CẢ lô
+  thành công (tự phục hồi nếu lỗi giữa chừng, không cần nút dự phòng riêng).
+- `cloudflare smarttrade base/backend/src/routes/partnerApi.ts` (sửa thêm 28/08/2026, không còn
+  100% chỉ đọc) — 2 route nhận `POST /api/partner/sync/ktv` (upsert qua `processKtvImportRows()` có
+  sẵn) và `POST /api/partner/sync/linh-kien` (ghi đè thẳng toàn bộ trường, vì `linh-kien-app` là
+  nguồn sự thật duy nhất) — xác thực `X-API-Key` dùng LẠI đúng bảng `partner_api_keys` của
+  `case-lookup`, không phải cơ chế riêng.
+
+**Đã cập nhật lại file phân tích mục 1 (sửa "không có cron job" đã lỗi thời) và mục 3.2 (bỏ hẳn thiết
+kế "đẩy theo từng lần ghi" tự nghĩ ra, thay bằng khuyến nghị nhân bản đúng mẫu cron+con-trỏ đã có
+sẵn cho `suachua` — chỉ cần thêm `suachua` làm đích gửi thứ 2 trong `dvbhSyncClient.ts`, thêm entity
+`khu_vuc` chưa có sẵn, và bên `suachua` xây 3 route nhận mirror đúng khuôn `dvbh`). Lý do ưu tiên mẫu
+có sẵn hơn thiết kế mới: tự phục hồi khi lỗi, không phải sửa rải rác nhiều điểm CRUD, và đã chạy thật
+trong sản xuất — đánh đổi duy nhất là độ trễ tối đa ~1 giờ thay vì tức thời, chấp nhận được cho dữ
+liệu tham chiếu ít đổi.
+
+Không có lỗi/vấn đề phát sinh — vẫn là phân tích/lập kế hoạch thuần tuý. **Chưa chạy kiểm thử.**
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

@@ -111,8 +111,10 @@ tên với Worker `linhkien` của nó) trước khi bắt đầu Giai đoạn 1
 - Cloudflare Workers (Hono) phục vụ cả API lẫn frontend build tĩnh từ **1 Worker duy nhất**
   (`assets.run_worker_first: ["/api/*"]` — bắt buộc, thiếu sẽ bị Static Assets chặn request
   navigate thật trước khi tới Worker).
-- D1 (SQLite) là database duy nhất, **không dùng R2**, **không có cron job** (báo cáo tính
-  trực tiếp/cache-on-miss qua `reportCache.ts`, không cần lưới an toàn dạng cron như hệ gốc).
+- D1 (SQLite) là database duy nhất, **không dùng R2**. ~~Không có cron job~~ — **[CẬP NHẬT
+  04/09/2026, file đã đổi trên đĩa kể từ lần đọc trước]** giờ **có đúng 1 cron** (`triggers.crons:
+  ["0 * * * *"]`, thêm 28/08/2026) — xem mục 3 bên dưới, đây chính là cơ chế đồng bộ dữ liệu tham
+  chiếu đã được xây dựng thật cho `dvbh`, và là mẫu cần tái dùng cho `suachua`.
 - React + Vite + Tailwind ở frontend — port gần nguyên bản UI của hệ gốc rồi chỉnh sửa riêng dần.
 - Domain: `linhkien.dichvu3t.workers.dev` — cùng account subdomain `dichvu3t` với hệ gốc `dvbh`.
 
@@ -296,47 +298,66 @@ trò thành **bên chủ động gửi đi**. Để nhất quán, thiết kế b
 3 loại dữ liệu tham chiếu** (linh kiện, KTV, Khu vực) — phần linh kiện dùng cơ chế đẩy là suy rộng ra
 cho nhất quán, không phải câu trả lời trực tiếp của người dùng (chỉ có KTV/Khu vực được nói rõ).
 
-### 3.2 Thiết kế cơ chế "đẩy" (push sync)
+### 3.2 Thiết kế cơ chế "đẩy" (push sync) — **KHÔNG CÒN LÀ ĐỀ XUẤT, ĐÃ CÓ SẴN MẪU THẬT ĐANG CHẠY**
+
+**[CẬP NHẬT 04/09/2026]** Phát hiện quan trọng: đúng cơ chế "đẩy" mà người dùng mô tả cho `suachua`
+**đã được xây dựng và đang chạy thật** giữa `linh-kien-app` và `dvbh` — không phải giả định, đây là
+code thật đã đọc trực tiếp. Phản hồi gốc dẫn tới tính năng này (28/08/2026, ghi lại trong comment của
+chính `dvbhSyncClient.ts`): *"khi cập nhật danh sách ktv hoặc cập nhật danh sách linh kiện, sẽ bắn
+API về web dvbh để cập nhật bổ sung dữ liệu mới nhất"* — cùng bản chất yêu cầu với `suachua` hôm nay,
+chỉ khác bên nhận. **Kết luận: không cần thiết kế mới — nhân bản/mở rộng đúng cơ chế đã có**, thay vì
+bản thiết kế "đẩy theo từng lần ghi qua `waitUntil()`" mà báo cáo lần trước đề xuất (đã bỏ, xem lý do
+bên dưới).
+
+**Cơ chế thật (không phải đẩy tức thời theo từng lần ghi, mà là cron + con trỏ tăng dần):**
 
 ```
-linh-kien-app (bên PHÁT)                         suachua (bên NHẬN)
-─────────────────────────                         ──────────────────
-ktv_lien_he đổi (CREATE/UPDATE/                    POST /api/sync/ktv
-  bulk-import/backfill)          ──────push──────▶   UPSERT ktv_lien_he_bh
-khu_vuc đổi (CREATE/UPDATE/                        POST /api/sync/khu-vuc
-  gán GS)                        ──────push──────▶   UPSERT khu_vuc_bh
-linh_kien đổi (CREATE/UPDATE/                      POST /api/sync/linh-kien
-  bulk-import)                   ──────push──────▶   UPSERT linh_kien_bh (nếu nguon_du_lieu='dong_bo')
+linh-kien-app (bên PHÁT) — backend/src/lib/dvbhSyncClient.ts + routes/dvbhSync.ts
+──────────────────────────────────────────────────────────────────────────────
+scheduled() — 1 cron DUY NHẤT ("0 * * * *", mỗi giờ, wrangler.jsonc triggers.crons)
+  → với mỗi entity (ktv, linh_kien): đọc dvbh_sync_state.last_synced_at (con trỏ)
+  → SELECT ... FROM <bảng> WHERE ngay_cap_nhat > <con trỏ> ORDER BY ngay_cap_nhat
+  → gửi theo lô 200 dòng/lần qua Service Binding → POST /api/partner/sync/<entity>
+  → CHỈ advance con trỏ khi TOÀN BỘ lô gửi thành công (lỗi giữa chừng → lần sau gửi lại
+    nguyên vẹn, an toàn vì bên nhận là upsert)
+
+dvbh (bên NHẬN) — backend/src/routes/partnerApi.ts (đã sửa thêm 28/08/2026, không còn 100% chỉ đọc)
+──────────────────────────────────────────────────────────────────────────────
+POST /api/partner/sync/ktv        — xác thực X-API-Key (bảng partner_api_keys có sẵn, DÙNG LẠI
+                                     đúng bảng của case-lookup, không phải bảng riêng) → gọi lại
+                                     processKtvImportRows() (hàm Admin dùng khi tự import Excel tay)
+                                     → upsert theo ma_ktv + tự cấp tài khoản placeholder
+POST /api/partner/sync/linh-kien  — cùng xác thực → GHI ĐÈ THẲNG toàn bộ trường (khác /sync/ktv —
+                                     ở đây bên gửi là nguồn sự thật DUY NHẤT, không ai sửa tay
+                                     Settings phía dvbh nữa) → ON CONFLICT DO UPDATE theo ma_linh_kien
 ```
 
-- **Kênh truyền**: bắt buộc qua **Service Binding** (`linh-kien-app/wrangler.jsonc` thêm 1
-  `services` binding mới trỏ sang Worker `suachua`) — đúng lý do kỹ thuật đã xác nhận ở mục 1
-  (`fetch()` thẳng URL bị Cloudflare chặn lỗi 1042 khi 2 Worker cùng tài khoản gọi nhau). Đây là
-  điểm **bắt buộc phải sửa thêm bên repo `linh-kien-app`**, không chỉ bên bảo hành.
-- **Xác thực chiều ngược** (`linhkien` → `suachua`, ngược hướng với `case-lookup`): dùng 1 secret
-  dùng chung đơn giản (`X-Sync-Key` header, lưu qua `wrangler secret put` ở cả 2 phía) — **không cần**
-  dựng cả bảng `partner_api_keys` nhiều-key như `case-lookup` (thiết kế cho nhiều đối tác bên ngoài
-  khác nhau), vì đây là quan hệ 1-1 cố định giữa đúng 2 Worker nội bộ cùng 1 tổ chức.
-  ```jsonc
-  // linh-kien-app/wrangler.jsonc — thêm mới
-  "services": [
-    { "binding": "CASE_LOOKUP_SERVICE", "service": "dvbh", "remote": true },
-    { "binding": "SUACHUA_SYNC_SERVICE", "service": "suachua", "remote": true }
-  ]
-  ```
-- **Gửi không chặn** (fire-and-forget): gọi qua `c.executionCtx.waitUntil()` ngay trong route
-  CRUD của `settingsKtv.ts`/`settingsDatMua.ts`/`lkSettings.ts` bên `linh-kien-app` — nếu `suachua`
-  đang tạm ngưng, thao tác gốc của người dùng `linh-kien-app` vẫn thành công bình thường, không bị
-  treo/lỗi theo.
-- **Payload**: gửi đúng 1 bản ghi vừa đổi (không cần gửi cả danh sách) — `suachua` UPSERT theo khoá tự
-  nhiên (`ma_ktv`/`ma_khu_vuc`/`ma_linh_kien`).
+**Áp dụng cho `suachua`: chỉ cần THÊM `suachua` làm mục tiêu đẩy thứ 2** — tối thiểu hoá thay đổi bên
+`linh-kien-app`, không viết lại kiến trúc:
 
-**Đề xuất bổ sung (tự thêm để an toàn dữ liệu, không phải yêu cầu gốc — có thể bỏ nếu không cần):**
-cơ chế đẩy thuần tuý **không tự phục hồi** nếu 1 lần đẩy bị lỡ (`suachua` đang down đúng lúc đó, hoặc
-dữ liệu có từ trước khi cơ chế này được nối). Đề xuất thêm 1 nút **"🔄 Đồng bộ lại toàn bộ"** phía
-`suachua` (Admin bấm tay, hiếm khi cần) — gọi 1 endpoint kéo hàng loạt riêng bên `linh-kien-app`
-(`GET /api/partner/ktv-list`, `/khu-vuc-list`, `/linh-kien-list`, dùng lại đúng `X-Sync-Key`) để đồng
-bộ lại từ đầu, dùng cho lần khởi tạo đầu tiên (bootstrap) và khi nghi ngờ dữ liệu bị lệch.
+1. **`linh-kien-app`**: `dvbhSyncClient.ts` tổng quát hoá thành gửi tới **nhiều đích** (hoặc đơn giản
+   hơn — nhân bản thành `suachuaSyncClient.ts` cùng khuôn, gọi tiếp trong `scheduled()` sau
+   `runDvbhSync()`), thêm cột `ma_khu_vuc`/bảng `khu_vuc` vào danh sách entity đồng bộ (hiện
+   `dvbhSyncClient.ts` mới có `ktv`/`linh_kien`, **chưa có `khu_vuc`** — đây là phần **thật sự phải
+   viết mới**, không có sẵn). Thêm 1 con trỏ mới `suachua_sync_state` (hoặc mở rộng
+   `dvbh_sync_state` thêm cột `target`) — **không dùng chung con trỏ với `dvbh`**, vì 2 bên có thể
+   nhận dữ liệu ở thời điểm khác nhau (1 bên down, bên kia vẫn chạy).
+2. **`linh-kien-app/wrangler.jsonc`**: thêm 1 `services` binding mới trỏ sang `suachua`, cùng khuôn
+   `CASE_LOOKUP_SERVICE` hiện có — **bắt buộc dùng Service Binding**, đúng lý do kỹ thuật 1042 đã xác
+   nhận ở mục 1 (2 Worker cùng tài khoản không được `fetch()` thẳng URL nhau).
+3. **`suachua`**: xây `POST /api/partner/sync/ktv`, `/sync/linh-kien`, `/sync/khu-vuc` — mirror đúng
+   khuôn 2 route đã có ở `dvbh` (xác thực `X-API-Key` qua 1 bảng `partner_api_keys` **của riêng
+   `suachua`**, không dùng chung với `dvbh`; `sync/linh-kien` chỉ upsert các dòng
+   `nguon_du_lieu='dong_bo'`, giữ nguyên các dòng `noi_bo` — đã thiết kế ở mục 3.3).
+
+**Tại sao bỏ thiết kế "đẩy theo từng lần ghi" (`waitUntil()` mỗi route CRUD) của báo cáo lần trước**:
+mẫu cron+con-trỏ thật đã chứng minh 3 ưu điểm mà thiết kế cũ phải tự bổ sung bằng tay — (a) **tự phục
+hồi** nếu 1 lần gửi lỗi (con trỏ không advance, lần sau tự gửi lại — thiết kế cũ cần thêm hẳn 1 nút
+"Đồng bộ lại toàn bộ" mới có tính năng tương đương); (b) **không phải sửa từng điểm CRUD** rải rác
+trong `settingsKtv.ts`/`settingsDatMua.ts`/`lkSettings.ts` — chỉ 1 chỗ (`scheduled()`) cần biết thêm
+đích gửi; (c) **đã chạy thật trong sản xuất**, rủi ro thấp hơn hẳn 1 thiết kế mới chưa kiểm chứng.
+Đánh đổi duy nhất: độ trễ tối đa ~1 giờ (không phải tức thời) — chấp nhận được cho dữ liệu tham chiếu
+(danh bạ KTV/Khu vực/danh mục linh kiện đổi không thường xuyên, khác dữ liệu giao dịch cần tức thời).
 
 ### 3.3 Bảng D1 phía `suachua`
 
@@ -449,7 +470,7 @@ không dựa vào trí nhớ khi đọc lại 1 file dài ~1800 dòng.
 | **2. Migration D1 tổng hợp 1 lần** | Viết `0001_init.sql` gộp toàn bộ bảng đã liệt kê ở mục 4.1 — theo đúng mẫu `linh-kien-app` đã làm ("schema tổng hợp 1 lần từ hình dạng CUỐI CÙNG", không replay từng bước thiết kế nhỏ đã đổi qua các vòng) | Giai đoạn 1 |
 | **3. Port backend** | Viết route theo nhóm màn hình (13 màn hình đã liệt kê ở Ke-hoach-Trien-khai cũ) — ưu tiên **luồng chính trước** (đúng cách vòng 1 prototype đã làm: tạo phiếu→gửi→Kho tiếp nhận→Admin phân loại→NV chẩn đoán→xác nhận hoàn tất→phiếu trả→Kế toán duyệt→Kho gửi→KTV nhận), sau đó mới tới 8 điểm đẩy ngược + FAST actions | Giai đoạn 2 |
 | **4. Port frontend** | **Không port thẳng HTML prototype** — viết lại thành component React/Tailwind (stack chung với `dvbh`/`linhkien`). **Lợi thế có sẵn**: bản redesign UI 22/08/2026 của prototype đã port 1:1 token màu/font từ `linh-kien-app` — chỉ cần chuyển đổi cấu trúc component, không cần thiết kế lại từ đầu | Giai đoạn 3 (có thể song song 1 phần) |
-| **5. API đối tác 2 chiều** | (a) Xin cấp `X-API-Key` từ `dvbh` cho `case-lookup`; (b) Sửa `linh-kien-app` (repo khác) thêm Service Binding + `X-Sync-Key` + 3 điểm gọi đẩy (KTV/Khu vực/linh kiện đổi → gọi `suachua`); (c) `suachua` xây 3 route nhận đẩy `POST /api/sync/{ktv,khu-vuc,linh-kien}` + 3 route pull dự phòng (nút "Đồng bộ lại toàn bộ") | Giai đoạn 1, có thể làm song song 2-4 |
+| **5. Đồng bộ 2 chiều** | (a) Xin cấp `X-API-Key` từ `dvbh` cho `case-lookup`; (b) `linh-kien-app`: thêm Service Binding tới `suachua` + nhân bản `dvbhSyncClient.ts` (mẫu thật đã có, mục 3.2) thành đích thứ 2, thêm entity `khu_vuc` (chưa có sẵn); (c) `suachua`: xây `partner_api_keys` riêng + 3 route nhận `POST /api/partner/sync/{ktv,linh-kien,khu-vuc}` mirror đúng khuôn `dvbh` | Giai đoạn 1, có thể làm song song 2-4 |
 | **6. QA thủ công** | Không có test suite tự động ở cả `dvbh`/`linh-kien-app` (đúng quy ước chung) — checklist kiểm thử tay theo từng vai trò (đã có sẵn phần khung ở CLAUDE.md mục "Đề xuất tiếp theo" #4) + Puppeteer smoke test tương tự đã áp dụng cho prototype | Giai đoạn 3-4 |
 | **7. Deploy thật** | Viết `DEPLOY.md` riêng theo đúng mẫu `linh-kien-app/DEPLOY.md` (đã có checklist 7 bước rất chi tiết để copy khung) | Giai đoạn 6 |
 
@@ -509,27 +530,16 @@ không dựa vào trí nhớ khi đọc lại 1 file dài ~1800 dòng.
 5. ~~`khu_vuc` hay `mien`~~ — **[ĐÃ CHỐT]** dùng `khu_vuc`, đồng bộ tự động (đẩy) từ `linh-kien-app`,
    bỏ hẳn khái niệm `mien` 2 giá trị của prototype.
 
-### Câu hỏi mới còn mở
+### Câu hỏi #6 — đã chốt
 
-6. **[Cần trả lời trước khi qua Giai đoạn 1]** Không tìm thấy thư mục mã nguồn nào cho Worker
-   `suachua` trên máy này (đã rà `F:\claude\QLBH 3T\` — chỉ có `gui-bao-hanh-linh-kien`,
-   `linh-kien-app`, `cloudflare smarttrade base`), nhưng người dùng xác nhận domain đã online. Mã
-   nguồn thật đang nằm ở đâu?
-   - (a) Chính thư mục `gui-bao-hanh-linh-kien` này sẽ **trở thành** nguồn cho Worker `suachua` (đúng
-     cách thư mục `linh-kien-app` có tên khác với Worker `linhkien` của nó) — thư mục hiện tại thêm
-     `backend/`+`frontend/` mới, D1 thật đã có sẵn (chỉ cần điền `database_id` vào `wrangler.jsonc`
-     mới)?
-   - (b) Đã deploy 1 bản Worker "rỗng"/placeholder (chỉ để giữ chỗ tên miền), toàn bộ code/D1 thật vẫn
-     cần tạo từ đầu?
-   - (c) Mã nguồn nằm ở máy/thư mục khác chưa được đưa vào phiên làm việc này?
+> a + b
 
-   **Bằng chứng mới nghiêng về (a)**: phát hiện file `logo sua chua 3t.png` (858×887, tạo
-   26/08/2026 — 1 icon app hoàn chỉnh dạng vuông bo góc, gradient xanh lá, biểu tượng cờ-lê/tua-vít
-   chéo + chữ "3T") nằm sẵn trong chính thư mục `gui-bao-hanh-linh-kien` này, chưa từng được commit
-   hay dùng ở đâu trong prototype — đúng kích cỡ/phong cách 1 icon PWA (so sánh với `icon-512.png` của
-   `linh-kien-app`). Đây là dấu hiệu cho thấy thư mục này đã được chuẩn bị trước làm nơi chứa tài
-   nguyên cho `suachua`, nhưng **vẫn cần người dùng xác nhận trực tiếp**, không tự suy đoán rồi coi
-   như đã chốt.
+**[ĐÃ CHỐT 03/09/2026]** Cả 2 đúng cùng lúc: **(a)** chính thư mục `gui-bao-hanh-linh-kien` này sẽ
+trở thành nguồn cho Worker `suachua` (đúng dự đoán từ bằng chứng `logo sua chua 3t.png` đã tìm thấy),
+**(b)** Worker đang online hiện tại chỉ là bản **rỗng/placeholder** giữ chỗ tên miền — toàn bộ
+`backend/`+`frontend/`+migration D1 thật vẫn cần viết từ đầu trong chính thư mục này, theo đúng
+Giai đoạn 1-2 ở mục 5. Không còn câu hỏi mở nào — sẵn sàng bắt đầu Giai đoạn 1 (scaffold local, chưa
+đụng tài nguyên Cloudflare/Google thật) khi được yêu cầu.
 
 **Đề xuất tiếp theo sau khi có câu trả lời cho #6**: cập nhật lại mục "Liên hệ với hệ thống chính"
 trong CLAUDE.md của bảo hành theo đúng kết luận đã chốt ở đây, rồi bắt đầu Giai đoạn 1 (scaffold hạ
