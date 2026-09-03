@@ -349,7 +349,11 @@ tr:hover td{background:var(--surface-100);}
    quy uoc pho bien "header = dieu huong/dong, footer = vung hanh dong chinh" (VD thanh CTA cua Gmail/
    cac app thuong mai dien tu). CHI render khi co it nhat 1 nut phu hop (unitActionButtonsHtml() tra
    ve chuoi rong neu vai tro/trang thai hien tai khong co thao tac gi), tranh 1 thanh trong vo nghia. */
-.modal-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 24px;border-top:1px solid var(--line);
+/* Yeu cau nguoi dung (03/09/2026, tiep theo): "cac nut thao tac chuyen sang ben phai trong UI chi
+   tiet" - truoc do nhom nut nghiep vu trong .modal-foot mac dinh dinh trai (flex-start ngam dinh cua
+   flex). Doi sang flex-end de nhom nut dinh sat canh phai thanh footer, dung vi tri nguoi dung yeu cau
+   - khong doi thu tu/logic cac nut, chi doi vi tri can chinh trong thanh. */
+.modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 24px;border-top:1px solid var(--line);
   flex-shrink:0;background:var(--surface-100);}
 @media (max-width:767px){
   .modal-bg{padding:0;}

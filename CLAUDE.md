@@ -76,8 +76,10 @@ footer (03/09/2026, cùng ngày), và gần nhất là badge SLA đơn giản ho
 bảng thống nhất Admin BH có tuỳ biến cột đầy đủ (kéo đổi vị trí/độ rộng, bật tắt cột) + nút tự động
 gộp phiếu trả cho mọi nhân viên (03/09/2026, cùng ngày), và gần nhất là thêm đường gạch chia ranh
 giới cột luôn hiện (không cần hover) tại tiêu đề bảng thống nhất Admin BH, để người dùng biết trước
-vị trí kéo giãn cột thay vì phải rà chuột dò tìm (03/09/2026, cùng ngày) — xem 11 mục cuối cùng phía
-dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
+vị trí kéo giãn cột thay vì phải rà chuột dò tìm (03/09/2026, cùng ngày), và gần nhất là nhóm nút
+thao tác trong thanh footer của "UI chi tiết" (`openDetailUnitModal`) căn lại sang bên phải thay vì
+bên trái mặc định (03/09/2026, cùng ngày) — xem 12 mục cuối cùng phía dưới (theo đúng thứ tự thời
+gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1560,6 +1562,27 @@ Admin BH ở trạng thái bình thường (đường kẻ xám mảnh hiện r�
 | Khách hàng | Linh kiện | Mô tả lỗi | SLA | Hành động) và ở trạng thái đang rê chuột vào đúng 1 tay
 cầm resize (đường kẻ chuyển màu trắng, nổi rõ trên nền xanh dương hover) — cả 2 ảnh đều đúng như kỳ
 vọng.
+
+## Nút thao tác trong footer của UI chi tiết căn sang bên phải (03/09/2026)
+
+Nguyên văn yêu cầu, gửi ngay sau vòng "Đường gạch chia ranh giới cột" ở trên: *"các nút thao tác
+chuyển sang bên phải trong UI chi tiết."*
+
+Bối cảnh: thanh `.modal-foot` (thêm ở vòng "Cột trạng thái lên vị trí 2 + đầy đủ nút thao tác trong
+UI chi tiết", cùng ngày 03/09/2026 — chứa nhóm nút nghiệp vụ như "Phân loại"/"Yêu cầu bổ sung"/"🐞 Báo
+cáo sai" của `openDetailUnitModal`, sinh ra từ `unitActionButtonsHtml()`) trước đó không khai báo
+`justify-content`, nên mặc định `flex-start` — nhóm nút dồn về mép trái thanh footer. Đã sửa 1 dòng
+CSS duy nhất: thêm `justify-content:flex-end` vào `.modal-foot`, đẩy toàn bộ nhóm nút sang sát mép
+phải — không đổi thứ tự/logic hiển thị từng nút (vẫn đúng theo vai trò + trạng thái như đã chốt ở
+vòng trước), chỉ đổi vị trí căn chỉnh trong thanh.
+
+Không phát sinh lỗi/vấn đề nào trong lúc làm — thay đổi CSS thuần, không đụng JS.
+
+**Kiểm thử đã chạy:** `node --check` (thực chất chạy `new Function()` trên cả 3 khối `<script>` để
+bắt lỗi cú pháp mà không cần biến trang thành module) — qua cả 3. Chạy lại toàn bộ 19 bộ test hồi quy
+— **0 lỗi, không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật) ở cả desktop (1500px)
+và mobile (390px): nút "Phân loại" trong thanh footer của màn "Chi tiết đơn bảo hành con" đã dịch hẳn
+sang mép phải thanh, đúng như yêu cầu, ở cả 2 kích cỡ màn hình.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
