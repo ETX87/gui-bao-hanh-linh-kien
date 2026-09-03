@@ -74,8 +74,10 @@ sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc
 thái chuyển lên vị trí 2 trong mọi bảng + UI chi tiết đơn bảo hành có đầy đủ nút thao tác cố định ở
 footer (03/09/2026, cùng ngày), và gần nhất là badge SLA đơn giản hoá (bỏ chữ, thêm màu xanh lá) +
 bảng thống nhất Admin BH có tuỳ biến cột đầy đủ (kéo đổi vị trí/độ rộng, bật tắt cột) + nút tự động
-gộp phiếu trả cho mọi nhân viên (03/09/2026, cùng ngày) — xem 10 mục cuối cùng phía dưới (theo đúng
-thứ tự thời gian) để có chi tiết đầy đủ.
+gộp phiếu trả cho mọi nhân viên (03/09/2026, cùng ngày), và gần nhất là thêm đường gạch chia ranh
+giới cột luôn hiện (không cần hover) tại tiêu đề bảng thống nhất Admin BH, để người dùng biết trước
+vị trí kéo giãn cột thay vì phải rà chuột dò tìm (03/09/2026, cùng ngày) — xem 11 mục cuối cùng phía
+dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1523,6 +1525,41 @@ toàn bộ 18 bộ test trước đó — **0 lỗi, không hồi quy**. Xác nh
 để kéo tay cầm resize và kéo tiêu đề cột — xác nhận HTML5 drag-and-drop gốc của trình duyệt phản hồi
 đúng với chuỗi sự kiện chuột tổng hợp qua CDP, ảnh chụp trước/sau cho thấy cột "Linh kiện" đổi đúng vị
 trí và cột "Khách hàng" đổi đúng độ rộng; nút tự động gộp phiếu trả hiện đúng vị trí trên màn.
+
+## Đường gạch chia ranh giới cột luôn hiện (03/09/2026)
+
+Nguyên văn yêu cầu, gửi ngay sau vòng "SLA đơn giản hoá + tuỳ biến cột" ở trên: *"vị trí nối giữa các
+tiêu đề thêm đường gạch để dễ dàng biết vị trí để kéo giãn hoặc thu nhỏ."*
+
+Bối cảnh: vùng kéo-resize (`.col-resize-handle`, rộng 8px, đặt ở cạnh phải mỗi `<th>` của bảng thống
+nhất Admin BH) trước đó là 1 hotzone **hoàn toàn vô hình** — chỉ tô màu (`background: var(--ocean-
+400)`) khi đang hover hoặc đang kéo. Người dùng không có cách nào biết trước ranh giới nào kéo được
+nếu chưa lỡ rà chuột qua đúng vị trí đó trước — đúng vấn đề người dùng nêu ra.
+
+Đã sửa (thuần CSS, không đổi logic JS resize/drag đã có): thêm 1 đường kẻ dọc 2px, cao 56% chiều cao ô
+tiêu đề (`top/bottom:22%`), đặt đúng tâm vùng hotzone 8px bằng `::after` — **luôn hiển thị, không cần
+hover** — màu `var(--ink-400)` (xám trung tính, không nổi bật quá mức gây rối mắt khi bảng có nhiều
+cột), bo góc nhẹ. Khi hover/đang kéo (`.col-resize-handle:hover`, `.col-resize-handle.resizing`), nền
+hotzone đổi sang xanh dương (`--ocean-400`, hành vi cũ giữ nguyên) và đường kẻ đổi màu trắng để vẫn đủ
+tương phản trên nền xanh mới.
+
+```css
+.col-resize-handle::after { content: ""; position: absolute; top: 22%; bottom: 22%; left: 50%;
+  width: 2px; background: var(--ink-400); border-radius: 2px; transform: translateX(-50%); }
+.col-resize-handle:hover::after, .col-resize-handle.resizing::after { background: #fff; }
+```
+
+Không phát sinh lỗi/vấn đề nào trong lúc làm — đây là 1 thay đổi CSS thuần, không đụng tới bất kỳ hàm
+JS nào của hệ thống tuỳ biến cột (`adminColResizeStart`/`Move`/`End`, `adminColDragStart`/`Drop`...).
+
+**Kiểm thử đã chạy:** `node --check` trên cả 3 khối `<script>` — qua. Chạy lại `test_admincols_
+autogom.js` (bài test liên quan trực tiếp nhất tới bảng này) — 0 lỗi. Chạy lại toàn bộ 19 bộ test
+trong bộ hồi quy thường quy (`smoke_all_routes.js` → `test_admincols_autogom.js`) — **0 lỗi, không hồi
+quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật): chụp riêng dòng tiêu đề bảng thống nhất
+Admin BH ở trạng thái bình thường (đường kẻ xám mảnh hiện rõ giữa mỗi cặp cột: ID | Trạng thái | Nguồn
+| Khách hàng | Linh kiện | Mô tả lỗi | SLA | Hành động) và ở trạng thái đang rê chuột vào đúng 1 tay
+cầm resize (đường kẻ chuyển màu trắng, nổi rõ trên nền xanh dương hover) — cả 2 ảnh đều đúng như kỳ
+vọng.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

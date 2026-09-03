@@ -469,8 +469,17 @@ a.link:hover{text-decoration:underline;}
 #adminUnifiedTable th { position: relative; user-select: none; }
 #adminUnifiedTable th[draggable="true"] { cursor: grab; }
 #adminUnifiedTable th.col-drag-over { background: var(--ocean-100) !important; }
+/* Yeu cau nguoi dung (03/09/2026): "vi tri noi giua cac tieu de them duong gach de de dang biet vi
+   tri de keo gian hoac thu nho" - truoc do vung keo-resize (.col-resize-handle) chi la 1 hotzone
+   8px VO HINH (chi to mau khi ruoc chuot toi gan/dang keo) - nguoi dung khong biet truoc duoc canh
+   nao la keo duoc neu chua thu di chuot qua. Them 1 duong gach doc LUON HIEN (khong can hover) o
+   dung tam vung hotzone, dung mau ink-400 trung tinh (khong lam thu bang qua roi mat khi nhieu cot),
+   dam hon/doi mau trang khi hover/dang keo de de nhan biet dang thao tac. */
 .col-resize-handle { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; z-index: 1; }
+.col-resize-handle::after { content: ""; position: absolute; top: 22%; bottom: 22%; left: 50%; width: 2px;
+  background: var(--ink-400); border-radius: 2px; transform: translateX(-50%); }
 .col-resize-handle:hover, .col-resize-handle.resizing { background: var(--ocean-400); }
+.col-resize-handle:hover::after, .col-resize-handle.resizing::after { background: #fff; }
 #adminUnifiedTable td > .cell-ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.tinh-te { width: 100%; border-collapse: collapse; background: var(--surface); text-align: left; }
 table.tinh-te th { background: var(--surface-100); color: var(--ink-500); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 2px solid var(--line); }
