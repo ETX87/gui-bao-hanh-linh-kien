@@ -83,7 +83,15 @@ cho từng đơn bảo hành — 10 nút 1-chạm đối chiếu đúng bộ ico
 huong_xu_ly/loai_bao_hanh/loai_doi_tru và tự gộp vào phiếu trả "Nhập" theo đúng KTV+loại đối trừ —
 cộng với badge SLA quá hạn giờ **bấm được trực tiếp** để ghi lý do chậm ngay không cần đi kèm hành
 động nghiệp vụ nào (03/09/2026, cùng ngày) — xem 13 mục cuối cùng phía dưới (theo đúng thứ tự thời
-gian) để có chi tiết đầy đủ.
+gian) để có chi tiết đầy đủ. **Mốc quan trọng nhất gần đây (03/09/2026, cùng ngày)**: đã phân tích
+dự án song song `../linh-kien-app` ("Đặt mua linh kiện") và phát hiện **thay đổi kiến trúc lớn** —
+module đó đã tách hẳn khỏi `../cloudflare smarttrade base` từ 19/08/2026 thành 1 hệ Cloudflare
+Workers+D1 độc lập, khiến giả định cũ "build bảo hành bên trong `cloudflare smarttrade base`" (mục
+"Liên hệ với hệ thống chính") **lỗi thời** — hướng mới: bảo hành nên là 1 Worker+D1 độc lập thứ 3
+(tên dự kiến `suachua`, đã có bằng chứng placeholder trong code `linh-kien-app`), liên kết cả 2 hệ
+kia qua partner API — xem file riêng
+`du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` (đầy đủ phân tích + kế
+hoạch từng bước + câu hỏi mở, **CHƯA triển khai gì**, đang chờ người dùng chốt).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -96,6 +104,7 @@ gian) để có chi tiết đầy đủ.
 | — | `du an sua chua bao hanh/Format và luồng quy trình đơn gửi bảo hành.xlsx` | Dữ liệu vận hành thật (8 sheet) — nguồn bằng chứng cho #2. Xem mục "Bằng chứng dữ liệu thật" bên dưới để tra nhanh mà không cần mở lại file. |
 | 5 | `du an sua chua bao hanh/Ma-tran-CRUD-Vai-tro-Truong-du-lieu.xlsx` | Ma trận CRUD 6 vai trò × ~76 trường dữ liệu (sheet "Ma tran CRUD"), chú giải (sheet "Chu giai"), 8 điểm cần cơ chế "đẩy ngược" giữa các vai trò (sheet "Diem day nguoc"), luồng UX cho case nhiều đơn vị + ma trận ưu tiên bulk-action theo 13 màn hình (sheet "UX - nhieu don vi"). Đã tách `phieu_sua_chua_bh` thành **đơn cha** (KTV khai, so_luong_khai) + **đơn vị con `phieu_sua_chua_bh_ct`** (tự sinh theo so_luong_thuc_nhan Admin BH xác nhận) — xem tóm tắt ở mục "Ma trận CRUD & đơn cha/đơn vị con" bên dưới. |
 | 6 | `du an sua chua bao hanh/prototype-html/index.html` | Bản click-through prototype (HTML/CSS/JS thuần, không phụ thuộc thư viện ngoài, chạy offline bằng cách mở file trực tiếp trong trình duyệt) — xem mục "Prototype HTML" bên dưới. |
+| 7 | `du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` | Phân tích dự án song song `../linh-kien-app` + kế hoạch chuyển đổi module bảo hành lên Cloudflare thật (03/09/2026) — **nguồn đúng nhất hiện tại cho câu hỏi "kiến trúc/kết nối hệ thống"**, GHI ĐÈ phần "Liên hệ với hệ thống chính" của #4 ở những điểm xung đột (xem cảnh báo lỗi thời ngay đầu mục đó). CHƯA triển khai gì, đang chờ chốt câu hỏi mở. |
 
 **Quan trọng:** #4 (Ke-hoach) là nguồn chốt cho schema/route/phân quyền GỐC, nhưng **#5 (ma trận CRUD)
 và mục "Phản hồi vòng 1 sau khi test prototype" bên dưới đã SỬA/BỔ SUNG nhiều điểm so với #4** — khi
@@ -103,7 +112,9 @@ có xung đột, phần cập nhật trong chính CLAUDE.md này (do mới hơn)
 sửa lại theo kịp. #1 chỉ còn giá trị lịch sử (sơ đồ to-be trong #1 **thiếu** nhóm case ngoại lệ có
 phê duyệt — đã sửa ở #2, rồi #2 tự nó cũng bị **thay thế một phần** ở #4 khi ý tưởng bảng `approvals`
 bị bỏ hẳn — xem mục 0 của #4, dòng "Case ngoại lệ / phê duyệt". Đừng lấy sơ đồ mermaid trong #1 hoặc
-#2 làm chuẩn cuối.
+#2 làm chuẩn cuối. **Riêng phần "Liên hệ với hệ thống chính" của #4, #7 (mới, 03/09/2026) là bản đúng
+nhất** — #4 giả định kiến trúc đã lỗi thời, xem cảnh báo ngay đầu mục "Liên hệ với hệ thống chính"
+bên dưới.
 
 ## Bối cảnh nghiệp vụ (rút ra từ dữ liệu thật, không phải suy đoán)
 
@@ -1696,6 +1707,71 @@ thêm bằng ảnh chụp Puppeteer (Chrome thật): lưới 10 icon tròn đún
 lúc đã quá hạn thật), modal "Đổi mới có phê duyệt" hiện đúng trường mail phê duyệt, và bấm trực tiếp
 vào badge số giờ quá hạn trong bảng thống nhất mở đúng modal "Ghi lý do chậm" chỉ 1 trường.
 
+## Phân tích liên kết với "Đặt mua linh kiện" + Kế hoạch chuyển đổi lên Cloudflare (03/09/2026)
+
+Nguyên văn yêu cầu (6 điểm, kèm chỉ đạo quy trình đầy đủ: *"tự khám phá => phân tích phương án => tự
+phản biện => tái đánh giá => lập kế hoạch => báo cáo xin ý kiến"*):
+
+1. *"phân tích dự án 'F:\claude\QLBH 3T\linh-kien-app' đây là 1 dự án đặt mua linh kiện hoạt động
+   song song với dự án gửi hàng bảo hành. 2 hệ thống sẽ liên kết với nhau và cùng hoạt động trên 1
+   tài khoản cloudflare smarttrade."*
+2. *"Xác định cách quản lý tài khoản KTV, Giám sát, Admin hệ thống, View để xây dựng cơ chế cho hệ
+   thống web bảo hành."*
+3. *"Danh sách linh kiện sẽ kéo API từ bên mua hàng về (danh sách linh kiện bán hàng cho phép bảo
+   hành). (cho phép tạo thêm, sửa thông tin, tắt bật danh sách sử dụng trong bảo hành)"*
+4. *"Dựa vào phân tích dựa án mua hàng => Phân tích chi tiết các bước chuyển đổi toàn bộ dự án bảo
+   hành hiện tại sang dữ liệu sẵn sàng để chuyển đổi lên cloudflare."*
+5. *"Lập kế hoạch thành từng bước chuyển đổi đảm bảo chuyển đổi 100% nội dung hiện tại đã xây dựng
+   sang hệ thống online."*
+6. *"Kiểm tra 1 số quy ước tạo giao diện, UI, setup phiên bản mobile (như tạo shortcut, gửi thông
+   báo, kết nối API từ cloudflare... để tạo skills cho bản thân) => phân tích chi tiết xem các vấn đề
+   đang thiếu. lập kế hoạch bổ sung."*
+
+Đây là yêu cầu **phân tích + lập kế hoạch, KHÔNG code gì** — đã khảo sát trực tiếp 2 repo song song
+(`../linh-kien-app`, `../cloudflare smarttrade base`) qua git log/migration/wrangler.jsonc thật (không
+suy đoán từ tài liệu), viết thành 1 file riêng đầy đủ:
+`du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` — CLAUDE.md này chỉ tóm tắt
+phát hiện quan trọng nhất, xem file đó để có đầy đủ 7 mục (bảng đối chiếu, schema đề xuất, roadmap
+từng giai đoạn, bảng so sánh PWA/mobile 3 hệ).
+
+**Phát hiện quan trọng nhất — thay đổi hướng kiến trúc:** module "Đặt mua linh kiện" mà CLAUDE.md cũ
+(mục "Liên hệ với hệ thống chính") giả định sẽ tái dùng trực tiếp (đọc thẳng bảng `case_dvbh`,
+`users.giam_sat_quan_ly`, mẫu `phieu_xuat_kho`, các file `moduleAccess.ts`/`scopeDatMua.ts` của
+`cloudflare smarttrade base`) **đã tách hẳn ra thành 1 hệ Cloudflare Workers + D1 độc lập từ
+19/08/2026** — chính là `linh-kien-app` đang được phân tích. Bằng chứng đã đối chiếu nhiều nguồn độc
+lập (không chỉ tin 1 dòng ghi chú):
+- `linh-kien-app/CLAUDE.md` tự khai đã tách hoàn toàn (Worker/D1/OAuth/`users` riêng).
+- `cloudflare smarttrade base/backend/src/lib/moduleAccess.ts`:
+  `TAM_TAT_MODULES = ["dat-mua-lk", "tra-hang"]` — 2 module cũ đã bị **ẩn khỏi sidebar cho mọi vai
+  trò kể cả Admin**, code cũ vẫn mount nhưng không ai dùng được qua UI.
+- Migration động tới `dat_don_hang`/`phieu_xuat_kho` bên `cloudflare smarttrade base` dừng hẳn ngay
+  sau ngày tách (migration cuối liên quan: `0091`, 21/08/2026).
+- `linh-kien-app` có git log hoạt động liên tục tới 02/09/2026 (hôm qua) với các fix lỗi vận hành
+  thật — xác nhận đang chạy sản xuất, không phải bản nháp; `wrangler.jsonc` có `database_id`/VAPID
+  key thật (không còn placeholder như `DEPLOY.md` mô tả — tài liệu đó đã lỗi thời).
+- **Bằng chứng mạnh nhất**: `linh-kien-app/frontend/src/layout/navConfig.ts` (sửa 25/08/2026, trước
+  cả khi module bảo hành bắt đầu redesign UI) đã có sẵn 1 mục menu liên kết ra ngoài:
+  `{ key: "sua-chua-bao-hanh", label: "Sửa chữa", icon: "🛠", href: "https://suachua.dichvu3t.workers.dev" }`
+  — xác nhận đã có kế hoạch từ trước: hệ bảo hành sẽ là **Worker thứ 3 độc lập**, tên miền dự kiến
+  `suachua.dichvu3t.workers.dev`, cùng tài khoản Cloudflare `dichvu3t` với `dvbh`/`linhkien` — khớp
+  đúng nguyên văn yêu cầu #1 hôm nay ("2 hệ thống sẽ liên kết với nhau và cùng hoạt động trên 1 tài
+  khoản cloudflare smarttrade").
+
+Đã cập nhật ngay mục "Liên hệ với hệ thống chính" bên dưới với 1 cảnh báo lỗi thời ở đầu mục, trỏ sang
+file phân tích mới — theo đúng nguyên tắc #4 của CLAUDE.md ("khi 2 tài liệu mâu thuẫn, ghi rõ nguồn
+nào đúng nhất, không âm thầm chọn 1 bên").
+
+**5 câu hỏi mở chưa có câu trả lời** (ghi đầy đủ ở file phân tích mục 7, không tự suy đoán rồi coi
+như đã chốt): (1) xác nhận hướng kiến trúc Worker độc lập tên `suachua` + domain đã tồn tại thật
+chưa; (2) cờ `chi_sua_chua` bên `linh-kien-app` có đúng là "linh kiện được phép dùng bảo hành" không;
+(3) vai trò "Giám sát" xây mới theo mẫu `linh-kien-app` hay dùng luôn `quanly` hiện có, và `quanly`/
+View có cần giới hạn theo miền/khu vực không; (4) danh bạ KTV tự có riêng hay luôn gọi API sang
+`linh-kien-app`; (5) giữ `mien` 2 giá trị đơn giản hay nâng cấp theo `khu_vuc` linh động như
+`linh-kien-app`.
+
+**Chưa chạy kiểm thử nào** — đây là phân tích/lập kế hoạch thuần tuý, chưa có code/migration nào được
+viết ở vòng này.
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung
@@ -1773,6 +1849,19 @@ phân tích ưu nhược"), phát hiện và đã xử lý:
      `test_dichvu.js` — 0 lỗi.
 
 ## Liên hệ với hệ thống chính (`../cloudflare smarttrade base`)
+
+**[LỖI THỜI — xem mục "Phân tích liên kết với Đặt mua linh kiện..." (03/09/2026) bên dưới trước khi
+đọc mục này]**: toàn bộ giả định "build vào bên trong `cloudflare smarttrade base`, tái dùng trực
+tiếp `moduleAccess.ts`/`scopeDatMua.ts`/`users.giam_sat_quan_ly`/mẫu `phieu_xuat_kho`" bên dưới **đã
+lỗi thời** — module "Đặt mua linh kiện" (nguồn của các pattern này) đã tách hẳn thành 1 hệ Cloudflare
+Workers + D1 độc lập tên `linh-kien-app` từ 19/08/2026, và `cloudflare smarttrade base` đã **ẩn hẳn**
+2 module cũ (`dat-mua-lk`/`tra-hang`) khỏi mọi vai trò (`TAM_TAT_MODULES` trong `moduleAccess.ts`) —
+2 module đó không còn là nguồn sự thật để tái dùng. Hướng kiến trúc mới (đã tìm được bằng chứng cụ
+thể — xem file phân tích riêng, mục 0): module bảo hành nên là **Worker + D1 độc lập thứ 3** (tên dự
+kiến `suachua`, đã có placeholder link trong `linh-kien-app`), liên kết với `dvbh`/`linhkien` qua
+partner API + Service Binding — **không phải** đọc thẳng bảng như mục dưới đây mô tả. Mục này (và
+toàn bộ #4 Ke-hoach cũ ở những điểm liên quan) giữ lại chỉ để tham khảo lịch sử/đối chiếu field, không
+còn là kế hoạch kỹ thuật cuối cùng cho phần kết nối hệ thống.
 
 Toàn bộ thiết kế ở #4 giả định tái dùng nguyên trạng các thứ sau — đã verify trực tiếp trong
 migrations của repo đó (không phải suy đoán từ tài liệu):
