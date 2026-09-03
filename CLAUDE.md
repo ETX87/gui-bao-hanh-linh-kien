@@ -68,7 +68,9 @@ ranh giới), rồi tiếp theo là đổi menu mobile từ drawer sang bottom t
 ngày), rồi sort log mới nhất lên đầu + 1 vòng đánh giá lại visual hierarchy toàn hệ thống (02/09/2026:
 badge SLA phân 3 mức khẩn cấp, khu vực "Việc của tôi" nổi bật hẳn khỏi số liệu tham khảo, trường chỉ-
 xem không còn trông như ô nhập bị khoá), rồi cuối cùng chuyển nút thao tác của 2 "UI chi tiết" lên
-top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu) — xem 7 mục cuối cùng phía
+top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu), và gần nhất là 1 vòng 3 yêu
+cầu (03/09/2026): lời chào rút gọn lên topbar, gộp 2 settings admin về 1 trang `#/qtri/cai-dat`, và
+sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc từng tab — xem 8 mục cuối cùng phía
 dưới (theo đúng thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
@@ -1292,6 +1294,72 @@ thêm bằng ảnh chụp Puppeteer (Chrome thật): nút "Đóng chi tiết" hi
 **vẫn hiện nguyên vị trí sau khi cuộn sâu xuống cuối nội dung** (ảnh chụp trước/sau cuộn để đối
 chứng — đây chính là mục đích của yêu cầu), và trên mobile (390px) tiêu đề tự ellipsis, nút + × vẫn
 đủ chỗ trên 1 hàng, không tràn/xuống dòng.
+
+## Lời chào lên topbar + gộp Cài đặt hệ thống + sidebar mặc định thu gọn (03/09/2026)
+
+Nguyên văn 3 yêu cầu, gửi cùng lúc:
+
+1. *"banner xin chào chiếm quá nhiều diện tích không cần thiết, cho nó lên thành lời chào ở góc trên
+   top banner."*
+2. *"Các settings cho tài khoản admin. chuyển nó về chung 1 modules settings cho admin hệ thống quản
+   trị."*
+3. *"Giao diện web dành cho các vai trò xử lý tự động kéo giãn ra khi thu gọn menu. (mặc định menu
+   sẽ ở trạng thái thu gọn - thẻ menu nào có việc cần làm sẽ tô đậm số việc cần làm lên như 1 dạng
+   báo có tin nhắn)"*
+
+**1. Lời chào chuyển lên topbar.** The `<div class="card">` "Xin chào, {tên}" + dòng phụ "Vai trò ·
+Miền · email" ở đầu Trang chủ (~70-80px chiều cao) đã xoá hẳn khỏi `renderHome()`. Thay bằng
+`<span id="topbarGreeting">` tĩnh trong `<header class="topbar">`, cập nhật nội dung qua `updateAvatar()`
+(hàm đã có sẵn, gọi mỗi khi đổi vai trò — mở rộng thêm luôn việc set `innerHTML` của greeting + set
+`title` tooltip đầy đủ vai trò/miền/email trên chính avatar tròn, thay vì phải thêm 1 lệnh gọi mới ở
+nơi khác). Chỉ hiện trên desktop (`topbar-desktop-only` — mobile đã thấy tên qua dropdown "Vai trò"
+đang chọn, không cần thêm dòng riêng khi màn hình đã chật). Trang chủ giờ mở đầu ngay bằng "🔥 Việc
+của tôi" — khu vực quan trọng nhất lên vị trí đầu tiên thay vì bị đẩy xuống dưới lời chào.
+
+**2. Gộp settings admin về 1 module.** Trước đó nút "⚙ Lý do chậm"/"⚙ Lý do huỷ" nằm thẳng trên
+topbar **toàn cục, hiện cho MỌI vai trò** đang xem — đây chính là lỗ hổng đã ghi nhận ở mục "Phản hồi
+vòng 2" (`[CẦN XÁC NHẬN] vai trò nào thực sự được quyền sửa danh mục "Lý do chậm"`), treo từ trước khi
+có vai trò `qtri`. Đã dời hẳn 2 nút này ra khỏi topbar, gộp vào 1 trang mới **`#/qtri/cai-dat`
+("Cài đặt hệ thống")** — chỉ vai trò Quản trị hệ thống thấy trong sidebar, vừa gộp đúng yêu cầu vừa
+giải quyết luôn câu hỏi mở cũ. Khác với modal cũ (bấm nút mới mở popup riêng), trang mới hiện **trực
+tiếp cả 2 danh mục dạng lưới 2 cột ngay trên trang** (không cần thêm 1 lượt bấm/mở modal) — 2 hàm
+`openLyDoChamSettingsModal`/`openLyDoTuChoiSettingsModal` (chỉ có đúng 2 nơi gọi là 2 nút topbar vừa
+xoá) đã bỏ hẳn, thay bằng `lyDoChamListHtml()`/`lyDoTuChoiListHtml()` (trả về HTML nhúng thẳng vào
+trang) + `addLyDoCham()`/`removeLyDoCham()`/... đổi từ "mở lại modal" sang gọi `render()` (đúng cách
+làm `xoaNguoiDung()` ở trang `#/qtri/nguoi-dung` bên cạnh đã dùng).
+
+**3. Sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu từng tab.**
+- `SIDEBAR_COLLAPSED` đổi mặc định `false` → `true`.
+- **Nội dung tự kéo giãn khi thu gọn**: `renderSidebar()` giờ đồng bộ 1 class `body.sidebar-collapsed`
+  theo đúng `SIDEBAR_COLLAPSED` mỗi lần render (thay vì chỉ đổi độ rộng `<aside>`) — CSS
+  `body.sidebar-collapsed .wrap,body.sidebar-collapsed footer.note{max-width:1440px;}` (tăng từ
+  1180px mặc định) tận dụng đúng ~176px vừa giải phóng khi sidebar co từ 248px xuống 72px. Đã xác
+  nhận bằng ảnh chụp so sánh trực tiếp: cùng 1 bảng dữ liệu, bản thu gọn hiện thêm được 1-2 cột trước
+  khi bị cắt, bản mở rộng bị cắt sớm hơn hẳn.
+- **Huy hiệu số việc cần làm cho TỪNG tab riêng** (trước đây chỉ "Trang chủ" có huy hiệu tổng): gom
+  `workloadItems()` theo đúng field `hash` sẵn có của từng item, gắn `.si-count` vào đúng mục sidebar
+  tương ứng. Khi **thu gọn** (chỉ còn icon, không còn chỗ đặt cạnh nhãn như bình thường), `.si-count`
+  chuyển từ ẩn hẳn (hành vi cũ) sang **huy hiệu tròn nhỏ đè lên góc icon** — đúng kiểu "báo có tin
+  nhắn chưa đọc" trên icon app điện thoại, dùng nguyên `position:relative` sẵn có trên `.sidebar-item`
+  làm điểm neo. Ở tablet 768-900px (drawer luôn mở full nhãn dù mang class `collapsed`), đã thêm rule
+  riêng trả `.si-count` về đúng vị trí inline bình thường, không để lẫn kiểu "huy hiệu góc icon" của
+  chế độ thu gọn desktop thật.
+- Thêm `title="..."` (tooltip khi hover) cho mọi mục sidebar — tự phát hiện thêm lúc chụp ảnh kiểm
+  tra: khi mặc định đã là thu gọn, icon-only không còn chữ để đọc, cần tooltip để biết mỗi icon là
+  màn nào trước khi bấm (điểm này không có trong yêu cầu gốc nhưng là hệ quả trực tiếp của việc đổi
+  mặc định sang thu gọn, nên bổ sung luôn cùng đợt thay vì để lại thành 1 lỗ hổng UX mới).
+
+**Kiểm thử đã chạy:** `test_greeting_settings_sidebar.js` (jsdom) xác minh cả 3 mục — greeting đúng
+tên/cập nhật đúng khi đổi vai trò, Trang chủ không còn dòng "Xin chào", avatar có tooltip đầy đủ;
+topbar không còn 2 nút settings cũ, trang `#/qtri/cai-dat` hiện đủ 2 danh mục và thêm/xoá ngay tại
+trang hoạt động đúng; `SIDEBAR_COLLAPSED` mặc định `true`, `body` đồng bộ đúng class, huy hiệu từng
+tab khớp đúng số liệu `workloadItems()` theo từng hash (test cả 2 nhánh có/không có việc). Cập nhật
+2 test cũ (`test_appsheet_features.js`, `test_sla.js`) đang gọi trực tiếp 2 hàm modal đã xoá — chuyển
+sang điều hướng tới `#/qtri/cai-dat` bằng vai trò `qtri` trước khi thao tác, đúng API mới. Chạy lại
+toàn bộ 17 bộ test — **0 lỗi, không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật):
+Trang chủ thu gọn mặc định với huy hiệu góc icon đúng số liệu, so sánh cạnh-nhau bảng dữ liệu thu gọn
+vs mở rộng cho thấy rõ nội dung giãn thêm, trang Cài đặt hệ thống hiện đủ 2 danh mục dạng lưới, và
+mobile (390px) không bị ảnh hưởng (greeting ẩn đúng theo thiết kế, bottom-nav không đổi).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

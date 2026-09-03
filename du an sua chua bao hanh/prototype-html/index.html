@@ -76,7 +76,7 @@ h1,h2,h3{font-family:var(--font-display);}
 .sidebar-group-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--sidebar-ink-dim);padding:0 8px;margin:10px 0 5px;}
 .sidebar-item{width:100%;display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;margin-bottom:2px;
   font-size:13px;font-weight:600;color:var(--sidebar-ink-mid);background:transparent;border:none;border-left:3px solid transparent;
-  cursor:pointer;text-align:left;transition:background .15s,color .15s;text-decoration:none;}
+  cursor:pointer;text-align:left;transition:background .15s,color .15s;text-decoration:none;position:relative;}
 .sidebar-item:hover{background:var(--sidebar-highlight);color:var(--sidebar-ink);}
 .sidebar-item.active{background:var(--sidebar-highlight);color:var(--sidebar-ink);border-left-color:var(--ocean-400);}
 .sidebar-item .si-icon{width:20px;text-align:center;flex-shrink:0;font-size:14px;}
@@ -84,7 +84,14 @@ h1,h2,h3{font-family:var(--font-display);}
 .sidebar-item .si-count{flex-shrink:0;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--coral-500);
   color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;}
 .sidebar.collapsed .sidebar-title,.sidebar.collapsed .sidebar-sub,.sidebar.collapsed .si-label,
-.sidebar.collapsed .si-count,.sidebar.collapsed .sidebar-group-label,.sidebar.collapsed .sidebar-foot{display:none;}
+.sidebar.collapsed .sidebar-group-label,.sidebar.collapsed .sidebar-foot{display:none;}
+/* Yeu cau nguoi dung (03/09/2026): "the menu nao co viec can lam se to dam so viec can lam len nhu 1
+   dang bao co tin nhan" - khi thu gon (chi con icon, khong co cho cho nhan .si-label de dat badge noi
+   tiep nhu binh thuong), KHONG an het .si-count nhu truoc nua ma chuyen thanh 1 huy hieu nho de o goc
+   icon (giong huy hieu thong bao chua-doc tren icon app dien thoai) - nho .sidebar-item da co
+   position:relative o tren de lam diem neo dinh vi tuyet doi. */
+.sidebar.collapsed .si-count{position:absolute;top:2px;right:6px;min-width:16px;height:16px;padding:0 3px;
+  font-size:9px;border:1.5px solid var(--sidebar-to);}
 .sidebar-collapse-btn{margin:10px;padding:8px;border-radius:10px;background:transparent;border:none;color:var(--sidebar-ink-dim);
   font-size:11px;font-weight:700;cursor:pointer;}
 .sidebar-collapse-btn:hover{background:var(--sidebar-highlight);color:var(--sidebar-ink);}
@@ -96,8 +103,12 @@ h1,h2,h3{font-family:var(--font-display);}
   .sidebar.mobile-open{transform:translateX(0);}
   .sidebar.collapsed{width:264px;}
   .sidebar.collapsed .sidebar-title,.sidebar.collapsed .sidebar-sub,.sidebar.collapsed .si-label,
-  .sidebar.collapsed .si-count,.sidebar.collapsed .sidebar-group-label,.sidebar.collapsed .sidebar-foot{display:block;}
+  .sidebar.collapsed .sidebar-group-label,.sidebar.collapsed .sidebar-foot{display:block;}
   .sidebar.collapsed .si-label{display:inline;}
+  /* Tablet (768-900px): drawer luon mo full nhan/label du dang "collapsed" ve mat state (xem class
+     .sidebar.collapsed{width:264px} ngay tren) - .si-count phai tro ve dung vi tri INLINE binh
+     thuong (khong con la huy hieu goc icon cua che do thu gon desktop that o tren). */
+  .sidebar.collapsed .si-count{position:static;display:flex;min-width:20px;height:20px;padding:0 5px;font-size:10.5px;border:none;}
   .sidebar-collapse-btn{display:none;}
 }
 /* Yeu cau nguoi dung (02/09/2026): "giao dien mobile chuyen menu xuong bottom" - o man hinh dien
@@ -150,12 +161,27 @@ h1,h2,h3{font-family:var(--font-display);}
 .topbar-title .td-name{font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--ink-900);white-space:nowrap;}
 .topbar-title .td-sub{font-size:10px;color:var(--ink-400);white-space:nowrap;}
 .topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;}
+/* Yeu cau nguoi dung (03/09/2026): "banner xin chao chiem qua nhieu dien tich, cho no len thanh loi
+   chao o goc tren top banner" - the "Xin chao, Ten" ban dau la 1 the .card rieng ngay dau trang chu
+   (h2 16px + dong phu, chiem ~70-80px chieu cao), nay rut gon thanh 1 dong chu nho trong topbar (luon
+   thay o moi trang, khong chi rieng Trang chu), giai phong toan bo khoang do o Trang chu cho "Viec
+   cua toi" len ngay dau tien. */
+.topbar-greeting{font-size:12.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+.topbar-greeting b{color:var(--ink-900);}
 .role-label{color:var(--ink-400);margin:0;font-size:11px;font-weight:600;white-space:nowrap;}
 #userSelect{padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface-100);color:var(--ink-900);font-size:12px;max-width:220px;}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--ocean-500);color:#fff;display:flex;align-items:center;
   justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
-.wrap{max-width:1180px;margin:0 auto;padding:18px;width:100%;}
-footer.note{max-width:1180px;margin:0 auto;padding:6px 18px 32px;font-size:11px;color:var(--ink-400);}
+.wrap{max-width:1180px;margin:0 auto;padding:18px;width:100%;transition:max-width .2s;}
+footer.note{max-width:1180px;margin:0 auto;padding:6px 18px 32px;font-size:11px;color:var(--ink-400);transition:max-width .2s;}
+/* Yeu cau nguoi dung (03/09/2026): "giao dien web danh cho cac vai tro xu ly tu dong keo gian ra khi
+   thu gon menu" - sidebar thu gon (72px, giai phong 176px so voi 248px luc mo rong) truoc day KHONG
+   lam gi voi khoang trong nay, .wrap van gioi han cung 1180px nen chi tao them le trong 2 ben thay vi
+   cho noi dung (bang/form) tan dung. Tang gioi han do rong noi dung khi body co class nay (dong bo
+   voi SIDEBAR_COLLAPSED trong renderSidebar()) - o man hinh hep hon 1440px, max-width lon hon khong
+   co tac dung gi (van bi gioi han boi be rong that cua khung nhin), nen an toan, khong anh huong
+   tablet/mobile. */
+body.sidebar-collapsed .wrap,body.sidebar-collapsed footer.note{max-width:1440px;}
 
 /* ---------- Card / typography ---------- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;
@@ -462,13 +488,12 @@ table.tinh-te, .table-responsive table { white-space: nowrap; }
         <div class="td-sub">Prototype — không kết nối backend thật</div>
       </div>
       <div class="topbar-right">
+        <span id="topbarGreeting" class="topbar-greeting topbar-desktop-only"></span>
         <label class="role-label">Vai trò</label>
         <select id="userSelect" onchange="onUserChange()"></select>
         <button class="btn-reset focus-ring topbar-desktop-only" style="background:var(--ocean-600);" onclick="openMobilePreview()">📱 Xem giao diện Mobile</button>
-        <button class="btn-reset focus-ring topbar-desktop-only" style="background:#fff;color:var(--ink-600);border:1px solid var(--line);" onclick="openLyDoChamSettingsModal()">⚙ Lý do chậm</button>
-        <button class="btn-reset focus-ring topbar-desktop-only" style="background:#fff;color:var(--ink-600);border:1px solid var(--line);" onclick="openLyDoTuChoiSettingsModal()">⚙ Lý do huỷ</button>
         <button class="btn-reset focus-ring" style="background:var(--coral-600);" onclick="if(confirm('Xoa toan bo du lieu da nhap va nap lai du lieu mau?')) resetData();">↺ Reset</button>
-        <div class="avatar" id="avatarBadge">?</div>
+        <div class="avatar" id="avatarBadge" title="">?</div>
       </div>
     </header>
     <main class="wrap" id="content"></main>
@@ -739,53 +764,77 @@ function gateSlaSubmit(){
   const cb = __gateSlaCb; __gateSlaCb = null;
   if(cb) cb(text);
 }
-function openLyDoChamSettingsModal(){
-  renderLyDoChamSettingsModalBody();
-}
-function renderLyDoChamSettingsModalBody(){
+/* Yeu cau nguoi dung (03/09/2026): "cac settings cho tai khoan admin ... chuyen ve chung 1 modules
+   settings cho admin he thong quan tri" - 2 danh muc nay TRUOC DAY mo qua modal, kich hoat boi 2 nut
+   nam thang tren TOPBAR TOAN CUC (hien cho MOI vai tro dang xem, khong phan biet quyen han - dung la
+   1 lo ho da tung duoc ghi nhan la "CAN XAC NHAN" o muc "Cau hoi mo" cua CLAUDE.md truoc khi co vai
+   tro qtri). Nay chuyen han thanh 1 trang rieng #/qtri/cai-dat, CHI vai tro Quan tri he thong (qtri)
+   thay duoc trong sidebar - vua gom ve 1 noi, vua giai quyet luon cau hoi mo do. Doi tu "mo modal" (
+   openXxxModal goi openModal()) sang "hien truc tiep tren trang" (list*Html() tra ve chuoi HTML de
+   nhung vao renderQtriCaiDat()), add/remove gio goi render() (ve lai toan trang) thay vi goi lai ham
+   mo modal - dung cach lam voi xoaNguoiDung()/suaVaiTroNguoiDung() da co san cho trang qtri kia. */
+function lyDoChamListHtml(){
   const list = DB.settings.ly_do_cham||[];
-  openModal('Cai dat danh muc "Ly do cham"', `
-    <div id="ldc_list">${list.map((l,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+  return `
+    <div id="ldc_list">${list.length===0?'<div class="fine">Chua co ly do nao.</div>':list.map((l,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
       <span>${esc(l)}</span><a class="link" style="color:#dc2626;" onclick="removeLyDoCham(${i})">Xoa</a></div>`).join('')}</div>
     <div class="field" style="margin-top:10px;"><label>Them ly do moi</label><input type="text" id="ldc_new"></div>
     <div class="btnrow"><button class="btn small" onclick="addLyDoCham()">+ Them</button></div>
-  `);
+  `;
 }
 function addLyDoCham(){
   const v = document.getElementById('ldc_new').value.trim();
   if(!v) return;
   DB.settings.ly_do_cham.push(v);
-  save(); renderLyDoChamSettingsModalBody(); toast('Da them ly do cham.');
+  save(); render(); toast('Da them ly do cham.');
 }
 function removeLyDoCham(i){
   DB.settings.ly_do_cham.splice(i,1);
-  save(); renderLyDoChamSettingsModalBody();
+  save(); render();
 }
 
 /* Danh muc "Ly do huy" (yeu cau 31/08/2026, muc 1: "Huy do khong co hang => them vao truong ly do
    huy. cac ly do huy nay dang listdown co the bo sung them") - cung 1 khuon mau voi ly_do_cham o
    tren, chi doi ten bien/ham va key trong DB.settings. */
-function openLyDoTuChoiSettingsModal(){
-  renderLyDoTuChoiSettingsModalBody();
-}
-function renderLyDoTuChoiSettingsModalBody(){
+function lyDoTuChoiListHtml(){
   const list = DB.settings.ly_do_tu_choi||[];
-  openModal('Cai dat danh muc "Ly do huy don"', `
-    <div id="ldtc_list">${list.map((l,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+  return `
+    <div id="ldtc_list">${list.length===0?'<div class="fine">Chua co ly do nao.</div>':list.map((l,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
       <span>${esc(l)}</span><a class="link" style="color:#dc2626;" onclick="removeLyDoTuChoi(${i})">Xoa</a></div>`).join('')}</div>
     <div class="field" style="margin-top:10px;"><label>Them ly do moi</label><input type="text" id="ldtc_new"></div>
     <div class="btnrow"><button class="btn small" onclick="addLyDoTuChoi()">+ Them</button></div>
-  `);
+  `;
 }
 function addLyDoTuChoi(){
   const v = document.getElementById('ldtc_new').value.trim();
   if(!v) return;
   DB.settings.ly_do_tu_choi.push(v);
-  save(); renderLyDoTuChoiSettingsModalBody(); toast('Da them ly do huy.');
+  save(); render(); toast('Da them ly do huy.');
 }
 function removeLyDoTuChoi(i){
   DB.settings.ly_do_tu_choi.splice(i,1);
-  save(); renderLyDoTuChoiSettingsModalBody();
+  save(); render();
+}
+function renderQtriCaiDat(){
+  return `
+  <div class="card">
+    <h2>⚙️ Cài đặt hệ thống</h2>
+    <p class="fine">Các danh mục dùng chung toàn hệ thống — trước đây nằm rải rác trên thanh topbar
+    của mọi vai trò, nay gộp về đây, chỉ Quản trị hệ thống truy cập/sửa được.</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Danh mục "Lý do chậm"</h3>
+      <p class="fine">Áp dụng khi 1 bước xử lý quá 24h SLA — người xử lý bắt buộc chọn 1 lý do trong
+      danh mục này trước khi được tiếp tục thao tác.</p>
+      ${lyDoChamListHtml()}
+    </div>
+    <div class="card">
+      <h3>Danh mục "Lý do huỷ đơn"</h3>
+      <p class="fine">Áp dụng khi Admin bảo hành chọn hướng xử lý "Huỷ đơn bảo hành" lúc phân loại.</p>
+      ${lyDoTuChoiListHtml()}
+    </div>
+  </div>`;
 }
 
 /* Yeu cau nguoi dung: "tat ca cac table deu co the click vao dong de mo giao dien UI chi tiet" - o
@@ -1246,7 +1295,7 @@ const ROUTES_BY_ROLE = {
   adminbh:[['#/admin/phan-loai','Hang doi phan loai','🗂'],['#/admin/xac-nhan','Xac nhan hoan tat','✅'],['#/admin/phieu-tra','Phieu tra bao hanh','📮']],
   nv:[['#/nv/viec-cua-toi','Viec cua toi','🔧']],
   ketoan:[['#/ketoan/duyet','Duyet phieu tra','💰']],
-  qtri:[['#/qtri/nguoi-dung','Nguoi dung & phan quyen','🛡️']],
+  qtri:[['#/qtri/nguoi-dung','Nguoi dung & phan quyen','🛡️'],['#/qtri/cai-dat','Cai dat he thong','⚙️']],
   quanly:[['#/quanly/tong-quan','Tong quan he thong','📊'],['#/quanly/tra-cuu','Tra cuu moi don hang','🔎']],
 };
 const ROLE_ICON = {ktv:'🧑‍🔧',kho:'🏬',adminbh:'🛡',nv:'🔧',ketoan:'💰',qtri:'🛡️',quanly:'📋'};
@@ -1260,7 +1309,15 @@ function roleLabel(r){ return {ktv:'KTV/CTV',kho:'Kho',adminbh:'Admin BH',nv:'NV
 function updateAvatar(){
   const me = currentUser();
   const el = document.getElementById('avatarBadge');
-  if(el) el.textContent = (me.ten||'?').trim().split(' ').slice(-1)[0]?.[0]?.toUpperCase() || '?';
+  if(el){
+    el.textContent = (me.ten||'?').trim().split(' ').slice(-1)[0]?.[0]?.toUpperCase() || '?';
+    el.title = `${esc(me.ten)} · ${roleLabel(me.vai_tro)}${me.mien?(' · Miền '+esc(me.mien)):''} · ${esc(me.email)}`;
+  }
+  /* Yeu cau nguoi dung (03/09/2026): loi chao rut gon tu the card lon o Trang chu len 1 dong nho
+     trong topbar, luon thay o moi trang (khong chi rieng luc render Trang chu) - vi vay cap nhat o
+     day (goi tu onUserChange() + populateUserSelect() luc boot), khong phai trong renderHome(). */
+  const g = document.getElementById('topbarGreeting');
+  if(g) g.innerHTML = `${ROLE_ICON[me.vai_tro]||''} Xin chào, <b>${esc(me.ten)}</b>`;
 }
 
 function onUserChange(){
@@ -1274,7 +1331,10 @@ function onUserChange(){
 /* =========================================================
    SIDEBAR (port Sidebar.tsx: gradient toi, thu gon tren desktop, drawer tren mobile)
    ========================================================= */
-var SIDEBAR_COLLAPSED = false;
+/* Yeu cau nguoi dung (03/09/2026): "mac dinh menu se o trang thai thu gon" - doi tu false sang true.
+   Danh dau vai vao sidebar-collapse-btn/sidebar deu doc dung gia tri nay, khong can sua gi them o
+   noi khac; body.sidebar-collapsed (xem renderSidebar()) dong bo theo bien nay moi lan render. */
+var SIDEBAR_COLLAPSED = true;
 function toggleSidebarCollapsed(){ SIDEBAR_COLLAPSED = !SIDEBAR_COLLAPSED; renderSidebar(); }
 function toggleMobileSidebar(){
   const sb = document.querySelector('.sidebar'); const ov = document.getElementById('sidebarOverlay');
@@ -1327,6 +1387,18 @@ function renderSidebar(){
   const cur = location.hash || '#/home';
   const wl = workloadItems();
   const totalCount = wl.reduce((s,i)=>s+i.count,0);
+  /* Yeu cau nguoi dung (03/09/2026): "the menu nao co viec can lam se to dam so viec can lam len" -
+     truoc day CHI "Trang chu" co huy hieu (tong tat ca), tung tab rieng le khong biet duoc chinh no
+     co bao nhieu viec neu khong bam vao. Gom lai theo dung "hash" cua tung workloadItems() (moi item
+     da co san 1 hash tro dung ve man xu ly no) de gan huy hieu cho DUNG tab tuong ung. */
+  const countByHash = {};
+  wl.forEach(i=>{ countByHash[i.hash] = (countByHash[i.hash]||0) + i.count; });
+  /* Yeu cau nguoi dung (03/09/2026): "giao dien web ... tu dong keo gian ra khi thu gon menu" - danh
+     dau len <body> de CSS ".wrap"/"footer.note" biet duong luong khi sidebar dang thu gon (72px) hay
+     mo rong (248px) ma tu dieu chinh do rong noi dung, khong can truyen bien qua tung ham render*()
+     rieng le. Dong bo lai o day (moi lan renderSidebar() chay) thay vi 1 lan luc boot - vi
+     SIDEBAR_COLLAPSED co the doi bat ky luc nao qua toggleSidebarCollapsed(). */
+  document.body.classList.toggle('sidebar-collapsed', SIDEBAR_COLLAPSED);
   const html = `
     <aside class="sidebar${SIDEBAR_COLLAPSED?' collapsed':''}">
       <div class="sidebar-head">
@@ -1338,15 +1410,21 @@ function renderSidebar(){
       </div>
       <nav class="sidebar-nav">
         <div class="sidebar-group-label">Chung</div>
-        <a class="sidebar-item${cur.startsWith('#/home')?' active':''}" href="#/home">
+        <a class="sidebar-item${cur.startsWith('#/home')?' active':''}" href="#/home" title="Trang chủ${totalCount>0?` (${totalCount} việc cần làm)`:''}">
           <span class="si-icon">🏠</span><span class="si-label">Trang chủ</span>
           ${totalCount>0?`<span class="si-count">${totalCount>99?'99+':totalCount}</span>`:''}
         </a>
         <div class="sidebar-group-label">Màn hình của bạn</div>
-        ${routes.map(([h,label,icon])=>`
-          <a class="sidebar-item${cur.startsWith(h)?' active':''}" href="${h}">
+        ${routes.map(([h,label,icon])=>{
+          const c = countByHash[h]||0;
+          /* title (tooltip khi hover) - quan trong hon khi sidebar mac dinh thu gon (chi con icon,
+             khong co .si-label de doc), giup nguoi dung biet dung icon nao truoc khi bam vao. */
+          return `
+          <a class="sidebar-item${cur.startsWith(h)?' active':''}" href="${h}" title="${esc(label)}${c>0?` (${c} việc cần làm)`:''}">
             <span class="si-icon">${icon}</span><span class="si-label">${label}</span>
-          </a>`).join('')}
+            ${c>0?`<span class="si-count">${c>99?'99+':c}</span>`:''}
+          </a>`;
+        }).join('')}
       </nav>
       <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapsed()">${SIDEBAR_COLLAPSED?'»':'« Thu gọn'}</button>
       <div class="sidebar-foot">Hệ thống nội bộ không chia sẻ dưới mọi hình thức.<br>Prototype v0.1</div>
@@ -1399,6 +1477,7 @@ function render(){
     '#/nv/viec-cua-toi': renderNvViecCuaToi,
     '#/ketoan/duyet': renderKeToanDuyet,
     '#/qtri/nguoi-dung': renderQtriNguoiDung,
+    '#/qtri/cai-dat': renderQtriCaiDat,
     '#/quanly/tong-quan': renderQuanLyTongQuan,
     '#/quanly/tra-cuu': renderQuanLyTraCuu,
   };
@@ -1462,15 +1541,10 @@ function workloadItems(){
   return items;
 }
 function renderHome(){
-  const me = currentUser();
   const items = workloadItems();
   const mine = items.filter(i=>i.count>0).sort((a,b)=>b.count-a.count);
   const toneDot = {gray:'dot-gray',blue:'dot-blue',green:'dot-green',amber:'dot-amber',red:'dot-red',purple:'dot-purple'};
   return `
-  <div class="card">
-    <h2>${ROLE_ICON[me.vai_tro]||''} Xin chào, ${esc(me.ten)}</h2>
-    <div class="fine">Vai trò: ${roleLabel(me.vai_tro)}${me.mien?(' · Miền '+esc(me.mien)):''} · ${esc(me.email)}</div>
-  </div>
   <div class="card${mine.length>0?' card-action':''}">
     <h3>${mine.length>0?'🔥 ':''}Việc của tôi</h3>
     ${mine.length===0
