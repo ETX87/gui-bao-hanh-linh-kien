@@ -87,11 +87,14 @@ gian) để có chi tiết đầy đủ. **Mốc quan trọng nhất gần đây
 dự án song song `../linh-kien-app` ("Đặt mua linh kiện") và phát hiện **thay đổi kiến trúc lớn** —
 module đó đã tách hẳn khỏi `../cloudflare smarttrade base` từ 19/08/2026 thành 1 hệ Cloudflare
 Workers+D1 độc lập, khiến giả định cũ "build bảo hành bên trong `cloudflare smarttrade base`" (mục
-"Liên hệ với hệ thống chính") **lỗi thời** — hướng mới: bảo hành nên là 1 Worker+D1 độc lập thứ 3
-(tên dự kiến `suachua`, đã có bằng chứng placeholder trong code `linh-kien-app`), liên kết cả 2 hệ
-kia qua partner API — xem file riêng
+"Liên hệ với hệ thống chính") **lỗi thời** — hướng mới: bảo hành là 1 Worker+D1 độc lập thứ 3 tên
+`suachua` (đã xác nhận domain `suachua.dichvu3t.workers.dev` **đã online thật**), liên kết cả 2 hệ
+kia qua partner API + cơ chế **"đẩy" (push sync)** tự động cho dữ liệu tham chiếu (KTV/Khu vực/danh
+mục linh kiện — `linh-kien-app` chủ động gọi sang khi có thay đổi) — cả 5 câu hỏi mở vòng đầu đã
+được chốt cùng ngày (xem mục "Chốt 5 câu hỏi mở..." bên dưới), chỉ còn 1 câu hỏi mới (vị trí mã
+nguồn thật của Worker `suachua`) — xem file riêng
 `du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` (đầy đủ phân tích + kế
-hoạch từng bước + câu hỏi mở, **CHƯA triển khai gì**, đang chờ người dùng chốt).
+hoạch từng bước, **CHƯA triển khai gì**, đang chờ câu trả lời cho câu hỏi mới trước khi scaffold).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1761,16 +1764,70 @@ lập (không chỉ tin 1 dòng ghi chú):
 file phân tích mới — theo đúng nguyên tắc #4 của CLAUDE.md ("khi 2 tài liệu mâu thuẫn, ghi rõ nguồn
 nào đúng nhất, không âm thầm chọn 1 bên").
 
-**5 câu hỏi mở chưa có câu trả lời** (ghi đầy đủ ở file phân tích mục 7, không tự suy đoán rồi coi
-như đã chốt): (1) xác nhận hướng kiến trúc Worker độc lập tên `suachua` + domain đã tồn tại thật
-chưa; (2) cờ `chi_sua_chua` bên `linh-kien-app` có đúng là "linh kiện được phép dùng bảo hành" không;
-(3) vai trò "Giám sát" xây mới theo mẫu `linh-kien-app` hay dùng luôn `quanly` hiện có, và `quanly`/
-View có cần giới hạn theo miền/khu vực không; (4) danh bạ KTV tự có riêng hay luôn gọi API sang
-`linh-kien-app`; (5) giữ `mien` 2 giá trị đơn giản hay nâng cấp theo `khu_vuc` linh động như
-`linh-kien-app`.
+~~**5 câu hỏi mở chưa có câu trả lời**~~ — **[ĐÃ CHỐT cùng ngày 03/09/2026]** cả 5/5, xem mục riêng
+"Chốt 5 câu hỏi mở..." bên dưới (ngay sau mục này) để có đầy đủ câu trả lời + 1 câu hỏi mới phát sinh.
 
 **Chưa chạy kiểm thử nào** — đây là phân tích/lập kế hoạch thuần tuý, chưa có code/migration nào được
 viết ở vòng này.
+
+## Chốt 5 câu hỏi mở của báo cáo Cloudflare + phát hiện cơ chế "đẩy" (push sync) mới (03/09/2026)
+
+Nguyên văn 5 câu trả lời (cùng ngày, ngay sau vòng phân tích ở mục trên):
+
+> 1. tên miền suachua.dichvu3t.workers.dev đã tồn tại. đang online.
+> 2. Lấy toàn bộ danh sách linh kiện bán bat_tat=1.
+> 3. GS và View làm theo hướng của linh-kien-app
+> 4. Bên linh-kien-app sẽ bắn api khi danh sách ktv có thay đổi. bên app sua chua sẽ nhận api vào cập
+>    nhật danh sách.
+> 5. Khu vực sẽ học linh-kien-app. lấy thông tin đồng bộ tự động từ linh-kien-app khi bên linh kien
+>    app có thay đổi
+
+Đã áp dụng đầy đủ vào file
+`du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` (viết lại mục 0, 2, 3, 4.1,
+4.2, 5, 7) và trang artifact xem trực quan đã publish trước đó. Tóm tắt các quyết định:
+
+1. **Worker `suachua` xác nhận đã tồn tại thật, đang online** — không còn là placeholder dự kiến.
+   Phát sinh 1 câu hỏi mới (chưa trả lời): không tìm thấy thư mục mã nguồn nào cho Worker này trên
+   máy (đã rà `F:\claude\QLBH 3T\`) — cần xác nhận mã nguồn thật nằm ở đâu trước khi bắt đầu scaffold
+   (3 khả năng đã liệt kê trong file phân tích mục 7: (a) chính thư mục `gui-bao-hanh-linh-kien` này
+   sẽ trở thành nguồn, (b) đã deploy bản rỗng/placeholder giữ chỗ tên miền, (c) nằm ở máy/thư mục
+   khác chưa đưa vào phiên này). **Bằng chứng mới nghiêng về (a)**: phát hiện file
+   `logo sua chua 3t.png` (858×887, tạo 26/08/2026, chưa từng commit/dùng trong prototype) nằm sẵn
+   trong chính thư mục này — đúng dạng icon app hoàn chỉnh (gradient xanh lá, cờ-lê/tua-vít chéo +
+   "3T"), gợi ý thư mục này đã được chuẩn bị trước làm nơi chứa tài nguyên cho `suachua` — nhưng vẫn
+   cần người dùng xác nhận trực tiếp, không tự suy đoán rồi coi như đã chốt.
+2. Danh mục linh kiện: lọc theo **toàn bộ `bat_tat=1`**, không lọc theo `chi_sua_chua` như suy đoán
+   ban đầu trong báo cáo.
+3. Giám sát/View: xây mới theo đúng mẫu `linh-kien-app` — GS scope qua `email_gs` đóng gói sẵn trên
+   đơn (denormalized, giống `ddh.email_gs` bên `linh-kien-app`), View đổi từ `quanly` (xem tất cả)
+   sang giới hạn theo Khu vực qua bảng `user_khu_vuc_bh`.
+4. **Phát hiện kiến trúc mới, không nằm trong 2 phương án ban đầu báo cáo đề xuất**: danh bạ KTV
+   không phải "tự nhập tay 1 lần" cũng không phải "gọi API mỗi lần cần", mà là **cơ chế đẩy (push)
+   tự động** — `linh-kien-app` chủ động gọi sang `suachua` mỗi khi `ktv_lien_he` đổi, `suachua` nhận
+   và UPSERT vào bảng nội bộ `ktv_lien_he_bh`. Đây là chiều NGƯỢC với mẫu `case-lookup` đã phân tích
+   (nơi `linh-kien-app` là bên chủ động kéo dữ liệu từ `dvbh`) — ở cơ chế mới này `linh-kien-app` đổi
+   vai trò thành bên chủ động gửi đi.
+5. Khu vực: cùng cơ chế đẩy như KTV, thay thế hoàn toàn khái niệm `mien` 2 giá trị (Nam/Bắc) của
+   prototype — bỏ hẳn cột `mien` khỏi thiết kế `users` mới.
+
+**Quyết định tự suy rộng ra (không phải câu trả lời trực tiếp, đã đánh dấu rõ trong file phân tích
+để dễ phản hồi lại nếu không đúng ý)**: áp dụng luôn cơ chế đẩy cho cả **danh mục linh kiện** (không
+chỉ KTV/Khu vực) — lý do: không có căn cứ gì để 2/3 loại dữ liệu tham chiếu dùng cơ chế đẩy còn danh
+mục linh kiện lại dùng nút bấm tay riêng biệt, giữ nhất quán toàn bộ tầng đồng bộ dữ liệu.
+
+**Thiết kế kỹ thuật mới cho cơ chế đẩy** (bổ sung vào file phân tích mục 3.2): bắt buộc qua Service
+Binding (đúng lý do kỹ thuật `error code 1042` đã phát hiện ở vòng phân tích trước — 2 Worker cùng
+tài khoản không được `fetch()` thẳng URL nhau) — nghĩa là `linh-kien-app/wrangler.jsonc` cần thêm 1
+`services` binding MỚI trỏ sang `suachua` (điểm phải sửa thêm ở repo `linh-kien-app`, không chỉ bên
+bảo hành); xác thực 1 chiều bằng 1 secret dùng chung đơn giản (`X-Sync-Key`), không cần dựng cả bảng
+`partner_api_keys` nhiều-key như `case-lookup` vì đây là quan hệ 1-1 cố định giữa đúng 2 Worker nội
+bộ; gửi không chặn qua `waitUntil()` để lỗi/downtime phía `suachua` không làm hỏng thao tác gốc của
+người dùng `linh-kien-app`. Đề xuất bổ sung tự thêm (không phải yêu cầu gốc, có thể bỏ): 1 nút "Đồng
+bộ lại toàn bộ" phía `suachua` làm cơ chế dự phòng/bootstrap, vì cơ chế đẩy thuần tuý không tự phục
+hồi nếu 1 lần đẩy bị lỡ.
+
+Không phát sinh lỗi/vấn đề nào trong lúc làm — đây vẫn là phân tích/lập kế hoạch thuần tuý, chưa viết
+code/migration nào. **Chưa chạy kiểm thử** (không có gì để test ở vòng này).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
