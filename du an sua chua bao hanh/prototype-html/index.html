@@ -460,6 +460,18 @@ a.link:hover{text-decoration:underline;}
 .table-responsive::-webkit-scrollbar-track { background: var(--surface-100); }
 .table-responsive::-webkit-scrollbar-thumb { background: var(--ocean-400); border-radius: 8px; }
 .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--ocean-500); }
+/* Yeu cau nguoi dung (03/09/2026): tuy bien cot cho bang thong nhat Admin BH - doi do rong (resize),
+   keo doi vi tri (reorder), bat/tat cot. Chi ap dung cho #adminUnifiedTable (da hoi lai, nguoi dung
+   xac nhan chi 1 bang nay, chua mo rong cac bang khac). table-layout:fixed bat buoc de <colgroup>
+   dieu khien do rong tung cot chinh xac (khac voi table-layout:auto mac dinh, o do do rong cot tu
+   tinh theo noi dung, bo qua gia tri o <col>). */
+#adminUnifiedTable { table-layout: fixed; }
+#adminUnifiedTable th { position: relative; user-select: none; }
+#adminUnifiedTable th[draggable="true"] { cursor: grab; }
+#adminUnifiedTable th.col-drag-over { background: var(--ocean-100) !important; }
+.col-resize-handle { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; z-index: 1; }
+.col-resize-handle:hover, .col-resize-handle.resizing { background: var(--ocean-400); }
+#adminUnifiedTable td > .cell-ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.tinh-te { width: 100%; border-collapse: collapse; background: var(--surface); text-align: left; }
 table.tinh-te th { background: var(--surface-100); color: var(--ink-500); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 2px solid var(--line); }
 table.tinh-te td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 13px; color: var(--ink-700); }
@@ -702,12 +714,19 @@ function isOverdue(dateStr){ return hoursSince(dateStr) > 24; }
    nao phan biet do khan cap bang mat thuong. Them muc thu 3: qua han QUA NGUONG 72h (gap 3 lan muc
    SLA 24h chuan cua he thong, xem CLAUDE.md "Phan hoi vong 2 muc 4") chuyen sang badge nen dac +
    chu trang (.b-red-solid) + icon canh bao khac han, thay vi chi doi mau chu nhat nhat. */
+/* Yeu cau nguoi dung (03/09/2026): "SLA bo chu qua han, chi can viet so gio. Chua qua han thi dien
+   mau xanh la, qua han thi to mau do." Da hoi lai va nguoi dung xac nhan GIU nguyen 3 muc do khan
+   cap da chot o vong truoc (dung han/qua han nhe/qua han nang) - chi doi: (a) bo chu "Qua han" khoi
+   PHAN HIEN THI (van con trong "title" tooltip khi hover, de tra cuu ngu canh neu can), (b) doi muc
+   "dung han" tu xam trung tinh sang XANH LA (truoc do dung xam vi coi day la "khong co gi dang chu
+   y" - nay doi theo dung yeu cau, xanh la = "an toan"). 2 muc qua han (vang/do dac) giu nguyen mau
+   nhu truoc, chi bo chu. */
 function slaBadge(dateStr){
   if(!dateStr) return '';
   const h = hoursSince(dateStr);
-  if(h<=24) return `<span class="badge b-gray" title="Thời gian chờ xử lý">⏱ ${Math.floor(h)}h</span>`;
-  if(h<=72) return `<span class="badge b-amber" title="Quá hạn SLA 24h">⏱ Quá hạn ${Math.floor(h)}h</span>`;
-  return `<span class="badge b-red-solid" title="Quá hạn nghiêm trọng — trên 3 lần mức SLA 24h chuẩn">⚠ Quá hạn ${Math.floor(h)}h</span>`;
+  if(h<=24) return `<span class="badge b-green" title="Trong hạn SLA 24h">⏱ ${Math.floor(h)}h</span>`;
+  if(h<=72) return `<span class="badge b-amber" title="Đã quá hạn SLA 24h">⏱ ${Math.floor(h)}h</span>`;
+  return `<span class="badge b-red-solid" title="Quá hạn nghiêm trọng — trên 3 lần mức SLA 24h chuẩn">⚠ ${Math.floor(h)}h</span>`;
 }
 
 /* ---------- Time Filtering (Yêu cầu 4: Lọc theo tuần, theo tháng để giới hạn dữ liệu lớn) ---------- */
@@ -2865,33 +2884,199 @@ function adminProcessableUnits(){
   return DB.phieu_sc_ct.filter(c=>['cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt'].includes(c.trang_thai))
     .filter(c=>{ const p=findPhieuSC(c.parent_id); if(!p.phieu_gui_id) return true; return !!findPhieuGui(p.phieu_gui_id)?.admin_tiep_nhan; });
 }
+/* ============================================================
+   TUY BIEN COT cho bang thong nhat Admin BH (yeu cau 03/09/2026: "keo doi vi tri, doi do rong, bat
+   tat bo sung cot du lieu"). Da hoi lai truoc khi lam - nguoi dung xac nhan CHI ap dung cho dung 1
+   bang nay (bang trung tam nhieu du lieu nhat), chua mo rong sang cac bang khac trong he thong.
+
+   Kien truc: 2 cot LUON CO DINH o 2 dau - checkbox chon hang loat (trai) va Hanh dong (phai) - day
+   la vung DIEU KHIEN/THAO TAC chu khong phai du lieu thuan tuy, an/doi vi tri se lam mat chuc nang
+   chinh cua bang nen KHONG cho tuy bien. Cot "ID" cung co dinh lam "cot neo" dinh danh dau tien (dung
+   tinh than da chot o yeu cau truoc "cot Trang thai len vi tri 2" - vi tri 1 luon danh cho ID). Cac
+   cot con lai deu la O DU LIEU tuy bien duoc (doi vi tri/do rong/an-hien).
+
+   Cau hinh luu vao localStorage - dung CHUNG 1 nguon voi toan bo state cua app (khong phai theo
+   tung nguoi dung rieng, vi prototype nay von la "1 server ao" dung chung 1 localStorage - xem
+   CLAUDE.md muc "Prototype HTML" han che #1, khong phai loi rieng cua tinh nang nay). */
+const ADMIN_COLS_DEF = {
+  trangthai:    {label:'Trạng thái',      width:150},
+  nguon:        {label:'Nguồn',           width:190},
+  khachhang:    {label:'Khách hàng',      width:150},
+  linhkien:     {label:'Linh kiện',       width:190},
+  mota:         {label:'Mô tả lỗi',       width:200},
+  sla:          {label:'SLA',             width:90},
+  sdt:          {label:'SĐT khách hàng',  width:120},
+  donchacode:   {label:'Mã đơn cha',      width:110},
+  phieuguicode: {label:'Mã phiếu gửi',    width:110},
+  doitru:       {label:'Loại đối trừ',    width:120},
+  huongxuly:    {label:'Hướng xử lý',     width:150},
+  baohanh:      {label:'Tình trạng BH',   width:120},
+};
+const ADMIN_COLS_DEFAULT_ORDER = ['trangthai','nguon','khachhang','linhkien','mota','sla'];
+const ADMIN_COLS_DEFAULT_HIDDEN = ['sdt','donchacode','phieuguicode','doitru','huongxuly','baohanh'];
+const ADMIN_COLS_STORAGE_KEY = 'admin_unified_cols_v1';
+var ADMIN_COL_ORDER, ADMIN_COL_HIDDEN, ADMIN_COL_WIDTHS;
+function loadAdminColState(){
+  let raw = null;
+  try{ raw = JSON.parse(localStorage.getItem(ADMIN_COLS_STORAGE_KEY)||'null'); }catch(e){}
+  const allKeys = Object.keys(ADMIN_COLS_DEF);
+  let order = (raw && Array.isArray(raw.order)) ? raw.order.filter(k=>allKeys.includes(k)) : ADMIN_COLS_DEFAULT_ORDER.slice();
+  allKeys.forEach(k=>{ if(!order.includes(k)) order.push(k); }); // bo sung cot moi (neu sau nay them vao ADMIN_COLS_DEF) ma cau hinh cu chua co
+  const hidden = (raw && Array.isArray(raw.hidden)) ? raw.hidden.filter(k=>allKeys.includes(k)) : ADMIN_COLS_DEFAULT_HIDDEN.slice();
+  const widths = (raw && raw.widths && typeof raw.widths==='object') ? raw.widths : {};
+  ADMIN_COL_ORDER = order; ADMIN_COL_HIDDEN = new Set(hidden); ADMIN_COL_WIDTHS = widths;
+}
+function saveAdminColState(){
+  try{ localStorage.setItem(ADMIN_COLS_STORAGE_KEY, JSON.stringify({order:ADMIN_COL_ORDER, hidden:Array.from(ADMIN_COL_HIDDEN), widths:ADMIN_COL_WIDTHS})); }catch(e){}
+}
+loadAdminColState();
+function adminColWidth(key){ return ADMIN_COL_WIDTHS[key] || ADMIN_COLS_DEF[key].width; }
+function adminVisibleCols(){ return ADMIN_COL_ORDER.filter(k=>!ADMIN_COL_HIDDEN.has(k)); }
+function resetAdminCols(){
+  ADMIN_COL_ORDER = ADMIN_COLS_DEFAULT_ORDER.concat(ADMIN_COLS_DEFAULT_HIDDEN);
+  ADMIN_COL_HIDDEN = new Set(ADMIN_COLS_DEFAULT_HIDDEN);
+  ADMIN_COL_WIDTHS = {};
+  saveAdminColState(); closeModal(); render(); toast('Da khoi phuc cot mac dinh.');
+}
+function toggleAdminColHidden(key, checked){
+  if(checked) ADMIN_COL_HIDDEN.delete(key); else ADMIN_COL_HIDDEN.add(key);
+  saveAdminColState(); render();
+  // mo lai modal cai dat (render() da xoa het DOM cu) de nguoi dung tiep tuc tick nhieu cot lien tiep
+  openAdminColSettingsModal();
+}
+function openAdminColSettingsModal(){
+  openModal('Tuỳ chỉnh cột hiển thị', `
+    <p class="fine">Tick để hiện/ẩn cột. Kéo tiêu đề cột trên bảng để đổi vị trí, kéo cạnh phải tiêu
+    đề để đổi độ rộng.</p>
+    ${ADMIN_COL_ORDER.map(k=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer;">
+        <input type="checkbox" ${ADMIN_COL_HIDDEN.has(k)?'':'checked'} onchange="toggleAdminColHidden('${k}', this.checked)">
+        ${esc(ADMIN_COLS_DEF[k].label)}
+      </label>`).join('')}
+    <div class="btnrow"><button class="btn small secondary" onclick="resetAdminCols()">↺ Khôi phục mặc định</button></div>
+  `);
+}
+/* Keo doi vi tri cot (HTML5 drag-and-drop thuan, khong dung thu vien ngoai) */
+var ADMIN_COL_DRAG_KEY = null;
+function adminColDragStart(key){ ADMIN_COL_DRAG_KEY = key; }
+function adminColDragEnter(e, key){
+  if(!ADMIN_COL_DRAG_KEY || ADMIN_COL_DRAG_KEY===key) return;
+  e.currentTarget.classList.add('col-drag-over');
+}
+function adminColDragLeave(e){ e.currentTarget.classList.remove('col-drag-over'); }
+function adminColDrop(e, targetKey){
+  e.currentTarget.classList.remove('col-drag-over');
+  if(!ADMIN_COL_DRAG_KEY || ADMIN_COL_DRAG_KEY===targetKey) return;
+  const arr = ADMIN_COL_ORDER;
+  const from = arr.indexOf(ADMIN_COL_DRAG_KEY);
+  const to = arr.indexOf(targetKey);
+  if(from<0||to<0) return;
+  arr.splice(from,1); arr.splice(to,0,ADMIN_COL_DRAG_KEY);
+  ADMIN_COL_DRAG_KEY = null;
+  saveAdminColState(); render();
+}
+/* Keo doi do rong cot (resize) - mousedown/mousemove/mouseup thuan tren document, khong dung thu
+   vien ngoai. Cap nhat truc tiep <col> trong luc keo (mem, khong giat) - chi luu vao localStorage +
+   render() lai luc tha chuot (mouseup), tranh render lai toan trang giua chung 1 thao tac keo. */
+var ADMIN_COL_RESIZE = null;
+function adminColResizeStart(e, key){
+  e.preventDefault(); e.stopPropagation();
+  const th = e.target.closest('th');
+  e.target.classList.add('resizing');
+  ADMIN_COL_RESIZE = { key, handle:e.target, startX:e.clientX, startWidth: th.getBoundingClientRect().width };
+  document.addEventListener('mousemove', adminColResizeMove);
+  document.addEventListener('mouseup', adminColResizeEnd);
+}
+function adminColResizeMove(e){
+  if(!ADMIN_COL_RESIZE) return;
+  const delta = e.clientX - ADMIN_COL_RESIZE.startX;
+  const newWidth = Math.max(60, Math.round(ADMIN_COL_RESIZE.startWidth + delta));
+  const idx = adminVisibleCols().indexOf(ADMIN_COL_RESIZE.key);
+  const table = document.getElementById('adminUnifiedTable');
+  if(table && idx>=0){
+    const col = table.querySelectorAll('colgroup col')[idx + 2]; // +2: bo qua <col> cua checkbox va ID dung truoc
+    if(col) col.style.width = newWidth+'px';
+  }
+  ADMIN_COL_RESIZE.currentWidth = newWidth;
+}
+function adminColResizeEnd(){
+  if(ADMIN_COL_RESIZE){
+    if(ADMIN_COL_RESIZE.handle) ADMIN_COL_RESIZE.handle.classList.remove('resizing');
+    ADMIN_COL_WIDTHS[ADMIN_COL_RESIZE.key] = ADMIN_COL_RESIZE.currentWidth || Math.round(ADMIN_COL_RESIZE.startWidth);
+    saveAdminColState();
+  }
+  ADMIN_COL_RESIZE = null;
+  document.removeEventListener('mousemove', adminColResizeMove);
+  document.removeEventListener('mouseup', adminColResizeEnd);
+}
+/* Gia tri tung "o du lieu" cho 1 dong DON CHA (dang cho_xac_nhan_so_luong) - tra ve object {key:html}
+   khop voi cac key trong ADMIN_COLS_DEF, dung chung 1 cach lap rap voi dong don vi ben duoi. */
+function adminParentRowFields(s){
+  const info = caseOrManualInfo(s); const lk = findLK(s.ma_lk); const g = findPhieuGui(s.phieu_gui_id);
+  return {
+    trangthai: `<span class="badge b-amber">Cho xac nhan SL (khai ${s.so_luong_khai})</span>`,
+    nguon: `<span class="cell-ellipsis" title="${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')} · ${s.phieu_gui_id}">${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')} <span class="fine">· ${s.phieu_gui_id}</span></span>`,
+    khachhang: `<span class="cell-ellipsis" title="${esc(info.khach_hang)}">${esc(info.khach_hang)}</span>`,
+    linhkien: `<span class="cell-ellipsis" title="${esc(lk?.ten||'Ca san pham')}">${esc(lk?.ten||'Ca san pham')}</span>`,
+    mota: `<span class="fine cell-ellipsis" title="${esc(s.mo_ta_loi)}">${esc(s.mo_ta_loi)}</span>`,
+    sla: slaBadge(g?.admin_thoi_gian_nhan),
+    sdt: `<span class="cell-ellipsis">${esc(info.sdt||'-')}</span>`,
+    donchacode: `<span class="fine">${s.id}</span>`,
+    phieuguicode: `<span class="fine">${s.phieu_gui_id||'-'}</span>`,
+    doitru: esc(LOAI_DOI_TRU_LABEL[s.loai_doi_tru_de_xuat]||'-'),
+    huongxuly: '<span class="fine">Chưa phân loại</span>',
+    baohanh: '<span class="fine">—</span>',
+  };
+}
+/* Gia tri tung "o du lieu" cho 1 dong DON VI (unit) - tra ve object {key:html}, cung khuon voi ham
+   tren. Khong sua logic tinh toan goc (w/b/nguon/isKhachLe) - chi to chuc lai thanh 1 object thay vi
+   ghep thang vao 1 chuoi <tr> nhu truoc, de renderAdminUnifiedTable() lap rap theo dung thu tu cot
+   nguoi dung da tuy chinh. */
+function adminUnitRowFields(u){
+  const p = findPhieuSC(u.parent_id); const info = caseOrManualInfo(p);
+  const lkGoc = findLK(p.ma_lk); const lk = unitEffectiveLk(u);
+  const isKhachLe = !p.phieu_gui_id;
+  const w = (lkGoc && p.case_id) ? warrantyCheck(p.case_id, p.ma_lk) : {expired:false};
+  const b = unitStatusBadge(u.trang_thai);
+  const nguonPlain = isKhachLe ? 'Khach le' : `${esc(DB.users.find(x=>x.email===findPhieuGui(p.phieu_gui_id)?.nguoi_tao)?.ten||'')} · ${p.phieu_gui_id}`;
+  const nguon = isKhachLe
+    ? '<span class="badge b-purple">Khach le</span>'
+    : `<span class="cell-ellipsis" title="${nguonPlain}">${esc(DB.users.find(x=>x.email===findPhieuGui(p.phieu_gui_id)?.nguoi_tao)?.ten||'')} <span class="fine">· ${p.phieu_gui_id}</span></span>`;
+  return {
+    trangthai: `<span class="badge ${b.cls}">${b.label}</span>`,
+    nguon,
+    khachhang: `<span class="cell-ellipsis" title="${esc(info.khach_hang)}">${esc(info.khach_hang)}</span>`,
+    linhkien: `<span class="cell-ellipsis" title="${esc(lk?.ten||'Ca san pham')}">${esc(lk?.ten||'Ca san pham')}${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue">Da doi LK</span>':''}</span>`,
+    mota: `<span class="fine cell-ellipsis" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</span>`,
+    sla: slaBadge(u.updated_at),
+    sdt: `<span class="cell-ellipsis">${esc(info.sdt||'-')}</span>`,
+    donchacode: `<span class="fine">${p.id}</span>`,
+    phieuguicode: `<span class="fine">${p.phieu_gui_id||'-'}</span>`,
+    doitru: esc(LOAI_DOI_TRU_LABEL[u.loai_doi_tru || p.loai_doi_tru_de_xuat]||'-'),
+    huongxuly: esc(HUONG_XU_LY_LABEL[u.huong_xu_ly]||'Chưa phân loại'),
+    baohanh: w.expired ? '<span class="badge b-red">Het han</span>' : (p.case_id ? '<span class="badge b-green">Con han</span>' : '<span class="fine">—</span>'),
+  };
+}
 function renderAdminUnifiedTable(){
   const parents = adminProcessableParents();
   const units = adminProcessableUnits();
+  const visCols = adminVisibleCols();
   let rows = '';
   parents.forEach(s=>{
-    const info = caseOrManualInfo(s); const lk = findLK(s.ma_lk); const g = findPhieuGui(s.phieu_gui_id);
+    const f = adminParentRowFields(s);
     rows += `<tr class="clickable-row" onclick="location.hash='#/admin/phan-loai?gui=${s.phieu_gui_id}';render();">
       <td></td>
       <td><b>${s.id}</b></td>
-      <td><span class="badge b-amber">Cho xac nhan SL (khai ${s.so_luong_khai})</span></td>
-      <td>${esc(DB.users.find(u=>u.email===g?.nguoi_tao)?.ten||'')} <span class="fine">· ${s.phieu_gui_id}</span></td>
-      <td>${esc(info.khach_hang)}</td>
-      <td>${esc(lk?.ten||'Ca san pham')}</td>
-      <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(s.mo_ta_loi)}">${esc(s.mo_ta_loi)}</td>
-      <td>${slaBadge(g?.admin_thoi_gian_nhan)}</td>
+      ${visCols.map(k=>`<td>${f[k]}</td>`).join('')}
       <td onclick="event.stopPropagation();"><button class="btn small" onclick="openSoLuongThucNhanModal('${s.id}')">Xac nhan SL</button></td>
     </tr>`;
   });
   units.forEach(u=>{
-    const p = findPhieuSC(u.parent_id); const info = caseOrManualInfo(p);
-    const lkGoc = findLK(p.ma_lk); const lk = unitEffectiveLk(u);
+    const p = findPhieuSC(u.parent_id);
     const isKhachLe = !p.phieu_gui_id;
+    const lkGoc = findLK(p.ma_lk);
     const w = (lkGoc && p.case_id) ? warrantyCheck(p.case_id, p.ma_lk) : {expired:false};
-    const b = unitStatusBadge(u.trang_thai);
-    const nguon = isKhachLe
-      ? '<span class="badge b-purple">Khach le</span>'
-      : `${esc(DB.users.find(x=>x.email===findPhieuGui(p.phieu_gui_id)?.nguoi_tao)?.ten||'')} <span class="fine">· ${p.phieu_gui_id}</span>`;
+    const f = adminUnitRowFields(u);
     let checkboxCell = '<td></td>';
     let actionCell;
     if(u.trang_thai==='cho_bo_sung_tt'){
@@ -2913,24 +3098,35 @@ function renderAdminUnifiedTable(){
     rows += `<tr class="clickable-row" onclick="openDetailUnitModal('${u.id}')">
       ${checkboxCell}
       <td><b>${u.id}</b>${w.expired?' <span class="badge b-red">Het han BH</span>':''}${u.trang_thai==='admin_can_xem_lai'?' <span class="badge b-red">NV tra lai</span>':''}</td>
-      <td><span class="badge ${b.cls}">${b.label}</span></td>
-      <td>${nguon}</td>
-      <td>${esc(info.khach_hang)}</td>
-      <td>${esc(lk?.ten||'Ca san pham')}${u.ma_lk_thuc_te && u.ma_lk_thuc_te!==p.ma_lk?' <span class="badge b-blue">Da doi LK</span>':''}</td>
-      <td class="fine" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(p.mo_ta_loi)}">${esc(p.mo_ta_loi)}</td>
-      <td>${slaBadge(u.updated_at)}</td>
+      ${visCols.map(k=>`<td>${f[k]}</td>`).join('')}
       <td onclick="event.stopPropagation();">${actionCell}</td>
     </tr>`;
   });
   const totalRows = parents.length + units.length;
+  const colgroupHtml = `<colgroup>
+    <col style="width:36px;">
+    <col style="width:110px;">
+    ${visCols.map(k=>`<col style="width:${adminColWidth(k)}px;">`).join('')}
+    <col style="width:230px;">
+  </colgroup>`;
+  const theadHtml = `<thead><tr>
+    <th style="width:36px;"></th>
+    <th style="width:110px;">ID</th>
+    ${visCols.map(k=>`<th draggable="true" title="Kéo để đổi vị trí"
+        ondragstart="adminColDragStart('${k}')" ondragover="event.preventDefault();"
+        ondragenter="adminColDragEnter(event,'${k}')" ondragleave="adminColDragLeave(event)"
+        ondrop="adminColDrop(event,'${k}')">${esc(ADMIN_COLS_DEF[k].label)}<span class="col-resize-handle" onmousedown="adminColResizeStart(event,'${k}')" title="Kéo để đổi độ rộng"></span></th>`).join('')}
+    <th style="width:230px;">Hanh dong</th>
+  </tr></thead>`;
   return `
   <div class="btnrow" style="margin-bottom:8px;">
     <button class="btn small secondary" onclick="openTaoDonDichVuModal()">+ Tao don dich vu tinh phi (khach le)</button>
+    <button class="btn small secondary" onclick="openAdminColSettingsModal()" title="Bat/tat cot, doi vi tri, doi do rong">⚙ Tuỳ chỉnh cột</button>
   </div>
   ${renderAdminBulkBar()}
   ${totalRows===0?'<div class="empty">Khong co don nao can xu ly ngay luc nay.</div>':`
   <div class="table-responsive">
-  <table><thead><tr><th></th><th>ID</th><th>Trang thai</th><th>Nguon</th><th>Khach hang</th><th>Linh kien</th><th>Mo ta loi</th><th>SLA</th><th>Hanh dong</th></tr></thead>
+  <table id="adminUnifiedTable">${colgroupHtml}${theadHtml}
   <tbody>${rows}</tbody></table>
   </div>`}`;
 }
@@ -3435,6 +3631,9 @@ function renderAdminPhieuTra(){
   return `<div class="card">
     <h2>Tao &amp; quan ly phieu tra bao hanh</h2>
     <p class="fine">Danh sach chi hien KTV/khach le dang co don can tao phieu tra (yeu cau 21/08/2026 muc 11).</p>
+    <div class="btnrow" style="margin-top:0;margin-bottom:12px;">
+      <button class="btn secondary" onclick="autoGomPhieuTraTatCa()" title="Tu dong gom don sang san sang thanh phieu tra (Nhap) cho MOI nhan vien dang co don, tach theo loai doi tru - van can gui duyet ke toan nhu binh thuong cho tung phieu">⚡ Tự động gộp phiếu trả cho tất cả nhân viên</button>
+    </div>
     <div class="field"><label>Chon KTV / khach le</label><select onchange="location.hash='#/admin/phieu-tra?ktv='+this.value; render();">
       ${ktvList.map(k=>`<option value="${k}" ${k===sel?'selected':''}>${esc(ktvDisplayName(k))}</option>`).join('')}
     </select></div>
@@ -3521,17 +3720,54 @@ function submitTaoPhieuTraNhanh(unitId, mode){
   addLog('phieu_tra', id, null, targetState, nhan+' — tao nhanh tu don vi '+unitId+' (ma don hang/MISA sinh tu dong, Admin da xem/sua lai truoc khi tao)');
   save(); closeModal(); render(); toast('Da tao phieu tra '+id+' ('+nhan+').');
 }
-function taoPhieuTraMoi(ktvEmail, loai){
-  const ids = Array.from(document.querySelectorAll('.chk-'+loai+':checked')).map(x=>x.value);
-  if(ids.length===0){ alert('Chon it nhat 1 dong.'); return; }
+/* Tach rieng phan "tao 1 phieu_tra + gan cac don vi vao" thanh 1 ham dung chung (yeu cau 03/09/2026,
+   xem autoGomPhieuTraTatCa() ben duoi) - truoc day logic nay nam thang trong taoPhieuTraMoi() va CHI
+   doc duoc danh sach ID tu checkbox tren DOM (.chk-<loai>:checked), khong dung lai duoc khi can tao
+   NHIEU phieu cho NHIEU KTV cung luc (moi lan chi co 1 bang checkbox cua 1 KTV dang hien tren trang). */
+function createPhieuTraForUnits(ktvEmail, loai, unitIds){
   const id = nextId('tra');
   DB.phieu_tra.push({id, ktv_nhan:ktvEmail, nguoi_tao: currentUser().email, trang_thai:'nhap',
     loai_doi_tru: loai, ma_don_hang:'', ma_misa:'', ma_van_don:'', anh_bien_ban:[],
     ly_do_tu_choi_kt:'', danh_gia_ktv:'', khong_nhan_duoc_ghi_chu:'',
     created_at: nowStr(), updated_at: nowStr()});
-  ids.forEach(uid=>{ findCT(uid).phieu_tra_id = id; });
-  addLog('phieu_tra', id, null,'nhap','Tao phieu tra moi ('+LOAI_DOI_TRU_LABEL[loai]+') voi '+ids.length+' dong');
+  unitIds.forEach(uid=>{ findCT(uid).phieu_tra_id = id; });
+  addLog('phieu_tra', id, null,'nhap','Tao phieu tra moi ('+LOAI_DOI_TRU_LABEL[loai]+') voi '+unitIds.length+' dong');
+  return id;
+}
+function taoPhieuTraMoi(ktvEmail, loai){
+  const ids = Array.from(document.querySelectorAll('.chk-'+loai+':checked')).map(x=>x.value);
+  if(ids.length===0){ alert('Chon it nhat 1 dong.'); return; }
+  const id = createPhieuTraForUnits(ktvEmail, loai, ids);
   save(); render(); toast('Da tao phieu tra '+id);
+}
+/* Yeu cau nguoi dung (03/09/2026): "nut thao tac nhanh... tu tao thung tra hang va tu add don hang
+   vao tung thung cho tung nhan vien theo tung loai phieu tra bao hanh." Da hoi lai truoc khi lam (2
+   cau hoi) va nguoi dung xac nhan ro:
+   (a) VAN di qua dung quy trinh Ke toan duyet binh thuong - phieu tao ra van o trang thai "Nhap",
+       Admin BH van phai nhap ma don hang/MISA roi bam "Gui duyet ke toan" nhu cu cho TUNG phieu.
+       Chi tu dong hoa dung 1 buoc "chon dong + tao phieu + gan dong vao phieu" (buoc te nhat, lap di
+       lap lai nhieu lan) - KHONG bo qua duyet nhu 2 nut "Tra truc tiep KTV/Kho" da co san (2 nut do
+       la duong tat CO CHU DICH bo qua ca gom nhom LAN duyet ke toan, khac ban chat voi yeu cau nay).
+   (b) Xu ly HANG LOAT cho TAT CA KTV/khach le dang co don san sang cung 1 luc bam, khong phai chi
+       nguoi dang chon trong dropdown "Chon KTV / khach le" tren cung trang. */
+function autoGomPhieuTraTatCa(){
+  if(!confirm('Se tu dong gom TAT CA don dang "san sang gom phieu tra" (o moi KTV/khach le) thanh cac phieu tra rieng biet o trang thai "Nhap", tach dung theo loai doi tru (Doi tra / Tru cong no). Ban VAN can mo tung phieu de nhap ma don hang/MISA va bam "Gui duyet ke toan" nhu binh thuong - thao tac nay KHONG bo qua buoc duyet ke toan. Tiep tuc?')) return;
+  const allKtv = usersByRole('ktv');
+  const keys = [...allKtv.map(k=>k.email), KHACH_LE_KEY];
+  let soPhieuTao = 0, soNguoiXuLy = 0;
+  keys.forEach(key=>{
+    let coTaoChoNguoiNay = false;
+    ['doi_tra','tru_cong_no'].forEach(loai=>{
+      const units = readyUnitsForKtv(key, loai);
+      if(units.length===0) return;
+      createPhieuTraForUnits(key, loai, units.map(u=>u.id));
+      soPhieuTao++; coTaoChoNguoiNay = true;
+    });
+    if(coTaoChoNguoiNay) soNguoiXuLy++;
+  });
+  if(soPhieuTao===0){ alert('Khong co don nao dang san sang gom phieu tra luc nay.'); return; }
+  save(); render();
+  toast('Da tu dong tao '+soPhieuTao+' phieu tra ("Nhap") cho '+soNguoiXuLy+' nguoi — van can nhap ma don hang/MISA roi gui duyet ke toan nhu binh thuong cho tung phieu.');
 }
 function themVaoPhieuTra(loai){
   const traId = document.getElementById('draftSelect_'+loai).value;

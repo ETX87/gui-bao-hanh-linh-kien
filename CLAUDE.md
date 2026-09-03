@@ -70,10 +70,12 @@ badge SLA phân 3 mức khẩn cấp, khu vực "Việc của tôi" nổi bật 
 xem không còn trông như ô nhập bị khoá), rồi cuối cùng chuyển nút thao tác của 2 "UI chi tiết" lên
 top tiêu đề modal (02/09/2026, để luôn nhìn thấy được dù cuộn tới đâu), và tiếp theo là 1 vòng 3 yêu
 cầu (03/09/2026): lời chào rút gọn lên topbar, gộp 2 settings admin về 1 trang `#/qtri/cai-dat`, và
-sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc từng tab, rồi gần nhất là cột Trạng
+sidebar mặc định thu gọn + nội dung tự giãn + huy hiệu số việc từng tab, rồi cột Trạng
 thái chuyển lên vị trí 2 trong mọi bảng + UI chi tiết đơn bảo hành có đầy đủ nút thao tác cố định ở
-footer (03/09/2026, cùng ngày) — xem 9 mục cuối cùng phía dưới (theo đúng thứ tự thời gian) để có
-chi tiết đầy đủ.
+footer (03/09/2026, cùng ngày), và gần nhất là badge SLA đơn giản hoá (bỏ chữ, thêm màu xanh lá) +
+bảng thống nhất Admin BH có tuỳ biến cột đầy đủ (kéo đổi vị trí/độ rộng, bật tắt cột) + nút tự động
+gộp phiếu trả cho mọi nhân viên (03/09/2026, cùng ngày) — xem 10 mục cuối cùng phía dưới (theo đúng
+thứ tự thời gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1437,6 +1439,90 @@ trước đó — **0 lỗi, không hồi quy**. Xác nhận thêm bằng ảnh 
 hiện đúng nút theo từng trường hợp (khách lẻ chỉ 1 nút, đơn KTV thường đủ 3 nút xếp gọn 1 hàng), vẫn
 cố định đúng vị trí khi cuộn sâu nội dung, và hoạt động đúng trên mobile (390px) — header/footer đều
 cố định, chỉ phần giữa cuộn.
+
+## SLA đơn giản hoá + tuỳ biến cột bảng Admin BH + tự động gộp phiếu trả (03/09/2026)
+
+Nguyên văn 3 yêu cầu, kèm chỉ đạo *"Có gì không hiểu thì hỏi tôi, không tự suy đoán"* — đã hỏi lại
+đủ 4 câu hỏi trước khi làm (xem câu trả lời chốt ở từng mục dưới đây, không tự đoán bất kỳ điểm nào):
+
+1. *"'SLA' bỏ chữ quá hạn, chỉ cần viết số giờ. chưa quá hạn thì điền màu xanh lá, quá hạn thì tô
+   màu đỏ."*
+2. *"Tiêu đều của table đơn hàng bổ sung thêm chức năng: thay đổi độ dài của cột, kéo cột thay đổi
+   vị trí, bật tắt bổ sung các cột thông tin có trong data."*
+3. *"Các nút thao tác nhanh tôi cần là các nút ấn 1 phát là tự đơn hàng được điền toàn bộ các thông
+   tin cần thiết => tự tạo thùng trả hàng và tự add đơn hàng vào từng thùng cho từng nhân viên theo
+   từng loại phiếu trả bảo hành."*
+
+**Đã hỏi lại và chốt trước khi làm:**
+- Mục 1: yêu cầu mới chỉ mô tả 2 màu (xanh lá/đỏ), trong khi vòng trước đã chốt hệ 3 mức khẩn cấp
+  (xám/vàng/đỏ đặc) — hỏi giữ 3 mức hay về nhị phân → **người dùng chọn giữ 3 mức**, chỉ đổi màu/bỏ
+  chữ.
+- Mục 2: "table đơn hàng" là bảng nào trong ~14 bảng của hệ thống → **người dùng chọn chỉ bảng thống
+  nhất Admin BH** (`#/admin/phan-loai`, bảng trung tâm nhiều dữ liệu nhất), chưa mở rộng bảng khác.
+- Mục 3: có nên bỏ qua Kế toán duyệt (giống 2 nút "Trả trực tiếp KTV/Kho" đã có) hay vẫn qua đúng quy
+  trình → **người dùng chọn vẫn qua Kế toán duyệt bình thường**, chỉ tự động hoá bước gom chọn + tạo
+  phiếu. Phạm vi xử lý 1 KTV hay tất cả → **người dùng chọn tất cả KTV cùng lúc**.
+
+**1. Badge SLA.** Giữ nguyên 3 mức đã chốt (≤24h / 24-72h / >72h), chỉ đổi: (a) bỏ chữ "Quá hạn" khỏi
+phần hiển thị (vẫn còn trong `title` tooltip khi hover, để tra cứu ngữ cảnh nếu cần) — chỉ còn icon +
+số giờ; (b) mức "đúng hạn" đổi từ xám trung tính (`b-gray`) sang **xanh lá** (`b-green`, tái dùng class
+đã có sẵn) — 2 mức quá hạn (vàng/đỏ đặc) giữ nguyên màu như vòng trước.
+
+**2. Tuỳ biến cột bảng thống nhất Admin BH.** Đây là phần lớn nhất trong đợt này — xây 1 hệ thống
+data-grid tương tác đầy đủ:
+- **Kiến trúc**: 3 cột luôn cố định — checkbox chọn hàng loạt (trái), **ID** (cột neo định danh, đúng
+  tinh thần "vị trí 1 luôn là ID" đã chốt ở yêu cầu trước), và Hành động (phải) — đây là vùng điều
+  khiển/thao tác, không phải dữ liệu thuần tuý nên không cho tuỳ biến. 6 cột dữ liệu còn lại (Trạng
+  thái, Nguồn, Khách hàng, Linh kiện, Mô tả lỗi, SLA) đều **kéo đổi vị trí, đổi độ rộng, ẩn/hiện**
+  được tự do.
+- **Bổ sung 6 cột dữ liệu mới** (mặc định ẩn, người dùng tự bật khi cần) — đúng nguyên văn "bật tắt
+  bổ sung các cột thông tin có trong data": SĐT khách hàng, Mã đơn cha, Mã phiếu gửi, Loại đối trừ,
+  Hướng xử lý, Tình trạng bảo hành — đều là dữ liệu đã có sẵn trong model nhưng trước đây chưa từng
+  có cột riêng để xem trực tiếp trên bảng (phải mở modal chi tiết mới thấy).
+- **Kéo đổi vị trí**: dùng HTML5 drag-and-drop thuần (`draggable`, `dragstart`/`dragover`/`drop`) trên
+  `<th>`, không dùng thư viện ngoài.
+- **Kéo đổi độ rộng**: 1 tay cầm nhỏ (`.col-resize-handle`) ở cạnh phải mỗi `<th>`, dùng
+  `mousedown`/`mousemove`/`mouseup` thuần trên `document`. Bảng dùng `table-layout:fixed` +
+  `<colgroup><col style="width:Npx">` — cách duy nhất để đặt độ rộng cột chính xác, độc lập với nội
+  dung (khác `table-layout:auto` mặc định, ở đó độ rộng tự tính theo nội dung, bỏ qua giá trị `<col>`).
+  Cập nhật DOM trực tiếp trong lúc kéo (mượt, không giật), chỉ lưu localStorage + `render()` lại lúc
+  thả chuột.
+- **Ẩn/hiện cột**: nút "⚙ Tuỳ chỉnh cột" mở modal danh sách 12 cột dạng checkbox, có nút "↺ Khôi phục
+  mặc định".
+- **Lưu trữ**: `localStorage` (key `admin_unified_cols_v1`) — dùng chung 1 cấu hình cho toàn app,
+  không phải theo từng người dùng (đúng kiến trúc "1 server ảo dùng chung localStorage" đã có sẵn của
+  toàn bộ prototype này, không phải hạn chế riêng của tính năng này — xem mục "Prototype HTML" hạn
+  chế #1).
+- Về mặt code: tách logic dựng nội dung từng ô thành 2 hàm `adminParentRowFields(s)`/
+  `adminUnitRowFields(u)` (trả về `{key: html}` khớp với `ADMIN_COLS_DEF`) thay vì ghép thẳng vào 1
+  chuỗi `<tr>` cố định thứ tự như trước — nhờ vậy `renderAdminUnifiedTable()` lắp ráp `<td>` theo đúng
+  thứ tự người dùng đã tuỳ chỉnh mà không phải viết lại logic tính toán gốc (case_id, cảnh báo hết hạn
+  BH, badge trạng thái... giữ nguyên y hệt).
+
+**3. Tự động gộp phiếu trả cho tất cả nhân viên.** Nút **"⚡ Tự động gộp phiếu trả cho tất cả nhân
+viên"** ở đầu màn "Tạo & quản lý phiếu trả" — bấm 1 lần, có `confirm()` xác nhận trước, rồi tự động:
+với **MỌI** KTV/khách lẻ đang có đơn ở trạng thái `san_sang_gom_phieu_tra` và chưa thuộc phiếu trả
+nào, gom các đơn đó theo đúng **loại đối trừ** (đổi trả / trừ công nợ — 1 phiếu trả chỉ chứa 1 loại,
+đúng ràng buộc đã chốt từ vòng 21/08/2026), tạo **1 phiếu trả riêng cho mỗi tổ hợp (KTV, loại đối
+trừ)** ở trạng thái **"Nhập"** — **không** bỏ qua bước duyệt: Admin BH vẫn phải mở từng phiếu, nhập mã
+đơn hàng/MISA, rồi bấm "Gửi duyệt kế toán" như quy trình chuẩn, khác hẳn bản chất với 2 nút "Trả trực
+tiếp KTV/Kho" đã có (2 nút đó là đường tắt bỏ qua CẢ gom nhóm LẪN duyệt kế toán). Tách phần "tạo 1
+phiếu trả + gán đơn vị vào" thành hàm dùng chung `createPhieuTraForUnits()` — `taoPhieuTraMoi()` (nút
+thủ công cũ, đọc checkbox trên DOM) nay cũng gọi lại đúng hàm này, không viết trùng logic.
+
+**Kiểm thử đã chạy:** `test_admincols_autogom.js` (jsdom) — xác nhận cột mặc định đúng 6 cột đúng thứ
+tự, bật cột tuỳ chọn cập nhật đúng cả state lẫn localStorage, bảng thật render đúng số `<col>`/`<th>
+draggable>`/resize-handle, reorder qua `adminColDrop()` đổi đúng thứ tự, `resetAdminCols()` khôi phục
+đúng mặc định; dựng đủ nhiều đơn thật cho 2 KTV × 2 loại đối trừ rồi gọi `autoGomPhieuTraTatCa()` —
+xác nhận tạo đúng số phiếu (mỗi tổ hợp KTV×loại đối trừ 1 phiếu riêng, không gộp nhầm 2 loại đối trừ
+khác nhau vào 1 phiếu), phiếu tạo ra đúng ở trạng thái "nhập" (chưa bỏ qua duyệt kế toán), và chạy lại
+lần 2 không tạo trùng cho các đơn đã có `phieu_tra_id`. Cập nhật 1 test cũ (`test_ui_hierarchy.js`)
+đang assert màu `b-gray` cho mức đúng hạn — sửa lại thành `b-green` đúng theo yêu cầu mới. Chạy lại
+toàn bộ 18 bộ test trước đó — **0 lỗi, không hồi quy**. Xác nhận thêm bằng Puppeteer (Chrome thật) —
+đặc biệt: dùng **`page.mouse` mô phỏng thao tác kéo-thả chuột thật** (không chỉ gọi hàm JS trực tiếp)
+để kéo tay cầm resize và kéo tiêu đề cột — xác nhận HTML5 drag-and-drop gốc của trình duyệt phản hồi
+đúng với chuỗi sự kiện chuột tổng hợp qua CDP, ảnh chụp trước/sau cho thấy cột "Linh kiện" đổi đúng vị
+trí và cột "Khách hàng" đổi đúng độ rộng; nút tự động gộp phiếu trả hiện đúng vị trí trên màn.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
