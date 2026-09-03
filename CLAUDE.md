@@ -78,7 +78,11 @@ gộp phiếu trả cho mọi nhân viên (03/09/2026, cùng ngày), và gần n
 giới cột luôn hiện (không cần hover) tại tiêu đề bảng thống nhất Admin BH, để người dùng biết trước
 vị trí kéo giãn cột thay vì phải rà chuột dò tìm (03/09/2026, cùng ngày), và gần nhất là nhóm nút
 thao tác trong thanh footer của "UI chi tiết" (`openDetailUnitModal`) căn lại sang bên phải thay vì
-bên trái mặc định (03/09/2026, cùng ngày) — xem 12 mục cuối cùng phía dưới (theo đúng thứ tự thời
+bên trái mặc định (03/09/2026, cùng ngày), và gần nhất là bộ **"nút thao tác nhanh"** (⚡ Xử lý nhanh)
+cho từng đơn bảo hành — 10 nút 1-chạm đối chiếu đúng bộ icon AppSheet gốc, tự động điền
+huong_xu_ly/loai_bao_hanh/loai_doi_tru và tự gộp vào phiếu trả "Nhập" theo đúng KTV+loại đối trừ —
+cộng với badge SLA quá hạn giờ **bấm được trực tiếp** để ghi lý do chậm ngay không cần đi kèm hành
+động nghiệp vụ nào (03/09/2026, cùng ngày) — xem 13 mục cuối cùng phía dưới (theo đúng thứ tự thời
 gian) để có chi tiết đầy đủ.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
@@ -1583,6 +1587,114 @@ bắt lỗi cú pháp mà không cần biến trang thành module) — qua cả 
 — **0 lỗi, không hồi quy**. Xác nhận thêm bằng ảnh chụp Puppeteer (Chrome thật) ở cả desktop (1500px)
 và mobile (390px): nút "Phân loại" trong thanh footer của màn "Chi tiết đơn bảo hành con" đã dịch hẳn
 sang mép phải thanh, đúng như yêu cầu, ở cả 2 kích cỡ màn hình.
+
+## Nút thao tác nhanh (FAST) cho từng đơn bảo hành + bấm số giờ SLA để ghi lý do chậm ngay (03/09/2026)
+
+Nguyên văn 2 yêu cầu, gửi kèm 1 ảnh chụp 10 icon "thao tác nhanh" từ AppSheet gốc (đúng bộ icon đã
+đối chiếu ở vòng 31/08/2026, mục "Đối chiếu nút chức năng AppSheet gốc"):
+
+1. *"tôi cần các các button fast này cho từng đơn bảo hành. Ví dụ: ấn đổi mới trong BH => tự động
+   điền các thông tin đổi mới, trong bảo hành => tự tạo phiếu trả bh cho KTV=> tự add đơn BH vào
+   phiếu chờ bổ sung mã đơn hàng và mã misa. Nếu đơn bị quá hạn sẽ hiện popup chọn lý do quá hạn."*
+2. *"Trường hợp bị quá hạn ấn vào số giờ bị quá hạn có thể lập tức chọn lý do quá hạn và save lại."*
+
+Trước khi làm, đã hỏi lại **4 điểm mơ hồ thật sự** (AskUserQuestion, đúng nguyên tắc "không tự suy
+đoán" của dự án) vì đây là các quyết định ảnh hưởng trực tiếp tới tính đúng đắn dữ liệu nghiệp vụ
+(tự động tạo phiếu trả, tự động gán NV, bắt buộc mail phê duyệt thật):
+
+- **(1)** "Sửa chữa (FAST)"/"Sửa chữa có phê duyệt" — luật hiện tại bắt buộc gán 1 NV cụ thể (không
+  thể tự đoán ai làm) → **người dùng chọn: mở 1 modal rất nhỏ chỉ hỏi chọn NV**, mọi trường khác tự
+  điền sẵn.
+- **(2)** 4 nút tự tạo phiếu trả ngay (Đổi mới/Trừ công nợ FAST + "có phê duyệt") — tạo phiếu MỚI mỗi
+  lần hay gộp vào phiếu "Nhập" có sẵn? → **người dùng chọn: gộp vào phiếu "Nhập" có sẵn nếu đúng
+  KTV+loại đối trừ**, giống hệt hành vi `autoGomPhieuTraTatCa()` đã có từ vòng trước.
+- **(3)** 3 nút "...CÓ PHÊ DUYỆT" (ngoài bảo hành) — luật bắt buộc nhập Mail phê duyệt thật, không thể
+  tự bịa → **người dùng chọn: mở 1 modal nhỏ chỉ hỏi Mail phê duyệt (+ Mã, tuỳ chọn)**.
+- **(4)** Bấm số giờ quá hạn trên badge SLA (không kèm hành động nghiệp vụ nào) → lưu lý do chậm kiểu
+  gì? → **người dùng chọn: ghi thành 1 log riêng, không đổi trạng thái đơn** (khác `gateSla()` vốn
+  luôn đi kèm 1 hành động cụ thể và ghi log của chính hành động đó).
+
+### 1. Bộ 10 nút "Xử lý nhanh" (`FAST_ACTIONS`)
+
+Đối chiếu đúng 10 icon AppSheet gốc, mỗi nút ứng với 1 tổ hợp `huong_xu_ly`/`loai_bao_hanh`/
+`loai_doi_tru` **đã có sẵn trong hệ thống** — không tạo khái niệm nghiệp vụ mới, chỉ rút ngắn thao
+tác nhập liệu lặp đi lặp lại:
+
+| Nút | huong_xu_ly | loai_bao_hanh | loai_doi_tru | Cần thêm gì trước khi áp dụng? |
+|---|---|---|---|---|
+| Đổi mới trong BH | `doi_moi` | `trong_bh` | mặc định (đề xuất KTV, hoặc `doi_tra`) | Không — 1 chạm |
+| Trừ công nợ | `xac_nhan_tru_no` | `trong_bh` | **luôn ép** `tru_cong_no` | Không — 1 chạm |
+| Sửa chữa trong BH | `sua_chua` | `trong_bh` | mặc định | **Chọn NV** (modal nhỏ) |
+| Bổ sung thông tin | — | — | — | Điều hướng sang `openYeuCauBoSungModal()` có sẵn |
+| Từ chối | `tu_choi` | `trong_bh` | — | **Chọn lý do huỷ** (modal nhỏ, không có preset) |
+| KTV báo cáo sai thông tin | — | — | — | Điều hướng sang `openBaoCaoSaiModal()` có sẵn |
+| Huỷ do không có hàng | `tu_choi` | `trong_bh` | — | Không — 1 chạm (preset lý do huỷ = "Khong co hang") |
+| Đổi mới có phê duyệt | `doi_moi` | `ngoai_bh` | mặc định | **Mail phê duyệt** (modal nhỏ) |
+| Trừ công nợ có phê duyệt | `xac_nhan_tru_no` | `ngoai_bh` | **luôn ép** `tru_cong_no` | **Mail phê duyệt** (modal nhỏ) |
+| Sửa chữa có phê duyệt | `sua_chua` | `ngoai_bh` | mặc định | **Chọn NV + Mail phê duyệt** (cùng 1 modal nhỏ) |
+
+Cơ chế dùng chung: `completeFastAction()` build đúng object `f` mà `applyPhanLoai()` (hàm đã có, đã
+test kỹ từ trước) cần — **không viết lại logic phân loại**, chỉ tự động hoá việc điền form. Với 4
+hướng nằm trong `HUONG_TAO_PHIEU_TRA` (`doi_moi`, `tra_lai_ktv`, `xac_nhan_tru_no`), sau khi phân
+loại xong sẽ gọi thêm `attachToOrCreatePhieuTra()` — tìm đúng phiếu trả "Nhập" sẵn có (đúng KTV +
+đúng loại đối trừ), gộp thêm đơn vào nếu có, chỉ tạo phiếu mới khi chưa có — **phiếu tạo/gộp luôn ở
+trạng thái "Nhập"**, mã đơn hàng/MISA vẫn trống, Admin bảo hành vẫn phải tự bổ sung rồi gửi duyệt kế
+toán như quy trình chuẩn (đúng nguyên văn yêu cầu "tự add đơn BH vào phiếu **chờ bổ sung** mã đơn
+hàng và mã misa" — không phải bỏ qua bước bổ sung/duyệt).
+
+Nếu đơn đang **quá hạn SLA**: với 3 nút "1 chạm" (Đổi mới/Trừ công nợ/Huỷ do không có hàng), vẫn hiện
+`gateSla()` có sẵn (bắt chọn lý do chậm trước khi áp dụng — đúng nguyên văn "nếu đơn bị quá hạn sẽ
+hiện popup chọn lý do quá hạn"). Với 4 nút cần thêm dữ liệu (NV/mail phê duyệt/lý do huỷ), lý do chậm
+được **gộp chung vào cùng 1 modal** thay vì 2 bước riêng — vẫn giữ đúng tinh thần "càng ít lần bấm
+càng tốt".
+
+Trigger `⚡ Xử lý nhanh` (`openFastActionsModal()`, mở lưới 10 icon tròn theo đúng phong cách ảnh
+AppSheet gốc người dùng gửi) được gắn ở **3 nơi hiện có nút "Phân loại"** để không bị lệch: bảng thống
+nhất Admin BH (`renderAdminUnifiedTable`), thanh footer của UI chi tiết
+(`unitActionButtonsHtml`/`openDetailUnitModal`), và màn drill-in theo thùng cũ
+(`renderUnitClassifyCard`). Với đơn **khách lẻ** (`!phieu_gui_id`), lưới ẩn đúng 2 nút "Bổ sung thông
+tin"/"KTV báo cáo sai thông tin" (chỉ còn 8 nút) — 2 khái niệm này vốn đã không áp dụng cho khách lẻ ở
+mọi nơi khác trong hệ thống (không có KTV nào để "báo cáo sai"/"bổ sung"), giữ đúng nhất quán.
+
+### 2. Bấm số giờ SLA quá hạn để ghi lý do chậm ngay (`openQuickLyDoChamModal`)
+
+`slaBadge(dateStr, entityType, entityId)` — thêm 2 tham số TUỲ CHỌN, hoàn toàn tương thích ngược (mọi
+lời gọi cũ 1 tham số không đổi hành vi). Khi có đủ `entityType`+`entityId` **và** đang quá hạn (>24h),
+badge trở thành clickable (`cursor:pointer` + `onclick`) — bấm vào mở `openQuickLyDoChamModal()`, chỉ
+1 trường chọn lý do chậm (dùng lại `lyDoChamFieldHtml()` có sẵn), lưu qua `submitQuickLyDoCham()` —
+ghi **1 dòng log độc lập** (`tu_trang_thai`/`den_trang_thai` = trạng thái hiện tại của đối tượng, giữ
+nguyên không đổi — tránh hiện chữ "null" vô nghĩa khi `renderLogBlock()` render "tu ➔ den"), **không**
+đổi trạng thái/dữ liệu nghiệp vụ của đối tượng — khác hẳn `gateSla()` (luôn đi kèm 1 hành động cụ thể
+đang thực hiện).
+
+**Phạm vi có chủ đích** (đã cân nhắc, không wire tràn lan mọi nơi có `slaBadge()`): chỉ bật clickable
+ở **màn hình nhân viên xử lý** — Kho tiếp nhận (`phieu_gui`), thùng chờ Admin BH tiếp nhận nội bộ
+(`phieu_gui`), đơn cha chờ Admin xác nhận số lượng (`phieu_sc`), bảng thống nhất + UI chi tiết + drill-
+in + xác nhận hoàn tất của Admin BH (`phieu_sc_ct`), "Việc của tôi" của NV (`phieu_sc_ct`), Kho đóng
+gói/gửi và Kế toán duyệt (`phieu_tra`) — tổng 11/14 vị trí có `slaBadge()`. **Cố ý KHÔNG bật** ở 3 nơi
+còn lại: 2 màn KTV (tra cứu tiến độ, nhận hàng trả) vì lý do chậm là *giải trình của người xử lý*, KTV
+là *người chờ*, không phải người giải trình; và màn "Tra cứu mọi đơn hàng" của vai trò `quanly` — giữ
+đúng nguyên tắc đã chốt từ trước "màn quanly THUẦN CHỈ XEM, không được có bất kỳ control nào làm đổi
+dữ liệu".
+
+Không phát sinh lỗi/vấn đề nào ngoài dự kiến trong lúc làm.
+
+**Kiểm thử đã chạy:** test mới `test_fast_actions.js` (jsdom, 13 kịch bản) — cả 10 nút FAST áp dụng
+đúng tổ hợp huong_xu_ly/loai_bao_hanh/loai_doi_tru; "Trừ công nợ" ép đúng loại đối trừ bất kể KTV đề
+xuất gì; đơn vị thứ 2 cùng KTV+loại đối trừ **gộp đúng** vào phiếu "Nhập" vừa tạo (không tạo trùng);
+"Sửa chữa (FAST)" bắt buộc chọn NV mới áp dụng được (kể cả xác nhận chặn đúng khi bỏ trống — sửa luôn
+1 gap nhỏ phát hiện lúc test: select NV không có option rỗng nên "bắt buộc chọn" không bao giờ kích
+hoạt được, đã thêm option rỗng mặc định cho riêng modal FAST mới này); "...có phê duyệt" bắt buộc nhập
+mail mới áp dụng; "Huỷ do không có hàng" preset đúng lý do, "Từ chối" bắt buộc chọn lý do (không có
+preset); lưới FAST khách lẻ đúng 8 nút (ẩn 2 nút không áp dụng); đơn quá hạn bấm nút FAST 1-chạm vẫn
+qua đúng cổng SLA trước khi áp dụng; `slaBadge()` clickable đúng điều kiện (có entity + quá hạn),
+không clickable khi thiếu tham số hoặc chưa quá hạn; `openQuickLyDoChamModal`/`submitQuickLyDoCham`
+ghi đúng 1 log độc lập, không đổi trạng thái đối tượng; nút "⚡ Xử lý nhanh" có mặt đúng ở cả modal chi
+tiết lẫn bảng thống nhất. Chạy lại toàn bộ 19 bộ test trước đó — **0 lỗi, không hồi quy**. Xác nhận
+thêm bằng ảnh chụp Puppeteer (Chrome thật): lưới 10 icon tròn đúng phong cách ảnh AppSheet gốc, modal
+"Sửa chữa trong BH" hiện đúng cả trường chọn NV lẫn banner lý do chậm gộp chung 1 modal (đơn seed đúng
+lúc đã quá hạn thật), modal "Đổi mới có phê duyệt" hiện đúng trường mail phê duyệt, và bấm trực tiếp
+vào badge số giờ quá hạn trong bảng thống nhất mở đúng modal "Ghi lý do chậm" chỉ 1 trường.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
