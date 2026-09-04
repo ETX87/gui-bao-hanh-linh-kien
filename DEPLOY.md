@@ -6,6 +6,10 @@ hỏi #6 chốt xong...". **Khác `linh-kien-app` lúc mới tách**: domain
 là bản rỗng/placeholder — chưa rõ D1/OAuth Client đã được tạo kèm theo hay chưa. **Bước 0 dưới đây
 bắt buộc làm trước tiên** để xác định đang ở tình huống nào.
 
+**Cập nhật 04/09/2026: cả 6 giai đoạn (backend, 13 màn hình frontend, đồng bộ đẩy 2 chiều với
+`linh-kien-app`, PWA cơ bản) đã code xong và commit — checklist dưới đây giờ là bước triển khai
+THẬT SỰ cuối cùng, không còn là "scaffold rỗng" như lúc file này viết lần đầu.
+
 **Xác nhận với người yêu cầu trước khi chạy bất kỳ lệnh nào ở đây** nếu bạn là 1 phiên AI mới không
 chắc đã được uỷ quyền — đây đều là hành động tạo/sửa tài nguyên thật.
 
@@ -48,10 +52,15 @@ npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 npx wrangler secret put SESSION_SECRET          # chuoi ngau nhien dai, vd: openssl rand -hex 32
 npx wrangler secret put CASE_LOOKUP_API_KEY     # xem buoc 5
+npx wrangler secret put LINHKIEN_SYNC_API_KEY   # tu bia 1 chuoi ngau nhien dai (vd openssl rand -hex 32)
 ```
 
-`LINHKIEN_SYNC_API_KEY` (xác thực dữ liệu đẩy từ `linh-kien-app`) chỉ cần đặt khi làm Giai đoạn 5
-(đồng bộ KTV/Khu vực/danh mục linh kiện) — chưa cần ở lần deploy đầu tiên này.
+**`LINHKIEN_SYNC_API_KEY` giờ CẦN đặt ngay từ đầu** (Giai đoạn 5 đã code xong, không còn là việc
+"để sau" như dòng này viết ban đầu) — đây là secret `suachua` dùng để xác thực dữ liệu KTV/Khu vực/
+linh kiện `linh-kien-app` đẩy sang (header `X-Sync-Key`, xem `backend/src/routes/sync.ts`). **Giá trị
+phải khớp 100%** với secret `SUACHUA_SYNC_API_KEY` sẽ đặt ở repo `linh-kien-app` (bước riêng, xem mục
+"Đồng bộ dữ liệu tham chiếu" bên dưới) — tự bịa 1 chuỗi ngẫu nhiên dài, dùng lại đúng giá trị đó ở cả
+2 nơi.
 
 ## 4. Chạy migration + deploy lần đầu
 
@@ -74,15 +83,26 @@ không được xoá (lý do kỹ thuật 1042, xem `wrangler.jsonc`).
 1. Mở `https://suachua.dichvu3t.workers.dev` → đăng nhập Google bằng đúng email đặt trong
    `BOOTSTRAP_ADMIN_EMAIL` (mặc định `smarttrade.vp@gmail.com`) → tự động lên Admin hệ thống
    (`la_qtri`).
-2. Xác nhận màn hình hiện đúng tên/email/vai trò "Admin hệ thống" (Giai đoạn 1 chỉ có màn hình xác
-   nhận Auth — chưa có UI quản lý người dùng, dùng tạm `PATCH /api/users/:email` qua curl/Postman
-   nếu cần gán vai trò cho người khác trước khi Giai đoạn 3/4 có UI thật).
+2. Xác nhận màn hình hiện đúng tên/email/vai trò "Admin hệ thống" — vào thẳng màn "Người dùng"
+   (`#/qtri/nguoi-dung`, có UI thật từ Giai đoạn 4) để gán vai trò cho những người dùng khác (KTV/
+   Kho/Admin BH/NV/Kế toán/Giám sát/View), không cần `curl`/Postman nữa.
 
-## Giai đoạn 5 (chưa làm ở đợt scaffold này) — Đồng bộ dữ liệu tham chiếu
+## 7. Bật đồng bộ dữ liệu tham chiếu (KTV/Khu vực/linh kiện) từ `linh-kien-app`
 
-Xem `du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` mục 3 — cần sửa thêm
-bên repo `linh-kien-app` (Service Binding mới + nhân bản `dvbhSyncClient.ts`) trước khi `suachua`
-nhận được dữ liệu KTV/Khu vực/danh mục linh kiện thật.
+Code cả 2 phía đã xong (Giai đoạn 5, xem CLAUDE.md) — bước này chỉ còn deploy + đặt secret khớp
+nhau, KHÔNG cần sửa code thêm:
+
+1. **Deploy `suachua` xong trước** (bước 4 ở trên) — Service Binding mới bên `linh-kien-app` cần
+   script `suachua` đã tồn tại thật trên tài khoản mới bind được.
+2. Ở repo `linh-kien-app`: đặt secret `npx wrangler secret put SUACHUA_SYNC_API_KEY` — dán **đúng**
+   giá trị đã đặt cho `LINHKIEN_SYNC_API_KEY` ở bước 3 trên (1 secret dùng chung, không phải 2 giá
+   trị khác nhau).
+3. Deploy lại `linh-kien-app` (`npm run deploy`, từ repo đó) — để Service Binding
+   `SUACHUA_SYNC_SERVICE` (đã thêm sẵn trong `wrangler.jsonc` của repo đó) thực sự có hiệu lực.
+4. Đợi cron chạy (mỗi giờ, phút 0) hoặc vào `linh-kien-app` → Settings → tab "Đồng bộ DVBH" → bấm
+   "🔄 Đồng bộ ngay" để đẩy thử ngay lập tức — kiểm tra bằng cách xem `suachua` đã có dữ liệu
+   `ktv_lien_he_bh`/`khu_vuc_bh`/`linh_kien_bh` (nguồn `dong_bo`) chưa (VD qua màn "Danh mục linh
+   kiện" trong `suachua`, hoặc `wrangler d1 execute --remote`).
 
 ## Kiểm thử local trước khi deploy thật (khuyến nghị)
 
