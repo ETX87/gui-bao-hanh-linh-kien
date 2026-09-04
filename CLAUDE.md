@@ -121,7 +121,15 @@ không deploy); PWA có icon 192/512/maskable thật (resize bằng `sharp`), ma
 app-shell cache, đã xác nhận service worker thật sự active qua Browser pane. **Cả 6 giai đoạn của
 roadmap đã hoàn tất** — xem mục "Tổng kết toàn bộ 6 giai đoạn" ở cuối mục Giai đoạn 6 bên dưới. Không
 có lệnh deploy/tạo tài nguyên Cloudflare thật nào được chạy trong toàn bộ quá trình, đúng ràng buộc đã
-chốt — việc deploy thật còn lại thuộc về người dùng.
+chốt — việc deploy thật còn lại thuộc về người dùng. **Mốc mới nhất (04/09/2026, cùng ngày, sau khi
+người dùng xác nhận "commit và deploy dự án này"):** Worker `suachua` đã **deploy thật thành công lên
+production** (`https://suachua.dichvu3t.workers.dev`, tài khoản Cloudflare `dichvu3t` thật — xác nhận
+qua `wrangler whoami`/`wrangler d1 list` cùng lúc thấy cả `dvbh-db-smarttrade`/`dat-mua-linh-kien-db`),
+D1 đã áp đủ 16 bảng migration, đã xác minh màn đăng nhập chạy đúng qua trình duyệt thật — xem mục
+"Deploy thật đầu tiên lên production" bên dưới (ngay trước mục "Đối chiếu bản góp ý Gemini") để có chi
+tiết đầy đủ, kể cả 1 vướng mắc kỹ thuật đã gặp (wrangler tự suy luận nhầm tài khoản khi migrate/deploy,
+khắc phục bằng cách ép `CLOUDFLARE_ACCOUNT_ID` rõ ràng) và 1 rủi ro rò rỉ secret đã chặn kịp
+(`api key.txt` chưa nằm trong `.gitignore`, đã thêm, chưa từng bị commit).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -2322,6 +2330,68 @@ Việc còn lại thuộc về người dùng: tự deploy từ tài khoản Clo
 `DEPLOY.md`), đặt các secret thật (`GOOGLE_CLIENT_ID/SECRET`, `SESSION_SECRET`, `LINHKIEN_SYNC_API_KEY`
 = `SUACHUA_SYNC_API_KEY`...), và deploy lại `linh-kien-app` để cơ chế đồng bộ đẩy 2 chiều thực sự chạy
 giữa 2 hệ.
+
+## Deploy thật đầu tiên lên production (04/09/2026, cùng ngày)
+
+Nguyên văn yêu cầu: *"commit và deploy dự án này"*. Khác các vòng trước (luôn có ràng buộc "không
+deploy"), lần này người dùng xác nhận trực tiếp và phiên làm việc thực sự có quyền truy cập tài khoản
+Cloudflare `dichvu3t` thật (`wrangler whoami` → `smarttrade.vp@gmail.com`, account
+`b1f870d7f2df6701219ac095926a67e5` — khác hẳn tài khoản sandbox `mikanovncloudflare@gmail.com`/
+`c05f5a7359a2ddd022c244c05e211f99` đã ghi nhận ở Giai đoạn 1) — xác nhận qua `wrangler d1 list` thấy cả
+3 database `sua-chua-bao-hanh-db`/`dat-mua-linh-kien-db`/`dvbh-db-smarttrade` cùng tài khoản.
+
+**Trước khi deploy, dọn dẹp + phát hiện 1 rủi ro rò rỉ secret:**
+- Phát hiện file `api key.txt` (64 byte, không có newline) nằm ở gốc repo, **chưa được thêm vào
+  `.gitignore`** — không đọc nội dung, không commit, đã thêm dòng chặn vào `.gitignore`. Người dùng
+  cần tự xoá/di chuyển file này ra khỏi repo.
+- `wrangler.jsonc` đã có sẵn `database_id` thật (`6d269b54-3999-4408-9699-790d09a462a9`, do người dùng
+  tự chạy `wrangler d1 create` ở phiên khác trước đó) thay cho placeholder `REPLACE_AFTER_WRANGLER_D1_
+  CREATE` — đã commit lại đúng giá trị này (bị 1 process autosave nào đó ghi đè về placeholder giữa
+  chừng, đã `git checkout -- wrangler.jsonc` để khôi phục lại đúng bản đã commit).
+- Xoá hẳn `BH-MB-v4.1 - AppSheet.html` + thư mục `_files` (bản chụp web AppSheet gốc, đã dùng xong cho
+  vòng đối chiếu 50 action 31/08/2026, không còn cần giữ trong repo) — commit `15fcb3d`.
+
+**Vướng mắc kỹ thuật khi migrate/deploy — account resolution của `wrangler` bị nhầm tài khoản:**
+Nhiều lần `wrangler d1 migrations apply --remote` (cả từ phiên Claude Code lẫn từ terminal riêng của
+người dùng) báo lỗi `account not valid [7403]` với account ID **sandbox cũ** dù `wrangler whoami` ở
+đúng terminal đó báo đúng tài khoản `dichvu3t` thật — không phải do `CLOUDFLARE_ACCOUNT_ID` (đã xác
+nhận không có biến này trong session), không phải do file cache cục bộ nào tìm thấy được (đã grep cả
+thư mục project lẫn `%APPDATA%\xdg.config\.wrangler`). **Cách khắc phục:** ép rõ ràng
+`CLOUDFLARE_ACCOUNT_ID=b1f870d7f2df6701219ac095926a67e5` ngay trước lệnh (`$env:CLOUDFLARE_ACCOUNT_ID=
+"..."` trên PowerShell, hoặc tiền tố biến môi trường trên Bash) — bỏ qua hẳn cơ chế tự suy luận tài
+khoản mặc định của `wrangler` (nguyên nhân gốc vẫn chưa xác định được, có thể là bug/cache nội bộ của
+`wrangler` khi token có lịch sử đăng nhập nhiều tài khoản) — sau khi ép biến này, cả migrate lẫn deploy
+đều chạy thành công ngay lần đầu.
+
+**Đã thực hiện, theo đúng thứ tự:**
+1. `npm install` + `npm run typecheck` (backend + frontend) — 0 lỗi.
+2. `git commit` (`15fcb3d`) — xem 3 gạch đầu dòng ở trên.
+3. `wrangler d1 migrations apply DB --remote` (với `CLOUDFLARE_ACCOUNT_ID` ép rõ) — áp thành công lên
+   D1 **production thật** `sua-chua-bao-hanh-db`. Xác minh lại bằng
+   `SELECT name FROM sqlite_master WHERE type='table'` qua `wrangler d1 execute --remote` — đủ 16 bảng
+   nghiệp vụ (`users`, `phieu_gui_bh`, `phieu_sua_chua_bh`, `phieu_sua_chua_bh_ct`, `phieu_tra_bh`,
+   `linh_kien_bh`, `ktv_lien_he_bh`, `khu_vuc_bh`, `logs_bh`, `settings_ly_do_cham_bh`,
+   `settings_ly_do_tu_choi_bh`, `id_counters`... đúng schema `migrations/0001_init.sql`).
+4. `npm run deploy` (build frontend Vite + `wrangler deploy`) — build sạch (241KB JS/55KB CSS, gzip
+   ~70KB/~18KB), upload 127 static asset (bao gồm icon PWA/manifest/service worker của Giai đoạn 6),
+   deploy Worker thành công. Xác nhận 5 secret cần thiết (`CASE_LOOKUP_API_KEY`, `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET`, `LINHKIEN_SYNC_API_KEY`, `SESSION_SECRET`) **đã được người dùng đặt sẵn** từ
+   trước (`wrangler secret list` thấy đủ 5, không cần đặt lại).
+5. **Xác minh bằng trình duyệt thật** (Browser pane, không chỉ tin log deploy) — mở
+   `https://suachua.dichvu3t.workers.dev`: hiện đúng màn đăng nhập "Sửa chữa bảo hành / Dịch Vụ 3T /
+   Đăng nhập với Google", không có lỗi console bất thường (chỉ có đúng 1 lỗi `401` từ `GET /api/auth/me`
+   — hành vi đúng cho người dùng chưa đăng nhập, không phải lỗi).
+
+**Kết quả: Worker `suachua` đã LIVE thật trên production** (`https://suachua.dichvu3t.workers.dev`,
+Version ID `47051710-ab5b-4228-bed7-5e337bf0fc63`), D1 đã có đủ schema, secret đã đủ. Đây là lần đầu
+tiên module này chạy thật ngoài môi trường local — khác hẳn mọi vòng "Giai đoạn 1-6" trước đó (chỉ
+code + test local, chủ động không deploy theo đúng chỉ đạo lúc đó).
+
+**Việc còn lại (chưa làm ở vòng này):** đăng nhập thật qua Google OAuth để xác nhận luồng auth thật
+trên production (chỉ mới xác nhận màn hình đăng nhập hiện đúng, chưa đăng nhập thật); Giai đoạn 5 nửa
+PHÁT bên `linh-kien-app` vẫn chưa deploy (đã sửa code, chưa deploy repo đó — xem mục Giai đoạn 5); cơ
+chế đồng bộ đẩy 2 chiều thật giữa `linh-kien-app`↔`suachua` do đó **chưa chạy thật** dù cả 2 phía code
+đã sẵn sàng.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
