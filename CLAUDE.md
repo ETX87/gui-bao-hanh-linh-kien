@@ -2393,6 +2393,90 @@ PHÁT bên `linh-kien-app` vẫn chưa deploy (đã sửa code, chưa deploy rep
 chế đồng bộ đẩy 2 chiều thật giữa `linh-kien-app`↔`suachua` do đó **chưa chạy thật** dù cả 2 phía code
 đã sẵn sàng.
 
+## QA: giao diện live khác bản đã xây + Admin (la_qtri) nhìn được tất cả module (04/09/2026)
+
+Nguyên văn 2 yêu cầu, gửi sau khi xác nhận dự án đã online:
+
+1. *"dự án đã online. tuy nhiên giao diện đang bị khác với giao diện đã xây dựng trên bản web. với vai
+   trò QA hệ thống check lại toàn bộ các giao diện đã xây đựng và so sánh với giao diện hiện tại trên
+   bản deploy. => đánh giá các thiếu sót => lên kế hoạch bổ sung => triển khai => tái đánh giá => chốt
+   báo cáo kết quả"*
+2. *"Vai trò Admin cần nhìn được tất cả các modules của hệ thống."*
+
+**Điều tra trước khi sửa** (không đoán ngay là do vai trò):
+- Mở thẳng `https://suachua.dichvu3t.workers.dev` qua Browser pane thật — màn đăng nhập hiện đúng,
+  **hash bundle JS đang chạy (`index-DS8uEyT0.js`) khớp CHÍNH XÁC** với bản build Giai đoạn 6 đã kiểm
+  thử local trước đó — loại trừ ngay khả năng "deploy nhầm code cũ/stale".
+- **Không đăng nhập thật được** để soi các màn nghiệp vụ — không có thông tin đăng nhập Google thật
+  của người dùng, và `/api/auth/dev-login` đã đúng thiết kế trả `404` trên production (chỉ hoạt động
+  khi `LOCAL_DEV_BYPASS_AUTH` được đặt, đúng ý đồ bảo mật, không tự ý bật lại để "tiện điều tra").
+- **Giả thuyết chính**: tài khoản đăng nhập đầu tiên trên production luôn là `BOOTSTRAP_ADMIN_EMAIL`,
+  tự động lên **CHỈ** `la_qtri=1` (đúng code `routes/auth.ts`), **không có** 8 cờ vai trò nghiệp vụ
+  còn lại — trong khi sidebar/route trước đó lọc **CHẶT theo đúng cờ vai trò**
+  (`routesForUser()`/`Routed()`), nên tài khoản `la_qtri`-chỉ chỉ thấy đúng 4 mục (Trang chủ/Người
+  dùng/Cài đặt hệ thống/Danh mục linh kiện) — khác hẳn 13 màn hình đầy đủ đã trình bày lúc build. Yêu
+  cầu #2 (Admin cần thấy hết) xác nhận trực tiếp đúng giả thuyết này — cùng 1 gốc rễ cho cả 2 yêu cầu.
+- **Đã kiểm chứng lại bằng thực nghiệm local** (không chỉ suy luận): dùng session cookie dev-login
+  local (chỉ `la_qtri=1`, không có cờ nào khác — mô phỏng đúng tài khoản bootstrap admin thật) mở
+  từng URL, xác nhận **trước khi sửa** sidebar chỉ hiện 4 mục như dự đoán.
+
+**Đã sửa — `la_qtri` thành superuser, đi qua được MỌI cổng vai trò** (không chỉ xem menu, mà thao tác
+được thật ở mọi module, để 1 Admin hệ thống có thể tự kiểm tra/hỗ trợ bất kỳ khâu nào mà không cần
+mượn tài khoản người khác):
+
+**Backend** (mọi hàm `requireX()`/`isKtv()` gác cổng theo 1 cờ vai trò duy nhất, đã thêm `|| la_qtri`):
+- `routes/adminBH.ts` + `routes/phieuTra.ts` (2 bản `requireAdminBH()` độc lập, không dùng chung).
+- `routes/kho.ts` + `routes/phieuTra.ts` (2 bản `requireKho()` độc lập).
+- `routes/nvSuaChua.ts` `requireNv()`, `routes/phieuTra.ts` `requireKeToan()`, `routes/phieuGui.ts`
+  `isKtv()`.
+- **Cố ý KHÔNG đổi** các kiểm tra hẹp hơn "đúng đúng người được gán mới cho làm" (VD
+  `nvSuaChua.ts`: NV chẩn đoán chỉ áp dụng được nếu `nguoi_sua_chua === user.email`;
+  `phieuTra.ts`: KTV xác nhận nhận/khiếu nại chỉ khi `ktv_nhan === user.email`) — đây là ràng buộc
+  "việc này có đúng thuộc về bạn không", khác bản chất với "module này bạn có được xem/thao tác
+  không"; Admin vẫn thấy đủ màn hình (rỗng nếu chưa có việc được gán riêng cho họ), và vẫn xử lý được
+  mọi đơn vị qua đúng kênh Admin BH (Phân loại/FAST actions) như trước.
+- Các route đã sẵn `|| la_qtri` từ trước (`traCuu.ts`, `logs.ts`, `linhKien.ts`, `phieuGui.ts`
+  `canReadGhiChu()`, `adminBH.ts` mục đọc chi tiết/báo cáo sai) không cần sửa gì thêm.
+
+**Frontend:**
+- `layout/routes.ts` (`routesForUser()`) — mọi nhánh theo vai trò đều mở thêm `|| u.la_qtri`, qtri
+  giờ thấy đủ **16 mục sidebar** (toàn bộ 13 màn nghiệp vụ + 3 màn quản trị riêng).
+- `App.tsx` (`Routed()`) — đồng bộ đúng y hệt điều kiện, tránh tình trạng "sidebar cho vào nhưng bấm
+  vào lại rơi vào trang Không tìm thấy" nếu chỉ sửa 1 trong 2 nơi.
+- `hooks/useWorkload.tsx` (`fetchCounts()`) — mở thêm `|| user.la_qtri` cho cả 5 nhóm đếm, để huy hiệu
+  Sidebar/StatCard của qtri phản ánh đúng số liệu thật thay vì luôn = 0 (trước đó chỉ nhóm `la_qtri`
+  có sẵn — không nhóm nào — mới được đếm).
+
+**Đã xác minh — không chỉ typecheck, thực nghiệm lại đúng kịch bản đã dùng để phát hiện vấn đề:**
+1. `npm run typecheck` (backend + frontend) — 0 lỗi.
+2. `npm run build` (frontend) — sạch.
+3. Chạy lại `wrangler dev` local (tạm vô hiệu hoá `services.CASE_LOOKUP_SERVICE` **và** binding D1
+   thứ 2 `sua_chua_bao_hanh_db` mới xuất hiện trong `wrangler.jsonc` production như thường lệ — khôi
+   phục đúng nguyên trạng sau khi xong, xác nhận lại bằng cách chính `wrangler.jsonc` không còn nằm
+   trong `git status` sau khi khôi phục) + D1 local rỗng hoàn toàn — đăng nhập lại đúng session
+   `la_qtri`-chỉ như bootstrap admin thật → **sidebar hiện đủ 16 mục** (trước khi sửa chỉ 4).
+4. Điều hướng qua hash trực tiếp tới Kho/NV/Kế toán/KTV/Admin BH (5 module trước đó `la_qtri`-chỉ
+   không vào được) → đọc `read_network_requests` xác nhận **toàn bộ request `GET` liên quan đều trả
+   200 OK** (không còn `403 FORBIDDEN`) — kiểm chứng bằng network log thật, không chỉ nhìn UI không
+   báo lỗi.
+
+**Phát hiện phụ, đã ghi nhận nhưng KHÔNG tự ý sửa:** `wrangler.jsonc` production hiện có 2 khai báo D1
+cho cùng 1 `database_id` (`binding:"DB"` — cái code dùng, và `binding:"sua_chua_bao_hanh_db"` mới,
+`remote:true`, không `migrations_dir`) — nhìn giống 1 binding trùng lặp có thể do Cloudflare Dashboard
+tự thêm khi người dùng bind D1 qua giao diện web, `Env` trong code không khai báo field này nên hiện
+không dùng tới. Không tự xoá — đây là thay đổi trên file production người dùng tự chỉnh, cần hỏi lại
+trước khi động vào.
+
+**Kết luận báo cáo QA:** nguyên nhân "giao diện khác" gần như chắc chắn là 1 — bootstrap admin chỉ có
+`la_qtri`, sidebar cũ lọc chặt theo cờ vai trò nên chỉ hiện 4/16 mục; KHÔNG phải lỗi deploy sai
+code/thiếu tính năng (bundle JS đã xác nhận khớp đúng bản mới nhất). Đã sửa tận gốc (superuser, không
+phải vá từng màn riêng lẻ). **Việc còn lại thuộc người dùng:** `npm run deploy` lại để đưa bản sửa này
+lên production, sau đó đăng nhập thật lại để xác nhận đúng như kỳ vọng — phiên làm việc này không có
+quyền tự deploy lên tài khoản thật (xem đầu CLAUDE.md, trừ phiên deploy riêng đã ghi ở mục ngay
+trên). Nếu sau khi deploy lại mà giao diện vẫn khác so với mong đợi ở điểm nào khác, cần mô tả/gửi ảnh
+chụp cụ thể — phiên làm việc này không có thông tin đăng nhập Google thật của production nên không tự
+kiểm tra thêm được các màn hình sau đăng nhập.
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung

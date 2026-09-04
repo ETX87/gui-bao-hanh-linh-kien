@@ -16,8 +16,12 @@ import { HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type L
 const adminBH = new Hono<{ Bindings: Env }>();
 adminBH.use("*", verifySessionMiddleware, loadUser);
 
-function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean } }) {
-  return c.get("user").la_admin_bh;
+// la_qtri (Admin he thong) luon di qua duoc moi cong vai tro - phan hoi 04/09/2026 "Vai trò Admin
+// cần nhìn được tất cả các modules của hệ thống": qtri la superuser, khong chi xem ma con thao tac
+// duoc moi module de kiem tra/ho tro khi can, khong phai rieng gi Admin BH.
+function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_admin_bh || u.la_qtri;
 }
 
 // ---------- 1. Thung hang cho Admin BH xac nhan tiep nhan noi bo tu Kho ----------

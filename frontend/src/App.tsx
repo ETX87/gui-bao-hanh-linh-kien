@@ -31,23 +31,27 @@ function Routed({ user }: { user: AppUser }) {
 
   if (path === "/home" || path === "/") return <HomeScreen user={user} />;
 
-  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen />;
-  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
-  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/nhan-hang") return <KtvNhanHangScreen user={user} />;
+  // la_qtri (Admin he thong) la superuser - phan hoi 04/09/2026 "Vai trò Admin cần nhìn được tất cả
+  // các modules của hệ thống": moi cong duoi day mo them cho ca la_qtri, dong bo dung voi
+  // routesForUser() (sidebar) va cac ham requireX() da sua ben backend - khong de sidebar hien muc
+  // ma bam vao lai rot vao trang "Khong tim thay".
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/nhan-hang") return <KtvNhanHangScreen user={user} />;
 
-  if (user.la_kho && path === "/kho/tiep-nhan") return <KhoTiepNhanScreen />;
-  if (user.la_kho && path === "/kho/dong-goi") return <KhoDongGoiScreen user={user} />;
+  if ((user.la_kho || user.la_qtri) && path === "/kho/tiep-nhan") return <KhoTiepNhanScreen />;
+  if ((user.la_kho || user.la_qtri) && path === "/kho/dong-goi") return <KhoDongGoiScreen user={user} />;
 
-  if (user.la_admin_bh && path === "/admin/phan-loai") return <AdminPhanLoaiScreen user={user} />;
-  if (user.la_admin_bh && path === "/admin/xac-nhan") return <AdminXacNhanScreen user={user} />;
-  if (user.la_admin_bh && path === "/admin/phieu-tra") return <AdminPhieuTraScreen user={user} />;
+  if ((user.la_admin_bh || user.la_qtri) && path === "/admin/phan-loai") return <AdminPhanLoaiScreen user={user} />;
+  if ((user.la_admin_bh || user.la_qtri) && path === "/admin/xac-nhan") return <AdminXacNhanScreen user={user} />;
+  if ((user.la_admin_bh || user.la_qtri) && path === "/admin/phieu-tra") return <AdminPhieuTraScreen user={user} />;
 
-  if (user.la_nv_sua_chua && path === "/nv/viec-cua-toi") return <NvViecCuaToiScreen user={user} />;
+  if ((user.la_nv_sua_chua || user.la_qtri) && path === "/nv/viec-cua-toi") return <NvViecCuaToiScreen user={user} />;
 
-  if (user.la_ke_toan && path === "/ketoan/duyet") return <KeToanDuyetScreen user={user} />;
+  if ((user.la_ke_toan || user.la_qtri) && path === "/ketoan/duyet") return <KeToanDuyetScreen user={user} />;
 
-  if ((user.la_giam_sat || user.la_view) && path === "/quanly/tong-quan") return <QuanLyTongQuanScreen />;
-  if ((user.la_giam_sat || user.la_view) && path === "/quanly/tra-cuu") return <QuanLyTraCuuScreen user={user} />;
+  if ((user.la_giam_sat || user.la_view || user.la_qtri) && path === "/quanly/tong-quan") return <QuanLyTongQuanScreen />;
+  if ((user.la_giam_sat || user.la_view || user.la_qtri) && path === "/quanly/tra-cuu") return <QuanLyTraCuuScreen user={user} />;
 
   if (user.la_qtri && path === "/qtri/nguoi-dung") return <QtriNguoiDungScreen currentEmail={user.email} />;
   if (user.la_qtri && path === "/qtri/cai-dat") return <QtriCaiDatScreen />;

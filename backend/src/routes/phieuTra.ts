@@ -36,8 +36,10 @@ async function createPhieuTraForUnits(db: D1Database, ktvKey: string, loai: Loai
 
 // ---------- Admin BH: tao & quan ly ----------
 
-function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean } }) {
-  return c.get("user").la_admin_bh;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_admin_bh || u.la_qtri;
 }
 
 // GET /api/phieu-tra/san-sang?ktv=<email|__khach_le__> - don vi san sang gom, nhom theo loai doi tru.
@@ -217,8 +219,10 @@ phieuTra.post("/nhanh/:unitId", async (c) => {
 
 // ---------- Ke toan ----------
 
-function requireKeToan(c: { get(k: "user"): { la_ke_toan: boolean } }) {
-  return c.get("user").la_ke_toan;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function requireKeToan(c: { get(k: "user"): { la_ke_toan: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_ke_toan || u.la_qtri;
 }
 
 phieuTra.post("/:id/duyet", async (c) => {
@@ -249,8 +253,10 @@ phieuTra.post("/:id/tu-choi", async (c) => {
 
 // ---------- Kho: dong goi (anh bien ban, tuy chon) + gui + ket thuc du phong ----------
 
-function requireKho(c: { get(k: "user"): { la_kho: boolean } }) {
-  return c.get("user").la_kho;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_kho || u.la_qtri;
 }
 
 phieuTra.post("/:id/dong-goi", async (c) => {

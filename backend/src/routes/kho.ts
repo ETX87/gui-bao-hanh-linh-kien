@@ -12,8 +12,10 @@ import { isOverdue } from "../lib/sla";
 const kho = new Hono<{ Bindings: Env }>();
 kho.use("*", verifySessionMiddleware, loadUser);
 
-function requireKho(c: { get(k: "user"): { la_kho: boolean } }) {
-  return c.get("user").la_kho;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_kho || u.la_qtri;
 }
 
 // GET /api/kho/phieu-gui?trang_thai=da_gui|da_tiep_nhan - hang doi cho tiep nhan / 8 phieu gan nhat

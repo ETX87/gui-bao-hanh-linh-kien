@@ -13,8 +13,10 @@ import { KET_QUA_CHAN_DOAN_VALUES, type KetQuaChanDoan } from "../lib/constants"
 const nvSuaChua = new Hono<{ Bindings: Env }>();
 nvSuaChua.use("*", verifySessionMiddleware, loadUser);
 
-function requireNv(c: { get(k: "user"): { la_nv_sua_chua: boolean } }) {
-  return c.get("user").la_nv_sua_chua;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function requireNv(c: { get(k: "user"): { la_nv_sua_chua: boolean; la_qtri: boolean } }) {
+  const u = c.get("user");
+  return u.la_nv_sua_chua || u.la_qtri;
 }
 
 nvSuaChua.get("/viec-cua-toi", async (c) => {

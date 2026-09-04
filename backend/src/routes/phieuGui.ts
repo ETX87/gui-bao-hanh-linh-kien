@@ -14,8 +14,9 @@ import { computeEmailGs } from "../lib/gs";
 const phieuGui = new Hono<{ Bindings: Env }>();
 phieuGui.use("*", verifySessionMiddleware, loadUser);
 
-function isKtv(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean }) {
-  return u.la_ktv_dvbh || u.la_ve_tinh;
+// la_qtri di qua duoc moi cong vai tro - xem CLAUDE.md muc "Vai tro Admin nhin duoc tat ca modules".
+function isKtv(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_qtri: boolean }) {
+  return u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri;
 }
 function canReadGhiChu(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_kho: boolean; la_admin_bh: boolean; la_qtri: boolean; la_giam_sat: boolean; la_view: boolean }) {
   return isKtv(u) || u.la_kho || u.la_admin_bh || u.la_qtri || u.la_giam_sat || u.la_view;

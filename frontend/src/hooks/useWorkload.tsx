@@ -40,7 +40,10 @@ const EMPTY: WorkloadCounts = {
 async function fetchCounts(user: AppUser): Promise<WorkloadCounts> {
   const counts = { ...EMPTY };
   const jobs: Promise<void>[] = [];
-  if (user.la_ktv_dvbh || user.la_ve_tinh) {
+  // la_qtri la superuser (phan hoi 04/09/2026 "nhin duoc tat ca cac module") - tinh dem cho CA 6
+  // nhom vai tro nghiep vu, khong chi rieng nhom qtri co san, de huy hieu Sidebar/Trang chu phan anh
+  // dung so lieu that thay vi luon = 0 khi qtri xem cac man khong phai cua rieng ho.
+  if (user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) {
     jobs.push(
       api.get<{ phieu_gui: { trang_thai: string }[] }>("/phieu-gui").then((r) => {
         counts.ktv_phieu_nhap = r.phieu_gui.filter((g) => g.trang_thai === "nhap").length;
@@ -53,7 +56,7 @@ async function fetchCounts(user: AppUser): Promise<WorkloadCounts> {
       }),
     );
   }
-  if (user.la_kho) {
+  if (user.la_kho || user.la_qtri) {
     jobs.push(
       api.get<{ phieu_gui: unknown[] }>("/kho/phieu-gui?trang_thai=da_gui").then((r) => {
         counts.kho_cho_tiep_nhan = r.phieu_gui.length;
@@ -63,7 +66,7 @@ async function fetchCounts(user: AppUser): Promise<WorkloadCounts> {
       }),
     );
   }
-  if (user.la_admin_bh) {
+  if (user.la_admin_bh || user.la_qtri) {
     jobs.push(
       api.get<{ phieu_gui: unknown[] }>("/admin/phieu-gui").then((r) => {
         counts.admin_cho_tiep_nhan_noi_bo = r.phieu_gui.length;
@@ -82,14 +85,14 @@ async function fetchCounts(user: AppUser): Promise<WorkloadCounts> {
       }),
     );
   }
-  if (user.la_nv_sua_chua) {
+  if (user.la_nv_sua_chua || user.la_qtri) {
     jobs.push(
       api.get<{ don_vi: unknown[] }>("/nv/viec-cua-toi").then((r) => {
         counts.nv_cho_chan_doan = r.don_vi.length;
       }),
     );
   }
-  if (user.la_ke_toan) {
+  if (user.la_ke_toan || user.la_qtri) {
     jobs.push(
       api.get<{ phieu_tra: unknown[] }>("/phieu-tra?trang_thai=cho_ke_toan_duyet").then((r) => {
         counts.ketoan_cho_duyet = r.phieu_tra.length;

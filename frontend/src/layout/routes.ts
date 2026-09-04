@@ -14,17 +14,20 @@ export interface RouteItem {
 
 export function routesForUser(u: AppUser): RouteItem[] {
   const items: RouteItem[] = [{ hash: "/home", label: "Trang chủ", icon: "🏠" }];
-  if (u.la_ktv_dvbh || u.la_ve_tinh) {
+  // la_qtri (Admin he thong) la superuser - phan hoi 04/09/2026 "Vai trò Admin cần nhìn được tất cả
+  // các modules của hệ thống": moi nhanh duoi day mo them cho ca la_qtri, khong chi rieng vai tro
+  // nghiep vu tuong ung - dong bo voi backend (moi ham requireX() da them u.la_qtri lam loi rem).
+  if (u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri) {
     items.push(
       { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", icon: "📦", workloadKey: "ktv_phieu_nhap" },
       { hash: "/ktv/tra-cuu", label: "Tra cứu tiến độ", icon: "🔍" },
       { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", icon: "📬", workloadKey: "ktv_nhan_hang" },
     );
   }
-  if (u.la_kho) {
+  if (u.la_kho || u.la_qtri) {
     items.push({ hash: "/kho/tiep-nhan", label: "Tiếp nhận", icon: "📥", workloadKey: "kho_cho_tiep_nhan" }, { hash: "/kho/dong-goi", label: "Đóng gói & gửi", icon: "📤", workloadKey: "kho_cho_dong_goi" });
   }
-  if (u.la_admin_bh) {
+  if (u.la_admin_bh || u.la_qtri) {
     items.push(
       { hash: "/admin/phan-loai", label: "Xử lý đơn bảo hành", icon: "🗂️", workloadKey: "admin_cho_phan_loai" },
       { hash: "/admin/xac-nhan", label: "Xác nhận hoàn tất", icon: "✔️", workloadKey: "admin_cho_xac_nhan_hoan_tat" },
@@ -32,20 +35,20 @@ export function routesForUser(u: AppUser): RouteItem[] {
       { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" },
     );
   }
-  if (u.la_nv_sua_chua) {
+  if (u.la_nv_sua_chua || u.la_qtri) {
     items.push({ hash: "/nv/viec-cua-toi", label: "Việc của tôi", icon: "🔧", workloadKey: "nv_cho_chan_doan" });
   }
-  if (u.la_ke_toan) {
+  if (u.la_ke_toan || u.la_qtri) {
     items.push({ hash: "/ketoan/duyet", label: "Duyệt phiếu trả", icon: "💰", workloadKey: "ketoan_cho_duyet" });
   }
-  if (u.la_giam_sat || u.la_view) {
+  if (u.la_giam_sat || u.la_view || u.la_qtri) {
     items.push({ hash: "/quanly/tong-quan", label: "Tổng quan", icon: "📊" }, { hash: "/quanly/tra-cuu", label: "Tra cứu", icon: "🔍" });
   }
   if (u.la_qtri) {
     items.push({ hash: "/qtri/nguoi-dung", label: "Người dùng", icon: "👥" }, { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", icon: "⚙️" }, { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" });
   }
-  // Khu vuc dedupe theo hash - 1 nguoi dung co the vua la_admin_bh vua la_qtri, ca 2 nhanh o tren deu
-  // push "/linh-kien" (chi khac nhau ve vi tri trong menu vai tro nao chiem truoc).
+  // Khu vuc dedupe theo hash - nhieu nhanh o tren co the cung push 1 hash (VD "/linh-kien" tu ca
+  // nhanh admin_bh lan nhanh qtri, hoac 1 nguoi dung vua co nhieu co vai tro that vua la_qtri).
   const seen = new Set<string>();
   return items.filter((it) => (seen.has(it.hash) ? false : (seen.add(it.hash), true)));
 }
