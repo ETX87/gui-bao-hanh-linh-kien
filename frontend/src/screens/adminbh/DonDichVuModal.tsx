@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
+import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, SectionLabel } from "../../ui/primitives";
@@ -22,6 +23,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
   const [maLk, setMaLk] = useState("");
   const [soLuong, setSoLuong] = useState("1");
   const [moTa, setMoTa] = useState("");
+  const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
 
   const hasCase = caseId.trim().length > 0;
@@ -30,6 +32,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
   const submit = async () => {
     setBusy(true);
     try {
+      const anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
       await api.post("/admin/don-dich-vu", {
         case_id: caseId.trim() || null,
         ten_khach_hang: ten.trim(),
@@ -39,6 +42,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
         ma_lk: maLk || null,
         so_luong: Number(soLuong),
         mo_ta_loi: moTa.trim(),
+        anh,
       });
       toast("Đã tạo đơn dịch vụ tính phí.", "ok");
       onDone();
@@ -98,6 +102,9 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
         </div>
         <Field label="Mô tả lỗi" required>
           <Textarea rows={2} value={moTa} onChange={(e) => setMoTa(e.target.value)} />
+        </Field>
+        <Field label="Ảnh linh kiện lỗi (tuỳ chọn)">
+          <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => setAnhFiles(e.target.files)} className="text-xs" />
         </Field>
       </div>
     </Modal>

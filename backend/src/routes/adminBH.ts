@@ -379,6 +379,8 @@ interface DonDichVuBody {
   ma_lk?: string | null;
   so_luong?: number;
   mo_ta_loi?: string;
+  // Anh chup linh kien loi luc tao don - xem chu thich cung ten o phieuGui.ts (POST /:id/don).
+  anh?: string[];
 }
 
 adminBH.post("/don-dich-vu", async (c) => {
@@ -405,6 +407,10 @@ adminBH.post("/don-dich-vu", async (c) => {
     statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct (id, parent_id, so_thu_tu, trang_thai, created_at, updated_at) VALUES (?, ?, ?, 'cho_phan_loai', ?, ?)").bind(`${id}-${i}`, id, i, now, now));
   }
   await c.env.DB.batch(statements);
+  const anhUrls = (body.anh || []).filter((u) => u && u.trim());
+  if (anhUrls.length > 0) {
+    await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
+  }
   await addLog(c.env.DB, "phieu_sc", id, null, "da_tach", user.email, "Admin BH tao don dich vu tinh phi (khach le)");
   return c.json({ id }, 201);
 });

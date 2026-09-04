@@ -2726,6 +2726,82 @@ comment `services.CASE_LOOKUP_SERVICE` + binding D1 trùng lặp `sua_chua_bao_h
 nhận nhánh "case tìm thấy" của case-lookup autocomplete hoạt động đúng với dữ liệu `dvbh` thật (sandbox
 này không có quyền truy cập Worker `dvbh` thật để test end-to-end).
 
+## QA vòng 4: rà soát toàn phiên tìm tính năng bị bỏ sót + 2 gap thật (04/09/2026)
+
+Nguyên văn yêu cầu: *"chức năng tạo shortcut cho bản mobile của tôi đâu, hãy rà soát lại toàn bộ phiên
+trao đổi này, xem có bỏ sót tính năng nào tôi đã yêu cầu không?"*
+
+**Về "tạo shortcut":** đã xác nhận tính năng này **không bị bỏ sót** — `frontend/public/
+manifest.webmanifest` đã có đủ `shortcuts` (3 mục: Gửi hàng bảo hành/Tiếp nhận/Xử lý đơn bảo hành) từ
+Giai đoạn 6 (04/09/2026), đã đưa vào bản deploy thật đầu tiên. Lý do người dùng không thấy: đây là
+"app shortcuts" chuẩn PWA — chỉ hiện khi đã **cài web thành app** (Thêm vào Màn hình chính), rồi
+nhấn giữ icon (Android)/chuột phải (desktop) mới hiện menu — **không hiện khi mở trong tab trình
+duyệt thường**, và **iOS Safari không hỗ trợ** field `shortcuts` (giới hạn của Apple, không phải lỗi
+code). Đã giải thích rõ cho người dùng, không phải sửa gì.
+
+**Đã rà soát lại toàn bộ các yêu cầu xuyên suốt phiên** (đối chiếu từng mục đã ghi trong CLAUDE.md với
+code thật hiện tại, không chỉ tin theo ghi chú) — xác nhận lại 3 điểm nghi ngờ đã **có đủ** (tự động
+gộp phiếu trả `AdminPhieuTra.tsx`/`autoGomPhieuTraTatCa()`, "Huỷ gửi duyệt"
+`POST /phieu-tra/:id/huy-gui-duyet`, Kho xác nhận kết thúc dự phòng
+`POST /phieu-tra/:id/kho-xac-nhan-ket-thuc`) — không cần sửa. Tìm thấy **2 gap thật** (không nằm
+trong danh sách "đã đơn giản hoá có chủ đích" của Giai đoạn 4 — tức bị rơi ngoài ý muốn):
+
+1. **KTV không upload được ảnh khi tạo đơn bảo hành.** Bảng `phieu_sua_chua_bh_anh` (ảnh gắn ở đơn
+   cha) có sẵn trong schema từ Giai đoạn 1, Admin BH **đọc được** ảnh này (`GET /admin/don-vi/:id` trả
+   `anh.don_cha`, `UnitDetailModal.tsx` đã hiện sẵn) — nhưng **chưa từng có route ghi (INSERT)** vào
+   bảng đó, và `AddDonModal.tsx` không có ô upload ảnh nào. Vừa thiếu backend vừa thiếu frontend.
+2. **Chưa có màn hình mobile riêng cho "Thêm đơn bảo hành"** đúng 7 nguyên tắc đã chốt ở vòng redesign
+   UI (22/08/2026, `TaoDonMobileScreen`/`openAddDonMobileSheet()` của prototype): nút +/- số lượng
+   44×44px, nhãn luôn trên ô nhập, thanh CTA dính đáy có `safe-area-inset-bottom`, ô ảnh với
+   `capture="environment"` (mở thẳng camera). Giai đoạn 4 chỉ dùng `Modal` chung (đúng full-màn-hình
+   trên mobile nhờ quyết định "modal tràn màn hình" 02/09/2026, nhưng không có tinh chỉnh UX riêng).
+
+Người dùng xác nhận qua `AskUserQuestion`: **"Làm cả 2"**.
+
+### 1. Ảnh khi tạo đơn (backend + frontend)
+
+- `backend/src/routes/phieuGui.ts` (`POST /:id/don`) và `backend/src/routes/adminBH.ts`
+  (`POST /don-dich-vu`) — thêm `anh?: string[]` vào body, `INSERT INTO phieu_sua_chua_bh_anh
+  (parent_id, anh_url)` cho từng URL (data URL base64, đúng quy ước đã dùng cho ảnh chẩn đoán NV/đóng
+  gói Kho — không dùng R2). Áp dụng cho **cả 2 đường tạo đơn cha** (KTV qua phiếu gửi, Admin BH tạo
+  đơn dịch vụ tính phí khách lẻ) vì cùng 1 bảng, cùng giá trị.
+- `frontend/src/screens/ktv/useAddDonForm.ts` (mới) — tách state + hàm `submit()` dùng CHUNG giữa
+  `AddDonModal.tsx` (desktop) và `AddDonMobileSheet.tsx` (mobile, xem mục 2) — đúng nguyên tắc "không
+  có 2 nguồn sự thật" đã áp dụng cho `submitAddDon()`/`updateCaseInfo()` ở bản prototype gốc.
+- `AddDonModal.tsx`, `frontend/src/screens/adminbh/DonDichVuModal.tsx` — thêm ô
+  `<input type="file" accept="image/*" multiple capture="environment">` (tuỳ chọn), dùng
+  `fileToDataUrl()` có sẵn (`lib/format.ts`, đã dùng cho ảnh chẩn đoán/đóng gói).
+
+### 2. `AddDonMobileSheet.tsx` — màn "Thêm đơn bảo hành" riêng cho mobile
+
+`frontend/src/hooks/useIsMobile.ts` (mới) — `matchMedia("(max-width: 767px)")`, đúng ngưỡng mobile
+chuẩn đã dùng xuyên suốt dự án. `frontend/src/screens/ktv/AddDonMobileSheet.tsx` (mới) — sheet
+`position:fixed;inset:0`, `height:"100dvh"` (portal riêng, `z-[160]` — nổi trên `Modal` của
+`PhieuGuiDetailModal` đang mở, `z-[150]`), header sticky + nội dung cuộn + footer CTA sticky với
+`paddingBottom:"calc(0.75rem + env(safe-area-inset-bottom))"`, nút +/- số lượng 44×44px, ô ảnh
+`capture="environment"`. `PhieuGuiDetailModal.tsx` dùng `useIsMobile()` để rẽ nhánh: mobile →
+`AddDonMobileSheet`, desktop → `AddDonModal` (như cũ) — cùng dùng chung `useAddDonForm()`.
+
+**1 lỗi thật phát hiện + đã sửa trong lúc verify:** nút +/- số lượng ban đầu viết
+`f.setSoLuong(String(Math.max(1, (Number(f.soLuong)||1)+delta)))` — đọc `f.soLuong` trực tiếp từ
+closure. Test bấm nhanh 2 lần liên tiếp (double-tap thật trên điện thoại có thể rơi vào tình huống
+tương tự) chỉ tăng đúng **1 lần** thay vì 2 — do React 18 tự động gộp (batch) nhiều sự kiện đồng bộ
+liên tiếp, cả 2 handler cùng đọc chung 1 giá trị "cũ" từ closure trước khi state kịp cập nhật. Đã sửa
+bằng functional updater: `f.setSoLuong((prev) => String(Math.max(1, (Number(prev)||1)+delta)))` —
+xác nhận lại bấm 2 lần liên tiếp ra đúng kết quả (1→3, không còn 1→2).
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi cả trước/sau khi sửa lỗi stepper.
+Verify qua Browser pane (`wrangler dev` local, quy trình backup/restore `wrangler.jsonc` thường quy):
+tạo đơn qua API kèm 1 ảnh PNG mẫu (base64) → xác nhận `GET /admin/don-vi/:id` trả đúng `anh.don_cha`
+→ mở `UnitDetailModal` thật trên UI, xác nhận `<img>` hiện đúng đúng data URL đã gửi. Đổi viewport
+375×812 (mobile thật, `resize_window`), tạo phiếu mới → mở "+ Thêm đơn" → xác nhận `AddDonMobileSheet`
+render đúng `100dvh` full-screen, 2 nút +/- đúng 44×44px, có ô ảnh `capture="environment"`; bấm "+"
+2 lần → xác nhận số lượng 1→3 đúng (sau khi sửa lỗi stepper); điền mô tả lỗi, bấm "Thêm vào phiếu" →
+xác nhận qua `GET /phieu-gui/:id` đơn tạo đúng `so_luong_khai:3` + mô tả đúng, sheet tự đóng. Không
+phát sinh lỗi console mới.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa 2 sửa đổi này lên production.
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung

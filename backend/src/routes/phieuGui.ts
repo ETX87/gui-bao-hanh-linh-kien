@@ -128,6 +128,11 @@ interface AddDonBody {
   so_luong_khai?: number;
   mo_ta_loi?: string;
   loai_doi_tru_de_xuat?: "doi_tra" | "tru_cong_no";
+  // Anh chup linh kien loi luc tao don (KTV, thuong tu camera dien thoai) - luu vao
+  // phieu_sua_chua_bh_anh (parent_id). Bang nay da co san trong schema tu Giai doan 1 va DA duoc
+  // Admin BH doc lai (GET /admin/don-vi/:id) nhung CHUA tung co route ghi - gap that phat hien o
+  // "QA vong 3" (nguoi dung hoi "chuc nang tao shortcut... co bo sot gi khong").
+  anh?: string[];
 }
 
 // POST /api/phieu-gui/:id/don - them 1 don (phieu_sua_chua_bh) vao phieu gui, port dung
@@ -153,6 +158,10 @@ phieuGui.post("/:id/don", async (c) => {
   )
     .bind(id, guiId, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, nowVN())
     .run();
+  const anhUrls = (body.anh || []).filter((u) => u && u.trim());
+  if (anhUrls.length > 0) {
+    await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
+  }
   return c.json({ id }, 201);
 });
 

@@ -1,46 +1,16 @@
-import { useState } from "react";
-import { api, errorMessage } from "../../lib/api";
-import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
-import { useLinhKien } from "../../hooks/useLinhKien";
 import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
+import { useAddDonForm } from "./useAddDonForm";
 
-// KTV them 1 don vao phieu gui - port dung submitAddDon(). "Loai doi tru de xuat" la de xuat ban dau
-// cua KTV (Admin BH xac nhan/co the ghi de lai luc phan loai - port dung "Phan hoi vong 4 muc 3").
+// KTV them 1 don vao phieu gui (ban desktop - modal can giua) - port dung submitAddDon(). "Loai doi
+// tru de xuat" la de xuat ban dau cua KTV (Admin BH xac nhan/co the ghi de lai luc phan loai - port
+// dung "Phan hoi vong 4 muc 3"). Logic form dung chung voi AddDonMobileSheet.tsx qua useAddDonForm().
 
 export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose: () => void; onDone: () => void }) {
-  const toast = useToast();
-  const { items: linhKien } = useLinhKien();
-  const [caseId, setCaseId] = useState("");
-  const [maLk, setMaLk] = useState("");
-  const [soLuong, setSoLuong] = useState("1");
-  const [moTa, setMoTa] = useState("");
-  const [loaiDoiTru, setLoaiDoiTru] = useState("doi_tra");
-  const [busy, setBusy] = useState(false);
-
-  const valid = moTa.trim() && Number(soLuong) >= 1;
-
-  const submit = async () => {
-    setBusy(true);
-    try {
-      await api.post(`/phieu-gui/${guiId}/don`, {
-        case_id: caseId.trim() || null,
-        ma_lk: maLk || null,
-        so_luong_khai: Number(soLuong),
-        mo_ta_loi: moTa.trim(),
-        loai_doi_tru_de_xuat: loaiDoiTru,
-      });
-      toast("Đã thêm đơn vào phiếu.", "ok");
-      onDone();
-    } catch (e) {
-      toast(errorMessage(e), "error");
-    } finally {
-      setBusy(false);
-    }
-  };
+  const f = useAddDonForm(guiId, onDone);
 
   return (
     <Modal
@@ -50,7 +20,7 @@ export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose
       footerActions={
         <>
           <Btn onClick={onClose}>Huỷ</Btn>
-          <Btn variant="primary" disabled={!valid || busy} onClick={submit}>
+          <Btn variant="primary" disabled={!f.valid || f.busy} onClick={f.submit}>
             Thêm vào phiếu
           </Btn>
         </>
@@ -58,28 +28,31 @@ export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose
     >
       <div className="space-y-4">
         <Field label="Mã case (nếu có)">
-          <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
+          <Input value={f.caseId} onChange={(e) => f.setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
         </Field>
-        <CaseLookupPreviewCard caseId={caseId} maLk={maLk} linhKien={linhKien} />
+        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Linh kiện lỗi">
-            <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
+            <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
           </Field>
           <Field label="Số lượng" required>
-            <Input type="number" min={1} value={soLuong} onChange={(e) => setSoLuong(e.target.value)} />
+            <Input type="number" min={1} value={f.soLuong} onChange={(e) => f.setSoLuong(e.target.value)} />
           </Field>
         </div>
         <Field label="Mô tả lỗi" required>
-          <Textarea rows={3} value={moTa} onChange={(e) => setMoTa(e.target.value)} />
+          <Textarea rows={3} value={f.moTa} onChange={(e) => f.setMoTa(e.target.value)} />
         </Field>
         <Field label="Loại đối trừ đề xuất">
-          <Select value={loaiDoiTru} onChange={(e) => setLoaiDoiTru(e.target.value)}>
+          <Select value={f.loaiDoiTru} onChange={(e) => f.setLoaiDoiTru(e.target.value)}>
             {Object.entries(LOAI_DOI_TRU_LABELS).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
           </Select>
+        </Field>
+        <Field label="Ảnh linh kiện lỗi (tuỳ chọn)">
+          <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => f.setAnhFiles(e.target.files)} className="text-xs" />
         </Field>
       </div>
     </Modal>

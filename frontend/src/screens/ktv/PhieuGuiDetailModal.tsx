@@ -7,7 +7,9 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
 import { AddDonModal } from "./AddDonModal";
+import { AddDonMobileSheet } from "./AddDonMobileSheet";
 import { QrCode } from "../../ui/QrCode";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, PhieuGui } from "../../lib/types";
 
 const HINH_THUC_OPTIONS = [
@@ -22,6 +24,7 @@ const HINH_THUC_OPTIONS = [
 
 export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: string; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
+  const isMobile = useIsMobile();
   const [data, setData] = useState<{ phieu_gui: PhieuGui; don_cha: DonCha[] } | null>(null);
   const [hinhThuc, setHinhThuc] = useState("");
   const [maXe, setMaXe] = useState("");
@@ -184,7 +187,12 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
           </div>
         </div>
       </Modal>
-      {addDonOpen && <AddDonModal guiId={g.id} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />}
+      {addDonOpen &&
+        (isMobile ? (
+          <AddDonMobileSheet guiId={g.id} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
+        ) : (
+          <AddDonModal guiId={g.id} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
+        ))}
     </>
   );
 }
