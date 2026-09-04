@@ -66,6 +66,9 @@ export interface DonCha {
   trang_thai_cha: "cho_xac_nhan_so_luong" | "da_tach";
   email_gs: string | null;
   created_at: string;
+  // Cot join them (tu GET /admin/don-cha) - email KTV tao phieu gui chua don nay (null neu don dich
+  // vu khach le, khong thuoc phieu gui nao).
+  ktv?: string | null;
 }
 
 export interface DonVi {

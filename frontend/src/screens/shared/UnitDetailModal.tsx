@@ -173,7 +173,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
         </div>
       </Modal>
 
-      {sub === "phan-loai" && <PhanLoaiModal unit={u} parent={p} onClose={() => setSub(null)} onDone={afterAction} />}
+      {sub === "phan-loai" && <PhanLoaiModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "fast" && (
         <FastActionsModal
           unit={u}

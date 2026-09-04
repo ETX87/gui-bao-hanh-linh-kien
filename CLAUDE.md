@@ -2477,6 +2477,136 @@ trên). Nếu sau khi deploy lại mà giao diện vẫn khác so với mong đ�
 chụp cụ thể — phiên làm việc này không có thông tin đăng nhập Google thật của production nên không tự
 kiểm tra thêm được các màn hình sau đăng nhập.
 
+## QA vòng 2: so sánh TOÀN BỘ với `prototype-html` (không phải mô tả của phiên trước) (04/09/2026)
+
+Người dùng làm rõ **"giao diện đã xây dựng"** không phải là bản mô tả của phiên trước, mà là chính
+`du an sua chua bao hanh/prototype-html/index.html` — 22+ vòng rà soát UI/UX thật đã chốt với người
+dùng trước khi build React. Ví dụ cụ thể người dùng đưa ra: *"đơn giản như giao diện mobile tôi đã
+yêu cầu sửa lại thành các menu ở bottom, nhưng hiện tại deploy lại vẫn ở top"* — xác nhận đúng: Giai
+đoạn 4 (frontend React) đã **tự ý đơn giản hoá** nhiều điểm UI đã chốt kỹ trong prototype (ghi rõ
+trong mục "Đã đơn giản hoá có chủ đích" của Giai đoạn 4) thay vì port đúng — dù có ghi chú lại, đây
+vẫn là sai lệch thật so với "giao diện đã xây dựng", không phải chỉ là "đánh đổi hợp lý" như đã tự
+đánh giá trước đó.
+
+**Đã đọc lại trực tiếp source code prototype** (không suy đoán) để lấy đúng markup/CSS/logic gốc, rồi
+so sánh với 12 file/tính năng React đã build — 4 khoảng cách thật đã xác nhận và ưu tiên theo mức độ
+ảnh hưởng:
+
+| # | Khoảng cách | Mức độ | Đã xử lý vòng này? |
+|---|---|---|---|
+| 1 | Menu mobile ở TOP (`MobileNavStrip`, dải cuộn ngang) thay vì BOTTOM tab bar cố định | Người dùng chỉ đích danh | ✅ Đã sửa |
+| 2 | Sidebar không có chế độ thu gọn mặc định + badge góc icon + nội dung tự giãn | Đã chốt kỹ 03/09/2026, bị bỏ hoàn toàn ở Giai đoạn 4 | ✅ Đã sửa |
+| 3 | Bảng thống nhất Admin BH: tách 2 bảng riêng (đơn cha/đơn vị) thay vì gộp 1 bảng; thiếu tuỳ biến cột (kéo vị trí/độ rộng/ẩn-hiện); **thiếu hẳn chọn-nhiều-dòng + phân loại hàng loạt** (backend đã có route `POST /admin/don-vi/phan-loai-hang-loat` từ Giai đoạn 3, Giai đoạn 4 chưa từng làm UI) | Nghiêm trọng nhất — mất hẳn 1 tính năng đã build backend, không chỉ khác giao diện | ✅ Đã sửa |
+| 4 | Quét QR camera (Kho), tem/QR dán thùng, "Xem giao diện Mobile" (iframe preview), tra cứu case CRM tự động, `SearchableSelect` | Đã ghi nhận từ Giai đoạn 4, effort lớn (thư viện ngoài/camera/Giai đoạn 5 case-lookup) | ❌ Chưa làm — xem "Còn tồn đọng" bên dưới |
+
+### 1. Bottom tab bar cho mobile (thay `MobileNavStrip`)
+
+`frontend/src/layout/BottomNav.tsx` (mới) — port dung `renderBottomNav()` của prototype: dùng LẠI
+đúng `routesForUser()`/`useWorkload()` với Sidebar desktop (không định nghĩa menu lần 2), icon+nhãn
+xếp dọc, chỉ "Trang chủ" hiện 1 chấm đỏ tổng hợp (không hiện số riêng từng mục — đúng bản gốc, vì 1
+hàng ngang không đủ chỗ). `MobileNavStrip` (cũ, dải cuộn ngang ở đầu `TopBar`) đã xoá hẳn khỏi
+`Sidebar.tsx`. `Shell.tsx` thêm `pb-20` cho `<main>` ở mobile (khớp
+`.main-col{padding-bottom:calc(60px+env(safe-area-inset-bottom))}` gốc) để nội dung không bị thanh cố
+định che.
+
+### 2. Sidebar thu gọn mặc định + badge góc icon + nội dung tự giãn
+
+`Sidebar.tsx` viết lại nhận `collapsed`/`onToggle` qua props (state chuyển lên `Shell.tsx` vì `<main>`
+cần biết để tự giãn `max-width`, khớp đúng cơ chế `body.sidebar-collapsed` gốc — React không có global
+CSS class nên chuyển state lên component cha chung thay vì `document.body.classList`). Mặc định
+`collapsed=true` (đúng yêu cầu 03/09/2026 "mặc định menu sẽ ở trạng thái thu gọn"). Khi thu gọn: chỉ
+còn icon (72px, so với 224px mở rộng — `w-56`), huy hiệu số việc chuyển từ hiện cạnh nhãn sang 1 chấm
+tròn nhỏ đè lên góc icon. `Shell.tsx`: `<main>` đổi `max-w-6xl` (1152px) → `max-w-[1440px]` khi
+`collapsed=true`, đúng cơ chế "tận dụng khoảng trống vừa giải phóng" đã chốt.
+
+### 3. Bảng thống nhất Admin BH — gộp lại đúng 1 bảng + tuỳ biến cột + chọn-nhiều-dòng
+
+Đây là phần việc lớn nhất vòng này, gồm cả sửa backend lẫn viết lại gần như toàn bộ màn Admin BH:
+
+- **`backend/src/routes/adminBH.ts`** — `GET /don-cha` và `GET /don-vi` thêm `g.nguoi_tao AS ktv` vào
+  SELECT (thiếu từ Giai đoạn 3 — cột "Nguồn" của bảng thống nhất cần tên/email KTV, trước đó chỉ có
+  `case_id`). `GET /don-vi/:id` ghép thêm `ma_lk`/`loai_doi_tru_de_xuat` của đơn cha thẳng vào object
+  `don_vi` trả về (để `PhanLoaiModal.tsx` tự đọc được 2 giá trị mặc định này mà **không cần prop
+  "parent" riêng** — đơn giản hoá interface, tái dùng được thẳng từ bảng thống nhất nơi vốn không có
+  sẵn context "đơn cha" đầy đủ như khi mở từ `UnitDetailModal`).
+- **`frontend/src/hooks/useAdminCols.ts`** (mới) — quản lý `order`/`hidden`/`widths` của 12 cột, đọc/
+  ghi `localStorage` **ĐÚNG key và hình dạng JSON** prototype đã dùng (`admin_unified_cols_v1`,
+  `{order,hidden,widths}`) — nếu người dùng từng dùng bản prototype trên cùng trình duyệt, cấu hình
+  cột cũ tự động được đọc lại, không cần tuỳ chỉnh lại từ đầu.
+- **`frontend/src/screens/adminbh/AdminUnifiedTable.tsx`** (mới) — bảng GỘP đơn cha (đang chờ xác
+  nhận SL) và đơn vị (đang cần xử lý) làm 1, port đúng `adminParentRowFields()`/`adminUnitRowFields()`
+  (12 cột dữ liệu y hệt, xem `ADMIN_COLS_DEF`) + kéo đổi vị trí cột (HTML5 drag-and-drop thuần) + kéo
+  đổi độ rộng (mousedown/mousemove/mouseup thuần trên `document`, cập nhật trực tiếp DOM `<col>` lúc
+  kéo cho mượt, chỉ commit vào state/localStorage lúc thả chuột — đúng kỹ thuật gốc). Click dòng đơn
+  cha mở `XacNhanSoLuongModal` (**khác gốc**: prototype điều hướng sang màn drill-in theo thùng, màn
+  đó không được port từ Giai đoạn 4 — mở thẳng modal xác nhận SL là hành động duy nhất áp dụng được
+  cho dòng đó nên hợp lý làm thay thế, ghi rõ trong code).
+- **`frontend/src/screens/adminbh/AdminColSettingsModal.tsx`** (mới) — modal bật/tắt cột (port
+  `openAdminColSettingsModal()`).
+- **`frontend/src/screens/adminbh/BulkPhanLoaiModal.tsx`** (mới) — **tính năng còn thiếu hẳn, không
+  chỉ khác giao diện**: `POST /admin/don-vi/phan-loai-hang-loat` đã có từ Giai đoạn 3 nhưng Giai đoạn
+  4 chưa từng xây UI gọi tới route này. Form giống `PhanLoaiModal` nhưng **không có** trường "Linh
+  kiện sửa chữa thực tế" (đúng quyết định gốc: nhiều đơn vị chọn hàng loạt có thể thuộc nhiều đơn cha
+  khác nhau, không có 1 giá trị mặc định chung hợp lý).
+- **`frontend/src/screens/shared/PhanLoaiModal.tsx`** — bỏ hẳn prop `parent: DonCha`, đọc thẳng
+  `unit.ma_lk`/`unit.loai_doi_tru_de_xuat` (đã có sẵn qua JOIN ở cả 2 nguồn gọi — bảng thống nhất và
+  `UnitDetailModal`) — ít prop hơn, dùng lại được nguyên vẹn ở cả 2 nơi mà không cần fetch thêm.
+- **`frontend/src/screens/adminbh/PhanLoai.tsx`** — viết lại, bỏ 2 card tách rời cũ (danh sách đơn
+  cha + bảng đơn vị riêng), thay bằng `AdminUnifiedTable` + state chọn nhiều dòng (`Set<string>`) +
+  thanh hành động nổi ("N đã chọn" / "Bỏ chọn" / "Phân loại hàng loạt") khi có dòng được chọn.
+
+**Đã kiểm thử thật qua Browser pane (không chỉ code review):**
+1. `npm run typecheck`/`npm run build` — 0 lỗi, sạch, ngay sau lần sửa đầu tiên dù đây là refactor lớn
+   nhất từ đầu dự án (9 file mới/sửa, đổi cả interface `PhanLoaiModal`).
+2. `wrangler dev` local (tạm vô hiệu hoá `services`/binding D1 thứ 2 như thường lệ, đã khôi phục đúng
+   sau khi xong) + seed dữ liệu thật qua `fetch()` (2 phiếu gửi → 1 đơn cha đang chờ SL + 1 đơn vị
+   đang chờ phân loại) — xác nhận **bảng thống nhất hiện đúng cả 2 loại dòng cùng lúc**, cột "Nguồn"
+   hiện đúng email KTV + mã phiếu gửi (xác nhận fix backend `g.nguoi_tao AS ktv` hoạt động).
+3. Sidebar: xác nhận `getBoundingClientRect().width` = 72px mặc định (thu gọn), bấm nút "»" đổi đúng
+   sang 224px + nhãn "« Thu gọn", đồng thời `<main>` đổi đúng `max-width` 1152→1440px.
+4. Bottom nav: chụp ảnh thật ở viewport 375×812 (mobile) — thanh điều hướng navy cố định ở đáy hiện
+   đúng, mục đang mở tô sáng.
+5. Tuỳ biến cột: bật/tắt 1 cột ẩn ("Tình trạng BH") → cột xuất hiện đúng vị trí cuối bảng; **mô phỏng
+   kéo-thả cột thật** bằng dispatch sự kiện `dragstart`/`dragenter`/`drop` — cột "Nguồn" di chuyển
+   đúng tới vị trí thả; **mô phỏng kéo-resize thật** bằng `mousedown`/`mousemove`/`mouseup` — độ rộng
+   cột cập nhật đúng và lưu `localStorage` đúng định dạng; "Khôi phục mặc định" trả đúng về nguyên
+   trạng ban đầu.
+6. Chọn 1 dòng đơn vị (checkbox) → thanh hành động nổi hiện đúng "1 đã chọn" → mở
+   `BulkPhanLoaiModal` → chọn "Đổi mới" → bấm áp dụng → **gọi thật `POST /admin/don-vi/phan-loai-hang-loat`**,
+   xác nhận lại bằng `GET /admin/don-vi/DH-000002-1` thấy đúng `huong_xu_ly='doi_moi'`,
+   `trang_thai='san_sang_gom_phieu_tra'` — tính năng còn thiếu hoàn toàn ở vòng trước nay hoạt động
+   đúng end-to-end qua backend thật.
+7. Click cả dòng đơn cha (mở đúng `XacNhanSoLuongModal`) lẫn dòng đơn vị (mở đúng `UnitDetailModal`).
+8. Không có lỗi console nào phát sinh từ các thay đổi (chỉ 1 lỗi 401 cũ từ trước khi đăng nhập, không
+   liên quan).
+
+### Còn tồn đọng — CHƯA làm ở vòng QA này (ghi rõ để không nhầm là đã xong)
+
+4 điểm còn lại của mục "Đã đơn giản hoá có chủ đích" (Giai đoạn 4) **vẫn CHƯA được port**, theo đúng
+thứ tự ưu tiên đã đánh giá (effort lớn, giá trị thấp hơn hẳn 3 điểm đã sửa ở trên):
+
+1. **Quét QR bằng camera (Kho tiếp nhận) + tem/QR dán thùng + tải ảnh QR in tem** — cần 2 thư viện
+   ngoài (`qrcode`, `jsqr`) + quyền camera trình duyệt — effort lớn nhất trong 4 điểm, giá trị vừa
+   (Kho vẫn chọn được đúng phiếu từ danh sách hàng đợi, chỉ chậm hơn quét mã).
+2. **"Xem giao diện Mobile" (khung điện thoại giả lập qua iframe)** — tiện ích debug thời prototype
+   còn là file tĩnh; nay ứng dụng thật đã responsive qua Tailwind + BottomNav thật, người dùng test
+   trực tiếp bằng điện thoại thật/DevTools trình duyệt sẽ chính xác hơn — **khuyến nghị KHÔNG làm**
+   trừ khi có nhu cầu cụ thể khác.
+3. **Tra cứu case CRM tự động (case-lookup autocomplete)** khi nhập "Mã case" — phụ thuộc
+   `lib/caseLookupClient.ts` + Service Binding `CASE_LOOKUP_SERVICE` chưa viết (thuộc Giai đoạn 5 nửa
+   PHÁT, khác phạm vi thuần UI của vòng QA này) — vẫn là ô nhập tay tự do.
+4. **`SearchableSelect`** (ô chọn có tìm kiếm cho danh sách dài — KTV/linh kiện) — chính prototype
+   cũng tự ghi nhận đây là "tồn đọng thật" chưa giải quyết dứt điểm ở bản gốc, không phải quy ước đã
+   chốt hoàn chỉnh để port.
+
+Nếu người dùng muốn làm tiếp bất kỳ điểm nào trong 4 điểm trên, cần yêu cầu rõ — đây là các hạng mục
+effort lớn, không tự ý làm thêm ngoài phạm vi đã xác nhận.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` lại để đưa toàn bộ các sửa đổi vòng này (Admin
+superuser + bottom-nav + sidebar collapse + bảng thống nhất/tuỳ biến cột/chọn hàng loạt) lên
+production — phiên làm việc này không có quyền deploy trực tiếp (trừ phiên deploy riêng đã ghi ở mục
+"Deploy thật đầu tiên").
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung

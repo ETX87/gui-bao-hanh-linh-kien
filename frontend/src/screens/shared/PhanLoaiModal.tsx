@@ -8,16 +8,18 @@ import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
 import { useLinhKien } from "../../hooks/useLinhKien";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
-import type { DonVi, DonCha } from "../../lib/types";
+import type { DonVi } from "../../lib/types";
 
 const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
 
 // Form "Phan loai" 1 don vi - port dung phanLoaiFormHtml()/openPhanLoaiModal() cua prototype. Dung cho
 // ca "cho_phan_loai" lan "admin_can_xem_lai" (nhan lai form da co gia tri cu). Truong "Linh kien sua
 // chua thuc te" mac dinh = linh kien goc cua don cha, doi duoc rieng (ma_lk_thuc_te) - CHI hien o day
-// (form don le), KHONG hien o phan loai hang loat (nhieu don vi co the khac don cha).
-
-export function PhanLoaiModal({ unit, parent, onClose, onDone }: { unit: DonVi; parent: DonCha; onClose: () => void; onDone: () => void }) {
+// (form don le), KHONG hien o phan loai hang loat (nhieu don vi co the khac don cha). KHONG can prop
+// "parent" rieng - ca 2 truong can doc tu don cha (ma_lk, loai_doi_tru_de_xuat) da co san qua JOIN
+// ngay tren chinh DonVi (xem GET /admin/don-vi(/:id)) - it prop hon, tai dung truc tiep duoc tu bang
+// thong nhat (AdminUnifiedTable.tsx) ma khong can fetch parent rieng.
+export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const { items: linhKien } = useLinhKien();
   const nvList = useNvList();
@@ -27,11 +29,11 @@ export function PhanLoaiModal({ unit, parent, onClose, onDone }: { unit: DonVi; 
   const [loaiBaoHanh, setLoaiBaoHanh] = useState(unit.loai_bao_hanh || "trong_bh");
   const [mailPd, setMailPd] = useState(unit.thong_tin_mail_pd || "");
   const [maPheDuyet, setMaPheDuyet] = useState(unit.ma_phe_duyet || "");
-  const [loaiDoiTru, setLoaiDoiTru] = useState(unit.loai_doi_tru || parent.loai_doi_tru_de_xuat || "doi_tra");
+  const [loaiDoiTru, setLoaiDoiTru] = useState(unit.loai_doi_tru || unit.loai_doi_tru_de_xuat || "doi_tra");
   const [huongXuLy, setHuongXuLy] = useState(unit.huong_xu_ly || "");
   const [nguoiSuaChua, setNguoiSuaChua] = useState(unit.nguoi_sua_chua || "");
   const [lyDoTuChoi, setLyDoTuChoi] = useState(unit.ly_do_tu_choi || "");
-  const [maLkThucTe, setMaLkThucTe] = useState(unit.ma_lk_thuc_te || parent.ma_lk || "");
+  const [maLkThucTe, setMaLkThucTe] = useState(unit.ma_lk_thuc_te || unit.ma_lk || "");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -82,7 +84,7 @@ export function PhanLoaiModal({ unit, parent, onClose, onDone }: { unit: DonVi; 
         {loaiBaoHanh === "ngoai_bh" && (
           <p className="rounded-lg bg-[var(--coral-100)] text-[var(--coral-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>
         )}
-        {parent.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-500)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[parent.loai_doi_tru_de_xuat]}</b></p>}
+        {unit.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-500)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[unit.loai_doi_tru_de_xuat]}</b></p>}
 
         <SectionLabel>Phân loại bảo hành</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
@@ -153,7 +155,7 @@ export function PhanLoaiModal({ unit, parent, onClose, onDone }: { unit: DonVi; 
         )}
         <Field label="Linh kiện sửa chữa thực tế">
           <Select value={maLkThucTe} onChange={(e) => setMaLkThucTe(e.target.value)}>
-            <option value="">— (dùng đúng linh kiện KTV đã chọn: {parent.ma_lk || "—"}) —</option>
+            <option value="">— (dùng đúng linh kiện KTV đã chọn: {unit.ma_lk || "—"}) —</option>
             {linhKien.map((lk) => (
               <option key={lk.ma_lk} value={lk.ma_lk}>
                 {lk.ten_lk}

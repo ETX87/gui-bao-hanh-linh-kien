@@ -68,8 +68,10 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 adminBH.get("/don-cha", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const trangThai = c.req.query("trang_thai_cha") || "cho_xac_nhan_so_luong";
+  // them g.nguoi_tao AS ktv - can cho cot "Nguon" cua bang thong nhat (UI, xem AdminUnifiedTable.tsx)
+  // hien dung email KTV thay vi chi case_id, khop dung renderAdminUnifiedTable() cua prototype.
   const { results } = await c.env.DB.prepare(
-    `SELECT p.* FROM phieu_sua_chua_bh p
+    `SELECT p.*, g.nguoi_tao AS ktv FROM phieu_sua_chua_bh p
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)
      ORDER BY p.created_at`,
@@ -118,8 +120,9 @@ adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
 
 adminBH.get("/don-vi", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  // them g.nguoi_tao AS ktv - xem comment o GET /don-cha o tren (cung ly do).
   const { results } = await c.env.DB.prepare(
-    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat
+    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv
      FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
@@ -136,9 +139,15 @@ adminBH.get("/don-vi/:id", async (c) => {
   const u = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   const uRow = u as { parent_id: string; nguoi_sua_chua: string | null };
-  const p = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh WHERE id = ?").bind(uRow.parent_id).first<{ phieu_gui_id: string | null }>();
+  const p = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh WHERE id = ?").bind(uRow.parent_id).first<{ phieu_gui_id: string | null; ma_lk: string | null; loai_doi_tru_de_xuat: string | null }>();
   const allowed = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || uRow.nguoi_sua_chua === user.email;
   if (!allowed) return c.json({ error: "FORBIDDEN" }, 403);
+
+  // Ghep them 2 truong cua don cha (ma_lk/loai_doi_tru_de_xuat) truc tiep vao don_vi tra ve - de
+  // PhanLoaiModal.tsx (frontend) doc duoc gia tri mac dinh (linh kien goc/de xuat doi tru cua KTV) ma
+  // KHONG can 1 prop "parent" rieng khi mo tu chinh modal chi tiet nay (dong bo voi cach bang thong
+  // nhat AdminUnifiedTable.tsx da co san 2 truong nay qua JOIN cua GET /don-vi).
+  if (p) Object.assign(u, { ma_lk: p.ma_lk, loai_doi_tru_de_xuat: p.loai_doi_tru_de_xuat });
 
   const [ctLogs, pLogs, ctAnh, pAnh, baoCaoSai] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_sc_ct' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
