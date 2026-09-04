@@ -153,6 +153,42 @@ export interface SettingItem {
   stt: number;
 }
 
+// Preview 1 case tra ve tu GET /api/case-lookup?id=... (proxy sang he DVBH goc, CHI DOC) - khop DUNG
+// 29 field cua CaseLookupPreview ben backend/src/lib/caseLookupClient.ts (doc truc tiep contract that
+// cua partnerApi.ts truoc khi viet, khong doan).
+export interface CaseLookupPreview {
+  ky_thuat_vien: string | null;
+  khach_hang: string | null;
+  seri_san_pham: string | null;
+  khu_vuc: string | null;
+  tinh: string | null;
+  quan_huyen: string | null;
+  hang: string | null;
+  san_pham_bao_hanh: string | null;
+  tien_do_hoan_thanh: string | null;
+  mo_ta_loi: string | null;
+  nhom_san_pham: string | null;
+  nhom_yeu_cau: string | null;
+  loai_yeu_cau: string | null;
+  hinh_thuc_bao_hanh: string | null;
+  ngay_mua: string | null;
+  thoi_gian_cskh_tiep_nhan: string | null;
+  thoi_gian_hen_xu_ly: string | null;
+  thoi_gian_hoan_thanh: string | null;
+  doi_tac: string | null;
+  link_crm: string | null;
+  noi_dung_xu_ly: string | null;
+  luu_y_loi_linh_kien: string | null;
+  cach_thuc_xu_ly: string | null;
+  nganh: string | null;
+  loai_nganh: string | null;
+  nhom_kh: string | null;
+  dt_san_pham: number | null;
+  dt_linh_kien: number | null;
+  dt_dich_vu: number | null;
+  ly_do_qua_han: string | null;
+}
+
 export interface FastActionMeta {
   key: string;
   label: string;

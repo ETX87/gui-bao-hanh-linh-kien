@@ -1,0 +1,56 @@
+import type { Env } from "../types";
+
+// Diem noi toi he DVBH goc (tra cuu case_dvbh theo ID, CHI DOC) - port DUNG tu
+// linh-kien-app/backend/src/lib/caseLookupClient.ts (doc truc tiep file do truoc khi viet, khong doan
+// contract). Dung cho autocomplete luc KTV/Admin BH tao don ("Man hinh chinh linh kien" Giai doan 4
+// con thieu tinh nang nay - xem CLAUDE.md muc "Giai doan 4" - "Bo tra cuu case CRM tu dong").
+export interface CaseLookupPreview {
+  ky_thuat_vien: string | null;
+  khach_hang: string | null;
+  seri_san_pham: string | null;
+  khu_vuc: string | null;
+  tinh: string | null;
+  quan_huyen: string | null;
+  hang: string | null;
+  san_pham_bao_hanh: string | null;
+  tien_do_hoan_thanh: string | null;
+  mo_ta_loi: string | null;
+  nhom_san_pham: string | null;
+  nhom_yeu_cau: string | null;
+  loai_yeu_cau: string | null;
+  hinh_thuc_bao_hanh: string | null;
+  ngay_mua: string | null;
+  thoi_gian_cskh_tiep_nhan: string | null;
+  thoi_gian_hen_xu_ly: string | null;
+  thoi_gian_hoan_thanh: string | null;
+  doi_tac: string | null;
+  link_crm: string | null;
+  noi_dung_xu_ly: string | null;
+  luu_y_loi_linh_kien: string | null;
+  cach_thuc_xu_ly: string | null;
+  nganh: string | null;
+  loai_nganh: string | null;
+  nhom_kh: string | null;
+  dt_san_pham: number | null;
+  dt_linh_kien: number | null;
+  dt_dich_vu: number | null;
+  ly_do_qua_han: string | null;
+}
+
+export async function lookupCase(id: string, env: Env): Promise<CaseLookupPreview | null> {
+  const url = `${env.CASE_LOOKUP_BASE_URL.replace(/\/$/, "")}/api/partner/case-lookup?id=${encodeURIComponent(id)}`;
+  try {
+    // Service Binding (khong fetch() thang URL) - 2 Worker cung 1 tai khoan Cloudflare bi chan loi
+    // 1042 (chong SSRF) neu fetch() mang that, dung nhu dvbh<->linh-kien-app - xem wrangler.jsonc.
+    const res = await env.CASE_LOOKUP_SERVICE.fetch(url, { headers: { "X-API-Key": env.CASE_LOOKUP_API_KEY } });
+    if (!res.ok || !(res.headers.get("Content-Type") ?? "").includes("application/json")) {
+      console.error("[caseLookup] fetch that bai", res.status, res.headers.get("Content-Type"));
+      return null;
+    }
+    const body = await res.json<{ found: boolean; preview: CaseLookupPreview | null }>();
+    return body.found ? body.preview : null;
+  } catch (err) {
+    console.error("[caseLookup] exception", err instanceof Error ? err.message : err);
+    return null;
+  }
+}

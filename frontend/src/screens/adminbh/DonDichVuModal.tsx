@@ -2,8 +2,10 @@ import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select, Textarea, SectionLabel } from "../../ui/primitives";
+import { Btn, Field, Input, Textarea, SectionLabel } from "../../ui/primitives";
+import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useLinhKien } from "../../hooks/useLinhKien";
+import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
 
 // Admin BH tu tao 1 don cha truc tiep - danh cho khach hang le tra phi, khong qua KTV/Kho (port dung
 // "dich vu tinh phi" da chot 21/08/2026 vong 2 muc 5c). case_id tuy chon - neu khong co bat buoc nhap
@@ -65,6 +67,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
         <Field label="Mã case (nếu có — để trống nếu khách lẻ không có case CRM)">
           <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} />
         </Field>
+        {hasCase && <CaseLookupPreviewCard caseId={caseId} maLk={maLk} linhKien={linhKien} />}
         {!hasCase && (
           <>
             <SectionLabel>Thông tin khách lẻ</SectionLabel>
@@ -87,14 +90,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
         <SectionLabel>Linh kiện lỗi</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Linh kiện">
-            <Select value={maLk} onChange={(e) => setMaLk(e.target.value)}>
-              <option value="">— Chọn —</option>
-              {linhKien.map((lk) => (
-                <option key={lk.ma_lk} value={lk.ma_lk}>
-                  {lk.ten_lk}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
           </Field>
           <Field label="Số lượng" required>
             <Input type="number" min={1} value={soLuong} onChange={(e) => setSoLuong(e.target.value)} />

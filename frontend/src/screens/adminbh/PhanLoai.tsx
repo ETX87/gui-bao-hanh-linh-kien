@@ -92,7 +92,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
               <div key={g.id} className="flex items-center gap-3 rounded-lg border border-[var(--line)] px-3 py-2.5">
                 <span className="font-mono text-xs font-semibold">{g.id}</span>
                 <span className="text-sm text-[var(--ink-700)] flex-1">{g.nguoi_tao}</span>
-                {g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
+                {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                 <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
                 <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)}>
                   Xác nhận đã nhận

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Card, Btn, Badge, Input, Field } from "../../ui/primitives";
@@ -9,11 +9,18 @@ import type { LinhKien } from "../../lib/types";
 // (nguon_du_lieu='noi_bo'). Dong dong bo CHI sua duoc 2 cot rieng cua bao hanh (so_thang_bao_hanh,
 // duoc_dung_bao_hanh) - server da tu chan sua cac cot khac, UI khoa luon de ro rang (port dung yeu
 // cau goc "cho phep tao them, sua thong tin, tat bat danh sach su dung trong bao hanh").
+// Phan trang 20 linh kien/bang (yeu cau bo sung "QA vong 2") - danh sach that co the dai ~400+ dong
+// (theo linh-kien-app), 1 bang phang khong gioi han se rat kho keo/tim; ket hop them o tim kiem theo
+// ten/ma de khong phai lat qua nhieu trang khi biet ro dang tim gi.
+
+const PAGE_SIZE = 20;
 
 export function LinhKienScreen() {
   const toast = useToast();
   const [items, setItems] = useState<LinhKien[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = () => api.get<{ linh_kien: LinhKien[] }>("/linh-kien").then((r) => setItems(r.linh_kien));
   useEffect(() => {
@@ -29,13 +36,34 @@ export function LinhKienScreen() {
     }
   };
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((lk) => lk.ten_lk.toLowerCase().includes(q) || lk.ma_lk.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageClamped = Math.min(page, pageCount);
+  const pageItems = filtered.slice((pageClamped - 1) * PAGE_SIZE, pageClamped * PAGE_SIZE);
+
   return (
     <Card className="p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🔩 Danh mục linh kiện ({items.length})</h3>
-        <Btn variant="primary" onClick={() => setAddOpen(true)}>
-          + Thêm linh kiện (nội bộ)
-        </Btn>
+        <div className="flex items-center gap-2">
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Tìm theo mã/tên…"
+            className="!py-1.5 !w-52"
+          />
+          <Btn variant="primary" onClick={() => setAddOpen(true)}>
+            + Thêm linh kiện (nội bộ)
+          </Btn>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
         <table className="w-full text-sm whitespace-nowrap">
@@ -49,7 +77,14 @@ export function LinhKienScreen() {
             </tr>
           </thead>
           <tbody>
-            {items.map((lk) => (
+            {pageItems.length === 0 && (
+              <tr>
+                <td colSpan={5} className="text-center py-8 text-[var(--ink-400)]">
+                  Không có linh kiện nào khớp.
+                </td>
+              </tr>
+            )}
+            {pageItems.map((lk) => (
               <tr key={lk.ma_lk} className="border-b border-[var(--line)] last:border-0">
                 <td className="px-3 py-2 font-mono text-xs">{lk.ma_lk}</td>
                 <td className="px-3 py-2">{lk.ten_lk}</td>
@@ -75,6 +110,21 @@ export function LinhKienScreen() {
           </tbody>
         </table>
       </div>
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between mt-3 text-xs text-[var(--ink-600)]">
+          <span>
+            Trang {pageClamped}/{pageCount} — {filtered.length} linh kiện{search.trim() ? " khớp tìm kiếm" : ""}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Btn onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageClamped <= 1} className="!py-1 !px-2.5">
+              ‹ Trước
+            </Btn>
+            <Btn onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={pageClamped >= pageCount} className="!py-1 !px-2.5">
+              Sau ›
+            </Btn>
+          </div>
+        </div>
+      )}
       {addOpen && <AddLinhKienModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); load(); }} />}
     </Card>
   );

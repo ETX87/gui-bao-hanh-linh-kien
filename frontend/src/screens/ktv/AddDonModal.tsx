@@ -3,8 +3,10 @@ import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
+import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
 import { useLinhKien } from "../../hooks/useLinhKien";
+import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
 
 // KTV them 1 don vao phieu gui - port dung submitAddDon(). "Loai doi tru de xuat" la de xuat ban dau
 // cua KTV (Admin BH xac nhan/co the ghi de lai luc phan loai - port dung "Phan hoi vong 4 muc 3").
@@ -58,16 +60,10 @@ export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose
         <Field label="Mã case (nếu có)">
           <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
         </Field>
+        <CaseLookupPreviewCard caseId={caseId} maLk={maLk} linhKien={linhKien} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Linh kiện lỗi">
-            <Select value={maLk} onChange={(e) => setMaLk(e.target.value)}>
-              <option value="">— Chọn —</option>
-              {linhKien.map((lk) => (
-                <option key={lk.ma_lk} value={lk.ma_lk}>
-                  {lk.ten_lk}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
           </Field>
           <Field label="Số lượng" required>
             <Input type="number" min={1} value={soLuong} onChange={(e) => setSoLuong(e.target.value)} />

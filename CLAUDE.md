@@ -129,7 +129,15 @@ D1 đã áp đủ 16 bảng migration, đã xác minh màn đăng nhập chạy 
 "Deploy thật đầu tiên lên production" bên dưới (ngay trước mục "Đối chiếu bản góp ý Gemini") để có chi
 tiết đầy đủ, kể cả 1 vướng mắc kỹ thuật đã gặp (wrangler tự suy luận nhầm tài khoản khi migrate/deploy,
 khắc phục bằng cách ép `CLOUDFLARE_ACCOUNT_ID` rõ ràng) và 1 rủi ro rò rỉ secret đã chặn kịp
-(`api key.txt` chưa nằm trong `.gitignore`, đã thêm, chưa từng bị commit).
+(`api key.txt` chưa nằm trong `.gitignore`, đã thêm, chưa từng bị commit). **Sau khi deploy thật, người
+dùng phát hiện giao diện production khác giao diện đã chốt** — 2 vòng QA tiếp theo (cùng ngày
+04/09/2026): **"QA vòng 2"** (đối chiếu lại đúng `prototype-html/index.html` thay vì mô tả cũ — sửa
+bottom-nav mobile, sidebar thu gọn mặc định, bảng thống nhất Admin BH đủ tuỳ biến cột + chọn hàng loạt,
+cộng `la_qtri` thành superuser mọi cổng vai trò) và **"QA vòng 3"** (case-lookup autocomplete + cảnh
+báo hết hạn BH khôi phục lại, QR thật (tem dán thùng/tải ảnh in tem/quét camera) bằng `qrcode`+`jsqr`
+npm thật, `SearchableSelect` cho picker linh kiện, phân trang Danh mục linh kiện 20/bảng) — xem 2 mục
+cùng tên bên dưới để có chi tiết đầy đủ. Việc deploy các sửa đổi này lên production vẫn thuộc người
+dùng.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -2585,27 +2593,138 @@ tròn nhỏ đè lên góc icon. `Shell.tsx`: `<main>` đổi `max-w-6xl` (1152p
 4 điểm còn lại của mục "Đã đơn giản hoá có chủ đích" (Giai đoạn 4) **vẫn CHƯA được port**, theo đúng
 thứ tự ưu tiên đã đánh giá (effort lớn, giá trị thấp hơn hẳn 3 điểm đã sửa ở trên):
 
-1. **Quét QR bằng camera (Kho tiếp nhận) + tem/QR dán thùng + tải ảnh QR in tem** — cần 2 thư viện
-   ngoài (`qrcode`, `jsqr`) + quyền camera trình duyệt — effort lớn nhất trong 4 điểm, giá trị vừa
-   (Kho vẫn chọn được đúng phiếu từ danh sách hàng đợi, chỉ chậm hơn quét mã).
+1. ~~**Quét QR bằng camera (Kho tiếp nhận) + tem/QR dán thùng + tải ảnh QR in tem**~~ — **[ĐÃ LÀM
+   04/09/2026, xem mục "QA vòng 3" bên dưới]**.
 2. **"Xem giao diện Mobile" (khung điện thoại giả lập qua iframe)** — tiện ích debug thời prototype
    còn là file tĩnh; nay ứng dụng thật đã responsive qua Tailwind + BottomNav thật, người dùng test
-   trực tiếp bằng điện thoại thật/DevTools trình duyệt sẽ chính xác hơn — **khuyến nghị KHÔNG làm**
-   trừ khi có nhu cầu cụ thể khác.
-3. **Tra cứu case CRM tự động (case-lookup autocomplete)** khi nhập "Mã case" — phụ thuộc
-   `lib/caseLookupClient.ts` + Service Binding `CASE_LOOKUP_SERVICE` chưa viết (thuộc Giai đoạn 5 nửa
-   PHÁT, khác phạm vi thuần UI của vòng QA này) — vẫn là ô nhập tay tự do.
-4. **`SearchableSelect`** (ô chọn có tìm kiếm cho danh sách dài — KTV/linh kiện) — chính prototype
-   cũng tự ghi nhận đây là "tồn đọng thật" chưa giải quyết dứt điểm ở bản gốc, không phải quy ước đã
-   chốt hoàn chỉnh để port.
-
-Nếu người dùng muốn làm tiếp bất kỳ điểm nào trong 4 điểm trên, cần yêu cầu rõ — đây là các hạng mục
-effort lớn, không tự ý làm thêm ngoài phạm vi đã xác nhận.
+   trực tiếp bằng điện thoại thật/DevTools trình duyệt sẽ chính xác hơn — **[ĐÃ XÁC NHẬN 04/09/2026:
+   người dùng đồng ý bỏ qua, không port]**, không phải nợ kỹ thuật còn treo.
+3. ~~**Tra cứu case CRM tự động (case-lookup autocomplete)**~~ — **[ĐÃ LÀM 04/09/2026, xem mục "QA
+   vòng 3" bên dưới]**.
+4. ~~**`SearchableSelect`**~~ — **[ĐÃ LÀM 04/09/2026, xem mục "QA vòng 3" bên dưới]**.
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` lại để đưa toàn bộ các sửa đổi vòng này (Admin
-superuser + bottom-nav + sidebar collapse + bảng thống nhất/tuỳ biến cột/chọn hàng loạt) lên
-production — phiên làm việc này không có quyền deploy trực tiếp (trừ phiên deploy riêng đã ghi ở mục
-"Deploy thật đầu tiên").
+superuser + bottom-nav + sidebar collapse + bảng thống nhất/tuỳ biến cột/chọn hàng loạt) **cộng thêm
+các sửa đổi vòng "QA vòng 3"** lên production — phiên làm việc này không có quyền deploy trực tiếp
+(trừ phiên deploy riêng đã ghi ở mục "Deploy thật đầu tiên").
+
+## QA vòng 3: case-lookup autocomplete + QR thật + SearchableSelect + phân trang linh kiện (04/09/2026)
+
+Tiếp nối "Còn tồn đọng" ở mục QA vòng 2 — người dùng chốt qua `AskUserQuestion`: phạm vi **3 mục**
+(bỏ qua "Xem giao diện Mobile" theo khuyến nghị), case-lookup **"Làm, chấp nhận chỉ test được 1 phần"**
+(chỉ nhánh lỗi/không tìm thấy test được thật từ sandbox này, nhánh "tìm thấy case" cần người dùng tự
+xác nhận sau khi deploy thật). Giữa chừng, người dùng gửi thêm 1 yêu cầu bổ sung: *"thêm vào kế hoạch,
+danh sách linh kiện chia theo table. 20 linh kiện 1 bảng"* — đã gộp làm mục thứ 4.
+
+### 1. Case-lookup autocomplete (khôi phục, contract đọc trực tiếp từ `dvbh`)
+
+Trước khi viết code, đã đọc trực tiếp `../cloudflare smarttrade base/backend/src/routes/partnerApi.ts`
+(route `GET /api/partner/case-lookup`, contract thật — không đoán) và
+`../linh-kien-app/backend/src/lib/caseLookupClient.ts` (bản tham chiếu `linh-kien-app` đã dùng thành
+công cho cùng endpoint) để tránh sai lệch field. Contract: header `X-API-Key`, response
+`{found: boolean, preview: CaseLookupRow | null}` với đúng 29 field (không có SĐT khách hàng — hệ
+DVBH gốc không expose field này qua API đối tác).
+
+- **`backend/src/lib/caseLookupClient.ts`** (mới) — port gần như nguyên trạng bản `linh-kien-app`:
+  gọi `env.CASE_LOOKUP_SERVICE.fetch()` (Service Binding, không `fetch()` thẳng URL — tránh lỗi 1042
+  chống SSRF khi 2 Worker cùng tài khoản, xem `wrangler.jsonc`), bọc try/catch trả `null` mềm khi lỗi
+  mạng/JSON không hợp lệ (không làm vỡ luồng tạo đơn).
+- **`backend/src/routes/caseLookup.ts`** (mới) — `GET /api/case-lookup?id=...`, mount ở
+  `backend/src/index.ts`. Mở cho **mọi vai trò đã đăng nhập** (không riêng KTV/Admin BH) vì đây chỉ
+  là tra cứu đọc, không có tác động dữ liệu.
+- **`frontend/src/hooks/useCaseLookup.ts`** (mới) — debounce 500ms, bỏ kết quả cũ nếu `caseId` đã đổi
+  trước khi request trả về (chặn race khi gõ nhanh) — dùng `useRef` đếm `seq` thay vì `AbortController`
+  (đơn giản hơn, đủ dùng cho quy mô 1 request/lần gõ).
+- **`frontend/src/lib/warranty.ts`** (mới) — port DÚNG công thức `warrantyCheck()` của prototype (dòng
+  1419-1427, đọc lại trước khi viết): hạn bảo hành = `ngay_mua` + N tháng (N =
+  `linh_kien.so_thang_bao_hanh`), hết hạn nếu `thoi_gian_cskh_tiep_nhan` > hạn. Đây đồng thời là việc
+  **khôi phục lại "cảnh báo hết hạn bảo hành"** đã bị mất ở Giai đoạn 4 (do case-lookup chưa xây) —
+  không nằm trong 3 mục đã hỏi nhưng phụ thuộc trực tiếp same case-lookup nên làm luôn cùng đợt, đúng
+  tinh thần quyết định 21/08/2026 mục #10 ("chỉ là cảnh báo, không chặn thao tác").
+- **`frontend/src/screens/shared/CaseLookupPreviewCard.tsx`** (mới) — hiện preview (khách hàng/sản
+  phẩm/serial/hãng/ngày mua) + banner đỏ cảnh báo hết hạn khi có đủ dữ liệu (case + linh kiện đã
+  chọn). Dùng chung ở 3 nơi: `AddDonModal` (KTV thêm đơn), `DonDichVuModal` (Admin BH tạo đơn dịch vụ
+  tính phí, chỉ hiện khi có nhập mã case), `PhanLoaiModal` (Admin BH phân loại — dùng
+  `unit.case_id` đã có sẵn qua JOIN từ `GET /admin/don-vi`, không cần fetch thêm).
+
+### 2. QR thật (tem dán thùng + tải ảnh in tem + quét camera)
+
+Cài `qrcode`+`jsqr` làm **npm dependency thật** (`frontend/package.json`), khác bản prototype offline
+tự bundle bằng esbuild — đúng khuyến nghị đã ghi ở Giai đoạn 4 ("có thể thêm lại bằng cách cài qua npm
+thật"). `@types/qrcode` thêm vào devDependencies (bản UMD của `jsqr` đã tự mang type riêng).
+
+- **`frontend/src/lib/qr.ts`** (mới) — `qrModulesOf()` dùng `QRCode.create()` lấy ma trận module thật
+  (Reed-Solomon thật), tự vẽ SVG (`renderQrSvg`) và Canvas (`downloadQrLabel`, xuất PNG kèm chữ mã bên
+  dưới) từ **cùng 1 nguồn ma trận** — đảm bảo ảnh tải về khớp 100% với QR hiển thị trên màn hình, đúng
+  nguyên tắc đã áp dụng ở bản prototype (`test_qr.js`/`test_qr_download.js`, xem mục "Mã QR thật" phía
+  trên) dù lần này không viết lại bộ test jsdom riêng (verify trực tiếp qua Browser pane thay thế).
+- **`frontend/src/ui/QrCode.tsx`** (mới) — component dùng chung, gắn vào
+  `frontend/src/screens/ktv/PhieuGuiDetailModal.tsx` (mã hoá `g.id`, hiện cho mọi trạng thái phiếu gửi
+  — không chỉ lúc "nhập" như bản đầu prototype, vì hữu ích cả sau khi đã gửi để Kho quét).
+- **`frontend/src/screens/kho/CameraScanModal.tsx`** (mới) — đọc khung hình mỗi 150ms qua `jsQR` (hạ
+  độ phân giải 480px, giống prototype), **CHỈ dùng để xác định nhanh đúng phiếu** (mở sẵn
+  `TiepNhanModal`), không tự động xác nhận nhận hàng — giữ đúng tinh thần kiểm soát nội bộ đã chốt ở
+  prototype. Gắn vào `frontend/src/screens/kho/TiepNhan.tsx` (nút "📷 Quét bằng camera", khớp `pending`
+  đã load sẵn trên client thay vì gọi API `resolveScannedGuiId` riêng — quy mô hàng đợi nhỏ nên không
+  cần round-trip thêm).
+
+### 3. `SearchableSelect` — áp dụng cho picker linh kiện
+
+**`frontend/src/ui/SearchableSelect.tsx`** (mới) — tự viết thuần (không thư viện ngoài, khớp nguyên
+tắc "13 màn hình không cần thêm dependency" của Giai đoạn 4): nút hiện giá trị đã chọn, bấm mở dropdown
+có ô gõ-để-lọc + điều hướng bàn phím (↑/↓/Enter/Escape), đóng khi click ra ngoài. Áp dụng cho **picker
+linh kiện** ở 3 nơi: `AddDonModal` ("Linh kiện lỗi"), `DonDichVuModal` ("Linh kiện"), `PhanLoaiModal`
+("Linh kiện sửa chữa thực tế") — đúng đúng phạm vi đã xác nhận ("primarily linh kiện pickers"),
+**chưa** áp dụng cho picker NV/case_id (không nằm trong yêu cầu đã chốt).
+
+### 4. Phân trang Danh mục linh kiện (20/bảng, yêu cầu bổ sung giữa chừng)
+
+`frontend/src/screens/shared/LinhKienScreen.tsx` — thêm ô tìm theo mã/tên (lọc client-side, reset về
+trang 1 khi gõ) + phân trang `PAGE_SIZE=20` (nút "‹ Trước"/"Sau ›", chỉ hiện thanh phân trang khi
+>1 trang). Không đổi API `GET /linh-kien` (vẫn trả toàn bộ danh sách 1 lần — quy mô ~400+ dòng vẫn nhẹ
+cho 1 lần fetch, phân trang chỉ áp dụng ở tầng hiển thị).
+
+### 1 lỗi có thật phát hiện trong lúc kiểm thử (không liên quan trực tiếp yêu cầu, đã sửa)
+
+Khi verify QR trên `PhieuGuiDetailModal` phát hiện dòng chữ **"0" hiện trơ trên màn hình** ngay dưới
+nút "Lưu thông tin" của mọi phiếu gửi CHƯA có sự cố tiếp nhận. Nguyên nhân: D1 trả `boolean` dưới dạng
+số nguyên `0`/`1` (không phải `true`/`false` JS thật), trong khi JSX dùng pattern
+`{g.su_co_tiep_nhan && (<p>...</p>)}` — khi giá trị là số `0`, biểu thức `&&` trả về chính số `0`
+(falsy nhưng không phải `undefined`/`null`/`false`), và **React render số 0 thành text node** thay vì
+ẩn đi (khác với `false`/`null`/`undefined`, các giá trị này React bỏ qua không render). Đây là 1 bug
+JSX kinh điển, tồn tại từ Giai đoạn 4, không phải do vòng sửa này gây ra. Đã rà soát toàn bộ codebase
+tìm các field `boolean` khác từ D1 dùng trong pattern `{x && <JSX>}` (không phải `checked={x}` — dùng
+`checked` thì an toàn vì HTML coerce đúng truthy/falsy, không render text) và sửa đủ 4 chỗ bằng `!!`:
+`PhieuGuiDetailModal.tsx` (`su_co_tiep_nhan`), `screens/kho/TiepNhan.tsx` (`su_co_tiep_nhan`,
+`admin_tiep_nhan`), `screens/adminbh/PhanLoai.tsx` (`su_co_tiep_nhan`).
+
+### Kiểm thử đã chạy
+
+`npm run typecheck` (cả backend lẫn frontend, `tsc --noEmit`) và `npm run build --workspace frontend`
+(Vite) — **0 lỗi** cả 2 lần (lần đầu trước fix bug "0", lần 2 sau fix). Verify tương tác thật qua
+Browser pane (`wrangler dev` local, D1 rỗng migrate mới, tài khoản `smarttrade.vp@gmail.com` với
+`la_qtri=1` bypass mọi cổng vai trò — đúng quy trình backup/restore `wrangler.jsonc` thường quy, tạm
+comment `services.CASE_LOOKUP_SERVICE` + binding D1 trùng lặp `sua_chua_bao_hanh_db`):
+- `GET /api/case-lookup?id=...` trả đúng `{found:false, preview:null}` khi `CASE_LOOKUP_SERVICE`
+  không khả dụng (sandbox không có `dvbh` thật) — xác nhận nhánh lỗi/không tìm thấy hoạt động đúng,
+  không làm vỡ form. Đã **giả lập `window.fetch`** để trả về 1 case mẫu có `ngay_mua` cũ (2020) +
+  linh kiện 12 tháng bảo hành → xác nhận banner đỏ "đã hết thời gian bảo hành" hiện đúng nội dung
+  (hạn/số ngày đã dùng/số tháng) — xác nhận nhánh "tìm thấy case" cũng đúng logic hiển thị, dù không
+  test được qua dvbh thật (đúng giới hạn đã chấp nhận trước khi làm).
+- QR: tạo phiếu gửi `BH-000001`, xác nhận `renderQrSvg` hiện đúng mã QR + text `BH-000001` bên dưới.
+  Camera scan: mở modal, xác nhận gọi `getUserMedia` đúng (Browser pane tự chặn quyền camera — xác
+  nhận modal hiện lỗi "Permission denied" mềm, không crash trang, đúng thiết kế try/catch).
+- `SearchableSelect`: thêm 2 linh kiện mẫu qua API, mở dropdown "Linh kiện lỗi" trong `AddDonModal`,
+  gõ "vòi" → lọc đúng 1/2 kết quả, chọn được, giá trị bind đúng vào state.
+- Phân trang: seed 25 linh kiện, xác nhận "Trang 1/2 — 25 linh kiện", bấm "Sau ›" hiện đúng 5 dòng còn
+  lại ở trang 2, gõ tìm kiếm "Karofi" lọc đúng còn 1 dòng (thanh phân trang tự ẩn vì chỉ còn 1 trang).
+- Không phát sinh lỗi console mới trong toàn bộ phiên test (loại trừ vài lỗi 401/503/404 cũ còn sót
+  lại trong buffer console từ trước khi restart server, đã cross-check bằng network log/console mới
+  sau restart — không liên quan code vòng này).
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa các sửa đổi này lên production, và tự xác
+nhận nhánh "case tìm thấy" của case-lookup autocomplete hoạt động đúng với dữ liệu `dvbh` thật (sandbox
+này không có quyền truy cập Worker `dvbh` thật để test end-to-end).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

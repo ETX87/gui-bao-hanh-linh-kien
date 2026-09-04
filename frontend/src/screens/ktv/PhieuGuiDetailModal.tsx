@@ -7,6 +7,7 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
 import { AddDonModal } from "./AddDonModal";
+import { QrCode } from "../../ui/QrCode";
 import type { DonCha, PhieuGui } from "../../lib/types";
 
 const HINH_THUC_OPTIONS = [
@@ -16,8 +17,8 @@ const HINH_THUC_OPTIONS = [
 ];
 
 // Chi tiet phieu gui - port dung renderPhieuGuiDetail(): sua header (khi con "nhap"), them/xoa don,
-// xac nhan gui xe, xoa phieu (khi con "nhap" va rong), ghi chu/phan hoi. Da BO tem/QR dan thung cua
-// prototype (chi la tien ich in tem, khong anh huong luong nghiep vu) - xem CLAUDE.md.
+// xac nhan gui xe, xoa phieu (khi con "nhap" va rong), ghi chu/phan hoi. QR dan thung (da bo o Giai
+// doan 4, nay port lai theo yeu cau "QA vong 2") - dung QrCode/lib/qr.ts, ma hoa dung g.id.
 
 export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: string; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
@@ -100,6 +101,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         }
       >
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <QrCode text={g.id} sizePx={100} />
+          </div>
           {isNhap ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Field label="Hình thức gửi">
@@ -137,7 +141,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
               <ReadField label="Ngày gửi xe" value={g.ngay_gui_xe} />
             </div>
           )}
-          {g.su_co_tiep_nhan && (
+          {!!g.su_co_tiep_nhan && (
             <p className="rounded-lg bg-[var(--coral-100)] text-[var(--coral-700)] text-xs font-bold px-3 py-2">
               ⚠ Kho báo sự cố tiếp nhận: {g.su_co_ly_do} {g.su_co_ghi_chu && `— ${g.su_co_ghi_chu}`}
             </p>
