@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
+import { parsePage } from "../lib/pagination";
 
 // Danh muc linh kien - HYBRID dong bo (nguon_du_lieu='dong_bo', Giai doan 5 se nhan qua
 // /api/sync/linh-kien) + tu tao them noi bo (nguon_du_lieu='noi_bo', CRUD day du o day). Admin BH
@@ -19,18 +20,40 @@ function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: bo
   return u.la_admin_bh || u.la_qtri;
 }
 
+// GET /linh-kien?duoc_dung_bao_hanh=1&q=&limit=&offset= - 2 kieu goi khac nhau CO CHU DICH:
+// (a) khong truyen "limit" - tra TOAN BO danh sach khop dieu kien, dung cho picker (useLinhKien.ts,
+//     SearchableSelect can du option de tu loc client-side, khong the phan trang - phan trang se lam
+//     hong UX "go de tim thay ngay" cua combobox); (b) co truyen "limit" - phan trang that o SQL, dung
+//     cho man "Danh muc linh kien" (LinhKienScreen.tsx, admin duyet toan bo danh muc) - xem
+//     CLAUDE.md "Phan trang toan bo bang du lieu" (05/09/2026).
 linhKien.get("/", async (c) => {
   const chiDuocDung = c.req.query("duoc_dung_bao_hanh");
-  let sql = "SELECT * FROM linh_kien_bh";
+  const kw = (c.req.query("q") || "").trim();
+  let where = "1=1";
   const binds: unknown[] = [];
-  if (chiDuocDung === "1") {
-    sql += " WHERE duoc_dung_bao_hanh = 1";
+  if (chiDuocDung === "1") where += " AND duoc_dung_bao_hanh = 1";
+  if (kw) {
+    where += " AND (ten_lk LIKE ? OR ma_lk LIKE ?)";
+    const like = `%${kw}%`;
+    binds.push(like, like);
   }
-  sql += " ORDER BY ten_lk";
-  const { results } = await c.env.DB.prepare(sql)
-    .bind(...binds)
-    .all();
-  return c.json({ linh_kien: results });
+  if (c.req.query("limit") === undefined) {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM linh_kien_bh WHERE ${where} ORDER BY ten_lk`)
+      .bind(...binds)
+      .all();
+    return c.json({ linh_kien: results });
+  }
+  const { limit, offset } = parsePage(c);
+  const fromWhere = `FROM linh_kien_bh WHERE ${where}`;
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT * ${fromWhere} ORDER BY ten_lk LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`)
+      .bind(...binds)
+      .first<{ cnt: number }>(),
+  ]);
+  return c.json({ linh_kien: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface CreateBody {

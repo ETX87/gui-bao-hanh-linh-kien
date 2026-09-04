@@ -7,6 +7,7 @@ import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
+import { parsePage } from "../lib/pagination";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
 // xac nhan so luong (tach don vi con), phan loai (don le + hang loat), yeu cau bo sung, bao cao sai,
@@ -28,8 +29,13 @@ function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: bo
 
 adminBH.get("/phieu-gui", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0 ORDER BY nguoi_tao, updated_at").all();
-  return c.json({ phieu_gui: results });
+  const { limit, offset } = parsePage(c);
+  const fromWhere = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0";
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT * ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).first<{ cnt: number }>(),
+  ]);
+  return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
 
 adminBH.post("/phieu-gui/:id/tiep-nhan-noi-bo", async (c) => {
@@ -68,17 +74,16 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 adminBH.get("/don-cha", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const trangThai = c.req.query("trang_thai_cha") || "cho_xac_nhan_so_luong";
+  const { limit, offset } = parsePage(c);
   // them g.nguoi_tao AS ktv - can cho cot "Nguon" cua bang thong nhat (UI, xem AdminUnifiedTable.tsx)
   // hien dung email KTV thay vi chi case_id, khop dung renderAdminUnifiedTable() cua prototype.
-  const { results } = await c.env.DB.prepare(
-    `SELECT p.*, g.nguoi_tao AS ktv FROM phieu_sua_chua_bh p
-     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)
-     ORDER BY p.created_at`,
-  )
-    .bind(trangThai)
-    .all();
-  return c.json({ don_cha: results });
+  const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`;
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai).first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_cha: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface XacNhanSoLuongBody {
@@ -118,18 +123,27 @@ adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
 
 // ---------- 3. Bang thong nhat - don vi can xu ly ----------
 
+// GET /don-vi?limit=&offset= - "bang thong nhat" (dong lon nhat, phan loai that o day) - xem
+// lib/pagination.ts. Rieng GET /don-cha (thung cho xac nhan SL) khong lo dai vi bi gate lai truoc khi
+// don qua duoc buoc nay - khong can pager rieng o frontend, chi can COUNT/LIMIT day du de an toan.
 adminBH.get("/don-vi", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const { limit, offset } = parsePage(c);
   // them g.nguoi_tao AS ktv - xem comment o GET /don-cha o tren (cung ly do).
-  const { results } = await c.env.DB.prepare(
-    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv
-     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+  const fromWhere = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
-       AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)
-     ORDER BY u.updated_at`,
-  ).all();
-  return c.json({ don_vi: results });
+       AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`;
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv
+       ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`,
+    )
+      .bind(limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
 
 // Chi tiet 1 don vi (dung cho modal chi tiet + 4 khoi log rieng biet).
@@ -314,8 +328,12 @@ adminBH.post("/don-cha/:id/bao-cao-sai", async (c) => {
 
 adminBH.get("/xac-nhan", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan' ORDER BY updated_at").all();
-  return c.json({ don_vi: results });
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan' ORDER BY updated_at LIMIT ? OFFSET ?").bind(limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan'").first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
 
 adminBH.post("/don-vi/:id/xac-nhan-hoan-tat", async (c) => {

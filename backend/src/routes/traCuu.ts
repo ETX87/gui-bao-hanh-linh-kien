@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
+import { parsePage } from "../lib/pagination";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -19,23 +20,36 @@ function scopeClause(user: { la_giam_sat: boolean; la_view: boolean; la_qtri: bo
   return { where: "1=0", binds: [] };
 }
 
+// Phan trang that o tang SQL (LIMIT/OFFSET + COUNT) - day la bang "tra cuu MOI don hang toan he
+// thong", co kha nang phinh to nhat trong ca he thong nen uu tien phan trang dung dan nhat. "q" chuyen
+// tu "JSON.stringify toan dong roi loc o server" (ban cu, bat buoc phai SELECT het du lieu ve truoc)
+// sang SQL LIKE tren dung cac cot hien thi tren bang.
 traCuu.get("/don-vi", async (c) => {
   const user = c.get("user");
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
-  const kw = (c.req.query("q") || "").trim().toLowerCase();
-  const { where, binds } = scopeClause(user);
-  const { results } = await c.env.DB.prepare(
-    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang, p.phieu_gui_id, g.nguoi_tao as ktv
-     FROM phieu_sua_chua_bh_ct u
+  const kw = (c.req.query("q") || "").trim();
+  const { limit, offset } = parsePage(c);
+  const { where: scopeWhere, binds: scopeBinds } = scopeClause(user);
+  let where = scopeWhere;
+  const binds = [...scopeBinds];
+  if (kw) {
+    where += " AND (u.id LIKE ? OR p.case_id LIKE ? OR p.ma_lk LIKE ? OR p.mo_ta_loi LIKE ? OR p.ten_khach_hang LIKE ? OR g.nguoi_tao LIKE ?)";
+    const like = `%${kw}%`;
+    binds.push(like, like, like, like, like, like);
+  }
+  const fromWhere = `FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE ${where}
-     ORDER BY u.updated_at DESC`,
-  )
-    .bind(...binds)
-    .all();
-  if (!kw) return c.json({ don_vi: results });
-  return c.json({ don_vi: results.filter((r) => JSON.stringify(r).toLowerCase().includes(kw)) });
+     WHERE ${where}`;
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang, p.phieu_gui_id, g.nguoi_tao as ktv ${fromWhere} ORDER BY u.updated_at DESC LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`)
+      .bind(...binds)
+      .first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
 
 traCuu.get("/tong-quan", async (c) => {

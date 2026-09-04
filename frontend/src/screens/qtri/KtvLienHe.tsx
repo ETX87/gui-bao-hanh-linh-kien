@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, Field, Input, Select } from "../../ui/primitives";
+import { Pagination } from "../../ui/Pagination";
 import { Modal } from "../../ui/Modal";
 import type { KtvLienHe } from "../../lib/types";
 
@@ -17,33 +19,27 @@ const VAI_TRO_OPTIONS = ["KTV", "CTV", "Tram", "Ve tinh"];
 
 export function QtriKtvScreen() {
   const toast = useToast();
-  const [items, setItems] = useState<KtvLienHe[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>("/ktv-lien-he", "ktv");
   const [editing, setEditing] = useState<KtvLienHe | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-
-  const load = () => api.get<{ ktv: KtvLienHe[] }>("/ktv-lien-he").then((r) => { setItems(r.ktv); setLoading(false); });
-  useEffect(() => {
-    load();
-  }, []);
 
   const xoa = async (maKtv: string) => {
     if (!confirm(`Xoá KTV "${maKtv}" khỏi danh bạ? (Tài khoản đăng nhập đã có sẵn của họ không bị xoá — chỉ mất khả năng tự động duyệt lần đăng nhập kế tiếp.)`)) return;
     try {
       await api.delete(`/ktv-lien-he/${encodeURIComponent(maKtv)}`);
       toast("Đã xoá.", "ok");
-      load();
+      reload();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading && items.length === 0) return <Spinner />;
 
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📇 Danh sách KTV / CTV / Trạm ({items.length})</h3>
+        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
         <Btn variant="primary" onClick={() => setAddOpen(true)}>
           + Khai báo KTV
         </Btn>
@@ -92,8 +88,9 @@ export function QtriKtvScreen() {
           </tbody>
         </table>
       </div>
-      {addOpen && <KtvFormModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); load(); }} />}
-      {editing && <KtvFormModal existing={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); load(); }} />}
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      {addOpen && <KtvFormModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); reload(); }} />}
+      {editing && <KtvFormModal existing={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}
     </Card>
   );
 }

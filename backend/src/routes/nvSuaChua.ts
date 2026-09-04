@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { KET_QUA_CHAN_DOAN_VALUES, type KetQuaChanDoan } from "../lib/constants";
+import { parsePage } from "../lib/pagination";
 
 // Man hinh NV sua chua - "Viec cua toi" + Chan doan. Anh luu dang data URL (base64) truc tiep trong
 // cot TEXT - dung quyet dinh "KHONG dung R2" da chot cho he nay (giong prototype fileToBase64()).
@@ -22,8 +23,12 @@ function requireNv(c: { get(k: "user"): { la_nv_sua_chua: boolean; la_qtri: bool
 nvSuaChua.get("/viec-cua-toi", async (c) => {
   const user = c.get("user");
   if (!requireNv(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ? ORDER BY updated_at").bind(user.email).all();
-  return c.json({ don_vi: results });
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ? ORDER BY updated_at LIMIT ? OFFSET ?").bind(user.email, limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ?").bind(user.email).first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface ChanDoanBody {

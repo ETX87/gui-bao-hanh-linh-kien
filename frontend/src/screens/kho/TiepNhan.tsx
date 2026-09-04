@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, EmptyState } from "../../ui/primitives";
+import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { BaoSuCoModal } from "./BaoSuCoModal";
 import { TiepNhanModal } from "./TiepNhanModal";
@@ -14,32 +16,27 @@ import type { PhieuGui } from "../../lib/types";
 // khoXacNhanTiepNhan()/submitSuCo(). Quet camera (jsQR that, port lai o "QA vong 2" - da bo o Giai
 // doan 4) chi dung de XAC DINH NHANH dung phieu (mo san TiepNhanModal), KHONG tu dong xac nhan nhan
 // hang - van can nguoi dung chu dong bam "Xac nhan tiep nhan" trong modal, dung tinh than kiem soat
-// noi bo da chot tu prototype.
+// noi bo da chot tu prototype. "Cho tiep nhan" phan trang that (co the dai) - "Da tiep nhan gan day"
+// CO CHU DICH khong phan trang (backend luon tra dung 8 dong gan nhat, khong phai lich su day du).
 
 export function KhoTiepNhanScreen() {
   const toast = useToast();
   const { refresh } = useWorkload();
-  const [pending, setPending] = useState<PhieuGui[]>([]);
+  const { items: pending, total: pendingTotal, page, pageCount, setPage, loading, reload: reloadPending } = usePagedApi<PhieuGui>("/kho/phieu-gui?trang_thai=da_gui", "phieu_gui");
   const [recent, setRecent] = useState<PhieuGui[]>([]);
-  const [loading, setLoading] = useState(true);
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
   const [logFor, setLogFor] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    const [p, r] = await Promise.all([api.get<{ phieu_gui: PhieuGui[] }>("/kho/phieu-gui?trang_thai=da_gui"), api.get<{ phieu_gui: PhieuGui[] }>("/kho/phieu-gui?trang_thai=da_tiep_nhan")]);
-    setPending(p.phieu_gui);
-    setRecent(r.phieu_gui);
-    setLoading(false);
-  };
+  const loadRecent = () => api.get<{ phieu_gui: PhieuGui[] }>("/kho/phieu-gui?trang_thai=da_tiep_nhan").then((r) => setRecent(r.phieu_gui));
   useEffect(() => {
-    load();
+    loadRecent();
   }, []);
 
   const afterChange = () => {
-    load();
+    reloadPending();
+    loadRecent();
     refresh();
   };
 
@@ -53,17 +50,17 @@ export function KhoTiepNhanScreen() {
     } else if (recent.some((g) => g.id === code)) {
       toast("Phiếu này đã được tiếp nhận rồi.", "error");
     } else {
-      toast("Không khớp phiếu nào đang chờ tiếp nhận — kiểm tra lại mã QR.", "error");
+      toast("Không khớp phiếu nào đang chờ tiếp nhận trên trang hiện tại — kiểm tra lại mã QR hoặc chuyển trang.", "error");
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading && pending.length === 0) return <Spinner />;
 
   return (
     <div className="space-y-6">
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📥 Chờ tiếp nhận ({pending.length})</h3>
+          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
         </div>
         {pending.length === 0 ? (
@@ -87,6 +84,7 @@ export function KhoTiepNhanScreen() {
             ))}
           </div>
         )}
+        <Pagination page={page} pageCount={pageCount} total={pendingTotal} onChange={setPage} />
       </Card>
 
       <Card className="p-5">

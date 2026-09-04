@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, EmptyState } from "../../ui/primitives";
 import { Table, StopClick, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY } from "../../lib/constants";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
 import type { AppUser, PhieuTra } from "../../lib/types";
@@ -22,26 +24,21 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const toast = useToast();
   const { refresh } = useWorkload();
   const [sanSang, setSanSang] = useState<SanSangUnit[]>([]);
-  const [list, setList] = useState<PhieuTra[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingSanSang, setLoadingSanSang] = useState(true);
+  const { items: list, total: listTotal, page: listPage, pageCount: listPageCount, setPage: setListPage, loading: loadingList, reload: reloadList } = usePagedApi<PhieuTra>("/phieu-tra", "phieu_tra");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    const [s, l] = await Promise.all([api.get<{ don_vi: SanSangUnit[] }>("/phieu-tra/san-sang"), api.get<{ phieu_tra: PhieuTra[] }>("/phieu-tra")]);
-    setSanSang(s.don_vi);
-    setList(l.phieu_tra);
-    setLoading(false);
-  };
+  const loadSanSang = () => api.get<{ don_vi: SanSangUnit[] }>("/phieu-tra/san-sang").then((r) => { setSanSang(r.don_vi); setLoadingSanSang(false); });
   useEffect(() => {
-    load();
+    loadSanSang();
   }, []);
 
   const afterChange = () => {
     setSelected(new Set());
-    load();
+    loadSanSang();
+    reloadList();
     refresh();
   };
 
@@ -84,7 +81,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loadingSanSang && loadingList && sanSang.length === 0 && list.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -142,8 +139,9 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Danh sách phiếu trả ({list.length})</h3>
+        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Danh sách phiếu trả ({listTotal})</h3>
         <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Chưa có phiếu trả nào." />
+        <Pagination page={listPage} pageCount={listPageCount} total={listTotal} onChange={setListPage} />
       </Card>
 
       {detailId && <PhieuTraDetailModal traId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={afterChange} />}

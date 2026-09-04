@@ -1,32 +1,29 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { TRANG_THAI_PHIEU_GUI_LABELS } from "../../lib/constants";
 import { fmtDateOnly } from "../../lib/format";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import type { PhieuGui } from "../../lib/types";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
-// tao phieu nhap moi, mo chi tiet de them don/xac nhan gui.
+// tao phieu nhap moi, mo chi tiet de them don/xac nhan gui. Phan trang that (server LIMIT/OFFSET, xem
+// hooks/usePagedApi.ts) - port dung yeu cau "tat ca du lieu dang bang deu phan trang" (05/09/2026).
 
 export function KtvTaoPhieuScreen() {
   const toast = useToast();
   const { refresh } = useWorkload();
-  const [rows, setRows] = useState<PhieuGui[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuGui>("/phieu-gui", "phieu_gui");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const load = () => api.get<{ phieu_gui: PhieuGui[] }>("/phieu-gui").then((r) => { setRows(r.phieu_gui); setLoading(false); });
-  useEffect(() => {
-    load();
-  }, []);
-
   const afterChange = () => {
-    load();
+    reload();
     refresh();
   };
 
@@ -44,7 +41,7 @@ export function KtvTaoPhieuScreen() {
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<PhieuGui>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -57,12 +54,13 @@ export function KtvTaoPhieuScreen() {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📦 Phiếu gửi hàng của tôi ({rows.length})</h3>
+        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📦 Phiếu gửi hàng của tôi ({total})</h3>
         <Btn variant="primary" disabled={creating} onClick={taoPhieu}>
           + Tạo phiếu mới
         </Btn>
       </div>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Chưa có phiếu gửi nào." />
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && <PhieuGuiDetailModal guiId={detailId} onClose={() => setDetailId(null)} onChanged={afterChange} />}
     </Card>
   );

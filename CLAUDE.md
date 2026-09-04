@@ -2856,6 +2856,87 @@ xác nhận gián tiếp qua đúng câu SQL mà nó dùng.
 danh sách KTV thật vào `#/qtri/ktv` (hoặc đợi `linh-kien-app` triển khai xong đồng bộ đẩy — xem mục
 "Giai đoạn 5" — lúc đó dữ liệu sẽ tự có, không cần nhập tay).
 
+## Phân trang toàn bộ bảng dữ liệu (05/09/2026)
+
+Nguyên văn yêu cầu: *"tất cả các dữ liệu dạng bảng đều phân trang không để dữ liệu tràn như hiện tại
+=> hạn chế việc load quá nhiều dữ liệu về máy người dùng khi không cần thiết."*
+
+**Quan trọng — phân biệt với "phân trang" đã làm trước đó:** `LinhKienScreen.tsx` đã có "phân trang"
+từ QA vòng 3 (04/09/2026), nhưng đó là phân trang **client-side thuần tuý** — `GET /linh-kien` vẫn tải
+**toàn bộ** danh sách về trình duyệt trong 1 lần rồi mới cắt 20 dòng/trang bằng `.slice()` ở React,
+không giải quyết đúng yêu cầu "hạn chế load dữ liệu về máy" (mọi dòng vẫn được tải, chỉ ẩn đi khỏi màn
+hình). Lần này làm **phân trang thật ở tầng server** — mỗi lần chuyển trang chỉ gọi `GET .../?limit=20
+&offset=N`, D1 chỉ trả đúng 20 dòng + 1 số `total` (qua `SELECT COUNT(*)` song song), trình duyệt
+không bao giờ tải nhiều hơn 1 trang cùng lúc.
+
+**Hạ tầng dùng chung (mới):**
+- `backend/src/lib/pagination.ts` — `parsePage(c)` đọc `?limit=&offset=` từ query string, mặc định
+  20/trang, giới hạn cứng tối đa 100/trang (chặn 1 request bất thường xin quá nhiều).
+- `frontend/src/hooks/usePagedApi.ts` — hook dùng chung, gọi `GET <path>?limit=&offset=`, tự quản lý
+  `page`/`total`/`pageCount`, tự reset về trang 1 khi `path` (bộ lọc/tìm kiếm) đổi.
+- `frontend/src/ui/Pagination.tsx` — thanh "‹ Trước / Trang X/Y — N dòng / Sau ›" dùng chung, tự ẩn
+  nếu chỉ có 1 trang (port đúng mẫu đã làm cho `LinhKienScreen.tsx` ở QA vòng 3, nay tách thành
+  component riêng để tái dùng rộng khắp thay vì chỉ 1 màn).
+
+**13 route backend đã chuyển sang LIMIT/OFFSET + COUNT thật** (kèm 12 màn hình frontend tương ứng
+chuyển sang `usePagedApi`): `phieuGui.ts` (`GET /` — Phiếu gửi hàng của tôi; `GET /don-vi/tra-cuu` —
+Tra cứu tiến độ KTV), `adminBH.ts` (`GET /phieu-gui` — thùng chờ tiếp nhận nội bộ; `GET /don-cha`;
+`GET /don-vi` — bảng thống nhất, dòng lớn nhất hệ thống; `GET /xac-nhan`), `kho.ts` (`GET /phieu-gui?
+trang_thai=da_gui` — chờ tiếp nhận), `nvSuaChua.ts` (`GET /viec-cua-toi`), `phieuTra.ts` (`GET /` —
+dùng chung cho cả 3 màn Duyệt/Đóng gói/Phiếu trả bảo hành qua tham số `trang_thai`), `traCuu.ts`
+(`GET /don-vi` — Tra cứu toàn hệ thống của Giám sát/View, khả năng phình to nhất), `users.ts` (`GET
+/`), `ktvLienHe.ts` (`GET /`), `linhKien.ts` (`GET /`, nâng cấp từ client-side lên server-side).
+
+**2 route "q" (tìm kiếm) đổi cách lọc — từ `JSON.stringify(row).includes(kw)` sang SQL `LIKE`:**
+`phieuGui.ts GET /don-vi/tra-cuu` và `traCuu.ts GET /don-vi` trước đó phải **tải hết toàn bộ dữ liệu
+về server rồi mới lọc bằng JS** (ngược hẳn tinh thần "hạn chế load dữ liệu" — chỉ là load về server
+thay vì về trình duyệt, nhưng vẫn phải quét hết). Đổi sang `WHERE (id LIKE ? OR case_id LIKE ? OR
+ma_lk LIKE ? OR mo_ta_loi LIKE ? ...)` — SQL tự lọc + phân trang cùng lúc, không phải quét bảng về bộ
+nhớ ứng dụng trước. Đánh đổi: tìm kiếm giờ chỉ khớp đúng các cột hiển thị trên bảng (trước đây khớp
+**mọi** trường kể cả trường ẩn/không hiển thị) — chấp nhận được vì người dùng chỉ tìm theo cái họ nhìn
+thấy trên màn hình.
+
+**Quyết định phạm vi — KHÔNG paginate mọi nơi, ghi rõ lý do để không nhầm là bỏ sót:**
+- **Danh sách con bên trong 1 modal chi tiết** (log/ảnh/ghi chú/báo cáo sai của 1 đơn cụ thể) — giữ
+  nguyên không phân trang, vì các danh sách này bị giới hạn tự nhiên theo đúng 1 entity (1 đơn hiếm
+  khi có quá vài chục dòng log), khác hẳn "bảng dữ liệu" liệt kê nhiều entity mà yêu cầu nhắm tới.
+- **Picker/`<select>` tìm kiếm** (`useLinhKien.ts` cấp dữ liệu cho `SearchableSelect` ở các form) —
+  CỐ Ý giữ tải toàn bộ (`GET /linh-kien?duoc_dung_bao_hanh=1`, không kèm `limit`) vì `SearchableSelect`
+  cần đủ option để tự lọc tức thời phía client — đây không phải "bảng dữ liệu tràn màn hình" mà là 1
+  ô chọn, phân trang sẽ phá hỏng UX gõ-để-tìm của nó. `linhKien.ts GET /` phân biệt 2 kiểu gọi bằng
+  sự có mặt của tham số `limit` trong query — không truyền `limit` thì giữ hành vi cũ (toàn bộ danh
+  sách), có `limit` thì phân trang thật (dùng cho `LinhKienScreen.tsx`).
+- **`adminBH.ts GET /don-cha`** (đơn cha chờ Admin xác nhận số lượng) và **`phieuTra.ts GET /san-sang`**
+  (đơn vị sẵn sàng gộp phiếu trả, nhóm theo KTV+loại đối trừ để hiện UI checkbox) — 2 danh sách này
+  **có hỗ trợ `limit`/`offset` ở backend** (đồng nhất, an toàn) nhưng **cố ý không lộ pager ở UI**: cả
+  hai đều bị "gate" lại trước khi qua được bước này (đơn cha phải được Admin xác nhận SL mới tách
+  thành đơn vị; đơn vị sẵn sàng gộp phải được gộp mới biến mất khỏi danh sách) nên trong thực tế không
+  bao giờ phình to — thêm 1 pager UI riêng cho từng phần trong khi cả 2 đều gộp chung 1 bảng liền mạch
+  với 1 danh sách khác (đơn vị cần xử lý / phiếu trả) sẽ rối UX hơn là có ích. `PhanLoai.tsx` gọi
+  `/admin/don-cha?limit=100` (đủ rộng rãi, không giới hạn mặc định 20).
+- **`kho.ts GET /phieu-gui?trang_thai=da_tiep_nhan`** ("Đã tiếp nhận gần đây") — giữ nguyên hành vi cũ
+  (luôn đúng 8 dòng gần nhất, không có `total`/pager) vì đây CHỦ ĐÍCH là "gần đây", không phải lịch sử
+  đầy đủ — thêm pager vào đây đi ngược lại chính mục đích thiết kế màn hình.
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi. Verify qua Browser pane (`wrangler
+dev` local, quy trình backup/restore `wrangler.jsonc` thường quy) — seed 25 dòng cho từng bảng chính
+(phiếu gửi, đơn vị bảng thống nhất, KTV, người dùng, linh kiện) qua `fetch()` thật rồi xác nhận từng
+màn:
+- `GET /admin/don-vi?limit=20&offset=0` và `offset=20` trả đúng 20+5=25 dòng, `total:25` đúng cả 2
+  lần gọi — xác nhận LIMIT/OFFSET hoạt động đúng ở tầng SQL trước khi verify UI.
+- UI thật (`#/admin/phan-loai`) hiện đúng 20 dòng trang 1, bấm "Sau ›" chuyển đúng sang 5 dòng còn lại
+  (DH-000021-1 → DH-000025-1), tiêu đề "Trang 1/2 — 25 dòng" đúng.
+- `#/ktv/tao-phieu`, `#/qtri/ktv`, `#/qtri/nguoi-dung`, `#/quanly/tra-cuu` đều xác nhận đúng "20/trang,
+  tổng N" với dữ liệu seed tương ứng (25, 25, 26 — gồm cả bootstrap admin, 25).
+- Tìm kiếm + phân trang hoạt động đúng cùng lúc: `#/ktv/tra-cuu` gõ "seed #1" lọc đúng 11 kết quả
+  (khớp cả "#1" lẫn "#10"–"#19" qua SQL LIKE), dưới ngưỡng 20 nên pager tự ẩn đúng;
+  `#/linh-kien` gõ "test 1" lọc đúng còn 11/25 dòng, tiêu đề cập nhật đúng "(11)".
+- 2 màn "Đóng gói & gửi" (`#/kho/dong-goi`, 2 pager độc lập cùng trang) và "Tạo & quản lý phiếu trả"
+  (`#/admin/phieu-tra`) hoạt động đúng với dữ liệu rỗng (0 dòng, không lỗi console).
+- Không phát sinh lỗi console mới ở bất kỳ màn nào đã kiểm tra.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa toàn bộ thay đổi này lên production.
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung

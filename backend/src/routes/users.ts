@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
+import { parsePage } from "../lib/pagination";
 
 // CRUD nguoi dung cho man "#/qtri/nguoi-dung" (Admin he thong, la_qtri) - port lai tu
 // renderQtriNguoiDung()/suaVaiTroNguoiDung()/xoaNguoiDung()/submitThemNguoiDung() cua prototype.
@@ -23,11 +24,12 @@ function requireQtri(c: { get(k: "user"): { la_qtri: boolean } }): boolean {
 
 users.get("/", async (c) => {
   if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare(
-    `SELECT email, ten, bi_khoa, trang_thai_duyet, ${ROLE_FLAGS.join(", ")}, created_at
-     FROM users ORDER BY created_at DESC`,
-  ).all();
-  return c.json({ users: results });
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, ${ROLE_FLAGS.join(", ")}, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM users").first<{ cnt: number }>(),
+  ]);
+  return c.json({ users: results, total: totalRow?.cnt ?? 0 });
 });
 
 // GET /api/users/nv-sua-chua - danh sach rut gon (email, ten) cac tai khoan la_nv_sua_chua=1, dung

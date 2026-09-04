@@ -7,6 +7,7 @@ import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
+import { parsePage } from "../lib/pagination";
 
 // Phieu tra bao hanh - Admin BH tao/gop, Ke toan duyet, Kho dong goi/gui/ket thuc, KTV xac nhan
 // nhan/khieu nai. State machine: nhap -> cho_ke_toan_duyet -> da_duyet_ke_toan -> da_gui ->
@@ -95,32 +96,37 @@ phieuTra.post("/tu-dong-gom", async (c) => {
   return c.json({ so_phieu_tao: created.length, phieu_tra_ids: created });
 });
 
-// GET /api/phieu-tra?ktv=&trang_thai=
+// GET /api/phieu-tra?ktv=&trang_thai=&limit=&offset=
 phieuTra.get("/", async (c) => {
   const user = c.get("user");
   const ktv = c.req.query("ktv");
   const trangThai = c.req.query("trang_thai");
-  let sql = "SELECT * FROM phieu_tra_bh WHERE 1=1";
+  const { limit, offset } = parsePage(c);
+  let where = "1=1";
   const binds: unknown[] = [];
   if (user.la_ktv_dvbh || user.la_ve_tinh) {
-    sql += " AND ktv_nhan = ?";
+    where += " AND ktv_nhan = ?";
     binds.push(user.email);
   } else if (!(user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_qtri || user.la_view)) {
     return c.json({ error: "FORBIDDEN" }, 403);
   }
   if (ktv) {
-    sql += " AND ktv_nhan = ?";
+    where += " AND ktv_nhan = ?";
     binds.push(ktv);
   }
   if (trangThai) {
-    sql += " AND trang_thai = ?";
+    where += " AND trang_thai = ?";
     binds.push(trangThai);
   }
-  sql += " ORDER BY updated_at DESC";
-  const { results } = await c.env.DB.prepare(sql)
-    .bind(...binds)
-    .all();
-  return c.json({ phieu_tra: results });
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT * FROM phieu_tra_bh WHERE ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE ${where}`)
+      .bind(...binds)
+      .first<{ cnt: number }>(),
+  ]);
+  return c.json({ phieu_tra: results, total: totalRow?.cnt ?? 0 });
 });
 
 phieuTra.get("/:id", async (c) => {

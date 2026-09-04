@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Badge, Spinner, Input } from "../../ui/primitives";
 import { Table, StopClick, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { Btn } from "../../ui/primitives";
 import { TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
 import { SlaBadge } from "../../ui/SlaBadge";
@@ -9,24 +10,18 @@ import { KtvBoSungModal } from "./KtvBoSungModal";
 import type { DonVi } from "../../lib/types";
 
 // "Tra cuu tien do cac don cua toi" (KTV) - port dung renderKtvTraCuu(): KHONG loc theo thoi gian
-// (dung nguyen tac da chot: hang doi/tra cuu khong duoc de don qua han lau "bien mat"), co o tim kiem.
+// (dung nguyen tac da chot: hang doi/tra cuu khong duoc de don qua han lau "bien mat"), co o tim
+// kiem + phan trang that (server LIMIT/OFFSET, "q" loc bang SQL LIKE - xem backend routes/phieuGui.ts).
 
 export function KtvTraCuuScreen() {
-  const [rows, setRows] = useState<DonVi[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
-  const [boSungFor, setBoSungFor] = useState<DonVi | null>(null);
-
-  const load = (kw: string) => api.get<{ don_vi: DonVi[] }>(`/phieu-gui/don-vi/tra-cuu${kw ? `?q=${encodeURIComponent(kw)}` : ""}`).then((r) => { setRows(r.don_vi); setLoading(false); });
   useEffect(() => {
-    load("");
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => load(q), 250);
+    const t = setTimeout(() => setQ(qInput), 250);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
+  }, [qInput]);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(`/phieu-gui/don-vi/tra-cuu${q ? `?q=${encodeURIComponent(q)}` : ""}`, "don_vi");
+  const [boSungFor, setBoSungFor] = useState<DonVi | null>(null);
 
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -49,14 +44,15 @@ export function KtvTraCuuScreen() {
     },
   ];
 
-  if (loading) return <Spinner />;
+  if (loading && rows.length === 0) return <Spinner />;
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔍 Tra cứu tiến độ đơn của tôi ({rows.length})</h3>
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo mã đơn, case, mô tả lỗi..." className="mb-3 max-w-sm" />
+      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔍 Tra cứu tiến độ đơn của tôi ({total})</h3>
+      <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, case, mô tả lỗi..." className="mb-3 max-w-sm" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} emptyText="Không tìm thấy đơn nào." />
-      {boSungFor && <KtvBoSungModal unit={boSungFor} onClose={() => setBoSungFor(null)} onDone={() => { setBoSungFor(null); load(q); }} />}
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      {boSungFor && <KtvBoSungModal unit={boSungFor} onClose={() => setBoSungFor(null)} onDone={() => { setBoSungFor(null); reload(); }} />}
     </Card>
   );
 }

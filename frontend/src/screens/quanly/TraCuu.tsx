@@ -1,30 +1,27 @@
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Badge, Spinner, Input } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { TRANG_THAI_UNIT_LABELS, KHACH_LE_KEY } from "../../lib/constants";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser, DonVi } from "../../lib/types";
 
 // "Tra cuu moi don hang trong pham vi" (Giam sat/View) - THUAN CHI XEM (UnitDetailModal tu dong khong
-// hien nut hanh dong nao vi cac dieu kien vai tro trong do khong khop la_giam_sat/la_view).
+// hien nut hanh dong nao vi cac dieu kien vai tro trong do khong khop la_giam_sat/la_view). Phan
+// trang that (server LIMIT/OFFSET) - day la bang de phinh to nhat he thong (toan bo pham vi), uu tien
+// cao nhat cho yeu cau "tat ca du lieu dang bang deu phan trang" (05/09/2026).
 
 export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
-  const [rows, setRows] = useState<DonVi[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
-  const [detailId, setDetailId] = useState<string | null>(null);
-
-  const load = (kw: string) => api.get<{ don_vi: DonVi[] }>(`/tra-cuu/don-vi${kw ? `?q=${encodeURIComponent(kw)}` : ""}`).then((r) => { setRows(r.don_vi); setLoading(false); });
   useEffect(() => {
-    load("");
-  }, []);
-  useEffect(() => {
-    const t = setTimeout(() => load(q), 250);
+    const t = setTimeout(() => setQ(qInput), 250);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
+  }, [qInput]);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(`/tra-cuu/don-vi${q ? `?q=${encodeURIComponent(q)}` : ""}`, "don_vi");
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -35,14 +32,15 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
   ];
 
-  if (loading) return <Spinner />;
+  if (loading && rows.length === 0) return <Spinner />;
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔍 Tra cứu mọi đơn hàng trong phạm vi ({rows.length})</h3>
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo mã đơn, KTV, mô tả lỗi..." className="mb-3 max-w-sm" />
+      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔍 Tra cứu mọi đơn hàng trong phạm vi ({total})</h3>
+      <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, KTV, mô tả lỗi..." className="mb-3 max-w-sm" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không tìm thấy đơn nào." />
-      {detailId && <UnitDetailModal unitId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={() => load(q)} />}
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      {detailId && <UnitDetailModal unitId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={reload} />}
     </Card>
   );
 }

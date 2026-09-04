@@ -1,27 +1,23 @@
-import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { useState } from "react";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { Table, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser, DonVi } from "../../lib/types";
 
 // Hang doi "Xac nhan hoan tat" (sau khi NV nop ket qua chan doan) - port dung GET /admin/xac-nhan.
-// Click dong mo UnitDetailModal (da co san nut "Xac nhan hoan tat / Yeu cau lam lai" o footer).
+// Click dong mo UnitDetailModal (da co san nut "Xac nhan hoan tat / Yeu cau lam lai" o footer). Phan
+// trang that (server LIMIT/OFFSET).
 
 export function AdminXacNhanScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
-  const [rows, setRows] = useState<DonVi[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>("/admin/xac-nhan", "don_vi");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const load = () => api.get<{ don_vi: DonVi[] }>("/admin/xac-nhan").then((r) => { setRows(r.don_vi); setLoading(false); });
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading) return <Spinner />;
+  if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -33,15 +29,16 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">✔️ Chờ Admin BH xác nhận hoàn tất ({rows.length})</h3>
+      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">✔️ Chờ Admin BH xác nhận hoàn tất ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có đơn nào chờ xác nhận." />
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <UnitDetailModal
           unitId={detailId}
           user={user}
           onClose={() => setDetailId(null)}
           onChanged={() => {
-            load();
+            reload();
             refresh();
           }}
         />

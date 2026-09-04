@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
+import { parsePage } from "../lib/pagination";
 
 // Man hinh Kho: "Diem tiep nhan kho" - tiep nhan o muc THUNG hang (khong mo kiem tung linh kien).
 // Port dung khoXacNhanTiepNhan()/submitSuCo() cua prototype.
@@ -18,14 +19,22 @@ function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }
   return u.la_kho || u.la_qtri;
 }
 
-// GET /api/kho/phieu-gui?trang_thai=da_gui|da_tiep_nhan - hang doi cho tiep nhan / 8 phieu gan nhat
-// da nhan (dung cho man hinh, xem renderKhoTiepNhan trong prototype).
+// GET /api/kho/phieu-gui?trang_thai=da_gui|da_tiep_nhan - hang doi cho tiep nhan (phan trang that,
+// co the dai) / 8 phieu gan nhat da nhan (co chu dich khong phan trang - chi la "gan day", khong
+// phai lich su day du) - xem renderKhoTiepNhan trong prototype.
 kho.get("/phieu-gui", async (c) => {
   if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const trangThai = c.req.query("trang_thai") === "da_tiep_nhan" ? "da_tiep_nhan" : "da_gui";
-  const limit = trangThai === "da_tiep_nhan" ? 8 : 200;
-  const { results } = await c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE trang_thai = ? ORDER BY updated_at DESC LIMIT ?`).bind(trangThai, limit).all();
-  return c.json({ phieu_gui: results });
+  if (trangThai === "da_tiep_nhan") {
+    const { results } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' ORDER BY updated_at DESC LIMIT 8").all();
+    return c.json({ phieu_gui: results, total: results.length });
+  }
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_gui' ORDER BY updated_at DESC LIMIT ? OFFSET ?").bind(limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'").first<{ cnt: number }>(),
+  ]);
+  return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface ConfirmBody {

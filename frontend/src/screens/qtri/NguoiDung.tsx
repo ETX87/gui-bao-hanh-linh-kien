@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, Select } from "../../ui/primitives";
+import { Pagination } from "../../ui/Pagination";
 import { Modal } from "../../ui/Modal";
 import { Field, Input } from "../../ui/primitives";
 import type { AppUser } from "../../lib/types";
@@ -23,19 +25,13 @@ const ROLE_FLAGS: Array<{ flag: keyof AppUser; label: string }> = [
 
 export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) {
   const toast = useToast();
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items: users, total, page, pageCount, setPage, loading, reload } = usePagedApi<AppUser>("/users", "users");
   const [addOpen, setAddOpen] = useState(false);
-
-  const load = () => api.get<{ users: AppUser[] }>("/users").then((r) => { setUsers(r.users); setLoading(false); });
-  useEffect(() => {
-    load();
-  }, []);
 
   const setFlag = async (email: string, flag: keyof AppUser, value: boolean) => {
     try {
       await api.patch(`/users/${encodeURIComponent(email)}`, { flag, value });
-      load();
+      reload();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
@@ -43,7 +39,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   const setTrangThai = async (email: string, v: string) => {
     try {
       await api.patch(`/users/${encodeURIComponent(email)}`, { trang_thai_duyet: v });
-      load();
+      reload();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
@@ -51,7 +47,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   const toggleKhoa = async (email: string, v: boolean) => {
     try {
       await api.patch(`/users/${encodeURIComponent(email)}`, { bi_khoa: v });
-      load();
+      reload();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
@@ -61,18 +57,18 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
     try {
       await api.delete(`/users/${encodeURIComponent(email)}`);
       toast("Đã xoá.", "ok");
-      load();
+      reload();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading && users.length === 0) return <Spinner />;
 
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">👥 Người dùng ({users.length})</h3>
+        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">👥 Người dùng ({total})</h3>
         <Btn variant="primary" onClick={() => setAddOpen(true)}>
           + Thêm người dùng
         </Btn>
@@ -135,7 +131,8 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
           </tbody>
         </table>
       </div>
-      {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); load(); }} />}
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); reload(); }} />}
     </Card>
   );
 }

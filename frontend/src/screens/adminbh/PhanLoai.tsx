@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
+import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { AdminUnifiedTable } from "./AdminUnifiedTable";
 import { XacNhanSoLuongModal } from "./XacNhanSoLuongModal";
@@ -17,18 +19,40 @@ import type { AppUser, DonCha, DonVi, PhieuGui } from "../../lib/types";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
 // 1) Thung cho xac nhan tiep nhan noi bo tu Kho, 2) Bang thong nhat GOP ca don cha (cho xac nhan SL)
-// LAN don vi can xu ly (xem AdminUnifiedTable.tsx - port lai day du sau QA 04/09/2026, truoc do Giai
-// doan 4 tach rieng 2 bang + khong co tuy bien cot/chon-hang-loat). Man drill-in xem theo tung thung
-// rieng (view the long cu cua prototype) KHONG port - bang thong nhat + UnitDetailModal la du de xu
-// ly toan bo, click dong de mo chi tiet.
+// LAN don vi can xu ly (xem AdminUnifiedTable.tsx). Man drill-in xem theo tung thung rieng (view the
+// long cu cua prototype) KHONG port - bang thong nhat + UnitDetailModal la du de xu ly toan bo, click
+// dong de mo chi tiet.
+//
+// Phan trang (05/09/2026): "Thung cho tiep nhan noi bo" va "Don vi can xu ly" (donVi, phan chinh cua
+// bang thong nhat) deu phan trang that (server LIMIT/OFFSET). Rieng "don cha cho xac nhan SL" (donCha)
+// CO CHU DICH lay 1 lan het (gioi han cung 100 dong, khong lo pager rieng) - danh sach nay bi gate lai
+// truoc khi qua duoc buoc nay (Admin phai xac nhan SL moi tach thanh don vi), nen trong thuc te khong
+// bao gio phinh to - va vi AdminUnifiedTable gop ca 2 nguon thanh 1 bang lien tuc, 2 pager rieng cho 2
+// phan se roi UX hon la co ich; pager duy nhat o cuoi bang phan trang dung phan "don vi" (backlog thuc
+// su co the tang lien tuc).
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const toast = useToast();
   const { refresh } = useWorkload();
-  const [phieuGui, setPhieuGui] = useState<PhieuGui[]>([]);
+  const {
+    items: phieuGui,
+    total: phieuGuiTotal,
+    page: phieuGuiPage,
+    pageCount: phieuGuiPageCount,
+    setPage: setPhieuGuiPage,
+    loading: loadingPhieuGui,
+    reload: reloadPhieuGui,
+  } = usePagedApi<PhieuGui>("/admin/phieu-gui", "phieu_gui");
   const [donCha, setDonCha] = useState<DonCha[]>([]);
-  const [donVi, setDonVi] = useState<DonVi[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    items: donVi,
+    total: donViTotal,
+    page: donViPage,
+    pageCount: donViPageCount,
+    setPage: setDonViPage,
+    loading: loadingDonVi,
+    reload: reloadDonVi,
+  } = usePagedApi<DonVi>("/admin/don-vi", "don_vi");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
@@ -40,24 +64,15 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [boSungFor, setBoSungFor] = useState<string | null>(null);
   const [baoCaoSaiFor, setBaoCaoSaiFor] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    const [g, d, u] = await Promise.all([
-      api.get<{ phieu_gui: PhieuGui[] }>("/admin/phieu-gui"),
-      api.get<{ don_cha: DonCha[] }>("/admin/don-cha"),
-      api.get<{ don_vi: DonVi[] }>("/admin/don-vi"),
-    ]);
-    setPhieuGui(g.phieu_gui);
-    setDonCha(d.don_cha);
-    setDonVi(u.don_vi);
-    setLoading(false);
-  };
+  const loadDonCha = () => api.get<{ don_cha: DonCha[] }>("/admin/don-cha?limit=100").then((r) => setDonCha(r.don_cha));
   useEffect(() => {
-    load();
+    loadDonCha();
   }, []);
 
   const afterChange = () => {
-    load();
+    reloadPhieuGui();
+    loadDonCha();
+    reloadDonVi();
     refresh();
   };
 
@@ -80,13 +95,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     });
   };
 
-  if (loading) return <Spinner />;
+  if ((loadingPhieuGui && phieuGui.length === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0)) return <Spinner />;
 
   return (
     <div className="space-y-6">
-      {phieuGui.length > 0 && (
+      {phieuGuiTotal > 0 && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGui.length})</h3>
+          <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGuiTotal})</h3>
           <div className="space-y-2">
             {phieuGui.map((g) => (
               <div key={g.id} className="flex items-center gap-3 rounded-lg border border-[var(--line)] px-3 py-2.5">
@@ -100,12 +115,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
               </div>
             ))}
           </div>
+          <Pagination page={phieuGuiPage} pageCount={phieuGuiPageCount} total={phieuGuiTotal} onChange={setPhieuGuiPage} />
         </Card>
       )}
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🗂️ Đơn bảo hành cần xử lý ({donCha.length + donVi.length})</h3>
+          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🗂️ Đơn bảo hành cần xử lý ({donCha.length + donViTotal})</h3>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
               <>
@@ -133,6 +149,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onOpenBoSung={(pid) => setBoSungFor(pid)}
           onOpenBaoCaoSai={(pid) => setBaoCaoSaiFor(pid)}
         />
+        <Pagination page={donViPage} pageCount={donViPageCount} total={donViTotal} onChange={setDonViPage} />
       </Card>
 
       {xacNhanSlFor && (

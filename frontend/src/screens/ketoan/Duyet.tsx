@@ -1,27 +1,23 @@
-import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { useState } from "react";
 import { useWorkload } from "../../hooks/useWorkload";
+import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Badge, Spinner } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
+import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS, KHACH_LE_KEY } from "../../lib/constants";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
 import type { AppUser, PhieuTra } from "../../lib/types";
 
 // Man "Duyet phieu tra" (Ke toan) - port dung renderKeToanDuyet(). KHONG co bulk-action (dung nguyen
-// tac segregation of duties da chot: moi phieu phai mo va duyet rieng).
+// tac segregation of duties da chot: moi phieu phai mo va duyet rieng). Phan trang that (server
+// LIMIT/OFFSET).
 
 export function KeToanDuyetScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
-  const [rows, setRows] = useState<PhieuTra[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuTra>("/phieu-tra?trang_thai=cho_ke_toan_duyet", "phieu_tra");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const load = () => api.get<{ phieu_tra: PhieuTra[] }>("/phieu-tra?trang_thai=cho_ke_toan_duyet").then((r) => { setRows(r.phieu_tra); setLoading(false); });
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading) return <Spinner />;
+  if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
@@ -33,15 +29,16 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">💰 Chờ duyệt ({rows.length})</h3>
+      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">💰 Chờ duyệt ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ duyệt." />
+      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <PhieuTraDetailModal
           traId={detailId}
           user={user}
           onClose={() => setDetailId(null)}
           onChanged={() => {
-            load();
+            reload();
             refresh();
           }}
         />

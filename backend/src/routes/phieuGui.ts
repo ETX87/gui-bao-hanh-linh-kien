@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { computeEmailGs } from "../lib/gs";
+import { parsePage } from "../lib/pagination";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -22,12 +23,17 @@ function canReadGhiChu(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_kho: b
   return isKtv(u) || u.la_kho || u.la_admin_bh || u.la_qtri || u.la_giam_sat || u.la_view;
 }
 
-// GET /api/phieu-gui - "Phieu gui hang cua toi" (KTV) - chi thay phieu CHINH MINH tao.
+// GET /api/phieu-gui?limit=&offset= - "Phieu gui hang cua toi" (KTV) - chi thay phieu CHINH MINH tao.
+// Phan trang that (LIMIT/OFFSET, khong phai fetch het roi cat o client) - xem lib/pagination.ts.
 phieuGui.get("/", async (c) => {
   const user = c.get("user");
   if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE nguoi_tao = ? ORDER BY created_at DESC").bind(user.email).all();
-  return c.json({ phieu_gui: results });
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE nguoi_tao = ? ORDER BY created_at DESC LIMIT ? OFFSET ?").bind(user.email, limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE nguoi_tao = ?").bind(user.email).first<{ cnt: number }>(),
+  ]);
+  return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
 
 // POST /api/phieu-gui - tao phieu nhap moi, tu dien nha xe theo lan gan nhat cua chinh KTV nay (thay
@@ -205,26 +211,37 @@ phieuGui.post("/:id/ghi-chu", async (c) => {
 
 // ---------- Tra cuu tien do (KTV) + Bo sung thong tin theo yeu cau Admin BH ----------
 
-// GET /api/phieu-gui/don-vi/tra-cuu - moi don vi con thuoc cac phieu gui CHINH MINH da tao (khong
-// gioi han theo thoi gian - CLAUDE.md "Doi chieu bang gop y Gemini" da xac nhan hang doi/tra cuu
-// KHONG duoc loc theo thoi gian, tranh don qua han lau bi "bien mat").
+// GET /api/phieu-gui/don-vi/tra-cuu?q=&limit=&offset= - moi don vi con thuoc cac phieu gui CHINH
+// MINH da tao (khong gioi han theo thoi gian - CLAUDE.md "Doi chieu bang gop y Gemini" da xac nhan
+// hang doi/tra cuu KHONG duoc loc theo thoi gian, tranh don qua han lau bi "bien mat"). Phan trang
+// that o tang SQL (LIMIT/OFFSET + COUNT) thay vi fetch het roi loc/cat o server nhu ban cu - "q" gio
+// loc bang SQL LIKE tren dung cac cot hien thi tren bang (id/case/linh kien/mo ta), khong con
+// JSON.stringify toan bo dong (cach cu bat buoc phai tai het du lieu ve dung 1 lan).
 phieuGui.get("/don-vi/tra-cuu", async (c) => {
   const user = c.get("user");
   if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
-  const kw = (c.req.query("q") || "").trim().toLowerCase();
-  const { results } = await c.env.DB.prepare(
-    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.loai_doi_tru_de_xuat, g.ngay_gui_xe
-     FROM phieu_sua_chua_bh_ct u
+  const kw = (c.req.query("q") || "").trim();
+  const { limit, offset } = parsePage(c);
+  let where = "g.nguoi_tao = ?";
+  const binds: unknown[] = [user.email];
+  if (kw) {
+    where += " AND (u.id LIKE ? OR p.case_id LIKE ? OR p.ma_lk LIKE ? OR p.mo_ta_loi LIKE ?)";
+    const like = `%${kw}%`;
+    binds.push(like, like, like, like);
+  }
+  const fromWhere = `FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE g.nguoi_tao = ?
-     ORDER BY u.updated_at DESC`,
-  )
-    .bind(user.email)
-    .all();
-  if (!kw) return c.json({ don_vi: results });
-  const filtered = results.filter((r) => JSON.stringify(r).toLowerCase().includes(kw));
-  return c.json({ don_vi: filtered });
+     WHERE ${where}`;
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.loai_doi_tru_de_xuat, g.ngay_gui_xe ${fromWhere} ORDER BY u.updated_at DESC LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`)
+      .bind(...binds)
+      .first<{ cnt: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface BoSungBody {

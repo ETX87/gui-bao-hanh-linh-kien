@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
+import { parsePage } from "../lib/pagination";
 
 // Man "Quan ly danh sach KTV" (qtri) - CRUD ktv_lien_he_bh, gap that phat hien 04/09/2026 ("thieu
 // modules quan ly danh sach ktv"): bang nay truoc gio CHI nhan duoc du lieu qua sync day tu
@@ -24,8 +25,12 @@ function requireQtri(c: { get(k: "user"): { la_qtri: boolean } }): boolean {
 
 ktvLienHe.get("/", async (c) => {
   if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare("SELECT * FROM ktv_lien_he_bh ORDER BY ten_hien_thi, ma_ktv").all();
-  return c.json({ ktv: results });
+  const { limit, offset } = parsePage(c);
+  const [{ results }, totalRow] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM ktv_lien_he_bh ORDER BY ten_hien_thi, ma_ktv LIMIT ? OFFSET ?").bind(limit, offset).all(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM ktv_lien_he_bh").first<{ cnt: number }>(),
+  ]);
+  return c.json({ ktv: results, total: totalRow?.cnt ?? 0 });
 });
 
 interface KtvBody {
