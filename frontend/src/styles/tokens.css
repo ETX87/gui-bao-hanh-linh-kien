@@ -1,0 +1,150 @@
+/* Port tu linh-kien-app/frontend/src/styles/tokens.css (ban 27/08/2026, MOI hon ban CSS da port vao
+   prototype-html/index.html 22/08/2026 - 2 ban da drift: teal/amber ben linh-kien-app da doi mau sau
+   do, prototype van giu ban cu). Dung ban MOI NHAT nay lam nguon cho frontend React that, vi day moi
+   la "ngon ngu thi giac" dang chay that cua he sinh thai, khong phai bam snapshot cu cua prototype -
+   xem CLAUDE.md muc "Kiem tra quy uoc UI/mobile". Da BO cac class/animation rieng cho tinh nang cua
+   linh-kien-app khong ap dung o day (.dat-mua-lk-module, .bell-shake, .greeting-marquee,
+   .pipeline-urgent-ring, .drawer-in, font Be Vietnam Pro cho "Giao dien" ca nhan) - giu lai token
+   mau/font + reset co ban + scrollbar/focus-ring dung chung. Them lai neu Giai doan 3/4 can. */
+@import "@fontsource/manrope/500.css";
+@import "@fontsource/manrope/700.css";
+@import "@fontsource/manrope/800.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ocean-950: #052033;
+  --ocean-900: #06304a;
+  --ocean-800: #0a4666;
+  --ocean-700: #0e5d85;
+  --ocean-600: #1176a6;
+  --ocean-500: #1591c9;
+  --ocean-400: #3fb0e0;
+  --ocean-100: #ddf1fb;
+  --teal-700: #047857;
+  --teal-600: #059669;
+  --teal-500: #10b981;
+  --teal-100: #d1fae5;
+  --amber-700: #1d4ed8;
+  --amber-600: #2563eb;
+  --amber-500: #3b82f6;
+  --amber-100: #dbeafe;
+  --coral-700: #7a2424;
+  --coral-600: #b23a3a;
+  --coral-500: #d84c4c;
+  --coral-400: #e78888;
+  --coral-100: #fbe1e1;
+  --orange-700: #9a3412;
+  --orange-600: #c2410c;
+  --orange-500: #ea580c;
+  --orange-100: #ffedd5;
+  --violet-700: #4c1d95;
+  --violet-600: #7c3aed;
+  --violet-500: #8b5cf6;
+  --violet-100: #ede9fe;
+  --green-700: #15803d;
+  --green-600: #16a34a;
+  --indigo-700: #3730a3;
+  --indigo-600: #4f46e5;
+  --indigo-500: #6366f1;
+  --indigo-100: #eef2ff;
+
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-soft: #fbfbfb;
+  --surface-100: #f4f4f5;
+  --surface-200: #e4e4e7;
+  --topbar-bg: #ffffff;
+  --sidebar-from: #ffffff;
+  --sidebar-to: #fafafa;
+  --sidebar-ink: #18181b;
+  --sidebar-ink-mid: #3f3f46;
+  --sidebar-ink-dim: #71717a;
+  --sidebar-highlight: rgba(79, 70, 229, 0.08);
+  --line: #e4e4e7;
+  --ink-900: #18181b;
+  --ink-700: #3f3f46;
+  --ink-600: #52525b;
+  --ink-500: #71717a;
+  --ink-400: #a1a1aa;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink-900);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.font-display {
+  font-family: "Manrope", sans-serif;
+}
+.font-mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ocean-400) 55%, var(--surface-200));
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-in {
+  animation: fadeSlide 0.22s ease-out;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.toast-in {
+  animation: toastIn 0.25s ease-out;
+}
+input[type="checkbox"] {
+  accent-color: var(--ocean-800);
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ocean-800);
+  outline-offset: 2px;
+}

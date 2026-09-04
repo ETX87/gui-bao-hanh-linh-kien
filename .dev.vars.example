@@ -1,0 +1,9 @@
+SESSION_SECRET=dev-only-local-testing-secret-change-me
+GOOGLE_CLIENT_ID=dev-placeholder-client-id
+GOOGLE_CLIENT_SECRET=dev-placeholder-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8789/api/auth/callback
+FRONTEND_URL=http://localhost:8789
+CASE_LOOKUP_BASE_URL=https://dvbh.dichvu3t.workers.dev
+CASE_LOOKUP_API_KEY=dev-placeholder-case-lookup-key
+LINHKIEN_SYNC_API_KEY=dev-placeholder-linhkien-sync-key
+LOCAL_DEV_BYPASS_AUTH=true

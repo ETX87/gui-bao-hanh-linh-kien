@@ -1,0 +1,59 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "suachua",
+  "main": "backend/src/index.ts",
+  "compatibility_date": "2026-07-16",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // run_worker_first la BAT BUOC - bai hoc port tu ca dvbh lan linh-kien-app (xem CLAUDE.md 2 repo
+  // do): thieu no thi request navigate that (Sec-Fetch-Mode: navigate) se bi Workers Static Assets
+  // SPA fallback chan truoc khi toi duoc Worker, curl KHONG tai hien duoc loi nay. Dung xoa dong nay.
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // database_id la PLACEHOLDER - dien sau khi chay "wrangler d1 create" that (xem DEPLOY.md buoc 2).
+  // Worker "suachua" da online that (nguoi dung xac nhan 04/09/2026) nhung hien la ban rong/
+  // placeholder - repo nay (gui-bao-hanh-linh-kien) la nguon that se lap day Worker do (xem CLAUDE.md
+  // muc "Cau hoi #6 chot xong...").
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sua-chua-bao-hanh-db",
+      "database_id": "REPLACE_AFTER_WRANGLER_D1_CREATE",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Khong co "triggers.crons" o Giai doan 1 - Worker nay la BEN NHAN cua co che day (push sync, xem
+  // CLAUDE.md muc "Chot 5 cau hoi mo...") tu linh-kien-app, khong phai ben phat nen khong can cron
+  // rieng. Neu sau nay them "Dong bo lai toan bo" du phong (pull), se can 1 cron/route rieng luc do.
+  // Khong co "r2_buckets" - khong dung R2, dung quy uoc voi ca dvbh lan linh-kien-app.
+
+  // Service Binding toi dvbh (tra cuu case_dvbh theo ID - case-lookup, xem CLAUDE.md muc "Lien he he
+  // thong chinh") - dung Service Binding chu KHONG fetch() thang URL, vi 2 Worker cung 1 tai khoan
+  // Cloudflare se bi chan error code 1042 (chong SSRF) - xem giai thich day du trong CLAUDE.md cua
+  // linh-kien-app (lib/caseLookupClient.ts). "remote": true de "wrangler dev" local cung dispatch
+  // toi ban DA DEPLOY that cua dvbh thay vi tim 1 "wrangler dev" khac dang chay local cho no.
+  "services": [
+    { "binding": "CASE_LOOKUP_SERVICE", "service": "dvbh", "remote": true }
+  ],
+
+  "vars": {
+    "BOOTSTRAP_ADMIN_EMAIL": "smarttrade.vp@gmail.com",
+    "GOOGLE_REDIRECT_URI": "https://suachua.dichvu3t.workers.dev/api/auth/callback",
+    "FRONTEND_URL": "https://suachua.dichvu3t.workers.dev",
+    // Diem noi toi he DVBH goc (tra cuu case_dvbh theo ID, khong ghi) - xem
+    // backend/src/lib/caseLookupClient.ts (Giai doan 5, chua viet o Giai doan 1).
+    "CASE_LOOKUP_BASE_URL": "https://dvbh.dichvu3t.workers.dev"
+  }
+
+  // Cac gia tri NHAY CAM (khong dat trong "vars" - dat qua "wrangler secret put", xem DEPLOY.md):
+  // GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET, CASE_LOOKUP_API_KEY.
+  // Giai doan 5 se can them: LINHKIEN_SYNC_API_KEY (xac thuc du lieu day tu linh-kien-app - xem
+  // CLAUDE.md muc "Chot 5 cau hoi mo..."), va (tuong lai) VAPID_SERVER_PRIVATE_KEY neu lam Web Push
+  // (Giai doan 6, xem "Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md" muc 6).
+}

@@ -97,7 +97,13 @@ trên **không cần thiết kế mới** — đã có sẵn mẫu thật đang 
 (`dvbhSyncClient.ts`, cron mỗi giờ + con trỏ tăng dần, thêm 28/08/2026) — chỉ cần nhân bản thêm
 `suachua` làm đích gửi thứ 2 — xem mục "Câu hỏi #6 chốt xong..." bên dưới. Xem file riêng
 `du an sua chua bao hanh/Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` (đầy đủ phân tích + kế
-hoạch từng bước, **CHƯA triển khai gì** — sẵn sàng cho Giai đoạn 1 khi được yêu cầu).
+hoạch từng bước). **Giai đoạn 1 (scaffold hạ tầng) đã xong (04/09/2026, cùng ngày)** — thư mục này
+giờ có `backend/`+`frontend/`+`migrations/`+`wrangler.jsonc`+`DEPLOY.md` thật (không chỉ tài liệu
+đặc tả nữa), đã xác minh Auth+D1 chạy đúng qua `wrangler dev` local thật (không chỉ đọc code) — xem
+mục "Giai đoạn 1: Scaffold hạ tầng Worker suachua" bên dưới, kể cả 1 phát hiện quan trọng (phiên làm
+việc hiện tại không có quyền truy cập tài khoản Cloudflare `dichvu3t` thật, chỉ xác thực được 1 tài
+khoản sandbox khác — mọi bước tạo tài nguyên thật trong `DEPLOY.md` cần người dùng tự chạy). Giai
+đoạn 3-6 (route nghiệp vụ, port UI, đồng bộ đẩy, QA, PWA/mobile) **CHƯA làm**.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1871,6 +1877,86 @@ trong sản xuất — đánh đổi duy nhất là độ trễ tối đa ~1 gi�
 liệu tham chiếu ít đổi.
 
 Không có lỗi/vấn đề phát sinh — vẫn là phân tích/lập kế hoạch thuần tuý. **Chưa chạy kiểm thử.**
+
+## Giai đoạn 1: Scaffold hạ tầng Worker "suachua" (04/09/2026)
+
+Nguyên văn yêu cầu: *"ok, triển khai"* — bắt đầu Giai đoạn 1 theo đúng roadmap đã chốt trong
+`Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` mục 5.
+
+**Đã tạo trong chính thư mục `gui-bao-hanh-linh-kien`** (đúng câu trả lời "a+b" ở mục trước — repo
+này là nguồn thật cho Worker `suachua`), mirror cấu trúc `linh-kien-app` càng sát càng tốt (đọc trực
+tiếp từng file gốc của `linh-kien-app` — `package.json`, `tsconfig.json`, `wrangler.jsonc`,
+`backend/src/{index,types}.ts`, `lib/jwt.ts`/`vnTime.ts`, `middleware/session.ts`/`loadUser.ts`,
+`routes/auth.ts`, `frontend/src/{main,App}.tsx`, `auth/AuthContext.tsx`, `styles/tokens.css` — không
+suy đoán field/cấu trúc):
+
+- **Root**: `package.json` (workspaces), `wrangler.jsonc` (Worker `suachua`, Service Binding tới
+  `dvbh` cho case-lookup, `database_id` còn placeholder), `.gitignore` bổ sung (`node_modules/`,
+  `dist/`, `.dev.vars`...), `.dev.vars.example`, `.claude/launch.json` (2 server: `suachua-worker`
+  cổng 8789, `suachua-frontend` cổng 5175 — khác cổng `dvbh` 8787/5173 và `linhkien` 8788/5174 để 3 hệ
+  chạy dev song song không đụng độ), `DEPLOY.md` riêng (mirror `linh-kien-app/DEPLOY.md`, có thêm
+  bước 0 kiểm tra tài nguyên đã gắn sẵn cho Worker rỗng/placeholder trước khi tạo mới).
+- **`migrations/0001_init.sql`**: schema tổng hợp 1 lần (đúng mẫu `linh-kien-app` đã làm) — đối chiếu
+  **trực tiếp từng hàm JS tạo dữ liệu trong `prototype-html/index.html`**
+  (`createPhieuGui`/`submitAddDon`/`submitSoLuongThucNhan`/`applyPhanLoai`/`createPhieuTraForUnits`/
+  `addLog`...) để lấy đúng tên field, không đoán. 16 bảng: `users` (9 cờ vai trò mới, **bỏ hẳn cột
+  `mien`**), `login_log`, `ktv_lien_he_bh`/`khu_vuc_bh`/`user_khu_vuc_bh` (đồng bộ đẩy, không CRUD nội
+  bộ), `linh_kien_bh` (hybrid đồng bộ + CRUD nội bộ), `partner_api_keys`, `phieu_gui_bh` (+ bảng con
+  ghi chú), `phieu_sua_chua_bh` (+ ảnh + báo cáo sai, thêm cột mới `email_gs` đóng gói sẵn cho scope
+  Giám sát), `phieu_sua_chua_bh_ct` (+ ảnh), `phieu_tra_bh` (+ ảnh), `logs_bh`,
+  `settings_ly_do_cham_bh`/`settings_ly_do_tu_choi_bh` (seed đủ 8+5 giá trị thật). **Chưa tạo**
+  `de_xuat_linh_kien_bh`/`phieu_tra_xac_bh` — prototype vòng 1 xác nhận 2 tính năng này **chưa được
+  triển khai**, tránh bịa schema trước khi biết chắc field cần gì.
+- **`backend/src/`**: `index.ts` (chỉ mount `/api/auth` + `/api/users`, chưa có route nghiệp vụ nào —
+  đó là việc Giai đoạn 3), `types.ts` (`AppUser`/`Env` theo đúng 9 cờ vai trò), `lib/jwt.ts`/`vnTime.ts`
+  (port verbatim, tự chứa không phụ thuộc ngoài), `middleware/session.ts`/`loadUser.ts` (adapted,
+  **bỏ "xem thử vai trò"/view-as** của `linh-kien-app` — chưa cần cho scaffold), `routes/auth.ts`
+  (login/callback/dev-login/logout/me, tự kích hoạt tài khoản nếu email khớp
+  `ktv_lien_he_bh.email_dang_nhap` — dùng đúng mẫu đã chốt), `routes/users.ts` (CRUD người dùng cho
+  `la_qtri`, chặn tự khoá/tự xoá/tự gỡ quyền chính mình).
+- **`frontend/src/`**: React 18 + Vite + Tailwind, `styles/tokens.css` — **dùng bản token
+  MỚI NHẤT của `linh-kien-app` (27/08/2026)**, không phải bản đã port vào prototype HTML (22/08/2026,
+  đã lỗi thời — `linh-kien-app` đổi màu teal từ xanh-lam-ngọc sang xanh lá thật, amber từ vàng sang
+  xanh dương ngay sau đó) — quyết định có chủ đích: khớp "ngôn ngữ thị giác" đang chạy thật, không bám
+  snapshot cũ. Đã bỏ các class/animation riêng cho tính năng của `linh-kien-app` không áp dụng ở đây
+  (`.dat-mua-lk-module`, `.bell-shake`, `.greeting-marquee`...). `App.tsx` là màn hình xác nhận Auth
+  tối giản (đăng nhập/chờ duyệt/từ chối/khoá/đã đăng nhập hiện vai trò) — **chưa port 13 màn hình
+  nghiệp vụ** của prototype, đó là việc Giai đoạn 3/4.
+- **Icon app**: dùng thẳng `logo sua chua 3t.png` (tìm thấy sẵn trong repo, xem mục trước) làm
+  `frontend/public/icon.png` — **chưa resize** đúng chuẩn PWA (192/512/maskable như `linh-kien-app`),
+  để làm ở Giai đoạn 6 (mobile/PWA) cùng lúc với `manifest.webmanifest`/service worker thật.
+
+**Đã xác minh — không chỉ đọc code bằng mắt:**
+1. `npm install` (workspaces) — cài sạch, 0 lỗi.
+2. `npm run typecheck` (cả backend `tsc --noEmit` lẫn frontend) — 0 lỗi.
+3. `npm run db:migrate:local` — áp `0001_init.sql` vào D1 local (`.wrangler/state`, không đụng tài
+   nguyên Cloudflare thật) — 45 lệnh SQL chạy thành công, xác nhận schema không có lỗi cú pháp.
+4. `npm run build` (frontend) — build sạch.
+5. Chạy `wrangler dev` local thật (không phải chỉ đọc code) → mở bằng trình duyệt thật (Puppeteer
+   qua Browser pane) → xác nhận màn đăng nhập hiện đúng ("Sửa chữa bảo hành / Dịch Vụ 3T / Đăng nhập
+   với Google") → gọi `GET /api/auth/dev-login` → xác nhận D1 upsert đúng, cookie session set đúng,
+   `GET /api/auth/me` trả đúng user, React hiện đúng "Admin hệ thống" (huy hiệu `la_qtri`) → gọi trực
+   tiếp `POST /api/users` + `PATCH /api/users/:email` qua `fetch()` trong trang → xác nhận tạo tài
+   khoản mới + gán cờ `la_ktv_dvbh` hoạt động đúng, đọc lại `GET /api/users` thấy đúng thay đổi.
+
+**Phát hiện quan trọng phát sinh trong lúc kiểm thử:** phiên làm việc này (`wrangler whoami`) đang
+xác thực Cloudflare với tài khoản **`mikanovncloudflare@gmail.com`** (account ID
+`c05f5a7359a2ddd022c244c05e211f99`) — **KHÔNG PHẢI** tài khoản `dichvu3t` thật đang host
+`dvbh`/`linhkien`/`suachua`. Khi bật `services.CASE_LOOKUP_SERVICE` (`remote: true`) để test local,
+`wrangler dev` báo lỗi `Worker 'dvbh' which was not found` — đúng như dự kiến vì Worker đó không tồn
+tại trong tài khoản sandbox này. Đã **tạm thời vô hiệu hoá** binding này để hoàn tất kiểm thử (mục 5
+ở trên), rồi **khôi phục lại đúng cấu hình gốc** trước khi commit — `wrangler.jsonc` trong repo vẫn
+đúng, chỉ cần chạy trên máy có tài khoản `dichvu3t` thật sẽ hoạt động bình thường.
+**Hệ quả quan trọng**: bất kỳ bước nào trong `DEPLOY.md` cần chạm tài nguyên Cloudflare thật
+(`wrangler d1 create`, `wrangler secret put`, `wrangler deploy`) đều **không thể chạy được từ phiên
+làm việc này** — người dùng cần tự chạy trên máy/phiên có quyền truy cập tài khoản `dichvu3t` thật,
+hoặc xác thực lại phiên này với tài khoản đó trước.
+
+**Chưa làm ở Giai đoạn 1 này** (đúng phạm vi đã định trong roadmap, không tự ý mở rộng): route nghiệp
+vụ (phiếu gửi/đơn sửa chữa/phiếu trả/FAST actions — Giai đoạn 3), port 13 màn hình UI (Giai đoạn 4),
+route nhận đồng bộ đẩy `POST /api/partner/sync/*` + sửa `linh-kien-app` thêm đích gửi (Giai đoạn 5),
+QA theo vai trò (Giai đoạn 6), và toàn bộ bước tạo tài nguyên Cloudflare/Google thật trong
+`DEPLOY.md` (chờ người dùng tự chạy — không tự ý tạo tài khoản/database/deploy khi chưa xác nhận).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
