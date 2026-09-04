@@ -141,7 +141,7 @@ adminBH.get("/don-vi/:id", async (c) => {
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_sc' AND entity_id = ? ORDER BY thoi_gian DESC").bind(uRow.parent_id).all(),
     c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct_anh WHERE unit_id = ?").bind(id).all(),
     c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_anh WHERE parent_id = ?").bind(uRow.parent_id).all(),
-    user.la_admin_bh || user.la_qtri || user.la_view ? c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_baocaosai WHERE parent_id = ? ORDER BY thoi_gian DESC").bind(uRow.parent_id).all() : Promise.resolve({ results: [] }),
+    user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view ? c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_baocaosai WHERE parent_id = ? ORDER BY thoi_gian DESC").bind(uRow.parent_id).all() : Promise.resolve({ results: [] }),
   ]);
   let guiLogs: unknown[] = [];
   let traLogs: unknown[] = [];
@@ -283,7 +283,7 @@ adminBH.post("/don-cha/:id/yeu-cau-bo-sung", async (c) => {
 
 adminBH.get("/don-cha/:id/bao-cao-sai", async (c) => {
   const user = c.get("user");
-  if (!(user.la_admin_bh || user.la_qtri || user.la_view)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!(user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view)) return c.json({ error: "FORBIDDEN" }, 403);
   const { results } = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_baocaosai WHERE parent_id = ? ORDER BY thoi_gian DESC").bind(c.req.param("id")).all();
   return c.json({ bao_cao_sai_thong_tin: results });
 });

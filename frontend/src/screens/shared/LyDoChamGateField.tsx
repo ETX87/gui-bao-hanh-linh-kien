@@ -1,0 +1,31 @@
+import { Field, Select } from "../../ui/primitives";
+import { useLyDoCham } from "../../hooks/useSettings";
+import { isOverdue } from "../../lib/format";
+
+// Truong "Ly do cham" - chi hien khi doi tuong dang qua han SLA 24h, dat O DAU form (port dung QA
+// 31/08/2026 diem #4: chuyen banner/truong SLA len dau thay vi cuoi cung). Dung chung cho moi form co
+// cong SLA (tiep nhan/phan loai/xac nhan hoan tat/chan doan/yeu cau lam lai/FAST actions...).
+
+export function useSlaGate(since: string | null | undefined) {
+  return isOverdue(since);
+}
+
+export function LyDoChamGateField({ overdue, value, onChange }: { overdue: boolean; value: string; onChange: (v: string) => void }) {
+  const { items } = useLyDoCham();
+  if (!overdue) return null;
+  return (
+    <div className="rounded-lg border border-[var(--coral-400)] bg-[var(--coral-100)] p-3">
+      <p className="text-xs font-bold text-[var(--coral-700)] mb-2">⚠ Đơn đã quá hạn SLA 24h — vui lòng chọn lý do chậm để tiếp tục.</p>
+      <Field label="Lý do chậm" required>
+        <Select value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">— Chọn lý do —</option>
+          {items.map((l) => (
+            <option key={l.id} value={l.noi_dung}>
+              {l.noi_dung}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    </div>
+  );
+}

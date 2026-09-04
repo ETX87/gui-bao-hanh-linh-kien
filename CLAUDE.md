@@ -108,8 +108,13 @@ bộ route nghiệp vụ backend) đã xong (04/09/2026, cùng ngày)** — 12 f
 state machine đã chốt qua 22 vòng rà soát, đã kiểm thử end-to-end thật qua HTTP (không chỉ typecheck)
 với 2 bộ test riêng biệt (`e2e_test.js` full luồng chính 0 lỗi, `e2e_test2.js` các nhánh còn lại —
 FAST actions/bổ sung/sync/qtri — 23/24 đúng, 1 sai khác biệt do chính test script chứ không phải lỗi
-backend) — xem mục "Giai đoạn 3: Toàn bộ route nghiệp vụ backend" bên dưới. Giai đoạn 4-6 (port UI,
-nửa PHÁT của đồng bộ đẩy bên `linh-kien-app`, PWA/mobile) **CHƯA làm** — không có lệnh deploy/tạo tài
+backend) — xem mục "Giai đoạn 3: Toàn bộ route nghiệp vụ backend" bên dưới. **Giai đoạn 4 (toàn bộ 13
+màn hình frontend thật) đã xong (04/09/2026, cùng ngày)** — React 18 thật thay cho `App.tsx` tối giản
+của Giai đoạn 1, đã kiểm thử bằng click-through thật qua Chrome (Browser pane) đi hết toàn bộ luồng
+nghiệp vụ chính từ KTV tạo phiếu tới KTV nhận hàng trả (0 lỗi console bất ngờ) — xem mục "Giai đoạn 4:
+Toàn bộ 13 màn hình frontend thật" bên dưới, kể cả danh sách các điểm đã đơn giản hoá có chủ đích
+(quét QR camera, tuỳ biến cột kéo-thả, bottom-tab-bar cố định...) so với prototype. Giai đoạn 5-6 (nửa
+PHÁT của đồng bộ đẩy bên `linh-kien-app`, PWA/mobile) **CHƯA làm** — không có lệnh deploy/tạo tài
 nguyên Cloudflare thật nào được chạy trong toàn bộ quá trình, đúng ràng buộc đã chốt.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
@@ -2081,6 +2086,125 @@ không có Worker `dvbh` thật để dispatch tới) rồi khôi phục lại �
 chế đồng bộ đẩy trong `linh-kien-app` (Giai đoạn 5), PWA/mobile đầy đủ (Giai đoạn 6). Không có route
 nào cho `de_xuat_linh_kien_bh`/`phieu_tra_xac_bh` — giữ nguyên quyết định từ Giai đoạn 1 (2 tính năng
 này chưa từng được triển khai ở bất kỳ vòng prototype nào, tránh bịa API trước khi biết chắc field).
+
+## Giai đoạn 4: Toàn bộ 13 màn hình frontend thật (04/09/2026)
+
+Tiếp nối trực tiếp Giai đoạn 3, vẫn theo đúng ràng buộc *"ko deploy, chỉ cần triển khai đầy đủ, tôi sẽ
+tự deploy ở tài khoản khác"*. Đã port toàn bộ giao diện nghiệp vụ từ `prototype-html/index.html` sang
+React 18 + TypeScript thật (không còn là `App.tsx` tối giản của Giai đoạn 1), tiêu thụ đúng 12 route
+file của Giai đoạn 3 — không có route backend nào cần sửa thêm ngoài 2 chỗ nhỏ phát hiện trong lúc
+build UI (xem mục lỗi bên dưới).
+
+**Kiến trúc frontend mới** (không có ở Giai đoạn 1, viết mới hoàn toàn):
+- `lib/api.ts` — client fetch dùng chung (`credentials:"include"`, ném `ApiError` mang đúng `error`
+  code backend trả về) + `ERROR_MESSAGES` dịch ~30 mã lỗi backend sang tiếng Việt dễ hiểu.
+- `lib/types.ts` — kiểu dữ liệu khớp đúng từng cột `migrations/0001_init.sql` (không đoán field).
+- `lib/format.ts`/`lib/constants.ts` — SLA 3 mức (port `isOverdue()`/`slaLevel()`), nhãn enum tiếng
+  Việt, `fileToDataUrl()` (ảnh base64, không R2).
+- `router/Router.tsx` — router hash tự viết (`#/vai-tro/man-hinh`, khớp đúng quy ước URL của
+  prototype cũ để người vận hành không bị lạ) — không thêm dependency `react-router-dom` cho quy mô
+  13 màn hình này.
+- `hooks/useWorkload.tsx` — đếm "việc cần làm" theo đúng vai trò, gọi lại các endpoint GET danh sách
+  đã có (không thêm endpoint `/workload` riêng) qua `Promise.all`, expose `refresh()` để màn hình gọi
+  lại sau mỗi thao tác — dùng cho cả huy hiệu Sidebar lẫn dải "🔥 Việc của tôi"/StatCard ở Trang chủ.
+- `hooks/useSettings.ts`/`useLinhKien.ts`/`useNvList.ts` — nạp danh mục dùng chung (lý do chậm/lý do
+  huỷ/linh kiện/danh sách NV — riêng `GET /api/users/nv-sua-chua` là **route mới thêm ở Giai đoạn 4**,
+  xem mục lỗi/bổ sung bên dưới).
+- `ui/` — primitives dùng chung: `Modal.tsx` (2 kích cỡ mặc định/`full`, đúng quyết định "modal tràn
+  màn hình" đã chốt 02/09/2026, khoá đóng nhầm bằng kiểm tra `mousedown`+`click` cùng bắt đầu trên nền
+  — bài học từ chính lỗi đã sửa ở prototype vòng 1), `Toast.tsx`, `Table.tsx` (luôn 1 dòng + cuộn
+  ngang, click dòng mở chi tiết), `SlaBadge.tsx` (3 mức màu + bấm số giờ quá hạn mở modal ghi lý do
+  chậm độc lập), `primitives.tsx` (Btn/Badge/Field/Card/StatCard... theo đúng token màu
+  `styles/tokens.css` đã port ở Giai đoạn 1).
+- `layout/` — `Sidebar.tsx` (desktop, huy hiệu số việc theo `workloadKey`) + `MobileNavStrip.tsx`
+  (dải cuộn ngang thay `Sidebar` dưới 768px — **đơn giản hoá có chủ đích** so với bottom-tab-bar cố
+  định của prototype, xem mục "Đã đơn giản hoá" bên dưới) + `TopBar.tsx` (lời chào + đăng xuất) +
+  `routes.ts` (`routesForUser()` — danh sách menu theo đúng 9 cờ vai trò).
+- `screens/shared/` — các khối/modal dùng chung nhiều màn: `UnitDetailModal.tsx` ("UI chi tiết" đơn vị
+  bảo hành, port đúng `unitActionButtonsHtml()` — nút footer tính theo ĐÚNG vai trò đang đăng nhập +
+  trạng thái hiện tại của đơn, đồng bộ 1-đối-1 với điều kiện dùng ở bảng thống nhất), `LogBlock.tsx`
+  (4 khối log riêng biệt, sort mới nhất lên đầu), `PhanLoaiModal.tsx`, `FastActionsModal.tsx` (lưới 10
+  icon + form phụ cho 4 nút cần thêm dữ liệu), `YeuCauBoSungModal.tsx`, `BaoCaoSaiModal.tsx`,
+  `XacNhanHoanTatModal.tsx`, `TraTrucTiepModal.tsx`, `ChanDoanModal.tsx`, `PhieuTraDetailModal.tsx`
+  ("UI chi tiết" phiếu trả — nút footer theo vai trò+trạng thái, gộp cả 4 vai trò Admin BH/Kế
+  toán/Kho/KTV vào 1 modal dùng chung), `GhiChuLogPanel.tsx`/`GhiChuLogModal.tsx`,
+  `LyDoChamGateField.tsx` (cổng SLA dùng chung mọi form có mốc SLA), `LinhKienScreen.tsx`.
+- `screens/{ktv,kho,adminbh,nv,ketoan,quanly,qtri}/` — 13 màn hình nghiệp vụ đầy đủ theo đúng vai trò.
+
+**Quyết định thiết kế mới, không có trong prototype gốc** (phát sinh khi build API thật):
+- **`GET /api/users/nv-sua-chua`** (route mới, `backend/src/routes/users.ts`) — danh sách rút gọn
+  (email/tên) các tài khoản `la_nv_sua_chua=1`, dùng cho Admin BH chọn "người sửa chữa" ở form Phân
+  loại/FAST actions. Route `GET /api/users` gốc chỉ dành cho `la_qtri` nên không dùng lại được ở đây.
+- **Sửa 1 lỗ hổng quyền thật phát hiện khi build `UnitDetailModal`**: `GET /admin/don-vi/:id` và
+  `GET /admin/don-cha/:id/bao-cao-sai` (đọc "KTV báo cáo sai thông tin") chỉ cho phép
+  `la_admin_bh || la_qtri || la_view`, **thiếu `la_giam_sat`** — trong khi CLAUDE.md đã ghi rõ ý định
+  ban đầu (mục "Đối chiếu nút chức năng AppSheet gốc") là "chỉ vai trò giám sát" đọc được, tức PHẢI
+  gồm cả `la_giam_sat` lẫn `la_view` (2 vai trò tách ra từ `quanly` gốc của prototype). Đã sửa cả 2
+  route trong `backend/src/routes/adminBH.ts`, thêm `user.la_giam_sat` vào điều kiện.
+
+**Đã đơn giản hoá có chủ đích so với prototype** (không phải thiếu sót, là đánh đổi hợp lý cho 1 Worker
+độc lập mới — ghi lại rõ ràng để không nhầm là "quên làm"):
+- **Bỏ quét QR bằng camera** (`jsQR`) ở màn Kho tiếp nhận — Kho chọn đúng phiếu từ danh sách hàng đợi
+  thay vì quét mã; đây là tiện ích tăng tốc thao tác, không phải logic nghiệp vụ cốt lõi.
+- **Bỏ tem/QR dán thùng + tải ảnh QR in tem** — cùng lý do, tiện ích in ấn không ảnh hưởng luồng.
+  Cả 2 điểm QR có thể thêm lại sau bằng cách cài `qrcode`/`jsqr` qua npm thật (không cần tự bundle thủ
+  công như bản prototype offline).
+- **Bỏ tuỳ biến cột kéo-thả/resize/ẩn-hiện** của bảng thống nhất Admin BH — giữ đúng 8 cột cố định đã
+  chọn kỹ (ID, Trạng thái, Nguồn, Khách hàng, Linh kiện, Mô tả lỗi, SLA, Hành động); tính năng tuỳ
+  biến là "nice-to-have" cho demo, không phải yêu cầu nghiệp vụ.
+- **Bỏ màn "Xem giao diện Mobile" (khung điện thoại giả lập qua iframe)** — không cần thiết khi ứng
+  dụng thật đã responsive qua Tailwind + `MobileNavStrip`, có thể test trực tiếp bằng trình duyệt
+  thật/điện thoại thật khi deploy.
+- **`MobileNavStrip` (dải cuộn ngang) thay cho bottom-tab-bar cố định** của prototype — đơn giản hơn
+  để viết đúng và kiểm thử trong thời gian có hạn, vẫn đáp ứng đúng nhu cầu "điều hướng được trên
+  điện thoại"; có thể nâng cấp thành bottom-tab cố định sau nếu người dùng thực tế thấy cần.
+- **Bỏ tra cứu case CRM tự động (case-lookup autocomplete)** — trường "Mã case" ở form Thêm đơn/Đơn
+  dịch vụ tính phí hiện là ô nhập tay tự do (khớp đúng cột `case_id TEXT` không FK trong schema); tra
+  cứu case tự động cần `lib/caseLookupClient.ts` + Service Binding `CASE_LOOKUP_SERVICE` — đây là việc
+  của Giai đoạn 5 (nửa PHÁT `linh-kien-app`), chưa làm.
+- Không port `SearchableSelect` (ô chọn có tìm kiếm cho danh sách dài) — dùng `<select>` thường; đã
+  từng được prototype tự ghi nhận là "tồn đọng thật cần làm khi dữ liệu thật dài hơn nhiều" — giữ
+  nguyên nợ kỹ thuật này, không giải quyết ở Giai đoạn 4.
+
+**Đã xác minh — không chỉ typecheck, kiểm thử tương tác thật qua Chrome (Browser pane), không phải
+đọc code bằng mắt:**
+1. `npm run typecheck` (cả backend lẫn frontend, `tsc --noEmit` với `strict:true`) — **0 lỗi** sau khi
+   sửa đúng 1 lỗi thật (`hooks/useWorkload.ts` chứa JSX nhưng đặt sai đuôi `.ts` thay vì `.tsx` — TS
+   báo lỗi cú pháp rõ ràng, đã đổi tên file, không phải lỗi logic).
+2. `npm run build` (frontend, Vite) — build sạch, bundle ~241KB JS (gzip ~70KB) + CSS ~55KB (gzip
+   ~18KB), không cảnh báo.
+3. Chạy `wrangler dev` local thật (tạm vô hiệu hoá `services.CASE_LOOKUP_SERVICE` như thường lệ, đã
+   khôi phục lại đúng sau khi xong) + `wrangler d1 migrations apply --local` trên D1 rỗng hoàn toàn
+   (không seed sẵn dữ liệu như vòng test backend Giai đoạn 3) — đăng nhập qua session cookie có sẵn từ
+   phiên trước (`smarttrade.vp@gmail.com`, `la_qtri=1`), tự gán thêm cho chính tài khoản này đủ 8 cờ
+   vai trò còn lại qua chính màn "Người dùng" thật (không seed SQL tay) để 1 tài khoản test được đủ cả
+   13 màn hình.
+4. **Click-through thật qua toàn bộ luồng nghiệp vụ chính** (đúng chuỗi trạng thái Giai đoạn 3 đã test
+   bằng HTTP, nay lặp lại bằng click chuột thật trên UI): KTV tạo phiếu gửi (`BH-000001`) → thêm đơn
+   (`DH-000001`) → xác nhận gửi xe → Kho xác nhận tiếp nhận → Admin BH xác nhận tiếp nhận nội bộ →
+   xác nhận số lượng (tách `DH-000001-1`) → mở "UI chi tiết" (đúng đủ 4 khối log, đúng nút footer cho
+   trạng thái `cho_phan_loai`) → **⚡ Xử lý nhanh "Sửa chữa trong BH"** (form phụ bắt chọn NV, chọn
+   đúng NV vừa gán quyền cho chính mình) → NV Chẩn đoán ("Sửa được") → Admin BH Xác nhận hoàn tất →
+   **⚡ Tự động gộp phiếu trả cho tất cả nhân viên** (tạo đúng `TR-000001`) → mở "UI chi tiết" phiếu
+   trả → **chặn đúng lỗi 400 `REQUIRE_MA_MISA`** khi bấm "Gửi duyệt kế toán" lúc còn thiếu mã → nhập
+   mã đơn hàng/MISA, lưu, gửi duyệt lại thành công → Kế toán Duyệt → Kho Gửi hàng (không đóng gói/ảnh,
+   đúng "tuỳ chọn") → KTV Xác nhận đã nhận — **toàn bộ chuỗi hoàn tất đúng trạng thái cuối
+   `ktv_da_nhan`, 0 lỗi console runtime bất ngờ** (chỉ có đúng 1 lỗi 400 cố ý tạo ra để kiểm tra validate).
+5. Xác nhận thêm các màn còn lại qua điều hướng trực tiếp bằng hash: Tra cứu tiến độ (KTV, tìm kiếm
+   hoạt động, hiện đúng trạng thái `san_sang_gom_phieu_tra`), Cài đặt hệ thống (2 danh mục hiện đủ dữ
+   liệu seed), Danh mục linh kiện (thêm 1 dòng nội bộ thành công), Tổng quan hệ thống (Giám sát/View —
+   đếm đúng 1 đơn theo đúng trạng thái hiện tại), Tra cứu mọi đơn hàng (Giám sát/View — click dòng mở
+   "UI chi tiết" **đúng KHÔNG hiện nút hành động nào** vì đơn đã có `phieu_tra_id`, xác nhận cơ chế
+   "chỉ xem" hoạt động đúng dựa trên logic role+state, không phải cờ ẩn riêng).
+6. Phát hiện phụ (không phải lỗi): `window.confirm()` bị trình duyệt test tự động từ chối mặc định
+   (native dialog bị chặn) — xác nhận đây là hành vi *an toàn* của môi trường test (không tự ý xác
+   nhận hành động phá huỷ/quan trọng), đã ghi đè `window.confirm` tạm thời để tiếp tục test nút "Tự
+   động gộp phiếu trả" — không phải lỗi ứng dụng, chỉ là đặc thù của công cụ kiểm thử.
+
+**Chưa làm ở Giai đoạn 4 này**: nửa PHÁT của đồng bộ đẩy bên `linh-kien-app` (Giai đoạn 5), PWA/mobile
+thật (`manifest.webmanifest`, service worker, icon 192/512/maskable, Web Push — Giai đoạn 6), và toàn
+bộ các điểm đã liệt kê ở mục "Đã đơn giản hoá có chủ đích" bên trên. Không chạy lệnh
+deploy/tạo tài nguyên Cloudflare thật nào trong suốt quá trình.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

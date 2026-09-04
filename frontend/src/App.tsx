@@ -1,51 +1,88 @@
-import { useAuth, type AppUser } from "./auth/AuthContext";
+import { useAuth } from "./auth/AuthContext";
+import type { AppUser } from "./lib/types";
+import { RouterProvider, useRoute } from "./router/Router";
+import { WorkloadProvider } from "./hooks/useWorkload";
+import { ToastProvider } from "./ui/Toast";
+import { Shell } from "./layout/Shell";
+import { HomeScreen } from "./screens/Home";
+import { KtvTaoPhieuScreen } from "./screens/ktv/TaoPhieu";
+import { KtvTraCuuScreen } from "./screens/ktv/TraCuu";
+import { KtvNhanHangScreen } from "./screens/ktv/NhanHang";
+import { KhoTiepNhanScreen } from "./screens/kho/TiepNhan";
+import { KhoDongGoiScreen } from "./screens/kho/DongGoi";
+import { AdminPhanLoaiScreen } from "./screens/adminbh/PhanLoai";
+import { AdminXacNhanScreen } from "./screens/adminbh/XacNhan";
+import { AdminPhieuTraScreen } from "./screens/adminbh/PhieuTra";
+import { NvViecCuaToiScreen } from "./screens/nv/ViecCuaToi";
+import { KeToanDuyetScreen } from "./screens/ketoan/Duyet";
+import { QuanLyTongQuanScreen } from "./screens/quanly/TongQuan";
+import { QuanLyTraCuuScreen } from "./screens/quanly/TraCuu";
+import { QtriNguoiDungScreen } from "./screens/qtri/NguoiDung";
+import { QtriCaiDatScreen } from "./screens/qtri/CaiDat";
+import { LinhKienScreen } from "./screens/shared/LinhKienScreen";
 
-// Giai doan 1 (scaffold ha tang): CHUA port 13 man hinh nghiep vu tu prototype-html/index.html - chi
-// dung de xac nhan toan bo day chuyen Auth (Google OAuth -> session cookie -> D1 users) hoat dong
-// dung tren ha tang Cloudflare that. Port cac man hinh thuc (Trang chu/Tao phieu gui/Hang doi phan
-// loai...) la viec cua Giai doan 3/4 (xem CLAUDE.md muc "Phan tich lien ket voi Dat mua linh kien...").
+// Giai doan 4: port day du 13 man hinh nghiep vu cua prototype-html/index.html sang React that, dung
+// backend Giai doan 3 (12 route file da kiem thu end-to-end 0 loi). Dispatch theo dung ROUTES_BY_ROLE
+// (routesForUser) - moi hash chi render duoc khi user THAT SU co vai tro tuong ung, tranh truy cap
+// truc tiep URL vao man khong co quyen.
 
-const ROLE_LABELS: Array<{ flag: keyof AppUser; label: string }> = [
-  { flag: "la_ktv_dvbh", label: "KTV / CTV / Trạm" },
-  { flag: "la_ve_tinh", label: "Vệ tinh" },
-  { flag: "la_kho", label: "Kho" },
-  { flag: "la_admin_bh", label: "Admin bảo hành" },
-  { flag: "la_nv_sua_chua", label: "NV sửa chữa" },
-  { flag: "la_ke_toan", label: "Kế toán" },
-  { flag: "la_giam_sat", label: "Giám sát" },
-  { flag: "la_view", label: "View" },
-  { flag: "la_qtri", label: "Admin hệ thống" },
-];
+function Routed({ user }: { user: AppUser }) {
+  const { path } = useRoute();
 
-function Shell({ children }: { children: React.ReactNode }) {
+  if (path === "/home" || path === "/") return <HomeScreen user={user} />;
+
+  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh) && path === "/ktv/nhan-hang") return <KtvNhanHangScreen user={user} />;
+
+  if (user.la_kho && path === "/kho/tiep-nhan") return <KhoTiepNhanScreen />;
+  if (user.la_kho && path === "/kho/dong-goi") return <KhoDongGoiScreen user={user} />;
+
+  if (user.la_admin_bh && path === "/admin/phan-loai") return <AdminPhanLoaiScreen user={user} />;
+  if (user.la_admin_bh && path === "/admin/xac-nhan") return <AdminXacNhanScreen user={user} />;
+  if (user.la_admin_bh && path === "/admin/phieu-tra") return <AdminPhieuTraScreen user={user} />;
+
+  if (user.la_nv_sua_chua && path === "/nv/viec-cua-toi") return <NvViecCuaToiScreen user={user} />;
+
+  if (user.la_ke_toan && path === "/ketoan/duyet") return <KeToanDuyetScreen user={user} />;
+
+  if ((user.la_giam_sat || user.la_view) && path === "/quanly/tong-quan") return <QuanLyTongQuanScreen />;
+  if ((user.la_giam_sat || user.la_view) && path === "/quanly/tra-cuu") return <QuanLyTraCuuScreen user={user} />;
+
+  if (user.la_qtri && path === "/qtri/nguoi-dung") return <QtriNguoiDungScreen currentEmail={user.email} />;
+  if (user.la_qtri && path === "/qtri/cai-dat") return <QtriCaiDatScreen />;
+
+  if ((user.la_admin_bh || user.la_qtri) && path === "/linh-kien") return <LinhKienScreen />;
+
+  return (
+    <div className="text-center py-16 text-[var(--ink-500)]">
+      <p className="text-lg font-display font-bold mb-1">Không tìm thấy trang</p>
+      <p className="text-sm">Bạn không có quyền truy cập màn hình này, hoặc đường dẫn không tồn tại.</p>
+    </div>
+  );
+}
+
+function AuthedApp({ user }: { user: AppUser }) {
+  return (
+    <WorkloadProvider user={user}>
+      <Shell user={user}>
+        <Routed user={user} />
+      </Shell>
+    </WorkloadProvider>
+  );
+}
+
+function Shell_Login() {
   return (
     <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
-      <div className="w-full max-w-sm">{children}</div>
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">{children}</div>;
-}
-
-function Brand() {
-  return (
-    <div className="flex flex-col items-center gap-3 mb-6">
-      <img src="/icon.png" alt="" className="w-14 h-14 rounded-xl shadow-sm" />
-      <div>
-        <h1 className="font-display font-extrabold text-lg text-[var(--ink-900)]">Sửa chữa bảo hành</h1>
-        <p className="text-xs text-[var(--ink-500)] mt-0.5">Dịch Vụ 3T</p>
-      </div>
-    </div>
-  );
-}
-
-function LoginScreen() {
-  return (
-    <Shell>
-      <Card>
-        <Brand />
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <img src="/icon.png" alt="" className="w-14 h-14 rounded-xl shadow-sm" />
+          <div>
+            <h1 className="font-display font-extrabold text-lg text-[var(--ink-900)]">Sửa chữa bảo hành</h1>
+            <p className="text-xs text-[var(--ink-500)] mt-0.5">Dịch Vụ 3T</p>
+          </div>
+        </div>
         <p className="text-sm text-[var(--ink-600)] mb-6">Đăng nhập bằng tài khoản Google được cấp để tiếp tục.</p>
         <a
           href="/api/auth/login"
@@ -53,89 +90,43 @@ function LoginScreen() {
         >
           Đăng nhập với Google
         </a>
-      </Card>
-    </Shell>
+      </div>
+    </div>
   );
 }
 
 function StatusScreen({ title, body, tone }: { title: string; body: string; tone: "amber" | "coral" }) {
   const dot = tone === "amber" ? "bg-[var(--amber-500)]" : "bg-[var(--coral-500)]";
   return (
-    <Shell>
-      <Card>
-        <Brand />
+    <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
+        <img src="/icon.png" alt="" className="w-14 h-14 rounded-xl shadow-sm mx-auto mb-4" />
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className={`w-2 h-2 rounded-full ${dot}`} />
           <h2 className="font-display font-bold text-base text-[var(--ink-900)]">{title}</h2>
         </div>
         <p className="text-sm text-[var(--ink-600)]">{body}</p>
-      </Card>
-    </Shell>
-  );
-}
-
-function HomeScreen({ user }: { user: AppUser }) {
-  const activeRoles = ROLE_LABELS.filter((r) => user[r.flag] === true);
-  return (
-    <div className="min-h-full bg-[var(--bg)]">
-      <header className="bg-[var(--topbar-bg)] border-b border-[var(--line)] px-6 py-4 flex items-center gap-3">
-        <img src="/icon.png" alt="" className="w-8 h-8 rounded-lg" />
-        <div>
-          <p className="font-display font-bold text-sm text-[var(--ink-900)] leading-tight">Sửa chữa bảo hành</p>
-          <p className="text-[11px] text-[var(--ink-500)] leading-tight">Dịch Vụ 3T</p>
-        </div>
-        <form action="/api/auth/logout" method="post" className="ml-auto">
-          <button
-            type="button"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-              location.reload();
-            }}
-            className="focus-ring text-xs font-medium text-[var(--ink-500)] hover:text-[var(--ink-900)] transition-colors"
-          >
-            Đăng xuất
-          </button>
-        </form>
-      </header>
-
-      <main className="max-w-lg mx-auto px-6 py-10">
-        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-6 anim-in">
-          <p className="text-xs uppercase tracking-wide text-[var(--ink-400)] font-mono mb-1">Đã đăng nhập</p>
-          <h2 className="font-display font-bold text-lg text-[var(--ink-900)]">{user.ten || user.email}</h2>
-          <p className="text-sm text-[var(--ink-500)] mt-0.5">{user.email}</p>
-
-          <div className="mt-5 pt-5 border-t border-[var(--line)]">
-            <p className="text-xs uppercase tracking-wide text-[var(--ink-400)] font-mono mb-2">Vai trò</p>
-            {activeRoles.length === 0 ? (
-              <p className="text-sm text-[var(--ink-500)]">Chưa được gán vai trò nào — liên hệ Admin hệ thống.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {activeRoles.map((r) => (
-                  <span key={r.flag} className="text-xs font-medium px-2.5 py-1 rounded-full bg-[var(--ocean-100)] text-[var(--ocean-700)]">
-                    {r.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <p className="text-xs text-[var(--ink-400)] text-center mt-6">
-          Giai đoạn 1: đã xác nhận Auth + D1 hoạt động đúng trên hạ tầng thật. Màn hình nghiệp vụ sẽ được port ở Giai đoạn 3/4.
-        </p>
-      </main>
+      </div>
     </div>
   );
 }
 
-export function App() {
+function Inner() {
   const auth = useAuth();
-
   if (auth.status === "loading") return null;
-  if (auth.status === "anonymous") return <LoginScreen />;
+  if (auth.status === "anonymous") return <Shell_Login />;
   if (auth.status === "pending") return <StatusScreen tone="amber" title="Đang chờ duyệt" body="Tài khoản của bạn đã được tạo, đang chờ Admin hệ thống gán vai trò." />;
   if (auth.status === "rejected") return <StatusScreen tone="coral" title="Tài khoản bị từ chối" body="Liên hệ Admin hệ thống nếu bạn cho rằng đây là nhầm lẫn." />;
   if (auth.status === "disabled") return <StatusScreen tone="coral" title="Tài khoản bị khoá" body="Liên hệ Admin hệ thống để được hỗ trợ." />;
+  return <AuthedApp user={auth.user} />;
+}
 
-  return <HomeScreen user={auth.user} />;
+export function App() {
+  return (
+    <RouterProvider>
+      <ToastProvider>
+        <Inner />
+      </ToastProvider>
+    </RouterProvider>
+  );
 }

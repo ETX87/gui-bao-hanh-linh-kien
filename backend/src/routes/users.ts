@@ -30,6 +30,16 @@ users.get("/", async (c) => {
   return c.json({ users: results });
 });
 
+// GET /api/users/nv-sua-chua - danh sach rut gon (email, ten) cac tai khoan la_nv_sua_chua=1, dung
+// cho Admin BH chon "nguoi sua chua" luc phan loai (form Phan loai/FAST actions can 1 <select>, KHONG
+// the goi GET / o tren vi route do chi danh cho la_qtri).
+users.get("/nv-sua-chua", async (c) => {
+  const user = c.get("user");
+  if (!(user.la_admin_bh || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
+  const { results } = await c.env.DB.prepare("SELECT email, ten FROM users WHERE la_nv_sua_chua = 1 AND bi_khoa = 0 ORDER BY ten, email").all();
+  return c.json({ users: results });
+});
+
 interface PatchBody {
   flag?: string;
   value?: boolean;

@@ -1,24 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { AppUser } from "../lib/types";
 
 // Adapted tu linh-kien-app/frontend/src/auth/AuthContext.tsx - mo hinh vai tro rieng cua bao hanh (7
 // co nghiep vu + Admin he thong "qtri"), KHONG dung enum "vai_tro" nhu linh-kien-app (xem
-// backend/src/types.ts). Giai doan 1 BO "xem thu vai tro" (view-as) - co the them lai sau.
+// backend/src/types.ts). Giai doan 1 BO "xem thu vai tro" (view-as) - co the them lai sau. AppUser
+// dinh nghia 1 lan duy nhat o lib/types.ts, import lai o day - tranh 2 nguon su that lech nhau.
 
-export interface AppUser {
-  email: string;
-  ten: string | null;
-  trang_thai_duyet: "Cho duyet" | "Da duyet" | "Tu choi";
-  bi_khoa: boolean;
-  la_ktv_dvbh: boolean;
-  la_ve_tinh: boolean;
-  la_kho: boolean;
-  la_admin_bh: boolean;
-  la_nv_sua_chua: boolean;
-  la_ke_toan: boolean;
-  la_giam_sat: boolean;
-  la_view: boolean;
-  la_qtri: boolean;
-}
+export type { AppUser };
 
 type AuthState =
   | { status: "loading" }

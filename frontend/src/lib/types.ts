@@ -1,0 +1,161 @@
+// Kieu du lieu dung chung frontend - khop DUNG ten cot voi migrations/0001_init.sql (khong doan lai).
+
+export type LogEntityType = "phieu_gui" | "phieu_sc" | "phieu_sc_ct" | "phieu_tra";
+
+export interface AppUser {
+  email: string;
+  ten: string | null;
+  bi_khoa: boolean;
+  trang_thai_duyet: "Cho duyet" | "Da duyet" | "Tu choi";
+  la_ktv_dvbh: boolean;
+  la_ve_tinh: boolean;
+  la_kho: boolean;
+  la_admin_bh: boolean;
+  la_nv_sua_chua: boolean;
+  la_ke_toan: boolean;
+  la_giam_sat: boolean;
+  la_view: boolean;
+  la_qtri: boolean;
+}
+
+export interface PhieuGui {
+  id: string;
+  nguoi_tao: string;
+  ngay_tao: string;
+  ngay_gui_xe: string | null;
+  hinh_thuc_gui: string | null;
+  ma_xe_hoac_tai_xe: string | null;
+  don_vi_van_chuyen: string | null;
+  ma_van_don: string | null;
+  trang_thai: "nhap" | "da_gui" | "da_tiep_nhan";
+  su_co_tiep_nhan: boolean;
+  su_co_ly_do: string | null;
+  su_co_ghi_chu: string | null;
+  nguoi_nhan_kho: string | null;
+  thoi_gian_nhan_kho: string | null;
+  admin_tiep_nhan: boolean;
+  admin_nguoi_nhan: string | null;
+  admin_thoi_gian_nhan: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GhiChuLog {
+  id: number;
+  phieu_gui_id: string;
+  tac_gia: string;
+  thoi_gian: string;
+  noi_dung: string;
+}
+
+export interface DonCha {
+  id: string;
+  phieu_gui_id: string | null;
+  case_id: string | null;
+  ma_lk: string | null;
+  mo_ta_loi: string | null;
+  so_luong_khai: number;
+  so_luong_thuc_nhan: number | null;
+  ly_do_chenh_lech_sl: string | null;
+  loai_doi_tru_de_xuat: "doi_tra" | "tru_cong_no" | null;
+  nguon_tao: "ktv" | "admin_dich_vu";
+  ten_khach_hang: string | null;
+  sdt_khach_hang: string | null;
+  dia_chi_khach_hang: string | null;
+  san_pham_bh: string | null;
+  trang_thai_cha: "cho_xac_nhan_so_luong" | "da_tach";
+  email_gs: string | null;
+  created_at: string;
+}
+
+export interface DonVi {
+  id: string;
+  parent_id: string;
+  so_thu_tu: number;
+  ma_lk_thuc_te: string | null;
+  loai_bao_hanh: string | null;
+  thong_tin_mail_pd: string | null;
+  ma_phe_duyet: string | null;
+  huong_xu_ly: string | null;
+  loai_doi_tru: string | null;
+  nguoi_sua_chua: string | null;
+  ly_do_tu_choi: string | null;
+  xu_ly_xac: string | null;
+  ket_qua_chan_doan: string | null;
+  admin_xac_nhan_hoan_tat: boolean;
+  phieu_tra_id: string | null;
+  trang_thai: string;
+  so_lan_yeu_cau_lam_lai: number;
+  ly_do_bo_sung: string | null;
+  updated_at: string;
+  created_at: string;
+  // Cac cot join them (tu GET /admin/don-vi, GET /phieu-gui/don-vi/tra-cuu, GET /tra-cuu/don-vi)
+  case_id?: string | null;
+  ma_lk?: string | null;
+  mo_ta_loi?: string | null;
+  phieu_gui_id?: string | null;
+  nguon_tao?: string;
+  ten_khach_hang?: string | null;
+  sdt_khach_hang?: string | null;
+  san_pham_bh?: string | null;
+  loai_doi_tru_de_xuat?: string | null;
+  ktv?: string | null;
+  ngay_gui_xe?: string | null;
+}
+
+export interface PhieuTra {
+  id: string;
+  ktv_nhan: string;
+  nguoi_tao: string;
+  trang_thai: string;
+  loai_doi_tru: "doi_tra" | "tru_cong_no";
+  ma_don_hang: string | null;
+  ma_misa: string | null;
+  ma_van_don: string | null;
+  ly_do_tu_choi_kt: string | null;
+  danh_gia_ktv: string | null;
+  khong_nhan_duoc_ghi_chu: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LogRow {
+  id: number;
+  entity_type: LogEntityType;
+  entity_id: string;
+  tu_trang_thai: string | null;
+  den_trang_thai: string | null;
+  nguoi_thuc_hien: string;
+  thoi_gian: string;
+  ghi_chu: string | null;
+}
+
+export interface LinhKien {
+  ma_lk: string;
+  ten_lk: string;
+  don_vi: string | null;
+  ghi_chu: string | null;
+  anh_demo: string | null;
+  so_thang_bao_hanh: number | null;
+  loai_hang: string | null;
+  nguon_du_lieu: "dong_bo" | "noi_bo";
+  duoc_dung_bao_hanh: boolean;
+  ngay_cap_nhat: string;
+}
+
+export interface SettingItem {
+  id: number;
+  noi_dung: string;
+  bat_tat: boolean;
+  stt: number;
+}
+
+export interface FastActionMeta {
+  key: string;
+  label: string;
+  huong?: string;
+  loaiBH?: string;
+  loaiDoiTru?: string;
+  lyDoTuChoi?: string;
+  special?: "bo_sung_tt" | "bao_cao_sai";
+}
