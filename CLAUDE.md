@@ -113,9 +113,15 @@ màn hình frontend thật) đã xong (04/09/2026, cùng ngày)** — React 18 t
 của Giai đoạn 1, đã kiểm thử bằng click-through thật qua Chrome (Browser pane) đi hết toàn bộ luồng
 nghiệp vụ chính từ KTV tạo phiếu tới KTV nhận hàng trả (0 lỗi console bất ngờ) — xem mục "Giai đoạn 4:
 Toàn bộ 13 màn hình frontend thật" bên dưới, kể cả danh sách các điểm đã đơn giản hoá có chủ đích
-(quét QR camera, tuỳ biến cột kéo-thả, bottom-tab-bar cố định...) so với prototype. Giai đoạn 5-6 (nửa
-PHÁT của đồng bộ đẩy bên `linh-kien-app`, PWA/mobile) **CHƯA làm** — không có lệnh deploy/tạo tài
-nguyên Cloudflare thật nào được chạy trong toàn bộ quá trình, đúng ràng buộc đã chốt.
+(quét QR camera, tuỳ biến cột kéo-thả, bottom-tab-bar cố định...) so với prototype. **Giai đoạn 5 (nửa
+PHÁT đồng bộ đẩy bên `linh-kien-app`) và Giai đoạn 6 (PWA/mobile cơ bản) đã xong (04/09/2026, cùng
+ngày)** — đã hỏi lại và loại bỏ phương án "chia sẻ D1 trực tiếp" (rủi ro coupling migration, xem mục
+Giai đoạn 5) trước khi sửa 5 điểm ở repo `linh-kien-app` (commit riêng trong repo đó, cùng ràng buộc
+không deploy); PWA có icon 192/512/maskable thật (resize bằng `sharp`), manifest + service worker
+app-shell cache, đã xác nhận service worker thật sự active qua Browser pane. **Cả 6 giai đoạn của
+roadmap đã hoàn tất** — xem mục "Tổng kết toàn bộ 6 giai đoạn" ở cuối mục Giai đoạn 6 bên dưới. Không
+có lệnh deploy/tạo tài nguyên Cloudflare thật nào được chạy trong toàn bộ quá trình, đúng ràng buộc đã
+chốt — việc deploy thật còn lại thuộc về người dùng.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -2205,6 +2211,117 @@ build UI (xem mục lỗi bên dưới).
 thật (`manifest.webmanifest`, service worker, icon 192/512/maskable, Web Push — Giai đoạn 6), và toàn
 bộ các điểm đã liệt kê ở mục "Đã đơn giản hoá có chủ đích" bên trên. Không chạy lệnh
 deploy/tạo tài nguyên Cloudflare thật nào trong suốt quá trình.
+
+## Giai đoạn 5: Nửa PHÁT của đồng bộ đẩy trong `linh-kien-app` (04/09/2026)
+
+Trước khi làm, người dùng đặt câu hỏi kiến trúc quan trọng: *"nếu thay vì xin api, mà trực tiếp lấy
+database từ workers linh-kien-app sang thì có tốt hơn không? tận dụng khai báo linh kiện và tài khoản
+dùng chung cho cả 2 hệ thống"* — đã phân tích và khuyến nghị **KHÔNG chia sẻ D1 trực tiếp** (2 Worker
+cùng bind 1 database) vì tái tạo đúng vấn đề coupling migration/blast-radius đã khiến `dat-mua-lk`
+phải tách khỏi `cloudflare smarttrade base` thành `linh-kien-app` từ đầu (19/08/2026), và `users` của
+2 hệ có hình dạng khác hẳn nhau (`vai_tro` enum vs 9 cờ boolean) nên không thể dùng chung bảng nguyên
+trạng. Người dùng đồng ý giữ hướng đồng bộ đẩy qua API — xem đầy đủ phần phân tích trao đổi trong lịch
+sử phiên làm việc (không lặp lại ở đây, chỉ ghi lại quyết định cuối).
+
+Đã sửa 5 điểm trong repo **`../linh-kien-app`** (khác repo này, đang chạy production thật — commit
+trực tiếp `master` theo đúng quy ước sẵn có của repo đó, **KHÔNG deploy**):
+
+1. **`wrangler.jsonc`** — thêm Service Binding thứ 2 `SUACHUA_SYNC_SERVICE` (cùng lý do 1042/SSRF như
+   `CASE_LOOKUP_SERVICE` đã có — 2 Worker cùng 1 tài khoản Cloudflare không `fetch()` thẳng URL nhau
+   được) + var `SUACHUA_SYNC_BASE_URL` + ghi chú secret mới `SUACHUA_SYNC_API_KEY` (đặt qua
+   `wrangler secret put`, **phải khớp đúng** giá trị `LINHKIEN_SYNC_API_KEY` bên `suachua`).
+2. **`backend/src/types.ts`** — thêm 3 field `Env` tương ứng.
+3. **`backend/src/lib/dvbhSyncClient.ts`** — viết lại thành cấu hình `TARGETS × ENTITIES` thay vì code
+   cứng riêng cho `dvbh`: mỗi cặp (entity, target) có **con trỏ đồng bộ riêng** (bảng
+   `dvbh_sync_state`, xem mục 4) — 1 đích lỗi tạm thời không chặn/làm mất tiến độ của đích còn lại.
+   Thêm **entity mới `khu_vuc`** (bảng `khu_vuc` bên `linh-kien-app`, cột `ma, ten, gs_email`) — **CHỈ
+   gửi tới `suachua`**, không gửi `dvbh` (hệ DVBH gốc không có khái niệm Khu vực trong schema của nó).
+   `getPendingSyncCounts()`/`getLastSyncTimes()` tính theo hướng **bi quan nhất** qua nhiều đích (còn
+   1 đích chưa nhận thì vẫn tính là "đang chờ"/"chưa từng đồng bộ" — tránh lạc quan giả khi 1 đích đã
+   xong nhưng đích kia còn treo).
+4. **`migrations/0016_dvbh_sync_state_multi_target.sql`** (mới) — mở rộng `dvbh_sync_state` từ
+   `PRIMARY KEY(entity)` sang `PRIMARY KEY(entity, target)`, dùng đúng pattern "tạo bảng mới → copy →
+   drop → rename" (đã xác nhận trước **không có bảng nào FK tới `dvbh_sync_state`** nên an toàn recreate
+   — khác `users`, nơi pattern này bị cấm vì có nhiều bảng con FK tới). Giữ nguyên tiến độ đồng bộ
+   `dvbh` cũ (không reset về epoch, tránh gửi lại toàn bộ KTV/linh kiện không cần thiết), seed 3 cặp
+   mới từ epoch (`ktv/suachua`, `linh_kien/suachua`, `khu_vuc/suachua`).
+5. **`routes/dvbhSync.ts` + `frontend/src/modules/SettingsModule.tsx`** — thêm field
+   `khuVucPending`/`lastSyncKhuVuc` vào response + thêm 1 dòng hiển thị trong tab "Đồng bộ DVBH" của
+   Settings (đổi tên hiển thị ngụ ý còn bao quát cả `suachua`, không đổi tên route/tab để tránh vỡ URL
+   đã lưu/bookmark).
+
+**Đã xác minh:** `npm run typecheck` (cả backend lẫn frontend của `linh-kien-app`) — 0 lỗi. Migration
+0016 đã **áp dụng thành công lên D1 local thật** của repo đó (`npm run db:migrate:local`, không đụng
+`--remote`) — xác nhận lại bằng `wrangler d1 execute --local` rằng bảng sau migrate đúng 5 dòng như kỳ
+vọng (tiến độ `ktv/dvbh` cũ được giữ nguyên, 3 cặp mới đều ở epoch). **Chưa chạy thử `runDvbhSync()`
+thật** (sẽ gọi sang Worker `suachua` thật — hiện vẫn là bản rỗng/placeholder, chưa deploy code Giai
+đoạn 3/4 của repo này lên đó) và **không deploy gì** ở cả 2 repo.
+
+**Bên nhận (`suachua`, repo này) đã sẵn sàng từ Giai đoạn 3** (`routes/sync.ts`, xem mục Giai đoạn 3
+bên trên) — không cần sửa gì thêm ở phía này cho Giai đoạn 5.
+
+## Giai đoạn 6: PWA/mobile cơ bản (04/09/2026)
+
+Người dùng xác nhận làm PWA **cơ bản** (không cần Web Push thật — cần `VAPID_SERVER_PRIVATE_KEY` thật
+lúc deploy, chưa có ở vòng này).
+
+- **Icon PWA thật** (không còn dùng tạm `icon.png` gốc 858×887/548KB) — dùng thư viện `sharp` (đã có
+  sẵn trong `node_modules` gốc) resize từ `logo sua chua 3t.png`:
+  - `icon-192.png`/`icon-512.png` (`purpose:"any"`, crop-cover vuông).
+  - `icon-maskable-512.png` — thu nhỏ logo vào đúng "safe zone" 80% rồi đệm nền màu lấy mẫu trực tiếp
+    từ góc ảnh gốc (`rgb(11,130,11)`, xanh lá đậm khớp gradient logo) ra đủ 512×512 — tránh bị cắt mất
+    nội dung khi hệ điều hành tự áp khung tròn/vuông-bo-góc lên icon maskable. Đã xác nhận bằng mắt
+    (xem ảnh trong lịch sử phiên làm việc) — logo đủ margin an toàn quanh mọi cạnh.
+  - `apple-touch-icon.png` (180×180, chuẩn iOS hiện tại), `favicon.png` (32×32).
+  - 3 nơi trong app đang dùng `icon.png` gốc (`App.tsx` ×2, `layout/TopBar.tsx`) đổi sang
+    `icon-192.png` (đủ độ phân giải cho kích thước hiển thị 32-56px, nhẹ hơn nhiều — 57KB so với
+    548KB).
+- **`frontend/public/manifest.webmanifest`** — theo đúng khuôn `linh-kien-app/frontend/public/
+  manifest.webmanifest` đã làm trước đó (3 icon, `display:"standalone"`, `theme_color`/
+  `background_color` khớp `--ocean-950`). Thêm `shortcuts` (3 mục: Gửi hàng bảo hành/Tiếp nhận/Xử lý
+  đơn bảo hành — 3 hành động khởi đầu phổ biến nhất theo 3 vai trò khác nhau) — `linh-kien-app` chưa
+  có shortcuts, đây là bổ sung mới không sao chép nguyên trạng.
+- **`frontend/public/sw.js`** — service worker tối giản, CHỈ cache app-shell (HTML/JS/CSS/icon) để
+  giao diện còn MỞ ĐƯỢC khi KTV ở hiện trường mất mạng tạm thời (khác `linh-kien-app/public/sw.js`,
+  vốn CHỈ xử lý Web Push, không cache gì) — network-first cho HTML/API (luôn ưu tiên dữ liệu mới nhất
+  khi có mạng, API trả lỗi `503 OFFLINE` rõ ràng thay vì treo vô hạn khi mất mạng), cache-first cho
+  asset tĩnh có hash trong tên (Vite build, an toàn cache dài hạn vì tên đổi khi nội dung đổi). CHƯA
+  xử lý sự kiện `push`/`notificationclick` (Web Push, để dành khi có VAPID key thật).
+- **`index.html`** — thêm `<link rel="manifest">`, `<link rel="apple-touch-icon">`, đổi favicon sang
+  `favicon.png`, thêm các thẻ meta `apple-mobile-web-app-*`/`mobile-web-app-capable` (khả năng "Thêm
+  vào Màn hình chính" trên iOS/Android), đổi `theme-color` cho khớp đúng token `--ocean-950` thật
+  (trước đó đang để tạm `#06304a`, lệch với token đã port ở Giai đoạn 1).
+- **`main.tsx`** — đăng ký `sw.js` qua `navigator.serviceWorker.register()` sau sự kiện `load`, bọc
+  trong kiểm tra `"serviceWorker" in navigator` + `.catch()` im lặng (trình duyệt không hỗ trợ/lỗi
+  đăng ký không được làm vỡ trang).
+
+**Đã xác minh:** `npm run typecheck`/`npm run build` (frontend) — 0 lỗi, sạch. Xác nhận icon nhìn đúng
+bằng mắt (đọc trực tiếp file ảnh). Chạy `wrangler dev` local thật (tạm vô hiệu hoá
+`services.CASE_LOOKUP_SERVICE` như thường lệ, đã khôi phục đúng sau khi xong) + mở qua Browser pane:
+`fetch('/manifest.webmanifest')` trả **200 + JSON hợp lệ** đúng cấu trúc đã viết,
+`navigator.serviceWorker.getRegistrations()` xác nhận **service worker đã đăng ký và active** (không
+chỉ "đã gọi register(), không biết có thành công không"), không có lỗi console nào phát sinh từ các
+thay đổi PWA (1 lỗi 500 tạm thời gặp phải là do tự làm rỗng D1 local giữa 2 lượt test trong cùng
+phiên, không phải lỗi liên quan PWA — xác nhận lại bằng cách chạy `db:migrate:local` lần nữa, hết lỗi
+ngay).
+
+**Chưa làm/cố ý bỏ qua ở Giai đoạn 6 này:** Web Push thật (cần VAPID key thật lúc deploy, người dùng
+xác nhận chưa cần ở vòng này), "Thêm vào màn hình chính" tự động prompt (`beforeinstallprompt` UI
+riêng — trình duyệt tự xử lý mặc định là đủ cho phạm vi "PWA cơ bản"), và mọi việc đã liệt kê ở mục
+"Chưa làm" của Giai đoạn 1/3/4/5 (đặc biệt: KHÔNG deploy/tạo tài nguyên Cloudflare thật nào — không
+có bước nào trong Giai đoạn 6 này chạm tài khoản Cloudflare thật).
+
+**Tổng kết toàn bộ 6 giai đoạn (04/09/2026, cùng ngày)**: Giai đoạn 1 (scaffold hạ tầng) → Giai đoạn 3
+(toàn bộ route nghiệp vụ backend, bỏ qua Giai đoạn 2 vì không có trong roadmap gốc) → Giai đoạn 4
+(toàn bộ 13 màn hình frontend) → Giai đoạn 5 (nửa PHÁT đồng bộ đẩy bên `linh-kien-app`) → Giai đoạn 6
+(PWA/mobile cơ bản) — **đã hoàn tất đầy đủ theo đúng roadmap đã chốt trong
+`Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` mục 5**, đúng ràng buộc *"ko deploy, chỉ cần triển
+khai đầy đủ, tôi sẽ tự deploy ở tài khoản khác"* xuyên suốt — không có bất kỳ lệnh `wrangler deploy`/
+`wrangler d1 create --remote`/`wrangler secret put` nào được chạy trong toàn bộ quá trình ở cả 2 repo.
+Việc còn lại thuộc về người dùng: tự deploy từ tài khoản Cloudflare `dichvu3t` thật (theo đúng
+`DEPLOY.md`), đặt các secret thật (`GOOGLE_CLIENT_ID/SECRET`, `SESSION_SECRET`, `LINHKIEN_SYNC_API_KEY`
+= `SUACHUA_SYNC_API_KEY`...), và deploy lại `linh-kien-app` để cơ chế đồng bộ đẩy 2 chiều thực sự chạy
+giữa 2 hệ.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

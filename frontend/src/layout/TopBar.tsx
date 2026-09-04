@@ -19,7 +19,7 @@ export function TopBar({ user }: { user: AppUser }) {
   const roles = ROLE_LABELS.filter((r) => user[r.flag]).map((r) => r.label);
   return (
     <header className="sticky top-0 z-40 bg-[var(--topbar-bg)] border-b border-[var(--line)] px-4 md:px-6 py-3 flex items-center gap-3">
-      <img src="/icon.png" alt="" className="w-8 h-8 rounded-lg shrink-0" />
+      <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg shrink-0" />
       <div className="min-w-0">
         <p className="font-display font-bold text-sm text-[var(--ink-900)] leading-tight truncate">Sửa chữa bảo hành</p>
         <p className="text-[11px] text-[var(--ink-500)] leading-tight">Dịch Vụ 3T</p>

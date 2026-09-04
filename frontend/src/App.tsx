@@ -77,7 +77,7 @@ function Shell_Login() {
     <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
       <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
         <div className="flex flex-col items-center gap-3 mb-6">
-          <img src="/icon.png" alt="" className="w-14 h-14 rounded-xl shadow-sm" />
+          <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-xl shadow-sm" />
           <div>
             <h1 className="font-display font-extrabold text-lg text-[var(--ink-900)]">Sửa chữa bảo hành</h1>
             <p className="text-xs text-[var(--ink-500)] mt-0.5">Dịch Vụ 3T</p>
@@ -100,7 +100,7 @@ function StatusScreen({ title, body, tone }: { title: string; body: string; tone
   return (
     <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
       <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
-        <img src="/icon.png" alt="" className="w-14 h-14 rounded-xl shadow-sm mx-auto mb-4" />
+        <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-xl shadow-sm mx-auto mb-4" />
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className={`w-2 h-2 rounded-full ${dot}`} />
           <h2 className="font-display font-bold text-base text-[var(--ink-900)]">{title}</h2>

@@ -3,12 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- icon.png = "logo sua chua 3t.png" tim thay san trong repo (858x887, tao 26/08/2026, chua
-         tung dung) - dung tam o kich thuoc goc cho Giai doan 1. TODO Giai doan 6 (mobile/PWA): resize
-         dung chuan 192/512/maskable nhu linh-kien-app da lam (icon-192.png/icon-512.png/
-         icon-maskable-512.png) truoc khi lam manifest.webmanifest that. -->
-    <link rel="icon" type="image/png" href="/icon.png" />
-    <meta name="theme-color" content="#06304a" />
+    <!-- Giai doan 6 (04/09/2026): PWA that - icon.png goc (858x887) da resize dung chuan
+         192/512/maskable qua sharp (frontend/public/icon-{192,512,maskable-512}.png,
+         apple-touch-icon.png, favicon.png - xem CLAUDE.md muc "Giai doan 6"), theo dung mau
+         linh-kien-app/frontend/public/manifest.webmanifest da lam truoc do. -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#052033" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sửa chữa 3T" />
     <title>Sửa chữa bảo hành - Dịch Vụ 3T</title>
   </head>
   <body>

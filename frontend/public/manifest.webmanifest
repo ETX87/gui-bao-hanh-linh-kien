@@ -1,0 +1,22 @@
+{
+  "name": "Sửa chữa bảo hành - Dịch Vụ 3T",
+  "short_name": "Sửa chữa 3T",
+  "description": "Hệ thống gửi/nhận/xử lý sửa chữa bảo hành linh kiện - Dịch Vụ 3T",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#052033",
+  "theme_color": "#052033",
+  "orientation": "portrait-primary",
+  "lang": "vi",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Gửi hàng bảo hành", "short_name": "Gửi hàng", "url": "/#/ktv/tao-phieu", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Tiếp nhận (Kho)", "short_name": "Tiếp nhận", "url": "/#/kho/tiep-nhan", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Xử lý đơn bảo hành", "short_name": "Xử lý đơn", "url": "/#/admin/phan-loai", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
