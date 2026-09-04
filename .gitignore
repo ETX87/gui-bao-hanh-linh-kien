@@ -11,6 +11,9 @@ dist/
 secrets.md
 *.tsbuildinfo
 
+# Secrets accidentally dropped in repo root
+api key.txt
+
 # OS junk
 Thumbs.db
 .DS_Store
