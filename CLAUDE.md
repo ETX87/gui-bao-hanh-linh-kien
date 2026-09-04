@@ -102,8 +102,15 @@ giờ có `backend/`+`frontend/`+`migrations/`+`wrangler.jsonc`+`DEPLOY.md` th�
 đặc tả nữa), đã xác minh Auth+D1 chạy đúng qua `wrangler dev` local thật (không chỉ đọc code) — xem
 mục "Giai đoạn 1: Scaffold hạ tầng Worker suachua" bên dưới, kể cả 1 phát hiện quan trọng (phiên làm
 việc hiện tại không có quyền truy cập tài khoản Cloudflare `dichvu3t` thật, chỉ xác thực được 1 tài
-khoản sandbox khác — mọi bước tạo tài nguyên thật trong `DEPLOY.md` cần người dùng tự chạy). Giai
-đoạn 3-6 (route nghiệp vụ, port UI, đồng bộ đẩy, QA, PWA/mobile) **CHƯA làm**.
+khoản sandbox khác — mọi bước tạo tài nguyên thật trong `DEPLOY.md` cần người dùng tự chạy). Theo chỉ
+đạo *"ko deploy, chỉ cần triển khai đầy đủ, tôi sẽ tự deploy ở tài khoản khác"*, **Giai đoạn 3 (toàn
+bộ route nghiệp vụ backend) đã xong (04/09/2026, cùng ngày)** — 12 file route/lib mới, port đầy đủ
+state machine đã chốt qua 22 vòng rà soát, đã kiểm thử end-to-end thật qua HTTP (không chỉ typecheck)
+với 2 bộ test riêng biệt (`e2e_test.js` full luồng chính 0 lỗi, `e2e_test2.js` các nhánh còn lại —
+FAST actions/bổ sung/sync/qtri — 23/24 đúng, 1 sai khác biệt do chính test script chứ không phải lỗi
+backend) — xem mục "Giai đoạn 3: Toàn bộ route nghiệp vụ backend" bên dưới. Giai đoạn 4-6 (port UI,
+nửa PHÁT của đồng bộ đẩy bên `linh-kien-app`, PWA/mobile) **CHƯA làm** — không có lệnh deploy/tạo tài
+nguyên Cloudflare thật nào được chạy trong toàn bộ quá trình, đúng ràng buộc đã chốt.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -1957,6 +1964,123 @@ vụ (phiếu gửi/đơn sửa chữa/phiếu trả/FAST actions — Giai đo�
 route nhận đồng bộ đẩy `POST /api/partner/sync/*` + sửa `linh-kien-app` thêm đích gửi (Giai đoạn 5),
 QA theo vai trò (Giai đoạn 6), và toàn bộ bước tạo tài nguyên Cloudflare/Google thật trong
 `DEPLOY.md` (chờ người dùng tự chạy — không tự ý tạo tài khoản/database/deploy khi chưa xác nhận).
+
+## Giai đoạn 3: Toàn bộ route nghiệp vụ backend (04/09/2026)
+
+Nguyên văn chỉ đạo: *"ko deploy, chỉ cần triển khai đầy đủ, tôi sẽ tự deploy ở tài khoản khác"* — xác
+nhận rõ: triển khai **đầy đủ** code (backend + frontend + đồng bộ + PWA), nhưng **không bao giờ** chạy
+lệnh chạm tài nguyên Cloudflare thật (`wrangler deploy`/`d1 create`/`secret put`) trong phiên này —
+người dùng tự deploy ở tài khoản `dichvu3t` thật. Đây là ràng buộc áp dụng cho toàn bộ phần việc còn
+lại, không chỉ Giai đoạn 3.
+
+Đã viết toàn bộ tầng route nghiệp vụ (12 file mới trong `backend/src/`, ~2000+ dòng TypeScript),
+port lại đúng state machine đã chốt qua 22 vòng rà soát prototype (đọc trực tiếp từng hàm JS gốc
+trong `prototype-html/index.html`, không suy đoán lại từ đầu):
+
+- **`lib/idCounter.ts`** — sinh ID tuần tự nguyên tử qua `id_counters` + `UPDATE...RETURNING`
+  (port từ `linh-kien-app/backend/src/lib/idCounter.ts`), đúng 3 tiền tố đã seed ở Giai đoạn 1: `BH`
+  (phiếu gửi), `DH` (đơn/phiếu sửa chữa cha), `TR` (phiếu trả) — 6 chữ số, khớp `nextId()` của
+  prototype.
+- **`lib/logs.ts`** — `addLog()` dùng chung cho cả 4 `entity_type` (`phieu_gui`/`phieu_sc`/
+  `phieu_sc_ct`/`phieu_tra`), insert-only vào `logs_bh`.
+- **`lib/sla.ts`** — `isOverdue()` (>24h), dùng ở mọi route có mốc SLA để bắt buộc `ly_do_cham`.
+- **`lib/constants.ts`** — toàn bộ enum đã chốt (`HUONG_XU_LY_VALUES` 7 giá trị, `LOAI_BAO_HANH`,
+  `LOAI_DOI_TRU`, `XU_LY_XAC`, `KET_QUA_CHAN_DOAN`, `HUONG_CAN_NV`, `HUONG_TAO_PHIEU_TRA`).
+- **`lib/scope.ts`** — `viewKhuVucEmailInSql()`: subquery giới hạn `la_view` theo đúng Khu vực đã
+  được `la_qtri` gán qua `user_khu_vuc_bh` (không có gán = không thấy gì — mặc định an toàn).
+- **`lib/gs.ts`** — **`computeEmailGs()`, quyết định thiết kế MỚI không có trong prototype gốc**: tại
+  thời điểm tạo `phieu_sua_chua_bh` (đơn cha), join `ktv_lien_he_bh.khu_vuc_ma → khu_vuc_bh.gs_email`
+  của đúng KTV tạo đơn, rồi **đóng gói sẵn** kết quả vào cột mới `phieu_sua_chua_bh.email_gs` — mirror
+  đúng pattern `ddh.email_gs` đã có sẵn bên `linh-kien-app`. Nhờ vậy `la_giam_sat` lọc được theo
+  `email_gs = <email của chính GS>` mà không cần join runtime qua 2 bảng đồng bộ mỗi lần truy vấn.
+- **`routes/phieuGui.ts`** — CRUD phiếu gửi/đơn của KTV (tạo/xoá phiếu nháp, thêm/xoá đơn, sửa header,
+  xác nhận gửi xe), ghi chú dùng chung KTV/Kho/Admin BH (`GET`/`POST` `/ghi-chu`), tra cứu tiến độ
+  (`GET /don-vi/tra-cuu`), bổ sung thông tin theo yêu cầu Admin BH (`PATCH /don-vi/:id/bo-sung`, cho
+  đổi cả `ma_lk` — đúng "Phản hồi vòng 4" mục 1). Đã kiểm tra kỹ thứ tự route để tránh Hono khớp nhầm
+  `/:id` với các path tĩnh hơn (`/don-vi/tra-cuu`, `/don-vi/:id/bo-sung`).
+- **`routes/kho.ts`** — hàng đợi + tiếp nhận, báo sự cố (đúng "chỉ là cảnh báo, không chặn" — vẫn
+  chuyển `da_tiep_nhan`, chỉ nối thêm dòng `⚠ [Báo sự cố tiếp nhận]` vào `ghi_chu_log`).
+- **`routes/adminBH.ts`** (file lớn nhất) — tiếp nhận nội bộ, đẩy lại chưa tiếp nhận (chặn cứng nếu đã
+  có đơn vị con `da_tach`), xác nhận số lượng thực nhận (tách N đơn vị con + tính `email_gs`), bảng
+  thống nhất (`GET /don-vi`) + chi tiết đầy đủ 4 khối log + ảnh + báo cáo sai (`GET /don-vi/:id`),
+  `applyPhanLoaiToUnit()` dùng chung cho phân loại đơn lẻ/hàng loạt, yêu cầu bổ sung (áp cho mọi đơn vị
+  hợp lệ của 1 đơn cha), báo cáo sai (KTV báo cáo sai thông tin — chỉ Admin BH/qtri/giám sát đọc được,
+  không phải log nghiệp vụ), xác nhận hoàn tất (riêng `huong_xu_ly='doi_moi'` bắt buộc chọn
+  `xu_ly_xac` trước khi hoàn tất), yêu cầu làm lại, đơn dịch vụ tính phí (khách lẻ, bỏ qua bước xác
+  nhận SL), và **toàn bộ `FAST_ACTIONS`** (10 nút, đúng bảng đối chiếu AppSheet đã chốt 03/09/2026) +
+  `attachToOrCreatePhieuTra()` (gộp vào phiếu "Nhập" có sẵn đúng KTV+loại đối trừ, chỉ tạo mới khi
+  chưa có) + `POST /don-vi/:id/fast/:key`.
+- **`routes/nvSuaChua.ts`** — Việc của tôi + nộp kết quả chẩn đoán (ảnh base64 vào 3 loại
+  `phieu_sua_chua_bh_ct_anh`).
+- **`routes/phieuTra.ts`** — `createPhieuTraForUnits()` dùng chung, sẵn sàng gom/tạo/tự động gộm
+  (nhóm theo KTV+loại đối trừ, đúng `autoGomPhieuTraTatCa()`), tách đơn (chỉ khi còn `nhap`), gửi
+  duyệt (chặn thiếu mã MISA trừ `tru_cong_no`), huỷ gửi duyệt, 2 nút tạo phiếu trả nhanh (Trả trực
+  tiếp KTV/Giao trực tiếp Kho, mã ngẫu nhiên Admin sửa được), Kế toán duyệt/từ chối (từ chối quay về
+  `nhap` + `ly_do_tu_choi_kt`), Kho đóng gói (ảnh tuỳ chọn, đúng QA 31/08)/gửi/xác nhận kết thúc dự
+  phòng, KTV xác nhận nhận/khiếu nại.
+- **`routes/settings.ts`** — factory `crudFor()` dùng chung cho 2 danh mục `ly_do_cham`/`ly_do_tu_choi`
+  (đọc mở cho mọi vai trò đã đăng nhập, ghi chỉ `la_qtri` — đúng quyết định gộp về `#/qtri/cai-dat`).
+- **`routes/linhKien.ts`** — CRUD hybrid: dòng `nguon_du_lieu='dong_bo'` (từ `linh-kien-app`) chỉ cho
+  sửa `so_thang_bao_hanh`/`duoc_dung_bao_hanh` tại chỗ; dòng `noi_bo` (tự tạo trong `suachua`) sửa/xoá
+  tự do — đúng yêu cầu "cho phép tạo thêm, sửa thông tin, tắt bật" trong khi vẫn tôn trọng nguồn dữ
+  liệu đồng bộ.
+- **`routes/logs.ts`** — `POST /:entityType/:entityId/ly-do-cham`: ghi 1 log **độc lập**, không đổi
+  trạng thái đối tượng — đúng thiết kế đã hỏi lại người dùng (câu hỏi #4 trước khi build FAST actions,
+  03/09/2026) cho tính năng "bấm số giờ SLA để ghi lý do ngay". Giới hạn đúng nhóm vai trò xử lý
+  (kho/admin_bh/nv/ke_toan/qtri), loại trừ `ktv`/`view` (người chờ, không phải người giải trình).
+- **`routes/traCuu.ts`** — `scopeClause()` (qtri/admin_bh thấy hết, `la_giam_sat` qua `email_gs`,
+  `la_view` qua `viewKhuVucEmailInSql()`), **thuần chỉ đọc, không có route ghi nào** — đúng nguyên tắc
+  "vai trò xem/kiểm soát không được đổi dữ liệu" đã chốt từ vòng "4 yêu cầu UI/vai trò" 01/09/2026.
+- **`routes/sync.ts`** — Giai đoạn 5 (nửa NHẬN): middleware xác thực `X-Sync-Key` (so khớp
+  `env.LINHKIEN_SYNC_API_KEY`, secret dùng chung 1-1 — **không** dựng bảng `partner_api_keys` nhiều-key
+  như `case-lookup`, đúng thiết kế đã chốt), 3 route `POST /ktv`/`/khu-vuc`/`/linh-kien` (upsert, riêng
+  `linh-kien` **bỏ qua** dòng `bat_tat=false` thay vì xoá — giữ lại bản sao phía bảo hành). **Nửa PHÁT
+  (sửa `linh-kien-app` thêm `suachua` làm đích gửi thứ 2 trong `dvbhSyncClient.ts`) CHƯA làm** — thuộc
+  1 repo khác, xem mục "Chưa làm" bên dưới.
+- **Sửa lại schema 2 lần trong lúc build** (không phải lỗi, là điều chỉnh cho khớp thiết kế đã chốt):
+  (1) thêm bảng `id_counters` + 3 dòng seed (bị thiếu ở Giai đoạn 1); (2) **bỏ hẳn bảng
+  `partner_api_keys`** đã thêm nhầm ở Giai đoạn 1 — mâu thuẫn với chính quyết định đã ghi trong
+  `Phan-Tich-Va-Ke-Hoach-Chuyen-Doi-Cloudflare.md` mục 3.2 ("không cần nhiều-key, quan hệ 1-1 cố định
+  dùng 1 secret là đủ") — thay bằng biến môi trường `LINHKIEN_SYNC_API_KEY` đơn giản.
+
+**Đã xác minh — không chỉ typecheck, kiểm thử chức năng thật qua HTTP:**
+1. `npm run typecheck` (backend) — **0 lỗi** ngay lần chạy đầu tiên sau khi viết đủ 12 file.
+2. Chạy `wrangler dev` local thật + viết script tự ký JWT session hợp lệ (`make_session.js`, đúng
+   thuật toán HS256/base64url của `lib/jwt.ts`) để giả lập đăng nhập nhiều vai trò cùng lúc mà không
+   cần Google OAuth thật (`/api/auth/dev-login` chỉ đăng nhập được đúng 1 email bootstrap) — seed 7 tài
+   khoản mẫu (`ktv`/`kho`/`adminbh`/`nv`/`ketoan`/`giamsat`/`view`) + 1 Khu vực + 1 KTV liên hệ qua
+   `wrangler d1 execute --local`.
+3. **Test luồng chính đầy đủ end-to-end** (`e2e_test.js`, gọi `fetch()` thật, không mock) — đi hết cả
+   12 bước: KTV tạo phiếu/đơn → Kho tiếp nhận → Admin BH tiếp nhận nội bộ + xác nhận SL (tách đúng 2
+   đơn vị con) → xác nhận `email_gs` đóng gói đúng ngay từ lúc tạo → phân loại 2 đơn vị theo 2 hướng
+   khác nhau (`doi_moi` thẳng vào hàng chờ gộp phiếu trả, `sua_chua` qua NV chẩn đoán) → NV nộp chẩn
+   đoán → Admin BH xác nhận hoàn tất → **tự động gộp phiếu trả đúng gộp cả 2 đơn vị khác hướng xử lý
+   vào CHUNG 1 phiếu** (vì cùng KTV + cùng loại đối trừ) → chặn đúng khi thiếu mã MISA (`loai_doi_tru=
+   doi_tra`) → Kế toán duyệt → Kho đóng gói (không ảnh, đúng "tuỳ chọn")/gửi → KTV xác nhận nhận →
+   **Giám sát/View đều tra cứu đúng phạm vi** (Giám sát qua `email_gs`, View qua `user_khu_vuc_bh`
+   grant thật đã gán). **Kết quả: `=== ERRORS: 0 ===`** trên toàn bộ chuỗi.
+4. **Test vòng 2** (`e2e_test2.js`) — riêng các nhánh chưa chạm ở vòng 1: FAST action 1-chạm
+   (`huy_khong_co_hang`, áp đúng `huong_xu_ly`/`loai_bao_hanh`/`ly_do_tu_choi` preset), FAST action bắt
+   buộc bổ sung dữ liệu (`sua_chua_fast` chặn đúng khi chưa chọn NV, trả lỗi `REQUIRE_NV`, qua được
+   sau khi có NV), luồng "yêu cầu bổ sung thông tin" đầy đủ (Admin BH gửi lý do → đơn chuyển
+   `cho_bo_sung_tt` → KTV bổ sung → quay lại đúng `cho_phan_loai` với dữ liệu đã cập nhật), "bấm SLA
+   ghi lý do chậm độc lập" (ghi log thành công, **không đổi trạng thái đối tượng** — đúng thiết kế),
+   route nhận đồng bộ đẩy (`/api/partner/sync/*` chặn đúng khi thiếu `X-Sync-Key`, upsert đúng khi có
+   key hợp lệ, linh kiện vừa sync hiện đúng `nguon_du_lieu='dong_bo'`), và CRUD người dùng của `qtri`
+   (tạo/gán quyền/chặn tự khoá chính mình). **23/24 assertion pass** — 1 "FAIL" duy nhất là lỗi trong
+   chính test script (kỳ vọng `POST /api/users` trả HTTP 201, route thực trả 200 kèm `{ok:true}` —
+   không phải lỗi backend, đã xác nhận lại code route đúng theo thiết kế, không sửa gì).
+
+**Phát hiện lại đúng giới hạn đã ghi ở Giai đoạn 1** (không phải phát hiện mới): mỗi lần test local
+vẫn phải tạm vô hiệu hoá `services.CASE_LOOKUP_SERVICE` trong `wrangler.jsonc` (tài khoản sandbox
+không có Worker `dvbh` thật để dispatch tới) rồi khôi phục lại đúng nguyên trạng trước khi commit —
+đã làm đúng quy trình này, xác nhận bằng `diff` với bản backup trước khi xoá backup.
+
+**Chưa làm ở Giai đoạn 3 này** (đúng phạm vi, việc tiếp theo): 13 màn hình frontend thật (Giai đoạn 4
+— `frontend/src/App.tsx` hiện vẫn chỉ là màn xác nhận Auth tối giản của Giai đoạn 1), nửa PHÁT của cơ
+chế đồng bộ đẩy trong `linh-kien-app` (Giai đoạn 5), PWA/mobile đầy đủ (Giai đoạn 6). Không có route
+nào cho `de_xuat_linh_kien_bh`/`phieu_tra_xac_bh` — giữ nguyên quyết định từ Giai đoạn 1 (2 tính năng
+này chưa từng được triển khai ở bất kỳ vòng prototype nào, tránh bịa API trước khi biết chắc field).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

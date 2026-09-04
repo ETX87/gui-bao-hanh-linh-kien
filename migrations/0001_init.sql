@@ -16,6 +16,17 @@
 --     xac, ticket de xuat vat tu sua chua bulk-action, dashboard...") - se them khi thuc su lam tinh
 --     nang do, tranh bay schema truoc khi biet chac field can gi.
 
+-- ---------- Bo dem sinh ID tuan tu (BH-000001/DH-000001/TR-000001, khop dung prefix cua ham
+-- nextId() trong prototype) - dung mau id_counters cua dvbh/linh-kien-app (UPDATE...RETURNING de
+-- tang atomic, khong phai SELECT COUNT(*) doc lai toan bang moi lan sinh 1 ID). ----------
+
+CREATE TABLE id_counters (
+    ten_bang          TEXT PRIMARY KEY,
+    gia_tri_hien_tai  INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO id_counters (ten_bang, gia_tri_hien_tai) VALUES
+    ('phieu_gui_bh', 0), ('phieu_sua_chua_bh', 0), ('phieu_tra_bh', 0);
+
 -- ---------- Tai khoan he thong (Worker "suachua" - Auth doc lap, KHONG dung chung OAuth/session voi
 -- dvbh/linhkien) ----------
 
@@ -116,17 +127,10 @@ CREATE TABLE linh_kien_bh (
 );
 CREATE INDEX idx_linh_kien_bh_nguon ON linh_kien_bh(ma_lk_nguon) WHERE ma_lk_nguon IS NOT NULL;
 
--- ---------- API doi tac (Giai doan 5) - xac thuc rieng cho linh-kien-app khi day du lieu sang, khac
--- SESSION_COOKIE (khong co nguoi ngoi truoc may). Mo hinh gion hon partner_api_keys nhieu-key cua
--- dvbh (do phuc vu nhieu doi tac ben ngoai khac nhau) - quan he 1-1 co dinh giua 2 Worker noi bo. ----------
-
-CREATE TABLE partner_api_keys (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    ten_doi_tac  TEXT NOT NULL,
-    key_hash     TEXT NOT NULL UNIQUE,
-    bat_tat      INTEGER NOT NULL DEFAULT 1,
-    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
-);
+-- ---------- Xac thuc du lieu day tu linh-kien-app (routes/sync.ts) - KHONG dung bang nhieu-key kieu
+-- partner_api_keys cua dvbh (thiet ke cho nhieu doi tac ben ngoai khac nhau) - day la quan he 1-1 co
+-- dinh giua dung 2 Worker noi bo, nen chi can 1 secret dung chung (Env.LINHKIEN_SYNC_API_KEY, dat
+-- qua "wrangler secret put", so sanh truc tiep trong routes/sync.ts) - khong can bang rieng. ----------
 
 -- ---------- Phieu gui bao hanh (KTV tao) - xem createPhieuGui() trong prototype ----------
 
