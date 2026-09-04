@@ -45,7 +45,12 @@ export function routesForUser(u: AppUser): RouteItem[] {
     items.push({ hash: "/quanly/tong-quan", label: "Tổng quan", icon: "📊" }, { hash: "/quanly/tra-cuu", label: "Tra cứu", icon: "🔍" });
   }
   if (u.la_qtri) {
-    items.push({ hash: "/qtri/nguoi-dung", label: "Người dùng", icon: "👥" }, { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", icon: "⚙️" }, { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" });
+    items.push(
+      { hash: "/qtri/nguoi-dung", label: "Người dùng", icon: "👥" },
+      { hash: "/qtri/ktv", label: "Danh sách KTV", icon: "📇" },
+      { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", icon: "⚙️" },
+      { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" },
+    );
   }
   // Khu vuc dedupe theo hash - nhieu nhanh o tren co the cung push 1 hash (VD "/linh-kien" tu ca
   // nhanh admin_bh lan nhanh qtri, hoac 1 nguoi dung vua co nhieu co vai tro that vua la_qtri).

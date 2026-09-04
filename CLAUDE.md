@@ -2802,6 +2802,60 @@ phát sinh lỗi console mới.
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa 2 sửa đổi này lên production.
 
+## Module "Quản lý danh sách KTV" (04/09/2026) — gap thật, tự động duyệt tài khoản KTV đã khai báo
+
+Nguyên văn yêu cầu: *"thiếu modules quản lý danh sách ktv, setup mặc định các tài khoản ktv đã khai
+báo mặc định được duyệt luôn"*.
+
+**Điều tra trước khi sửa:** logic "tự động duyệt nếu email khớp danh bạ KTV" **đã có sẵn từ Giai đoạn
+1** (`backend/src/routes/auth.ts`, `GET /callback` — đối chiếu `ktv_lien_he_bh.email_dang_nhap` lúc
+đăng nhập lần đầu, tự set `trang_thai_duyet='Da duyet'` + gán sẵn `la_ktv_dvbh`/`la_ve_tinh`). Nhưng
+**gap thật nằm ở chỗ khác**: `ktv_lien_he_bh` được thiết kế (mục "Ma trận CRUD..." + Giai đoạn 1) là
+bảng **CHỈ nhận qua sync đẩy từ `linh-kien-app`** (`routes/sync.ts`, `POST /api/partner/sync/ktv`) —
+nhưng cơ chế đẩy đó **CHƯA được triển khai xong ở phía `linh-kien-app`** (xem mục "Giai đoạn 5" —
+code phía nhận đã sẵn sàng từ lâu, code phía phát chưa deploy) — nghĩa là bảng này **đang RỖNG trên
+production**, nên logic auto-duyệt tuy đúng nhưng không có gì để đối chiếu. Đồng thời xác nhận **chưa
+từng có bất kỳ màn hình frontend nào** đọc/ghi `ktv_lien_he_bh` (`grep` toàn bộ `frontend/src` không
+ra kết quả) — đúng là 1 module bị thiếu hoàn toàn, không phải chỉ 1 tính năng phụ.
+
+**Đã sửa — không chờ `linh-kien-app` triển khai xong đồng bộ đẩy, cho qtri tự khai báo thủ công
+ngay:**
+- **`migrations/0002_ktv_lien_he_nguon.sql`** (mới) — thêm cột `nguon_du_lieu` (`'dong_bo'`|`'noi_bo'`,
+  mặc định `'noi_bo'`) vào `ktv_lien_he_bh` — port đúng mẫu HYBRID đã dùng cho `linh_kien_bh` (Giai
+  đoạn 3), để phân biệt rõ dòng nào tới từ sync tương lai vs dòng qtri tự thêm tay.
+  `backend/src/routes/sync.ts` (`POST /ktv`) cập nhật kèm `nguon_du_lieu='dong_bo'` mỗi lần upsert.
+- **`backend/src/routes/ktvLienHe.ts`** (mới) — CRUD đầy đủ (`GET`/`POST`/`PATCH /:ma_ktv`/
+  `DELETE /:ma_ktv`), chỉ `la_qtri`. `ma_ktv` (khoá chính TEXT tự do) mặc định = chính
+  `email_dang_nhap` nếu qtri để trống lúc tạo (không cần thêm 1 bộ đếm ID riêng chỉ cho trường hợp
+  này) — đủ duy nhất vì mỗi KTV chỉ có 1 email đăng nhập. Dòng `dong_bo` vẫn sửa/xoá tự do qua UI này
+  (không khoá field như `linh_kien_bh` — sync lần sau sẽ tự ghi đè lại đúng dữ liệu thật nếu có xung
+  đột, không cần chặn).
+- **`frontend/src/screens/qtri/KtvLienHe.tsx`** (mới, `#/qtri/ktv`, sidebar "📇 Danh sách KTV") —
+  bảng liệt kê (Tên/Email đăng nhập/SĐT/Vai trò/Khu vực/Nguồn), click dòng mở form sửa, nút
+  "+ Khai báo KTV" mở form thêm mới — cùng 1 modal dùng chung cho cả thêm/sửa. Banner giải thích rõ
+  hiệu ứng "tự động duyệt" ngay trên trang, tránh qtri hiểu nhầm đây chỉ là danh bạ thuần thông tin.
+
+**Giới hạn đã ghi rõ trong code + cần người dùng biết:** hiệu ứng "tự động duyệt" chỉ áp dụng cho
+**lần đăng nhập TIẾP THEO** của KTV đó (`auth.ts` chỉ kiểm tra lúc `GET /callback` — luồng OAuth) —
+nếu tài khoản đã tồn tại sẵn và đang ở "Chờ duyệt", thêm KTV vào danh bạ này KHÔNG tự động nâng cấp
+ngay tài khoản đã có; cần qtri tự duyệt tay ở màn "Người dùng" (đã có sẵn), hoặc đợi KTV đăng xuất/
+đăng nhập lại.
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi. Migration `0002` áp dụng thành
+công lên D1 local (`wrangler d1 migrations apply --local`, quy trình backup/restore `wrangler.jsonc`
+thường quy). Verify qua Browser pane: `POST /api/ktv-lien-he` tạo đúng 1 dòng `nguon_du_lieu='noi_bo'`
+→ `PATCH` sửa đúng → `GET` xác nhận dữ liệu khớp đúng cách `auth.ts` sẽ đối chiếu
+(`SELECT vai_tro_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?`) → mở UI thật `#/qtri/ktv`, xác
+nhận bảng hiện đúng badge "Nội bộ", click dòng mở đúng modal sửa với dữ liệu đã điền sẵn, sidebar hiện
+đúng mục "Danh sách KTV". Không phát sinh lỗi console mới. **Chưa test được nhánh OAuth thật** (đăng
+nhập Google thật cần production, sandbox này không có tài khoản Google thật để giả lập luồng
+`/callback` đầy đủ) — logic đối chiếu đã tồn tại từ Giai đoạn 1 và không bị đụng vào ở vòng này, chỉ
+xác nhận gián tiếp qua đúng câu SQL mà nó dùng.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa module này lên production, sau đó tự thêm
+danh sách KTV thật vào `#/qtri/ktv` (hoặc đợi `linh-kien-app` triển khai xong đồng bộ đẩy — xem mục
+"Giai đoạn 5" — lúc đó dữ liệu sẽ tự có, không cần nhập tay).
+
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
 Một phiên làm việc khác (ngoài phiên viết CLAUDE.md này) đã tự triển khai phần lớn nội dung

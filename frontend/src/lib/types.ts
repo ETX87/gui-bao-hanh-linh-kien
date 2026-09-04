@@ -189,6 +189,23 @@ export interface CaseLookupPreview {
   ly_do_qua_han: string | null;
 }
 
+// Danh ba KTV/CTV/Tram/Ve tinh (ktv_lien_he_bh) - dung de auth.ts (backend) tu dong duyet tai khoan
+// khi email_dang_nhap khop luc dang nhap lan dau, va tinh email_gs (Giam sat phu trach) qua
+// khu_vuc_ma. HYBRID dong bo (tu linh-kien-app, khi co che day trien khai xong) + noi_bo (qtri tu
+// khai bao qua man #/qtri/ktv, xem CLAUDE.md).
+export interface KtvLienHe {
+  ma_ktv: string;
+  ten_hien_thi: string | null;
+  sdt: string | null;
+  gmail: string | null;
+  email_dang_nhap: string | null;
+  vai_tro_ktv: "KTV" | "CTV" | "Tram" | "Ve tinh" | null;
+  khu_vuc_ma: string | null;
+  ktv_cap1_phu_trach: string | null;
+  nguon_du_lieu: "dong_bo" | "noi_bo";
+  dong_bo_luc: string;
+}
+
 export interface FastActionMeta {
   key: string;
   label: string;

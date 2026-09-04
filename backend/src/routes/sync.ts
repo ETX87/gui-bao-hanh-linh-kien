@@ -48,12 +48,13 @@ sync.post("/ktv", async (c) => {
     }
     statements.push(
       c.env.DB.prepare(
-        `INSERT INTO ktv_lien_he_bh (ma_ktv, ten_hien_thi, sdt, gmail, email_dang_nhap, vai_tro_ktv, khu_vuc_ma, ktv_cap1_phu_trach, dong_bo_luc)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO ktv_lien_he_bh (ma_ktv, ten_hien_thi, sdt, gmail, email_dang_nhap, vai_tro_ktv, khu_vuc_ma, ktv_cap1_phu_trach, nguon_du_lieu, dong_bo_luc)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'dong_bo', ?)
          ON CONFLICT(ma_ktv) DO UPDATE SET
            ten_hien_thi = excluded.ten_hien_thi, sdt = excluded.sdt, gmail = excluded.gmail,
            email_dang_nhap = excluded.email_dang_nhap, vai_tro_ktv = excluded.vai_tro_ktv,
-           khu_vuc_ma = excluded.khu_vuc_ma, ktv_cap1_phu_trach = excluded.ktv_cap1_phu_trach, dong_bo_luc = excluded.dong_bo_luc`,
+           khu_vuc_ma = excluded.khu_vuc_ma, ktv_cap1_phu_trach = excluded.ktv_cap1_phu_trach,
+           nguon_du_lieu = 'dong_bo', dong_bo_luc = excluded.dong_bo_luc`,
       ).bind(row.ma_ktv, row.ten_hien_thi ?? null, row.sdt ?? null, row.gmail ?? null, row.email_dang_nhap ?? null, row.vai_tro_ktv ?? null, row.khu_vuc_ma ?? null, row.ktv_cap1_phu_trach ?? null, now),
     );
   }
