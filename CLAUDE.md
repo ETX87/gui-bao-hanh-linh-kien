@@ -137,7 +137,11 @@ cộng `la_qtri` thành superuser mọi cổng vai trò) và **"QA vòng 3"** (c
 báo hết hạn BH khôi phục lại, QR thật (tem dán thùng/tải ảnh in tem/quét camera) bằng `qrcode`+`jsqr`
 npm thật, `SearchableSelect` cho picker linh kiện, phân trang Danh mục linh kiện 20/bảng) — xem 2 mục
 cùng tên bên dưới để có chi tiết đầy đủ. Việc deploy các sửa đổi này lên production vẫn thuộc người
-dùng.
+dùng. Sau đó thêm **QA vòng 4** (04/09/2026, ảnh KTV upload lúc tạo đơn + màn mobile riêng "Thêm đơn
+bảo hành"), module **"Quản lý danh sách KTV"** (`#/qtri/ktv`, 04/09/2026), **phân trang server-side
+thật cho toàn bộ bảng dữ liệu** (05/09/2026), và gần nhất là **nút "Cài đặt vào màn hình chính"** chủ
+động trên topbar mobile (05/09/2026, khác hẳn field `shortcuts` thụ động của manifest) — xem các mục
+cùng tên bên dưới.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -2936,6 +2940,54 @@ màn:
 - Không phát sinh lỗi console mới ở bất kỳ màn nào đã kiểm tra.
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa toàn bộ thay đổi này lên production.
+
+## Nút "Cài đặt vào màn hình chính" chủ động (05/09/2026) — khác PWA `shortcuts` thụ động
+
+Nguyên văn 2 yêu cầu (liên tiếp, cùng chủ đề, yêu cầu sau là chỉnh lại yêu cầu trước):
+
+1. *"chức năng tạo shortcut cho bản mobile của tôi đâu, hãy rà soát lại toàn bộ phiên trao đổi này,
+   xem có bỏ sót tính năng nào tôi đã yêu cầu không?"* — đã trả lời ở mục "QA vòng 4" phía trên: field
+   `shortcuts` trong `manifest.webmanifest` (Giai đoạn 6) đã có sẵn, nhưng đây là tính năng **thụ
+   động** (chỉ hiện sau khi đã cài PWA, long-press/chuột phải icon — iOS Safari không hỗ trợ).
+2. *"check lại bản mobile, không thấy chức năng tạo shortcut khi. hãy làm theo chức năng giống bên
+   linh-kien-app"* — xác nhận câu trả lời #1 KHÔNG đủ: người dùng muốn 1 nút **chủ động, luôn nhìn
+   thấy được** để tự cài/tạo icon màn hình chính ngay từ đầu, đúng như `linh-kien-app` đã có
+   (`InstallAppButton.tsx` dùng `beforeinstallprompt`), không phải field manifest thụ động.
+
+Đã đọc verbatim 2 file gốc bên `linh-kien-app` (`frontend/src/hooks/usePwaInstall.ts`,
+`frontend/src/layout/InstallAppButton.tsx`) trước khi port, cùng vị trí mount của nó
+(`Sidebar.tsx`, trong khối off-canvas drawer chỉ hiện mobile) — để đối chiếu đúng logic, không đoán.
+
+**Khác biệt kiến trúc quan trọng phát hiện trước khi mount:** `suachua` đã đổi menu mobile từ drawer
+sang `BottomNav` cố định từ "QA vòng 2" (04/09/2026) — không còn vị trí "drawer mobile" tương đương để
+đặt nút y hệt `linh-kien-app`. Đã chọn mount vào `TopBar.tsx`'s `ml-auto` (trước nút "Đăng xuất"),
+hiện mobile-only bằng `md:hidden` (đảo ngược đúng pattern `hidden md:block` đã dùng cho lời chào
+desktop trong cùng file).
+
+- `frontend/src/hooks/usePwaInstall.ts` (mới) — port gần verbatim: `deferredPrompt`/`listeners` ở
+  module scope (bắt sự kiện `beforeinstallprompt` 1 lần duy nhất cho cả vòng đời tab, trước khi bất kỳ
+  component nào mount), `isStandalonePwa()`, `isIosSafari()`, `usePwaInstall()` trả `{available,
+  promptInstall}`.
+- `frontend/src/layout/InstallAppButton.tsx` (mới) — nút "📲 Cài đặt", ẩn hẳn nếu đã chạy dạng
+  standalone; bấm vào gọi `promptInstall()` thật nếu `available` (Android/Chrome), hoặc hiện `Modal`
+  hướng dẫn thủ công (iOS Safari + mọi trường hợp khác không bắt được prompt). **Khác bản
+  `linh-kien-app`**: `Modal` của `suachua` không có prop `open` (điều khiển bằng conditional render
+  `{showIosGuide && <Modal .../>}`, đúng quy ước chung của mọi modal khác trong app này) — đã điều
+  chỉnh khi port thay vì copy nguyên văn.
+- `frontend/src/layout/TopBar.tsx` — thêm `<div className="md:hidden"><InstallAppButton /></div>`
+  vào đầu khối `ml-auto` (trước nút "Đăng xuất").
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi. Verify qua Browser pane (`wrangler
+dev` local, quy trình backup/restore `wrangler.jsonc` thường quy): ở viewport 375×812 (mobile), nút
+"📲 Cài đặt" hiện đúng trên topbar; bấm vào (môi trường sandbox không bắt được `beforeinstallprompt`
+thật nên rơi vào nhánh fallback) hiện đúng Modal hướng dẫn thủ công iPhone/Safari + Android/Chrome,
+đóng được bằng nút ✕. Ở viewport 1280×800 (desktop), xác nhận bằng `getComputedStyle` nút bị ẩn đúng
+(`display:none` từ `md:hidden`). Không phát sinh lỗi console mới (chỉ còn 401 quen thuộc từ
+`/api/auth/me` trước khi đăng nhập). **Chưa test được** nhánh `available=true` (trigger `prompt()`
+thật) — trình duyệt sandbox không phát `beforeinstallprompt`, cần người dùng tự xác nhận trên Android/
+Chrome thật sau khi deploy.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa nút này lên production.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

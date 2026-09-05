@@ -1,7 +1,14 @@
 import type { AppUser } from "../lib/types";
+import { InstallAppButton } from "./InstallAppButton";
 
 // TopBar - logo + loi chao (port dung quyet dinh "loi chao len topbar" 03/09/2026, chi hien desktop)
 // + dang xuat.
+// InstallAppButton chi hien mobile (md:hidden) - yeu cau 05/09/2026 "check lại bản mobile, không
+// thấy chức năng tạo shortcut... hãy làm theo chức năng giống bên linh-kien-app". Ben linh-kien-app
+// dat nut nay trong drawer mobile cua Sidebar, nhung suachua da doi sang BottomNav co dinh (QA vong 2,
+// 04/09/2026) nen khong con drawer tuong duong - TopBar la vi tri gan nhat con "ml-auto" trong da co
+// san (chi co nut Dang xuat), theo dung mau "hidden md:block" da dung cho loi chao desktop (dao nguoc
+// lai thanh md:hidden cho rieng nut nay).
 
 const ROLE_LABELS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ktv_dvbh", label: "KTV / CTV / Trạm" },
@@ -29,6 +36,9 @@ export function TopBar({ user }: { user: AppUser }) {
         <p className="text-[11px] text-[var(--ink-500)] truncate">{roles.join(" · ") || "Chưa gán vai trò"}</p>
       </div>
       <div className="ml-auto flex items-center gap-3 shrink-0">
+        <div className="md:hidden">
+          <InstallAppButton />
+        </div>
         <button
           onClick={async () => {
             await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
