@@ -1,6 +1,7 @@
 import { useRoute } from "../router/Router";
 import { routesForUser } from "./routes";
 import { useWorkload } from "../hooks/useWorkload";
+import { APP_VERSION } from "../lib/version";
 import type { AppUser } from "../lib/types";
 
 // Sidebar - danh sach man hinh theo vai tro, huy hieu so viec can lam tren tung muc (dung
@@ -49,6 +50,9 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
       <button onClick={onToggle} className="focus-ring mx-2 mt-1 rounded-lg px-2 py-2 text-xs font-semibold text-[var(--sidebar-ink-dim)] hover:bg-[var(--sidebar-highlight)] hover:text-[var(--sidebar-ink)] transition-colors">
         {collapsed ? "»" : "« Thu gọn"}
       </button>
+      <div className={`mx-2 mt-2 px-2 text-[10px] font-mono text-[var(--sidebar-ink-dim)] ${collapsed ? "text-center" : ""}`} title={`Phiên bản hệ thống ${APP_VERSION}`}>
+        v{APP_VERSION}
+      </div>
     </aside>
   );
 }

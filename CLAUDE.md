@@ -140,8 +140,9 @@ cùng tên bên dưới để có chi tiết đầy đủ. Việc deploy các s�
 dùng. Sau đó thêm **QA vòng 4** (04/09/2026, ảnh KTV upload lúc tạo đơn + màn mobile riêng "Thêm đơn
 bảo hành"), module **"Quản lý danh sách KTV"** (`#/qtri/ktv`, 04/09/2026), **phân trang server-side
 thật cho toàn bộ bảng dữ liệu** (05/09/2026), và gần nhất là **nút "Cài đặt vào màn hình chính"** chủ
-động trên topbar mobile (05/09/2026, khác hẳn field `shortcuts` thụ động của manifest) — xem các mục
-cùng tên bên dưới.
+động trên topbar mobile (05/09/2026, khác hẳn field `shortcuts` thụ động của manifest), và gần nhất
+là hiển thị số phiên bản hệ thống ở góc dưới-trái sidebar + chốt quy ước bắt buộc từ nay: **mỗi lần
+deploy phải tăng `APP_VERSION` 1 nấc 0.001** (05/09/2026) — xem các mục cùng tên bên dưới.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -2988,6 +2989,38 @@ thật) — trình duyệt sandbox không phát `beforeinstallprompt`, cần ng�
 Chrome thật sau khi deploy.
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa nút này lên production.
+
+## Thông báo phiên bản hệ thống + quy ước versioning mỗi lần deploy (05/09/2026)
+
+Nguyên văn yêu cầu: *"tạo cho tôi 1 thông báo phiên bản hệ thống ở góc dưới cùng bên trái menu. và
+tạo nguyên tắc chung mỗi lần deploy sẽ commit và đẩy phiên bản. 1.001 => 1.002"*.
+
+**1. Hiển thị phiên bản.** `frontend/src/lib/version.ts` (mới) — export duy nhất
+`APP_VERSION = "1.001"`, là **nguồn sự thật duy nhất** cho số phiên bản trong toàn bộ frontend (không
+hardcode chuỗi phiên bản ở nơi khác). `Sidebar.tsx` (menu desktop) hiện `v{APP_VERSION}` ở góc dưới-
+trái, ngay dưới nút "«/»" thu gọn — hiện đúng ở cả 2 trạng thái thu gọn (72px, chỉ icon) lẫn mở rộng
+(224px, đủ nhãn), màu chữ mờ (`--sidebar-ink-dim`, cùng tông với nút thu gọn) để không cạnh tranh sự
+chú ý với menu, có `title` tooltip đầy đủ khi hover. **Không thêm vào `BottomNav`** (menu mobile) vì
+đó là thanh ngang cố định ở đáy màn hình, không có khái niệm "góc dưới-trái" tương tự — yêu cầu gốc
+nói "menu" số ít, khớp đúng với sidebar desktop (menu chính duy nhất có bố cục dọc thật sự).
+
+**2. Quy ước versioning bắt buộc cho MỌI lần deploy (áp dụng từ vòng này về sau, không có ngoại lệ):**
+- Trước khi build+deploy production (`npm run deploy`), **luôn** tăng `APP_VERSION` trong
+  `frontend/src/lib/version.ts` lên đúng 1 nấc `0.001` (VD `1.001` → `1.002` → `1.003`...) — không
+  tăng nhảy cóc, không tăng phần nghìn/trăm trừ khi người dùng yêu cầu đổi quy ước.
+- Việc tăng version phải nằm **trong cùng commit** với các thay đổi code của đợt đó (không tách commit
+  riêng chỉ để bump version) — để mỗi commit tự nó ánh xạ đúng 1 phiên bản đã/sẽ deploy, dễ đối chiếu
+  ngược khi cần biết "bản nào đang chạy chứa thay đổi gì".
+- Đây là quy tắc áp dụng cho **cả các đợt sửa nhỏ lẫn lớn** — đúng tinh thần nguyên tắc chung đầu file
+  CLAUDE.md này (không phân biệt "thay đổi nhỏ không cần theo quy trình").
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi. Verify qua Browser pane (`wrangler
+dev` local, quy trình backup/restore `wrangler.jsonc` thường quy) ở viewport 1280×800: "v1.001" hiện
+đúng góc dưới-trái sidebar cả khi thu gọn lẫn sau khi bấm mở rộng, không lỗi console mới.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa thay đổi này lên production — và từ **lần
+deploy TIẾP THEO trở đi**, nhớ bump `APP_VERSION` lên `1.002` trước khi deploy (bản thân đợt này chưa
+bump vì đây là lần đầu thêm hiển thị phiên bản, chưa có phiên bản cũ nào để tăng từ).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 
