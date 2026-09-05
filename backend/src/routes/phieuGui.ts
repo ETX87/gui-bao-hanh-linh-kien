@@ -7,6 +7,8 @@ import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { computeEmailGs } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
+import { lookupCase } from "../lib/caseLookupClient";
+import { extractMaKtv } from "../lib/ktvCode";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -22,41 +24,90 @@ function isKtv(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_qtri: boolean 
 function canReadGhiChu(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_kho: boolean; la_admin_bh: boolean; la_qtri: boolean; la_giam_sat: boolean; la_view: boolean }) {
   return isKtv(u) || u.la_kho || u.la_admin_bh || u.la_qtri || u.la_giam_sat || u.la_view;
 }
+// GS khu vuc cua KTV / Admin bao hanh "tao ho don bao hanh" (yeu cau 05/09/2026 muc 1) - CHOT qua
+// AskUserQuestion: nguoi tao ho quan ly duoc TOAN BO thung truoc khi Kho tiep nhan (nhu chinh KTV do),
+// dung "nguoi_tao_ho" (bind luc tao, xem migrations/0003) lam khoa xac dinh thay vi kiem tra lai vai
+// tro moi lan (giu dung sau khi cac vai tro/khu vuc co the doi).
+function canTaoHo(u: { la_giam_sat: boolean; la_admin_bh: boolean; la_qtri: boolean }) {
+  return u.la_giam_sat || u.la_admin_bh || u.la_qtri;
+}
+function ownsPhieuGui(u: { email: string; la_qtri: boolean }, g: { nguoi_tao: string; nguoi_tao_ho: string | null }) {
+  return g.nguoi_tao === u.email || g.nguoi_tao_ho === u.email || u.la_qtri;
+}
 
-// GET /api/phieu-gui?limit=&offset= - "Phieu gui hang cua toi" (KTV) - chi thay phieu CHINH MINH tao.
-// Phan trang that (LIMIT/OFFSET, khong phai fetch het roi cat o client) - xem lib/pagination.ts.
+// GET /api/phieu-gui?limit=&offset= - "Phieu gui hang cua toi" (KTV THAT, phieu CHINH MINH so huu) -
+// hoac "Phieu tôi đã tạo hộ" (GS/Admin BH/qtri KHONG phai KTV that, loc theo nguoi_tao_ho = chinh
+// minh - yeu cau 05/09/2026 muc 1). LUU Y: khong dung isKtv() o day (ham do coi la_qtri nhu 1 KTV vi
+// muc dich "di qua moi cong vai tro" o cac route KHAC) - neu dung se khien qtri (khong phai KTV that)
+// luon bi loc theo nguoi_tao=chinh email cua ho (khong bao gio khop gi), lam man "Phieu toi da tao
+// ho" cua qtri LUON RONG du tao thanh cong (bug that phat hien luc kiem thu, da sua tan goc o day).
 phieuGui.get("/", async (c) => {
   const user = c.get("user");
-  if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
+  const isRealKtv = user.la_ktv_dvbh || user.la_ve_tinh;
+  let col: "nguoi_tao" | "nguoi_tao_ho";
+  if (isRealKtv) col = "nguoi_tao";
+  else if (canTaoHo(user)) col = "nguoi_tao_ho";
+  else if (isKtv(user)) col = "nguoi_tao"; // qtri fallback (khong xay ra thuc te vi canTaoHo() da gom qtri, giu de an toan)
+  else return c.json({ error: "FORBIDDEN" }, 403);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE nguoi_tao = ? ORDER BY created_at DESC LIMIT ? OFFSET ?").bind(user.email, limit, offset).all(),
-    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE nguoi_tao = ?").bind(user.email).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE ${col} = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(user.email, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ?`).bind(user.email).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
 
-// POST /api/phieu-gui - tao phieu nhap moi, tu dien nha xe theo lan gan nhat cua chinh KTV nay (thay
-// the DB.meta.nhaXeHistory cua prototype bang truy van "ban ghi gan nhat" - khong can bang rieng).
+interface CreatePhieuBody {
+  // Neu co (yeu cau 05/09/2026 muc 1): GS/Admin BH "tao ho" phieu cho dung KTV nay - bat buoc chon
+  // luc tao thung, khong doi duoc sau. Bo trong/= chinh minh => tao binh thuong nhu truoc (KTV tu
+  // tao cho chinh minh), khong doi hanh vi cu.
+  ktv_email?: string;
+}
+
+// POST /api/phieu-gui - tao phieu nhap moi, tu dien nha xe theo lan gan nhat CUA DUNG KTV so huu
+// thung (khong phai nguoi bam tao, neu la tao ho) - thay the DB.meta.nhaXeHistory cua prototype bang
+// truy van "ban ghi gan nhat", khong can bang rieng.
 phieuGui.post("/", async (c) => {
   const user = c.get("user");
-  if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<CreatePhieuBody>().catch(() => ({}) as CreatePhieuBody);
+  const ktvEmailReq = body.ktv_email?.trim();
+
+  let target: string;
+  let nguoiTaoHo: string | null;
+  if (ktvEmailReq && ktvEmailReq !== user.email) {
+    if (!canTaoHo(user)) return c.json({ error: "FORBIDDEN" }, 403);
+    const ktvRow = await c.env.DB.prepare("SELECT ma_ktv, khu_vuc_ma FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(ktvEmailReq).first<{ ma_ktv: string; khu_vuc_ma: string | null }>();
+    if (!ktvRow) return c.json({ error: "KTV_NOT_FOUND" }, 404);
+    // GS chi tao ho duoc trong dung Khu vuc minh phu trach (khop qua khu_vuc_bh.gs_email) - Admin
+    // BH/qtri khong bi gioi han khu vuc (dung nguyen van yeu cau "hoặc Admin bảo hành", khong dieu
+    // kien them).
+    if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
+      const emailGs = await computeEmailGs(c.env.DB, ktvEmailReq);
+      if (emailGs !== user.email) return c.json({ error: "OUT_OF_KHU_VUC" }, 403);
+    }
+    target = ktvEmailReq;
+    nguoiTaoHo = user.email;
+  } else {
+    if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
+    target = user.email;
+    nguoiTaoHo = null;
+  }
 
   const last = await c.env.DB.prepare(
     "SELECT hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen FROM phieu_gui_bh WHERE nguoi_tao = ? AND hinh_thuc_gui IS NOT NULL ORDER BY created_at DESC LIMIT 1",
   )
-    .bind(user.email)
+    .bind(target)
     .first<{ hinh_thuc_gui: string; ma_xe_hoac_tai_xe: string | null; don_vi_van_chuyen: string | null }>();
 
   const id = await nextSequentialId(c.env.DB, "phieu_gui_bh", "BH");
   const now = nowVN();
   await c.env.DB.prepare(
-    `INSERT INTO phieu_gui_bh (id, nguoi_tao, ngay_tao, ngay_gui_xe, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, trang_thai, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'nhap', ?, ?)`,
+    `INSERT INTO phieu_gui_bh (id, nguoi_tao, nguoi_tao_ho, ngay_tao, ngay_gui_xe, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, trang_thai, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nhap', ?, ?)`,
   )
-    .bind(id, user.email, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui ?? "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
+    .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui ?? "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, "Tao phieu moi");
+  await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tao phieu moi (tao ho cho KTV ${target})` : "Tao phieu moi");
   return c.json({ id }, 201);
 });
 
@@ -65,9 +116,9 @@ phieuGui.post("/", async (c) => {
 phieuGui.delete("/:id", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  const g = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; trang_thai: string }>();
+  const g = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
-  if (g.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
   const conCount = await c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh WHERE phieu_gui_id = ?").bind(id).first<{ cnt: number }>();
   if ((conCount?.cnt ?? 0) > 0) return c.json({ error: "HAS_CHILDREN" }, 400);
@@ -87,9 +138,9 @@ interface HeaderBody {
 phieuGui.patch("/:id", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  const g = await c.env.DB.prepare("SELECT nguoi_tao FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string }>();
+  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; nguoi_tao_ho: string | null }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
-  if (g.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<HeaderBody>().catch(() => ({}) as HeaderBody);
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET hinh_thuc_gui = ?, ma_xe_hoac_tai_xe = ?, don_vi_van_chuyen = ?, ma_van_don = ?, updated_at = ? WHERE id = ?")
     .bind(body.hinh_thuc_gui ?? "", body.ma_xe_hoac_tai_xe ?? "", body.don_vi_van_chuyen ?? "", body.ma_van_don ?? "", nowVN(), id)
@@ -101,9 +152,9 @@ phieuGui.patch("/:id", async (c) => {
 phieuGui.post("/:id/xac-nhan-gui", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  const g = await c.env.DB.prepare("SELECT nguoi_tao, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; trang_thai: string }>();
+  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
-  if (g.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
   const body = await c.req.json<{ ngay_gui_xe?: string }>().catch(() => ({}) as { ngay_gui_xe?: string });
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_gui', ngay_gui_xe = ?, updated_at = ? WHERE id = ?")
@@ -142,27 +193,52 @@ interface AddDonBody {
 }
 
 // POST /api/phieu-gui/:id/don - them 1 don (phieu_sua_chua_bh) vao phieu gui, port dung
-// submitAddDon() - chan so_luong_khai <=0 (bug that da sua trong prototype QA 31/08/2026).
+// submitAddDon() - chan so_luong_khai <=0 (bug that da sua trong prototype QA 31/08/2026). Yeu cau
+// 05/09/2026 muc 2 ("Mã sự cố là bắt buộc... phải đúng của ktv đó mới cho tạo"): case_id nay BAT
+// BUOC, phai tra ve duoc case that + khop dung KTV SO HUU THUNG (g.nguoi_tao - luon la KTV, bat ke ai
+// dang bam them don, ke ca nguoi tao ho) - CHOT strict qua AskUserQuestion: khong tach duoc ma KTV tu
+// case, hoac KTV khong co trong danh ba de doi chieu, deu bi chan (khong cho tao), khac tien le
+// "canh bao mem" cua linh-kien-app.
 phieuGui.post("/:id/don", async (c) => {
   const user = c.get("user");
   const guiId = c.req.param("id");
-  const g = await c.env.DB.prepare("SELECT nguoi_tao, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(guiId).first<{ nguoi_tao: string; trang_thai: string }>();
+  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(guiId).first<{ nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
-  if (g.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
 
   const body = await c.req.json<AddDonBody>().catch(() => ({}) as AddDonBody);
   const soLuong = body.so_luong_khai ?? 1;
   if (!Number.isInteger(soLuong) || soLuong < 1) return c.json({ error: "INVALID_SO_LUONG" }, 400);
   if (!body.mo_ta_loi?.trim()) return c.json({ error: "MISSING_MO_TA_LOI" }, 400);
+  const caseId = body.case_id?.trim();
+  if (!caseId) return c.json({ error: "MISSING_CASE_ID" }, 400);
+
+  const casePreview = await lookupCase(caseId, c.env);
+  if (!casePreview) return c.json({ error: "CASE_NOT_FOUND" }, 400);
+  const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
+  const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
+  if (!maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
 
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
-  const emailGs = await computeEmailGs(c.env.DB, user.email);
+  // email_gs phai tinh theo KTV SO HUU thung (g.nguoi_tao), KHONG phai user.email dang thao tac - o
+  // ban truoc 2 gia tri nay luon trung (chi chinh KTV moi them duoc don cho phieu cua ho), nhung tu
+  // khi co "tao ho" (nguoi_tao_ho co the la GS/Admin BH, khong co dong ktv_lien_he_bh nao ca) thi
+  // dung user.email se luon tra ve NULL - da sua tan goc, khong chi vá luc them "tao ho".
+  const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
   await c.env.DB.prepare(
     `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?)`,
   )
-    .bind(id, guiId, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, nowVN())
+    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, nowVN())
+    .run();
+  // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
+  // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai
+  // duoc, va Admin BH bam "dong bo lai" (POST /case-lookup/detail/:id/sync) lam moi duoc cho ca nhom.
+  await c.env.DB.prepare(
+    "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
+  )
+    .bind(caseId, JSON.stringify(casePreview), nowVN())
     .run();
   const anhUrls = (body.anh || []).filter((u) => u && u.trim());
   if (anhUrls.length > 0) {
@@ -176,12 +252,12 @@ phieuGui.delete("/don/:donId", async (c) => {
   const user = c.get("user");
   const donId = c.req.param("donId");
   const don = await c.env.DB.prepare(
-    "SELECT p.phieu_gui_id, g.nguoi_tao, g.trang_thai FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.id = ?",
+    "SELECT p.phieu_gui_id, g.nguoi_tao, g.nguoi_tao_ho, g.trang_thai FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.id = ?",
   )
     .bind(donId)
-    .first<{ phieu_gui_id: string; nguoi_tao: string; trang_thai: string }>();
+    .first<{ phieu_gui_id: string; nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
   if (!don) return c.json({ error: "NOT_FOUND" }, 404);
-  if (don.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!ownsPhieuGui(user, don)) return c.json({ error: "FORBIDDEN" }, 403);
   if (don.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
   await c.env.DB.prepare("DELETE FROM phieu_sua_chua_bh WHERE id = ?").bind(donId).run();
   return c.json({ ok: true });

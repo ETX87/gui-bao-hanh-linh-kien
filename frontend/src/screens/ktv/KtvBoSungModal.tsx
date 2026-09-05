@@ -2,7 +2,8 @@ import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Select, Textarea } from "../../ui/primitives";
+import { Btn, Field, Textarea } from "../../ui/primitives";
+import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useLinhKien } from "../../hooks/useLinhKien";
 import { LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
 import type { DonVi } from "../../lib/types";
@@ -51,14 +52,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
       <div className="space-y-4">
         <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-700)] text-xs font-bold px-3 py-2">Admin bảo hành yêu cầu bổ sung: {lyDoLabel}{lyDoRaw.includes(":") ? ` — ${lyDoRaw.split(":").slice(1).join(":").trim()}` : ""}</p>
         <Field label="Linh kiện lỗi">
-          <Select value={maLk} onChange={(e) => setMaLk(e.target.value)}>
-            <option value="">— Chọn —</option>
-            {linhKien.map((lk) => (
-              <option key={lk.ma_lk} value={lk.ma_lk}>
-                {lk.ten_lk}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
         </Field>
         <Field label="Mô tả lỗi" required>
           <Textarea rows={3} value={moTa} onChange={(e) => setMoTa(e.target.value)} />

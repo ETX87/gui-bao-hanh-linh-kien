@@ -6,6 +6,7 @@ import { Btn, Badge, ReadField, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, KET_QUA_CHAN_DOAN_LABELS, XU_LY_XAC_LABELS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
 import { LogBlock } from "./LogBlock";
+import { CaseSnapshotPanel } from "./CaseSnapshotPanel";
 import { PhanLoaiModal } from "./PhanLoaiModal";
 import { FastActionsModal } from "./FastActionsModal";
 import { YeuCauBoSungModal } from "./YeuCauBoSungModal";
@@ -112,6 +113,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
             <ReadField label="Nguồn" value={isKhachLe ? <Badge tone="violet">Khách lẻ</Badge> : p.nguon_tao === "admin_dich_vu" ? "Đơn dịch vụ" : "KTV gửi hàng"} />
             <ReadField label="Đối trừ đề xuất" value={p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—"} />
           </div>
+          {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} />}
           <ReadField label="Mô tả lỗi" value={p.mo_ta_loi} />
           {isKhachLe && (
             <div className="grid grid-cols-3 gap-4">

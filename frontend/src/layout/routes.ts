@@ -24,6 +24,12 @@ export function routesForUser(u: AppUser): RouteItem[] {
       { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", icon: "📬", workloadKey: "ktv_nhan_hang" },
     );
   }
+  // GS/Admin bao hanh (khong dong thoi la KTV/Ve tinh/qtri - da co hash nay tu nhanh tren) - "tạo hộ
+  // đơn bảo hành" (yeu cau 05/09/2026 muc 1): dung LAI dung man #/ktv/tao-phieu, tu re nhanh giao
+  // dien theo vai tro (xem KtvTaoPhieuScreen).
+  if ((u.la_giam_sat || u.la_admin_bh) && !(u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri)) {
+    items.push({ hash: "/ktv/tao-phieu", label: "Tạo hộ đơn KTV", icon: "📦" });
+  }
   if (u.la_kho || u.la_qtri) {
     items.push({ hash: "/kho/tiep-nhan", label: "Tiếp nhận", icon: "📥", workloadKey: "kho_cho_tiep_nhan" }, { hash: "/kho/dong-goi", label: "Đóng gói & gửi", icon: "📤", workloadKey: "kho_cho_dong_goi" });
   }

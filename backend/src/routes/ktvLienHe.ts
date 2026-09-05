@@ -23,12 +23,39 @@ function requireQtri(c: { get(k: "user"): { la_qtri: boolean } }): boolean {
   return c.get("user").la_qtri;
 }
 
+// GET / - mo rong 05/09/2026 (muc 1, "GS khu vực của KTV hoặc Admin bảo hành tạo hộ đơn bảo hành"):
+// truoc chi la_qtri doc duoc (man #/qtri/ktv). Nay la_admin_bh doc duoc TOAN BO (khong gioi han khu
+// vuc - dung nguyen van "hoặc Admin bảo hành" khong kem dieu kien), la_giam_sat CHI thay KTV thuoc
+// dung Khu vuc minh phu trach (khop qua khu_vuc_bh.gs_email, dung mau computeEmailGs() da co). Dung
+// cho picker "chọn KTV để tạo hộ" (SearchableSelect, khong dung thu vien lay danh sach day du - xem
+// quy uoc "khong truyen limit = danh sach day du cho o chon" da chot o vong phan trang 05/09/2026);
+// co truyen limit van la ban phan trang that cho bang quan tri #/qtri/ktv, khong doi hanh vi cu.
 ktvLienHe.get("/", async (c) => {
-  if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const user = c.get("user");
+  if (!(user.la_qtri || user.la_admin_bh || user.la_giam_sat)) return c.json({ error: "FORBIDDEN" }, 403);
+
+  let where = "1=1";
+  const binds: unknown[] = [];
+  if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
+    where = "khu_vuc_ma IN (SELECT ma FROM khu_vuc_bh WHERE gs_email = ?)";
+    binds.push(user.email);
+  }
+
+  if (c.req.query("limit") === undefined) {
+    const { results } = await c.env.DB.prepare(`SELECT * FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv`)
+      .bind(...binds)
+      .all();
+    return c.json({ ktv: results, total: results.length });
+  }
+
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM ktv_lien_he_bh ORDER BY ten_hien_thi, ma_ktv LIMIT ? OFFSET ?").bind(limit, offset).all(),
-    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM ktv_lien_he_bh").first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM ktv_lien_he_bh WHERE ${where}`)
+      .bind(...binds)
+      .first<{ cnt: number }>(),
   ]);
   return c.json({ ktv: results, total: totalRow?.cnt ?? 0 });
 });

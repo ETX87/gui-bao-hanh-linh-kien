@@ -13,8 +13,8 @@ import { useAddDonForm } from "./useAddDonForm";
 // anh co capture="environment" goi y mo thang camera. Dung CHUNG 1 bo state + submit voi AddDonModal
 // (desktop) qua useAddDonForm() - khong co 2 nguon su that.
 
-export function AddDonMobileSheet({ guiId, onClose, onDone }: { guiId: string; onClose: () => void; onDone: () => void }) {
-  const f = useAddDonForm(guiId, onDone);
+export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId: string; ktvEmail: string; onClose: () => void; onDone: () => void }) {
+  const f = useAddDonForm(guiId, onDone, ktvEmail);
 
   // Dung functional updater (khong doc f.soLuong tu closure) - 2 lan bam lien tiep (double-tap
   // that tren dien thoai) co the roi vao CUNG 1 dot batch cua React 18, khien ca 2 handler doc chung
@@ -33,10 +33,10 @@ export function AddDonMobileSheet({ guiId, onClose, onDone }: { guiId: string; o
       </div>
 
       <div className="px-4 py-4 overflow-y-auto flex-1 space-y-4">
-        <Field label="Mã case (nếu có)">
+        <Field label="Mã case" required>
           <Input value={f.caseId} onChange={(e) => f.setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
         </Field>
-        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} />
+        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} ktvEmail={f.ktvEmail} onValidityChange={f.setCaseValid} />
         <Field label="Linh kiện lỗi">
           <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
         </Field>

@@ -140,9 +140,13 @@ cùng tên bên dưới để có chi tiết đầy đủ. Việc deploy các s�
 dùng. Sau đó thêm **QA vòng 4** (04/09/2026, ảnh KTV upload lúc tạo đơn + màn mobile riêng "Thêm đơn
 bảo hành"), module **"Quản lý danh sách KTV"** (`#/qtri/ktv`, 04/09/2026), **phân trang server-side
 thật cho toàn bộ bảng dữ liệu** (05/09/2026), và gần nhất là **nút "Cài đặt vào màn hình chính"** chủ
-động trên topbar mobile (05/09/2026, khác hẳn field `shortcuts` thụ động của manifest), và gần nhất
-là hiển thị số phiên bản hệ thống ở góc dưới-trái sidebar + chốt quy ước bắt buộc từ nay: **mỗi lần
-deploy phải tăng `APP_VERSION` 1 nấc 0.001** (05/09/2026) — xem các mục cùng tên bên dưới.
+động trên topbar mobile (05/09/2026, khác hẳn field `shortcuts` thụ động của manifest), tiếp theo là
+hiển thị số phiên bản hệ thống ở góc dưới-trái sidebar + chốt quy ước bắt buộc từ nay: **mỗi lần
+deploy phải tăng `APP_VERSION` 1 nấc 0.001** (05/09/2026), và gần nhất là **"tạo hộ đơn bảo hành"**
+(GS khu vực/Admin BH tạo thùng cho 1 KTV khác, quản lý toàn bộ thùng đó tới khi Kho tiếp nhận) +
+**mã sự cố bắt buộc và phải khớp đúng KTV** (chặn cứng, lưu bằng chứng + Admin BH đồng bộ lại được)
++ sửa UI "Thêm đơn bảo hành" quá nhỏ + sửa nốt 1 chỗ linh kiện mobile còn dùng `<select>` thường
+(05/09/2026) — xem mục "Tạo hộ đơn bảo hành..." bên dưới.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3021,6 +3025,148 @@ dev` local, quy trình backup/restore `wrangler.jsonc` thường quy) ở viewpo
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa thay đổi này lên production — và từ **lần
 deploy TIẾP THEO trở đi**, nhớ bump `APP_VERSION` lên `1.002` trước khi deploy (bản thân đợt này chưa
 bump vì đây là lần đầu thêm hiển thị phiên bản, chưa có phiên bản cũ nào để tăng từ).
+
+## Tạo hộ đơn bảo hành (GS/Admin BH) + mã sự cố bắt buộc & khớp KTV + UI to hơn (05/09/2026)
+
+Nguyên văn 4 yêu cầu (gửi cùng lượt):
+
+0. *"giao diện UI khi tạo đơn bảo hành đang quá nhỏ trên màn hình web => căn chỉnh lại diện tích cho phù hợp."*
+1. *"cho phép GS khu vực của KTV hoặc Admin bảo hành tạo hộ đơn bảo hành (khi tạo thùng sẽ chọn bắt buộc thùng bảo hành này tạo cho KTV nào)"*
+2. *"Mã sự cố là bắt buộc (phải đúng của ktv đó mới cho tạo) Khi nhập thông tin ca sự vụ, nếu đúng của KTV đó thì sẽ hiện thông tin, nếu không đúng sẽ phản hồi cảnh báo sai mã sự vụ. (khi đơn được tạo, các thông tin liên quan đến mã yêu cầu sẽ được lưu về hệ thống đơn bảo hành làm bằng chứng, Admin bảo hành có thể ấn đồng bộ để cập nhật lại thông tin liên quan đến ca sự cố đó sau - mục đích để tránh việc phải gọi API liên tục cho 1 ca sự cố mỗi khi có người xem thông tin)"*
+3. *"Giao diện mobile, listdown chọn linh kiện bảo hành đang hẹp, khó nhìn và tìm kiếm.= > đánh giá lại và sửa."*
+
+Trước khi làm mục 1/2 (schema/quyền ảnh hưởng lâu dài), đã hỏi lại qua `AskUserQuestion` 3 điểm mơ hồ
+thật sự — câu trả lời chốt:
+- **Quyền quản lý th sau khi tạo hộ**: người tạo hộ (GS/Admin BH) **quản lý toàn bộ** thùng cho tới
+  khi Kho tiếp nhận (sửa header, thêm/xoá đơn, xác nhận gửi xe, xoá phiếu) — y như chính KTV đó,
+  KHÔNG bắt buộc KTV phải tự đăng nhập làm tiếp.
+- **Nguồn danh sách chọn KTV**: danh bạ KTV (`ktv_lien_he_bh`), **kể cả người chưa từng đăng nhập**.
+- **Ca mơ hồ khi kiểm tra mã sự cố** (không tách được mã KTV từ case, hoặc KTV mục tiêu chưa có trong
+  danh bạ để đối chiếu): **chặn cứng luôn** (khác tiền lệ "cảnh báo mềm" của `linh-kien-app` cho cùng
+  tính năng này).
+
+### 0. UI "Thêm đơn bảo hành" quá nhỏ
+
+Đo trực tiếp qua Browser pane trước khi sửa (không đoán): `AddDonModal.tsx`/`DonDichVuModal.tsx` bị
+ghim `maxWidthClass="max-w-lg"` (512px) — **hẹp hơn cả mặc định `max-w-2xl` (672px)** mà phần lớn
+modal khác trong app đang dùng (từ quyết định "modal tràn màn hình" 02/09/2026). Đã bỏ ghim, đổi
+thành `max-w-2xl`; đồng thời đổi grid "Linh kiện lỗi + Số lượng" từ `grid-cols-2` (50/50) sang
+`grid-cols-3` với Linh kiện chiếm `col-span-2` (66/33, đỡ chật cho `SearchableSelect`). Xác nhận lại
+bằng `getBoundingClientRect()` qua Browser pane: 512px → 672px đúng như kỳ vọng.
+
+### 1. Tạo hộ đơn bảo hành (GS khu vực / Admin bảo hành)
+
+- **`migrations/0003_case_lookup_snapshot_va_tao_ho.sql`** — thêm cột `phieu_gui_bh.nguoi_tao_ho`
+  (nullable) — **`nguoi_tao` GIỮ NGUYÊN Ý NGHĨA CŨ** ("KTV sở hữu thùng", dùng cho mọi truy vấn/quyền
+  đã có sẵn), `nguoi_tao_ho` chỉ là email người THẬT SỰ bấm tạo hộ (NULL nếu KTV tự tạo lấy) — quyết
+  định có chủ đích để không phải sửa lại hàng loạt chỗ đọc `nguoi_tao` đã có.
+- **`backend/src/routes/phieuGui.ts`** — `canTaoHo(u)` (la_giam_sat/la_admin_bh/la_qtri),
+  `ownsPhieuGui(u,g)` (`nguoi_tao===u.email || nguoi_tao_ho===u.email || u.la_qtri`) áp dụng cho
+  PATCH/DELETE/xác-nhận-gửi/thêm-đơn/xoá-đơn. `POST /` nhận thêm `ktv_email` tuỳ chọn: nếu khác
+  `user.email`, bắt buộc `canTaoHo`, KTV mục tiêu phải có trong `ktv_lien_he_bh`
+  (404 `KTV_NOT_FOUND`), và nếu người tạo CHỈ là `la_giam_sat` (không kèm admin_bh/qtri) thì
+  `computeEmailGs(target) === user.email` mới cho qua (403 `OUT_OF_KHU_VUC`) — Admin BH/qtri không bị
+  giới hạn khu vực (đúng nguyên văn "hoặc Admin bảo hành", không kèm điều kiện).
+- **`GET /` (danh sách "của tôi")** — rẽ nhánh theo `nguoi_tao` (KTV thật) hoặc `nguoi_tao_ho` (GS/
+  Admin BH/qtri không phải KTV thật, xem "Phiếu tôi đã tạo hộ").
+  **1 lỗi thật phát hiện lúc kiểm thử**: dùng nhầm `isKtv()` (hàm này cố ý coi `la_qtri` như 1 KTV để
+  "đi qua mọi cổng vai trò" ở CÁC route khác) làm điều kiện rẽ nhánh — khiến **qtri luôn thấy danh
+  sách "tạo hộ" RỖNG** dù tạo phiếu thành công thật (vì bị lọc nhầm theo `nguoi_tao = email của
+  chính qtri`, không bao giờ khớp gì). Đã sửa tận gốc: dùng `isRealKtv = la_ktv_dvbh || la_ve_tinh`
+  (không gồm qtri) làm điều kiện ưu tiên, `canTaoHo` xét sau.
+- **`backend/src/routes/ktvLienHe.ts` GET /** — mở rộng từ chỉ-qtri sang thêm `la_admin_bh` (xem
+  toàn bộ, không giới hạn khu vực) và `la_giam_sat` (chỉ xem KTV thuộc Khu vực mình phụ trách, khớp
+  qua `khu_vuc_bh.gs_email`) — dùng cho picker "chọn KTV để tạo hộ". Không truyền `?limit=` → trả
+  toàn bộ (dùng cho `SearchableSelect`, đúng quy ước "05/09/2026 Phân trang toàn bộ bảng dữ liệu" —
+  picker cần danh sách đầy đủ để tự lọc); có `?limit=` → vẫn phân trang thật như cũ cho bảng quản trị
+  `#/qtri/ktv`.
+- **Frontend**: `TaoPhieu.tsx` re nhánh `hoMode` (KTV thật → như cũ; GS/Admin BH/qtri không phải KTV
+  thật → tiêu đề "Phiếu bảo hành tôi đã tạo hộ", "+ Tạo phiếu mới" mở `PickKtvModal.tsx` mới (bắt
+  buộc chọn KTV qua `SearchableSelect` trước khi tạo) thay vì tạo ngay, thêm cột "Tạo cho KTV").
+  `PhieuGuiDetailModal.tsx` hiện badge "Được tạo hộ bởi X cho KTV Y" khi `nguoi_tao_ho` có giá trị.
+  `routes.ts`/`App.tsx` mở route `#/ktv/tao-phieu` cho `la_giam_sat`/`la_admin_bh` (dùng lại đúng 1
+  màn, không tạo màn mới).
+
+### 2. Mã sự cố bắt buộc + phải khớp KTV + bằng chứng + đồng bộ
+
+- **`backend/src/lib/ktvCode.ts`** (mới) — `extractMaKtv()` port đúng từ
+  `linh-kien-app/backend/src/lib/ktvCode.ts` (case_dvbh.ky_thuat_vien dạng `"(mã) Loại - Khu vực -
+  Tên"`, phần `"(mã)"` ở đầu ổn định qua các lần import CRM — dùng để đối chiếu với
+  `ktv_lien_he_bh.ma_ktv`, KHÔNG dùng nguyên chuỗi).
+- **`backend/src/routes/caseLookup.ts`** — `GET /?id=&ktv_email=` trả thêm `khopKtv` (bool|null) khi
+  có `ktv_email`. **`migrations/0003`** thêm bảng `case_lookup_snapshot` (case_id, data, synced_at) —
+  cache "bằng chứng" DÙNG CHUNG cho mọi đơn tham chiếu cùng case_id (không phải riêng từng đơn).
+  `GET /detail/:id` đọc cache (không tự gọi lại API đối tác), `POST /detail/:id/sync` (chỉ
+  `la_admin_bh`/`la_qtri`) làm mới, giới hạn 5s/lần.
+  **Lỗi tiềm ẩn phát hiện + tránh khi port**: mẫu `msSinceVN()` của `linh-kien-app` trừ trực tiếp
+  `Date.now() - Date.parse(ts+"Z")` — nhưng `nowVN()` (cả 2 repo) mã hoá giờ VN bằng cách CỘNG 7h rồi
+  format như UTC (xem `lib/vnTime.ts`), nên trộn với `Date.now()` thật sẽ lệch **~7 tiếng**, khiến
+  chức năng "đồng bộ lại" bị khoá nhầm suốt ~7h sau mỗi lần ghi. Đã sửa: so sánh bằng `nowVN()` ở CẢ
+  2 vế (offset tự triệt tiêu) — xác nhận đúng bằng 1 script Node độc lập trước khi tin dùng.
+- **`backend/src/routes/phieuGui.ts POST /:id/don`** — `case_id` nay **bắt buộc**; gọi `lookupCase()`
+  thật, **chặn cứng** (400) nếu: không tìm thấy case (`CASE_NOT_FOUND`), HOẶC không tách được mã KTV
+  từ case / KTV sở hữu thùng (`g.nguoi_tao` — LUÔN là KTV, bất kể ai đang bấm thêm đơn, kể cả người
+  tạo hộ) chưa có trong `ktv_lien_he_bh` / mã không khớp (`CASE_KTV_MISMATCH`, gộp chung 1 mã lỗi cho
+  cả 3 trường hợp, đúng quyết định "chặn cứng luôn"). Tạo thành công → upsert
+  `case_lookup_snapshot` làm bằng chứng.
+  **1 lỗi thật phát hiện + sửa cùng lúc**: `email_gs` của đơn mới tạo trước đó tính bằng
+  `computeEmailGs(user.email)` (người ĐANG bấm) — đúng ngẫu nhiên trong mọi trường hợp TRƯỚC ĐÂY (chỉ
+  chính KTV mới được thêm đơn cho phiếu của họ, nên `user.email === g.nguoi_tao` luôn đúng), nhưng
+  SAI hẳn từ khi có "tạo hộ" (người tạo hộ thường không có dòng nào trong `ktv_lien_he_bh`, luôn ra
+  `email_gs = null`). Đã sửa dùng `g.nguoi_tao` (KTV sở hữu thật) thay vì `user.email`.
+- **Frontend**: `useCaseLookup(caseId, ktvEmail?)` trả thêm `khopKtv`; `CaseLookupPreviewCard` nhận
+  `ktvEmail`+`onValidityChange` — khi có `ktvEmail`, đổi thông điệp "không tìm thấy" từ mềm ("vẫn có
+  thể tiếp tục") sang cứng ("chưa thể tạo đơn"), thêm banner đỏ khi `khopKtv===false`. Chỉ
+  `AddDonModal`/`AddDonMobileSheet` truyền `ktvEmail` (= `phieu_gui.nguoi_tao`) — `DonDichVuModal`/
+  `PhanLoaiModal` giữ nguyên hành vi mềm cũ (case tuỳ chọn/không gắn 1 KTV rõ ràng).
+  `useAddDonForm` thêm `caseValid` gate `valid` tổng. `CaseSnapshotPanel.tsx` (mới) — hiện "bằng
+  chứng" đã lưu + nút "🔄 Đồng bộ lại" (chỉ `la_admin_bh`/`la_qtri`), nhúng vào `UnitDetailModal.tsx`.
+
+### 3. Mobile — linh kiện dropdown hẹp/khó tìm
+
+Rà toàn bộ nơi chọn linh kiện: `AddDonModal`/`AddDonMobileSheet`/`DonDichVuModal`/`PhanLoaiModal` đã
+dùng `SearchableSelect` từ "QA vòng 3" — **CHỈ `KtvBoSungModal.tsx`** ("Bổ sung thông tin theo yêu
+cầu Admin BH") còn sót lại `<Select>` native (bị bỏ sót ở vòng đó, không nằm trong 3 nơi đã liệt kê
+lúc đó). Đã đổi sang `SearchableSelect` — đúng nguyên nhân "hẹp, khó tìm" người dùng mô tả (native
+`<select>` không có ô gõ-để-lọc).
+
+**Kiểm thử đã chạy:** `npm run typecheck`/`npm run build` — 0 lỗi. Verify qua Browser pane (`wrangler
+dev` local, quy trình backup/restore `wrangler.jsonc` thường quy) — vì sandbox không xác thực được
+nhiều vai trò qua OAuth thật, đã tự ký JWT session hợp lệ (`make_session.mjs`, đúng thuật toán
+HS256/base64url của `lib/jwt.ts`, xoá sau khi test xong) để kiểm thử ĐÚNG theo từng vai trò thật (GS
+trong/ngoài khu vực, KTV, Admin BH) thay vì chỉ test qua `la_qtri` (vốn bypass mọi cổng nên không lộ
+được lỗi phân quyền theo vai trò cụ thể — chính cách test này đã lộ ra lỗi `isKtv()` ở mục 1):
+- 4 kịch bản phân quyền tạo hộ qua `curl` trực tiếp: GS trong khu vực tạo cho đúng KTV → 201; GS tạo
+  cho KTV không có trong danh bạ → 404 `KTV_NOT_FOUND`; GS NGOÀI khu vực tạo cho KTV đó → 403
+  `OUT_OF_KHU_VUC`; KTV thường tự ý chỉ định `ktv_email` khác mình → 403 `FORBIDDEN`. Cả 4 đúng.
+- `GET /phieu-gui` cho GS (đã sửa bug) và KTV cùng thấy đúng 1 phiếu (theo đúng chiều lọc riêng); GS
+  (creator-hộ) sửa header thành công, GS khác (không phải creator) bị 403.
+- `POST /:id/don` thiếu `case_id` → 400 `MISSING_CASE_ID`; có `case_id` nhưng không tồn tại (đúng
+  giới hạn sandbox không có `CASE_LOOKUP_SERVICE` thật) → 400 `CASE_NOT_FOUND`.
+- `GET /ktv-lien-he` picker: GS trong khu vực thấy đúng 1 KTV, GS ngoài khu vực thấy rỗng, Admin BH
+  thấy toàn bộ.
+- `GET/POST /case-lookup/detail/:id(/sync)`: chưa có bằng chứng → `found:false`; sync thất bại do
+  case không tồn tại → 404 `CASE_NOT_FOUND` (không phải lỗi throttle nhầm — xác nhận bằng script Node
+  độc lập rằng công thức throttle đã sửa đúng, không còn lệch 7h); KTV thường gọi sync → 403.
+- **Click-through thật qua UI** (Browser pane, đăng nhập qua `la_qtri` — tự nhiên rơi vào `hoMode` vì
+  không phải KTV thật): mở `#/ktv/tao-phieu` → thấy "📦 Phiếu bảo hành tôi đã tạo hộ (0)" → bấm
+  "+ Tạo phiếu mới" → `PickKtvModal` mở, `SearchableSelect` liệt kê đúng KTV đã seed, chọn xong nút
+  "Tạo phiếu" hết disable → bấm → tạo thành công `BH-000002` (`nguoi_tao=ktv.test@...`,
+  `nguoi_tao_ho=<qtri email>`, tự điền đúng lịch sử nhà xe CỦA KTV MỤC TIÊU chứ không phải người tạo
+  hộ — xác nhận gián tiếp `computeEmailGs`/nhà-xe đều dùng đúng `target`) → modal chi tiết tự mở, hiện
+  đúng badge "Được tạo hộ bởi... cho KTV..." → mở "+ Thêm đơn" (rơi vào bản mobile do pane hẹp), gõ mã
+  case bất kỳ → hiện đúng banner đỏ "Sai mã sự vụ — không tìm thấy case..." + nút "Thêm vào phiếu"
+  vẫn disabled (đúng thiết kế "chặn cứng"). Không phát sinh lỗi console mới trong toàn bộ phiên test.
+- `KtvBoSungModal.tsx` (mục 3) **chưa verify qua UI** (cần dựng đủ chuỗi trạng thái `cho_bo_sung_tt`
+  tốn nhiều bước) — chỉ xác nhận qua typecheck + đối chiếu pattern y hệt 3 nơi đã verify UI thành
+  công (`AddDonModal`/`AddDonMobileSheet`/`DonDichVuModal`), rủi ro thấp vì cùng 1 component dùng lại
+  nguyên trạng, chỉ đổi cách gọi.
+- **Chưa test được** (đúng giới hạn đã biết trước, ghi nhận lại): nhánh "case tìm thấy VÀ khớp đúng
+  KTV" (tạo đơn thành công) — sandbox không có quyền truy cập Worker `dvbh` thật để `lookupCase()` trả
+  về khác `null`; người dùng cần tự xác nhận nhánh này sau khi deploy thật.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa toàn bộ thay đổi vòng này lên production,
+và tự xác nhận nhánh "case tìm thấy + khớp KTV" hoạt động đúng với dữ liệu `dvbh` thật.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

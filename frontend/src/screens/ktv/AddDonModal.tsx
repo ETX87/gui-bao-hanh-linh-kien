@@ -9,14 +9,14 @@ import { useAddDonForm } from "./useAddDonForm";
 // tru de xuat" la de xuat ban dau cua KTV (Admin BH xac nhan/co the ghi de lai luc phan loai - port
 // dung "Phan hoi vong 4 muc 3"). Logic form dung chung voi AddDonMobileSheet.tsx qua useAddDonForm().
 
-export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose: () => void; onDone: () => void }) {
-  const f = useAddDonForm(guiId, onDone);
+export function AddDonModal({ guiId, ktvEmail, onClose, onDone }: { guiId: string; ktvEmail: string; onClose: () => void; onDone: () => void }) {
+  const f = useAddDonForm(guiId, onDone, ktvEmail);
 
   return (
     <Modal
       title="Thêm đơn bảo hành"
       onClose={onClose}
-      maxWidthClass="max-w-lg"
+      maxWidthClass="max-w-2xl"
       footerActions={
         <>
           <Btn onClick={onClose}>Huỷ</Btn>
@@ -27,14 +27,16 @@ export function AddDonModal({ guiId, onClose, onDone }: { guiId: string; onClose
       }
     >
       <div className="space-y-4">
-        <Field label="Mã case (nếu có)">
+        <Field label="Mã case" required>
           <Input value={f.caseId} onChange={(e) => f.setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
         </Field>
-        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Linh kiện lỗi">
-            <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
-          </Field>
+        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} ktvEmail={f.ktvEmail} onValidityChange={f.setCaseValid} />
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2">
+            <Field label="Linh kiện lỗi">
+              <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
+            </Field>
+          </div>
           <Field label="Số lượng" required>
             <Input type="number" min={1} value={f.soLuong} onChange={(e) => f.setSoLuong(e.target.value)} />
           </Field>

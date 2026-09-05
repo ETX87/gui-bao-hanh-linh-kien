@@ -21,6 +21,9 @@ export interface AppUser {
 export interface PhieuGui {
   id: string;
   nguoi_tao: string;
+  // Email GS/Admin BH THAT SU bam tao (yeu cau 05/09/2026 "tạo hộ") - null neu chinh KTV (nguoi_tao)
+  // tu tao lay.
+  nguoi_tao_ho: string | null;
   ngay_tao: string;
   ngay_gui_xe: string | null;
   hinh_thuc_gui: string | null;

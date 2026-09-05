@@ -9,11 +9,18 @@ import { useLinhKien } from "../../hooks/useLinhKien";
 // (xem CLAUDE.md muc "Thiet ke giao dien" 22/08/2026). Anh chup linh kien loi (tuy chon, thuong tu
 // camera dien thoai) - gap that phat hien o "QA vong 3" (bang phieu_sua_chua_bh_anh da co san trong
 // schema + Admin BH da doc duoc, nhung truoc do khong co duong ghi/UI nao ca).
+//
+// ktvEmail (yeu cau 05/09/2026 muc 2, "Mã sự cố là bắt buộc... phải đúng của ktv đó mới cho tạo"):
+// KTV so huu phieu gui nay (g.nguoi_tao - luon la KTV du ai dang bam them don, ke ca nguoi tao ho) -
+// truyen xuong CaseLookupPreviewCard de doi chieu khopKtv, ket qua nhan lai qua setCaseValid GATE nut
+// submit (backend van la nguon chan quyet dinh - day chi la UX, tranh nguoi dung bam roi moi bi tra
+// loi 400).
 
-export function useAddDonForm(guiId: string, onDone: () => void) {
+export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: string) {
   const toast = useToast();
   const { items: linhKien } = useLinhKien();
   const [caseId, setCaseId] = useState("");
+  const [caseValid, setCaseValid] = useState(false);
   const [maLk, setMaLk] = useState("");
   const [soLuong, setSoLuong] = useState("1");
   const [moTa, setMoTa] = useState("");
@@ -21,14 +28,14 @@ export function useAddDonForm(guiId: string, onDone: () => void) {
   const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const valid = !!moTa.trim() && Number(soLuong) >= 1;
+  const valid = !!moTa.trim() && Number(soLuong) >= 1 && !!caseId.trim() && caseValid;
 
   const submit = async () => {
     setBusy(true);
     try {
       const anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
       await api.post(`/phieu-gui/${guiId}/don`, {
-        case_id: caseId.trim() || null,
+        case_id: caseId.trim(),
         ma_lk: maLk || null,
         so_luong_khai: Number(soLuong),
         mo_ta_loi: moTa.trim(),
@@ -44,5 +51,5 @@ export function useAddDonForm(guiId: string, onDone: () => void) {
     }
   };
 
-  return { linhKien, caseId, setCaseId, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, submit };
+  return { linhKien, ktvEmail, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, submit };
 }

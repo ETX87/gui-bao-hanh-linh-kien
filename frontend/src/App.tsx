@@ -36,7 +36,9 @@ function Routed({ user }: { user: AppUser }) {
   // các modules của hệ thống": moi cong duoi day mo them cho ca la_qtri, dong bo dung voi
   // routesForUser() (sidebar) va cac ham requireX() da sua ben backend - khong de sidebar hien muc
   // ma bam vao lai rot vao trang "Khong tim thay".
-  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen />;
+  // GS/Admin bao hanh cung mo duoc man nay de "tao ho" don bao hanh cho 1 KTV (yeu cau 05/09/2026
+  // muc 1) - KtvTaoPhieuScreen tu re nhanh giao dien theo vai tro (xem hoMode trong file do).
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri || user.la_giam_sat || user.la_admin_bh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen user={user} />;
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/nhan-hang") return <KtvNhanHangScreen user={user} />;
 

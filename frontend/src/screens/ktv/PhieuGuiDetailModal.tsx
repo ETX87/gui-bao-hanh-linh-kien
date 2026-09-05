@@ -104,7 +104,14 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         }
       >
         <div className="space-y-6">
-          <div className="flex justify-end">
+          <div className="flex items-start justify-between gap-3">
+            {g.nguoi_tao_ho ? (
+              <p className="text-xs text-[var(--ink-500)]">
+                Được tạo hộ bởi <span className="font-semibold text-[var(--ink-700)]">{g.nguoi_tao_ho}</span> cho KTV <span className="font-semibold text-[var(--ink-700)]">{g.nguoi_tao}</span>
+              </p>
+            ) : (
+              <span />
+            )}
             <QrCode text={g.id} sizePx={100} />
           </div>
           {isNhap ? (
@@ -189,9 +196,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
       </Modal>
       {addDonOpen &&
         (isMobile ? (
-          <AddDonMobileSheet guiId={g.id} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
+          <AddDonMobileSheet guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
         ) : (
-          <AddDonModal guiId={g.id} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
+          <AddDonModal guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
         ))}
     </>
   );

@@ -57,7 +57,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
     <Modal
       title="Tạo đơn dịch vụ tính phí (khách lẻ)"
       onClose={onClose}
-      maxWidthClass="max-w-lg"
+      maxWidthClass="max-w-2xl"
       footerActions={
         <>
           <Btn onClick={onClose}>Huỷ</Btn>
@@ -92,10 +92,12 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
           </>
         )}
         <SectionLabel>Linh kiện lỗi</SectionLabel>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Linh kiện">
-            <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
-          </Field>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2">
+            <Field label="Linh kiện">
+              <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
+            </Field>
+          </div>
           <Field label="Số lượng" required>
             <Input type="number" min={1} value={soLuong} onChange={(e) => setSoLuong(e.target.value)} />
           </Field>
