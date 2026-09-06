@@ -26,19 +26,29 @@ export function BottomNav({ user }: { user: AppUser }) {
       {items.map((it) => {
         const active = path === it.hash;
         const showDot = it.hash === "/home" && totalCount > 0;
-        return (
-          <button
-            key={it.hash}
-            onClick={() => nav(it.hash)}
-            className={`focus-ring flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-lg text-[10px] font-bold ${
-              active ? "text-[var(--sidebar-ink)] bg-[var(--sidebar-highlight)]" : "text-[var(--sidebar-ink-dim)]"
-            }`}
-          >
+        const itemClassName = `focus-ring flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-lg text-[10px] font-bold ${
+          active ? "text-[var(--sidebar-ink)] bg-[var(--sidebar-highlight)]" : "text-[var(--sidebar-ink-dim)]"
+        }`;
+        const itemContent = (
+          <>
             <span className="relative text-lg leading-none">
               {it.icon}
               {showDot && <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[var(--coral-500)] border border-[var(--sidebar-to)]" />}
             </span>
             <span className="max-w-full truncate">{it.label}</span>
+          </>
+        );
+        // Muc "href" (lien ket ra ngoai, xem routes.ts) - dung <a> chuan thay vi nav() noi bo.
+        if (it.href) {
+          return (
+            <a key={it.hash} href={it.href} className={itemClassName}>
+              {itemContent}
+            </a>
+          );
+        }
+        return (
+          <button key={it.hash} onClick={() => nav(it.hash)} className={itemClassName}>
+            {itemContent}
           </button>
         );
       })}

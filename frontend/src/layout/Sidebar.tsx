@@ -22,15 +22,11 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
         {items.map((it) => {
           const active = path === it.hash;
           const count = it.workloadKey ? counts[it.workloadKey] : 0;
-          return (
-            <button
-              key={it.hash}
-              onClick={() => nav(it.hash)}
-              title={`${it.label}${count > 0 ? ` (${count} việc cần làm)` : ""}`}
-              className={`focus-ring relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active ? "bg-[var(--sidebar-highlight)] text-[var(--ocean-800)]" : "text-[var(--sidebar-ink-mid)] hover:bg-[var(--surface-100)]"
-              }`}
-            >
+          const itemClassName = `focus-ring relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            active ? "bg-[var(--sidebar-highlight)] text-[var(--ocean-800)]" : "text-[var(--sidebar-ink-mid)] hover:bg-[var(--surface-100)]"
+          }`;
+          const itemContent = (
+            <>
               <span className="relative text-base leading-none shrink-0">
                 {it.icon}
                 {collapsed && count > 0 && (
@@ -43,6 +39,20 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
               {!collapsed && count > 0 && (
                 <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--coral-600)] text-white text-[10px] font-bold flex items-center justify-center">{count > 99 ? "99+" : count}</span>
               )}
+            </>
+          );
+          // Muc "href" (lien ket ra ngoai, xem routes.ts) - dung <a> chuan de trinh duyet tu dieu
+          // huong "mượt" sang app khac, giu nguyen tab hien tai (khong target=_blank).
+          if (it.href) {
+            return (
+              <a key={it.hash} href={it.href} title={it.label} className={itemClassName}>
+                {itemContent}
+              </a>
+            );
+          }
+          return (
+            <button key={it.hash} onClick={() => nav(it.hash)} title={`${it.label}${count > 0 ? ` (${count} việc cần làm)` : ""}`} className={itemClassName}>
+              {itemContent}
             </button>
           );
         })}

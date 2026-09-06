@@ -10,6 +10,13 @@ export interface RouteItem {
   label: string;
   icon: string;
   workloadKey?: keyof WorkloadCounts;
+  // "href" (them 05/09/2026, yeu cau "modules Mua hàng" tro sang linhkien.dichvu3t.workers.dev) -
+  // danh dau 1 muc la LIEN KET RA NGOAI (sang he Worker/app khac hoan toan), KHONG phai 1 route noi
+  // bo cua app nay - dung <a href> that (Sidebar/BottomNav) thay vi goi nav() qua router hash noi bo,
+  // giu nguyen tab hien tai (khong target=_blank). Port dung quy uoc NavItem.href cua linh-kien-app
+  // (frontend/src/layout/navConfig.ts) - ho da lam chieu nguoc lai (link tro sang suachua) tu
+  // 25/08/2026.
+  href?: string;
 }
 
 export function routesForUser(u: AppUser): RouteItem[] {
@@ -58,6 +65,10 @@ export function routesForUser(u: AppUser): RouteItem[] {
       { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" },
     );
   }
+  // "Mua hàng" (them 05/09/2026) - lien ket ra ngoai sang he "Dat mua linh kien" (linh-kien-app),
+  // LUON hien cho MOI nguoi dang nhap bat ke vai tro (giong cach linh-kien-app lam nguoc lai voi muc
+  // "Sửa chữa" cua ho) - dat cuoi danh sach, truoc buoc dedupe.
+  items.push({ hash: "/mua-hang", label: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/" });
   // Khu vuc dedupe theo hash - nhieu nhanh o tren co the cung push 1 hash (VD "/linh-kien" tu ca
   // nhanh admin_bh lan nhanh qtri, hoac 1 nguoi dung vua co nhieu co vai tro that vua la_qtri).
   const seen = new Set<string>();
