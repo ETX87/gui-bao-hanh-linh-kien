@@ -19,6 +19,7 @@ import { QuanLyTongQuanScreen } from "./screens/quanly/TongQuan";
 import { QuanLyTraCuuScreen } from "./screens/quanly/TraCuu";
 import { QtriNguoiDungScreen } from "./screens/qtri/NguoiDung";
 import { QtriKtvScreen } from "./screens/qtri/KtvLienHe";
+import { QtriKhuVucScreen } from "./screens/qtri/KhuVuc";
 import { QtriCaiDatScreen } from "./screens/qtri/CaiDat";
 import { LinhKienScreen } from "./screens/shared/LinhKienScreen";
 
@@ -58,6 +59,7 @@ function Routed({ user }: { user: AppUser }) {
 
   if (user.la_qtri && path === "/qtri/nguoi-dung") return <QtriNguoiDungScreen currentEmail={user.email} />;
   if (user.la_qtri && path === "/qtri/ktv") return <QtriKtvScreen />;
+  if (user.la_qtri && path === "/qtri/khu-vuc") return <QtriKhuVucScreen />;
   if (user.la_qtri && path === "/qtri/cai-dat") return <QtriCaiDatScreen />;
 
   if ((user.la_admin_bh || user.la_qtri) && path === "/linh-kien") return <LinhKienScreen />;

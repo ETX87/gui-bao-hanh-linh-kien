@@ -209,6 +209,16 @@ export interface KtvLienHe {
   dong_bo_luc: string;
 }
 
+// Khu vuc "quan sat duoc" tu ktv_lien_he_bh.khu_vuc_ma (GROUP BY, xem routes/khuVuc.ts) - ten/
+// gs_email co the null neu Khu vuc nay CHUA tung co dong khu_vuc_bh tuong ung (chua duoc qtri gan GS
+// hoac chua dong bo tu linh-kien-app).
+export interface KhuVucQuanSat {
+  ma: string;
+  so_ktv: number;
+  ten: string | null;
+  gs_email: string | null;
+}
+
 export interface FastActionMeta {
   key: string;
   label: string;

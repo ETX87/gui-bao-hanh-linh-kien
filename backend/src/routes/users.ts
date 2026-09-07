@@ -42,6 +42,14 @@ users.get("/nv-sua-chua", async (c) => {
   return c.json({ users: results });
 });
 
+// GET /api/users/giam-sat - danh sach rut gon (email, ten) cac tai khoan la_giam_sat=1, dung cho man
+// "#/qtri/khu-vuc" (picker chon GS phu trach 1 Khu vuc) - cung mau voi GET /nv-sua-chua o tren.
+users.get("/giam-sat", async (c) => {
+  if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const { results } = await c.env.DB.prepare("SELECT email, ten FROM users WHERE la_giam_sat = 1 AND bi_khoa = 0 ORDER BY ten, email").all();
+  return c.json({ users: results });
+});
+
 interface PatchBody {
   flag?: string;
   value?: boolean;

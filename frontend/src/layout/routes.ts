@@ -61,6 +61,7 @@ export function routesForUser(u: AppUser): RouteItem[] {
     items.push(
       { hash: "/qtri/nguoi-dung", label: "Người dùng", icon: "👥" },
       { hash: "/qtri/ktv", label: "Danh sách KTV", icon: "📇" },
+      { hash: "/qtri/khu-vuc", label: "Giám sát khu vực", icon: "🗺️" },
       { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", icon: "⚙️" },
       { hash: "/linh-kien", label: "Danh mục linh kiện", icon: "🔩" },
     );

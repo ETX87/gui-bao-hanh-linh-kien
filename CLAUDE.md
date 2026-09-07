@@ -146,7 +146,13 @@ deploy phải tăng `APP_VERSION` 1 nấc 0.001** (05/09/2026), và gần nhất
 (GS khu vực/Admin BH tạo thùng cho 1 KTV khác, quản lý toàn bộ thùng đó tới khi Kho tiếp nhận) +
 **mã sự cố bắt buộc và phải khớp đúng KTV** (chặn cứng, lưu bằng chứng + Admin BH đồng bộ lại được)
 + sửa UI "Thêm đơn bảo hành" quá nhỏ + sửa nốt 1 chỗ linh kiện mobile còn dùng `<select>` thường
-(05/09/2026) — xem mục "Tạo hộ đơn bảo hành..." bên dưới.
+(05/09/2026) — xem mục "Tạo hộ đơn bảo hành..." bên dưới. **Mốc mới nhất (07/09/2026)**: phát hiện 1
+phiên làm việc song song đã tự build xong hệ "Kho vận" (`khovan`) độc lập và tích hợp thêm vào repo
+này (đã loại trừ, không phải nguyên nhân lỗi); sửa 1 lỗi thật đang xảy ra trên production
+(`INTERNAL_ERROR` khi "tạo hộ đơn" cho 1 KTV chưa từng đăng nhập — do FOREIGN KEY constraint của D1
+chặn `phieu_gui_bh.nguoi_tao`, đã sửa bằng tự cấp phát trước 1 dòng `users` tối thiểu) và bổ sung
+module còn thiếu **"Giám sát khu vực"** (`#/qtri/khu-vuc`, gán GS phụ trách cho từng Khu vực đã có
+sẵn trên danh bạ KTV) — xem mục "Sửa lỗi FK 'tạo hộ' + thêm module 'Giám sát khu vực'..." bên dưới.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3167,6 +3173,102 @@ trong/ngoài khu vực, KTV, Admin BH) thay vì chỉ test qua `la_qtri` (vốn 
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa toàn bộ thay đổi vòng này lên production,
 và tự xác nhận nhánh "case tìm thấy + khớp KTV" hoạt động đúng với dữ liệu `dvbh` thật.
+
+## Sửa lỗi FK "tạo hộ" + thêm module "Giám sát khu vực" + phát hiện tích hợp `khovan` mới (07/09/2026)
+
+Nguyên văn 3 yêu cầu (gửi liên tiếp, ý 2-3 gửi kèm 1 ảnh chụp nút đỏ "INTERNAL_ERROR"):
+
+1. *"Thiếu chức năng quản lý giám sát khu vực => tôi phân vai trò giám sát cho 1 nhân viên nhưng
+   không thể phân khu vực (hiện có của KTV kéo về từ API) cho họ để họ quản lý nhân sự khu vực
+   mình"*
+2. *"khi tạo phiếu gửi bảo hành hộ, không hiện danh sách KTV để lựa chọn (vai trò admin hệ thống)"*
+3. *"khi chọn ktv xong ấn tạo hộ thì báo lỗi"*
+
+Trước khi sửa, phát hiện 1 việc ngoài dự kiến: **1 phiên làm việc khác (song song, không phải phiên
+này) đã tự build xong 1 hệ thống "Kho vận" (`khovan`) độc lập** và tích hợp thêm vào chính repo này
+(commit `1e9de56`, *"feat: báo trước thùng hàng 'chờ xử lý' sang khovan lúc tạo + API tra cứu lại
+theo ID"*) — thêm `backend/src/lib/khovanPushClient.ts` (best-effort, bọc try/catch, không throw),
+`backend/src/routes/khovanLookup.ts`, 1 Service Binding `KHOVAN_PUSH_SERVICE` mới trong
+`wrangler.jsonc`. Đã đọc kỹ 2 file này để **loại trừ** khả năng chúng là nguyên nhân lỗi
+`INTERNAL_ERROR` ở ý #3 (xác nhận: không phải — `pushBoxToKhovan()` không bao giờ throw ra ngoài).
+
+### 3. Lỗi `INTERNAL_ERROR` khi "tạo hộ" — nguyên nhân gốc: FOREIGN KEY constraint
+
+Dùng `wrangler tail` xem log production thật (không đoán) — bắt được đúng exception:
+`D1_ERROR: FOREIGN KEY constraint failed: SQLITE_CONSTRAINT_FOREIGNKEY` khi `INSERT INTO
+phieu_gui_bh` với `nguoi_tao = <email KTV mục tiêu>`. Đối chiếu `migrations/0001_init.sql`:
+`phieu_gui_bh.nguoi_tao TEXT NOT NULL REFERENCES users(email)` — D1 **thực thi FK constraint mặc
+định** (khác SQLite thường, nơi FK là tuỳ chọn bật/tắt theo từng connection — phát hiện mới, ghi lại
+để tránh lặp lại giả định sai này ở chỗ khác). Vì tính năng "tạo hộ" (chốt 05/09/2026) **cho phép cả
+KTV chưa từng đăng nhập** (không có dòng `users` nào), FK này chặn cứng ngay khi target là 1 KTV như
+vậy — đúng chính xác kịch bản người dùng vừa gặp trong ảnh chụp.
+
+**Đã sửa** (`backend/src/routes/phieuGui.ts`, nhánh `ktvEmailReq !== user.email`): trước khi INSERT
+`phieu_gui_bh`, tự cấp phát 1 dòng `users` tối thiểu cho KTV mục tiêu nếu CHƯA có
+(`INSERT ... ON CONFLICT(email) DO NOTHING`) — dùng ĐÚNG khuôn mẫu `ktvMatch` mà `routes/auth.ts` đã
+dùng lúc KTV đăng nhập Google lần đầu (đọc lại `auth.ts` để khớp default: `trang_thai_duyet='Da
+duyet'`, `la_ktv_dvbh`/`la_ve_tinh` theo đúng `ktv_lien_he_bh.vai_tro_ktv`) — để khi KTV đó đăng nhập
+thật sau này, dòng `users` đã tồn tại đúng và không bị ghi đè nhầm (`DO NOTHING`, không `DO UPDATE`).
+**Đã xác nhận sửa đúng** bằng test local: `POST /api/phieu-gui {ktv_email: 'ktv.chuadangnhap.test@...'}`
+(KTV chưa từng có dòng `users`) trả `201 {id:"BH-000001"}` thay vì lỗi FK.
+
+### 2. Danh sách KTV không hiện khi tạo hộ — CHƯA XÁC NHẬN LÀ LỖI THẬT
+
+Đọc `PickKtvModal.tsx`: gọi `GET /ktv-lien-he`, lọc `!!k.email_dang_nhap`, **không có `.catch()`** —
+nếu request lỗi, `list` kẹt ở `null` mãi mãi (Spinner vô hạn, không báo lỗi) — đây LÀ 1 lỗ hổng thật
+về xử lý lỗi, nhưng khi soi lại đúng log `wrangler tail` của phiên lỗi #3, `GET /ktv-lien-he` NGAY
+TRƯỚC ĐÓ trả về `Ok` (200) — tức tại đúng thời điểm người dùng gặp lỗi, danh sách KTV đã tải được
+(nếu không tải được, người dùng sẽ không có gì để "chọn KTV xong" ở bước #3). **Kết luận: chưa đủ
+bằng chứng để khẳng định đây là lỗi đang xảy ra** — có thể đã tự hết vì danh bạ `ktv_lien_he_bh` lúc
+đó đã có đủ 492 dòng (đồng bộ xong), hoặc chỉ là cảm nhận UX thoáng qua lúc danh sách đang tải. Chưa
+sửa gì cho ý này — cần người dùng xác nhận lại có còn tái hiện không sau khi bản vá ý #1/#3 lên
+production.
+
+### 1. Module "Giám sát khu vực" (`#/qtri/khu-vuc`, mới)
+
+Gap thật: `khu_vuc_bh.gs_email` (dùng bởi `computeEmailGs()` — quyết định GS nào phụ trách 1 KTV, cả
+cho scope tra cứu lẫn chặn/cho phép "tạo hộ" ngoài khu vực) **chưa từng có UI nào để gán** — chỉ có
+thể ghi qua `POST /api/partner/sync/khu-vuc` (đồng bộ đẩy từ `linh-kien-app`, chưa triển khai xong ở
+phía phát — xem mục "Giai đoạn 5"), nên trên thực tế bảng `khu_vuc_bh` đang **rỗng hoàn toàn trên
+production**.
+
+- **`backend/src/routes/khuVuc.ts`** (mới, mount `/api/khu-vuc`, chỉ `la_qtri`) — `GET /` liệt kê
+  **Khu vực "quan sát được"** bằng cách `GROUP BY khu_vuc_ma` trực tiếp trên `ktv_lien_he_bh` (không
+  đọc `khu_vuc_bh` làm nguồn chính — vì bảng đó rỗng, còn mã khu vực THẬT đã có sẵn trên từng dòng
+  KTV qua đồng bộ), LEFT JOIN `khu_vuc_bh` để lấy `ten`/`gs_email` đã gán (nếu có). `PATCH /:ma` —
+  upsert `khu_vuc_bh` (tên + `gs_email`, `ON CONFLICT DO UPDATE`).
+- **`backend/src/routes/users.ts`** — thêm `GET /giam-sat` (chỉ `la_qtri`): danh sách rút gọn
+  email/tên các tài khoản `la_giam_sat=1 AND bi_khoa=0`, cấp dữ liệu cho picker gán GS.
+- **`frontend/src/screens/qtri/KhuVuc.tsx`** (mới) — `QtriKhuVucScreen` (bảng Khu vực quan sát được +
+  số KTV + GS phụ trách, click dòng mở modal sửa) + `GanGsModal` (sửa tên khu vực + chọn GS qua
+  `SearchableSelect`, dùng chung component đã có).
+- Mount route `#/qtri/khu-vuc` (`App.tsx`, `routes.ts` — mục sidebar mới "🗺️ Giám sát khu vực").
+
+**Đã xác nhận qua API thật (local):** tạo 1 KTV mẫu với `khu_vuc_ma='MB1'`, `GET /khu-vuc` trả đúng
+`{ma:"MB1", so_ktv:1, ten:null, gs_email:null}`; `PATCH /khu-vuc/MB1 {ten:"Mien Bac 1",
+gs_email:"gs.test@example.com"}` → đọc lại đúng giá trị vừa ghi, xác nhận lại 2 lần độc lập (kể cả
+sau khi mở lại tab trình duyệt) — ghi/đọc nhất quán. Màn `#/qtri/khu-vuc` render đúng qua
+`get_page_text` ("🗺️ Giám sát khu vực (1)", đúng 1 dòng MB1). Không verify được thao tác click chuột
+trực tiếp qua UI cho modal (ref nằm ngoài viewport khi test) — đã verify tương đương bằng gọi thẳng
+đúng API mà UI đó gọi, cùng logic, rủi ro thấp.
+
+**Phát hiện phụ trong lúc kiểm thử:** production đang thiếu 2 migration
+(`0002_ktv_lien_he_nguon.sql`, `0003_case_lookup_snapshot_va_tao_ho.sql`) mà code đã deploy từ trước
+đó phụ thuộc vào (`wrangler d1 migrations list DB --remote` cho thấy pending) — đã tự chạy áp dụng
+lên production (`CLOUDFLARE_ACCOUNT_ID=... npm run db:migrate:remote`) để tránh production tiếp tục
+chạy sai lệch với code đã deploy, cùng vướng mắc "wrangler nhầm tài khoản" đã ghi ở mục "Deploy thật
+đầu tiên" (khắc phục bằng ép `CLOUDFLARE_ACCOUNT_ID` rõ ràng).
+
+**Kiểm thử đã chạy:** `npm run typecheck` — 0 lỗi. Verify qua Browser pane (`wrangler dev` local, quy
+trình backup/restore `wrangler.jsonc` thường quy) — xác nhận cả 2 tính năng (Giám sát khu vực + fix
+FK "tạo hộ") hoạt động đúng như mô tả ở trên.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa các sửa đổi này lên production — đây là
+bản vá cho 1 lỗi ĐANG XẢY RA THẬT trên production (không tạo được đơn hộ cho KTV chưa đăng nhập), nên
+nên ưu tiên deploy sớm. Sau khi deploy, xác nhận lại giúp: (a) lỗi `INTERNAL_ERROR` ở ý #3 đã hết; (b)
+ý #2 (danh sách KTV không hiện) có còn tái hiện không — nếu còn, cần thêm bằng chứng cụ thể hơn (ảnh
+chụp đúng lúc xảy ra, hoặc mở DevTools Network tab) vì log production hiện tại không đủ để xác nhận
+đây là lỗi thật.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

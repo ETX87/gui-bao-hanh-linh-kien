@@ -77,7 +77,9 @@ phieuGui.post("/", async (c) => {
   let nguoiTaoHo: string | null;
   if (ktvEmailReq && ktvEmailReq !== user.email) {
     if (!canTaoHo(user)) return c.json({ error: "FORBIDDEN" }, 403);
-    const ktvRow = await c.env.DB.prepare("SELECT ma_ktv, khu_vuc_ma FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(ktvEmailReq).first<{ ma_ktv: string; khu_vuc_ma: string | null }>();
+    const ktvRow = await c.env.DB.prepare("SELECT ma_ktv, khu_vuc_ma, vai_tro_ktv, ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?")
+      .bind(ktvEmailReq)
+      .first<{ ma_ktv: string; khu_vuc_ma: string | null; vai_tro_ktv: string | null; ten_hien_thi: string | null }>();
     if (!ktvRow) return c.json({ error: "KTV_NOT_FOUND" }, 404);
     // GS chi tao ho duoc trong dung Khu vuc minh phu trach (khop qua khu_vuc_bh.gs_email) - Admin
     // BH/qtri khong bi gioi han khu vuc (dung nguyen van yeu cau "hoặc Admin bảo hành", khong dieu
@@ -86,6 +88,21 @@ phieuGui.post("/", async (c) => {
       const emailGs = await computeEmailGs(c.env.DB, ktvEmailReq);
       if (emailGs !== user.email) return c.json({ error: "OUT_OF_KHU_VUC" }, 403);
     }
+    // "tao ho" duoc phep cho ca KTV CHUA TUNG dang nhap (danh ba ktv_lien_he_bh, CHOT qua
+    // AskUserQuestion 05/09/2026) - nhung phieu_gui_bh.nguoi_tao co FOREIGN KEY REFERENCES
+    // users(email) (migrations/0001), ma bang users CHI co dong khi nguoi do da tung dang nhap that
+    // (xem auth.ts GET /callback) -> INSERT phieu_gui_bh se vo FK neu KTV chua co dong users, gay
+    // INTERNAL_ERROR (bug that phat hien 07/09/2026 qua wrangler tail). Sua: tu cap phat truoc 1 dong
+    // users toi thieu neu chua co (KHONG dung neu da co - tranh ghi de tai khoan da cau hinh/dang
+    // nhap that), dung DUNG mau ktvMatch cua auth.ts de nhat quan khi KTV do sau nay tu dang nhap that.
+    const laVeTinh = ktvRow.vai_tro_ktv === "Ve tinh" ? 1 : 0;
+    await c.env.DB.prepare(
+      `INSERT INTO users (email, ten, trang_thai_duyet, la_ktv_dvbh, la_ve_tinh)
+       VALUES (?, ?, 'Da duyet', ?, ?)
+       ON CONFLICT(email) DO NOTHING`,
+    )
+      .bind(ktvEmailReq, ktvRow.ten_hien_thi ?? null, laVeTinh ? 0 : 1, laVeTinh)
+      .run();
     target = ktvEmailReq;
     nguoiTaoHo = user.email;
   } else {
