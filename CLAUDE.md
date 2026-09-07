@@ -153,6 +153,11 @@ này (đã loại trừ, không phải nguyên nhân lỗi); sửa 1 lỗi thậ
 chặn `phieu_gui_bh.nguoi_tao`, đã sửa bằng tự cấp phát trước 1 dòng `users` tối thiểu) và bổ sung
 module còn thiếu **"Giám sát khu vực"** (`#/qtri/khu-vuc`, gán GS phụ trách cho từng Khu vực đã có
 sẵn trên danh bạ KTV) — xem mục "Sửa lỗi FK 'tạo hộ' + thêm module 'Giám sát khu vực'..." bên dưới.
+Ngay sau đó (07/09/2026, cùng ngày): sửa lỗi "tạo ra 1 đống phiếu nháp thừa" (tự động xoá phiếu nháp
+rỗng khi đóng modal chi tiết không thêm đơn nào + dời thời điểm báo khovan từ lúc tạo phiếu sang lúc
+KTV thật sự xác nhận đã gửi xe — nhờ vậy phiếu nháp bị bỏ dở không cần báo huỷ sang khovan vì chưa
+từng được báo từ đầu) và sửa layout mobile của màn "Phiếu gửi"/danh sách đơn bị chồng chéo — xem mục
+"Không tạo phiếu nháp thừa..." bên dưới.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3269,6 +3274,74 @@ nên ưu tiên deploy sớm. Sau khi deploy, xác nhận lại giúp: (a) lỗi 
 ý #2 (danh sách KTV không hiện) có còn tái hiện không — nếu còn, cần thêm bằng chứng cụ thể hơn (ảnh
 chụp đúng lúc xảy ra, hoặc mở DevTools Network tab) vì log production hiện tại không đủ để xác nhận
 đây là lỗi thật.
+
+## Không tạo phiếu nháp thừa + đẩy khovan trễ tới lúc gửi thật + sửa layout mobile chồng chéo (07/09/2026)
+
+Nguyên văn 2 yêu cầu (gửi liên tiếp trong cùng lượt):
+
+1. *"khi ấn tạo phiếu, nếu không ấn lưu và tối tiểu 1 linh kiện bên trong phiếu thì không tạo ra
+   phiếu nháp. đang tạo ra 1 đống phiếu nháp thừa. ngoại ra nếu phiếu nháp bị hủy thì có bắn api sang
+   cho app kho vận để báo phiếu nháp đã bị xóa không?"*
+2. *"giao diện tạo phiếu và tạo đơn bh trên giao diện mobile đang không hợp lý, khó nhập liệu khi các
+   thông tin bị quá ngắn và chồng chéo đè lên nhau"*
+
+### 1. Phiếu nháp thừa + đồng bộ khovan
+
+Điều tra trước khi sửa: bấm "+ Tạo phiếu mới" gọi `POST /api/phieu-gui` **INSERT ngay 1 dòng**
+`phieu_gui_bh` (trạng thái `nhap`) rồi mới mở modal chi tiết để KTV điền tiếp — nếu KTV đóng modal mà
+chưa thêm đơn nào, dòng đó tồn tại vĩnh viễn trong danh sách "Phiếu gửi hàng của tôi" (đã tự bắt gặp
+1 ví dụ thật khi mở lại danh sách phiếu — `BH-000001`, phiếu nháp rỗng để lại từ chính vòng kiểm thử
+FK "tạo hộ" hôm trước). Đồng thời, `POST /api/phieu-gui` cũng gọi `pushBoxToKhovan()` **ngay lúc tạo**
+— nghĩa là mọi phiếu nháp bị bỏ dở đều đã được báo sang `khovan` như 1 đơn hàng "chờ xử lý" thật, dù
+sau đó không hề tồn tại nội dung gì — đúng câu hỏi thứ 2 của người dùng.
+
+Đã sửa theo 2 hướng bổ trợ nhau:
+
+- **Tự động dọn phiếu nháp rỗng khi đóng modal chi tiết** (`frontend/src/screens/ktv/
+  PhieuGuiDetailModal.tsx`, hàm mới `handleClose()`) — nếu phiếu vẫn `trang_thai='nhap'` **và**
+  `don_cha.length === 0` lúc đóng (bấm ✕, Escape, hoặc bấm ra ngoài nền), tự gọi
+  `DELETE /api/phieu-gui/:id` (best-effort, im lặng nếu lỗi) rồi mới đóng — đúng điều kiện đã có sẵn
+  của nút "Xoá phiếu" thủ công (`don_cha.length===0`), đây chỉ là bản tự động hoá của đúng hành động
+  đó, không mở thêm quyền gì mới. Có toast báo "Đã tự động xoá phiếu nháp trống" để KTV không hoang
+  mang khi phiếu biến mất khỏi danh sách.
+- **Dời `pushBoxToKhovan()` từ lúc TẠO phiếu (`POST /`) sang lúc KTV THẬT SỰ xác nhận đã gửi xe
+  (`POST /:id/xac-nhan-gui`)** (`backend/src/routes/phieuGui.ts`) — vừa đúng bản chất mục đích của
+  khovan ("báo trước hàng SẮP VỀ THẬT", không phải "có người vừa bấm nút tạo"), vừa giải quyết dứt
+  điểm câu hỏi thứ 2: **phiếu nháp bị xoá/bỏ dở không cần báo huỷ sang khovan, vì nó chưa từng được
+  báo sang từ đầu** — không cần thêm 1 API "huỷ" riêng (khovan là repo/Worker của 1 phiên làm việc
+  khác, không chủ động sửa thêm phía đó nếu tránh được).
+
+### 2. Layout mobile chồng chéo — "tạo phiếu" (`PhieuGuiDetailModal`) và danh sách đơn trong phiếu
+
+Đối chiếu trực tiếp bằng ảnh chụp Chrome thật (Browser pane, viewport 375×812) trước khi sửa, không
+đoán theo mô tả suông — xác nhận `AddDonMobileSheet.tsx` (màn "Thêm đơn bảo hành" mobile riêng, đã có
+từ Giai đoạn 4/QA vòng 2) **không có vấn đề** (đã là layout 1 cột chuyên biệt cho mobile từ trước) —
+gốc rễ thật nằm ở `PhieuGuiDetailModal.tsx`, màn duy nhất trong luồng KTV chưa từng có tinh chỉnh
+riêng cho mobile:
+
+- **Lưới thông tin header** (Hình thức gửi/Mã xe/Đơn vị vận chuyển/Mã vận đơn/Ngày gửi xe) trước đó
+  luôn `grid-cols-2` ngay cả ở màn hình hẹp nhất — đổi thành `grid-cols-1 sm:grid-cols-2
+  md:grid-cols-4` (1 cột trên điện thoại, 2 cột từ ~640px, 4 cột từ 768px như cũ).
+- **Hàng "Ngày gửi xe" + nút "Lưu thông tin"** trước đó dùng chung 1 `flex items-end` không có chiều
+  rộng cố định cho từng phần tử — 2 phần tử tranh nhau không gian trên màn hẹp, dễ vỡ dòng/đè lên
+  nhau. Tách "Ngày gửi xe" thành 1 ô lưới riêng, nút "Lưu thông tin" thành 1 ô lưới khác (rộng hết cỡ
+  trên mobile qua `className="w-full sm:w-auto"`) — mỗi phần tử có không gian riêng, không còn cạnh
+  tranh.
+- **Từng dòng "Đơn bảo hành trong phiếu"** trước đó ép cứng 1 hàng ngang (mã đơn + mô tả lỗi truncate
+  + SL + badge + nút Xoá) — trên màn hẹp, mô tả lỗi gần như không còn chỗ hiển thị (bị các phần tử cố
+  định khác chiếm hết chiều rộng). Đổi sang `flex-wrap` cho hàng nút/nhãn (tự xuống dòng khi chật thay
+  vì ép chết) + mô tả lỗi xuống dòng riêng, luôn có đủ chiều rộng để đọc.
+
+**Đã xác nhận qua Browser pane thật (không chỉ đọc code):** dựng lại đúng kịch bản thật (tạo phiếu →
+mở "+ Thêm đơn" → đóng không lưu gì → xác nhận phiếu tự động biến mất khỏi danh sách VÀ bị xoá thật
+trong D1; tạo phiếu khác → chèn tay 1 đơn con qua D1 → đóng modal → xác nhận phiếu **vẫn còn** vì đã
+có ≥1 đơn; gọi `xác-nhận-gửi` → xác nhận log worker cho thấy `pushBoxToKhovan()` được gọi ĐÚNG lúc
+này, không phải lúc tạo). Chụp ảnh màn hình 375×812 cho cả `PhieuGuiDetailModal` (header + danh sách
+đơn) và `AddDonMobileSheet` — không còn chồng chéo, mọi trường đều đọc/nhập được rõ ràng, nút "Lưu
+thông tin" rộng hết cỡ, dòng đơn tự xuống dòng đúng ý. `npm run typecheck` — 0 lỗi cả trước/sau khi
+sửa. v1.004.
+
+**Việc còn lại thuộc người dùng:** `npm run deploy` để đưa các sửa đổi này lên production.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

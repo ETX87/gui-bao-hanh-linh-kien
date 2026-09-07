@@ -61,9 +61,29 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
     }
   };
 
+  // Dong modal ma phieu con "nhap" VA chua co don nao ben trong -> tu dong xoa luon (best-effort,
+  // khong bao loi neu that bai) - port dung nguyen van yeu cau 07/09/2026 "nếu không ấn lưu và tối
+  // thiểu 1 linh kiện bên trong phiếu thì không tạo ra phiếu nháp": truoc day bam "+ Tạo phiếu mới"
+  // la INSERT ngay 1 dong phieu_gui_bh, dong modal ma chua them don nao de lai 1 phieu nhap rong vinh
+  // vien trong danh sach ("đống phiếu nháp thừa"). Dieu kien nay TRUNG KHOP dieu kien nut "Xoá phiếu"
+  // thu cong da co san (chi hien khi don_cha.length===0) - day chi la ban tu dong hoa cua dung hanh
+  // dong do, khong mo rong quyen gi moi.
+  const handleClose = () => {
+    if (data && data.phieu_gui.trang_thai === "nhap" && data.don_cha.length === 0) {
+      api
+        .delete(`/phieu-gui/${data.phieu_gui.id}`)
+        .then(() => {
+          toast("Đã tự động xoá phiếu nháp trống (chưa có đơn nào).", "ok");
+          onChanged();
+        })
+        .catch(() => {});
+    }
+    onClose();
+  };
+
   if (!data) {
     return (
-      <Modal title="Chi tiết phiếu gửi" onClose={onClose} full>
+      <Modal title="Chi tiết phiếu gửi" onClose={handleClose} full>
         <Spinner />
       </Modal>
     );
@@ -85,7 +105,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
     <>
       <Modal
         title={`Phiếu gửi ${g.id}`}
-        onClose={onClose}
+        onClose={handleClose}
         full
         headerActions={<Badge tone="blue">{TRANG_THAI_PHIEU_GUI_LABELS[g.trang_thai] || g.trang_thai}</Badge>}
         footerActions={
@@ -115,7 +135,13 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
             <QrCode text={g.id} sizePx={100} />
           </div>
           {isNhap ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            // Grid 1 cot tren mobile (< sm), 2 cot tu ~640px, 4 cot tu 768px - sua 07/09/2026 (phan
+            // hoi "giao diện tạo phiếu... trên mobile khó nhập liệu, thông tin bị quá ngắn và chồng
+            // chéo đè lên nhau"): truoc day luon co san 2 cot ngay ca tren dien thoai hep nhat, va
+            // "Ngày gửi xe" + nut "Lưu thông tin" nam chung 1 hang flex khong co chieu rong co dinh -
+            // 2 phan tu tranh cho nhau tren man hinh hep, de vo dong/de len nhau. Nay moi truong 1 o
+            // luoi rieng, "Lưu thông tin" thanh 1 nut rong het chieu rong o cua no tren mobile.
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <Field label="Hình thức gửi">
                 <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
                   {HINH_THUC_OPTIONS.map((o) => (
@@ -134,11 +160,11 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
               <Field label="Mã vận đơn">
                 <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
               </Field>
-              <div className="col-span-2 md:col-span-4 flex items-end gap-3">
-                <Field label="Ngày gửi xe">
-                  <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
-                </Field>
-                <Btn onClick={saveHeader} disabled={busy}>
+              <Field label="Ngày gửi xe">
+                <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
+              </Field>
+              <div className="flex items-end">
+                <Btn onClick={saveHeader} disabled={busy} className="w-full sm:w-auto">
                   Lưu thông tin
                 </Btn>
               </div>
@@ -174,16 +200,22 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
             <div className="space-y-1.5">
               {data.don_cha.length === 0 && <p className="text-xs text-[var(--ink-400)]">Chưa có đơn nào — bấm "+ Thêm đơn" trước khi xác nhận gửi.</p>}
               {data.don_cha.map((d) => (
-                <div key={d.id} className="flex items-center gap-3 rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
-                  <span className="font-mono text-xs">{d.id}</span>
-                  <span className="flex-1 truncate">{d.mo_ta_loi}</span>
-                  <span className="text-xs text-[var(--ink-500)]">SL: {d.so_luong_khai}</span>
-                  {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
-                  {isNhap && (
-                    <Btn variant="danger" onClick={() => xoaDon(d.id)} disabled={busy}>
-                      Xoá
-                    </Btn>
-                  )}
+                // flex-wrap thay vi ep 1 hang cung (sua 07/09/2026, cung ly do voi grid header o
+                // tren) - tren man hinh hep, id/SL/badge/nut "Xoá" tu xuong hang thay vi bop chet mo
+                // ta loi con vai px, va mo ta loi luon xuong dong rieng (khong chia se hang voi cac
+                // the khac) de khong con bi cham/de len nhau.
+                <div key={d.id} className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs">{d.id}</span>
+                    <span className="text-xs text-[var(--ink-500)]">SL: {d.so_luong_khai}</span>
+                    {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
+                    {isNhap && (
+                      <Btn variant="danger" onClick={() => xoaDon(d.id)} disabled={busy} className="ml-auto">
+                        Xoá
+                      </Btn>
+                    )}
+                  </div>
+                  <p className="mt-1 truncate">{d.mo_ta_loi}</p>
                 </div>
               ))}
             </div>

@@ -45,8 +45,9 @@
 	// linh-kien-app (lib/caseLookupClient.ts). "remote": true de "wrangler dev" local cung dispatch
 	// toi ban DA DEPLOY that cua dvbh thay vi tim 1 "wrangler dev" khac dang chay local cho no.
 	// Them 2026-09-07: "KHOVAN_PUSH_SERVICE" - Service Binding toi Worker "khovan" (he Quan ly hang ve
-	// kho, doc lap) - bao truoc thung hang "cho xu ly" ngay luc tao (xem lib/khovanPushClient.ts). Cung
-	// ly do Service Binding nhu CASE_LOOKUP_SERVICE o tren (cung 1 tai khoan Cloudflare).
+	// kho, doc lap) - bao truoc thung hang "cho xu ly" luc KTV xac nhan da gui xe (sua cung ngay, xem
+	// lib/khovanPushClient.ts - khong con day ngay luc tao phieu nhap nua). Cung ly do Service Binding
+	// nhu CASE_LOOKUP_SERVICE o tren (cung 1 tai khoan Cloudflare).
 	"services": [
 		{
 			"binding": "CASE_LOOKUP_SERVICE",

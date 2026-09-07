@@ -127,8 +127,12 @@ phieuGui.post("/", async (c) => {
     .run();
   await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tao phieu moi (tao ho cho KTV ${target})` : "Tao phieu moi");
 
-  const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(target).first<{ ten_hien_thi: string | null }>();
-  await pushBoxToKhovan(c.env, id, ktvInfo?.ten_hien_thi || target, target);
+  // KHONG day khovan ngay luc nay nua (07/09/2026, phan hoi "dang tao ra 1 dong phieu nhap thua") -
+  // phieu "nhap" moi tao co the bi bo do/tu dong xoa (xem DELETE /:id va frontend auto-cleanup o
+  // PhieuGuiDetailModal) neu KTV dong modal ma chua them don nao. Day sang khovan CHI khi KTV that su
+  // xac nhan da gui xe (xem POST /:id/xac-nhan-gui ben duoi) - vua dung dung muc dich cua khovan
+  // ("bao truoc hang SAP VE that"), vua giai quyet luon cau hoi "phieu nhap bi huy co bao sang khovan
+  // khong": khong can bao huy, vi phieu nhap chua tung duoc bao cho khovan tu dau.
 
   return c.json({ id }, 201);
 });
@@ -170,7 +174,9 @@ phieuGui.patch("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-// POST /api/phieu-gui/:id/xac-nhan-gui - "nhap" -> "da_gui", cho phep sua lai ngay gui xe.
+// POST /api/phieu-gui/:id/xac-nhan-gui - "nhap" -> "da_gui", cho phep sua lai ngay gui xe. Day
+// khovan O DAY (khong phai luc tao phieu nua, xem comment o POST "/" phia tren) - dung dung thoi
+// diem "hang THAT SU sap ve" ma khovan can biet truoc.
 phieuGui.post("/:id/xac-nhan-gui", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
@@ -183,6 +189,10 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
     .bind(body.ngay_gui_xe || nowVN().slice(0, 10), nowVN(), id)
     .run();
   await addLog(c.env.DB, "phieu_gui", id, "nhap", "da_gui", user.email, "Xac nhan da gui xe");
+
+  const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ten_hien_thi: string | null }>();
+  await pushBoxToKhovan(c.env, id, ktvInfo?.ten_hien_thi || g.nguoi_tao, g.nguoi_tao);
+
   return c.json({ ok: true });
 });
 
