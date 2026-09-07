@@ -43,6 +43,16 @@ export interface Env {
   // Xac thuc du lieu day (push) tu linh-kien-app - KTV/Khu vuc/danh muc linh kien (Giai doan 5, xem
   // CLAUDE.md muc "Chot 5 cau hoi mo..."). Key RIENG, khong dung chung CASE_LOOKUP_API_KEY.
   LINHKIEN_SYNC_API_KEY?: string;
+  // Them 2026-09-07: chieu GHI sang khovan (he Quan ly hang ve kho) - bao truoc thung
+  // hang "cho xu ly" ngay luc tao (xem lib/khovanPushClient.ts). Dung khuon
+  // external_systems + header X-Api-Key san co cua khovan.
+  KHOVAN_PUSH_BASE_URL: string;
+  KHOVAN_PUSH_API_KEY: string;
+  KHOVAN_PUSH_SERVICE: Fetcher;
+  // Them 2026-09-07: chieu khovan GOI VAO day de tra cuu lai 1 thung hang theo ID khi
+  // kho quet ma (xem routes/khovanLookup.ts) - xac thuc bang 1 secret dung chung don
+  // gian (X-Khovan-Key), cung khuon voi LINHKIEN_SYNC_API_KEY o tren.
+  KHOVAN_LOOKUP_API_KEY?: string;
   // Cua sau dang nhap CHI danh cho local dev (xem routes/auth.ts GET /dev-login), giong co che
   // dvbh/linh-kien-app.
   LOCAL_DEV_BYPASS_AUTH?: string;

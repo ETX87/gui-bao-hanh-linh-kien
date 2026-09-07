@@ -14,6 +14,7 @@ import logsRoutes from "./routes/logs";
 import syncRoutes from "./routes/sync";
 import caseLookupRoutes from "./routes/caseLookup";
 import ktvLienHeRoutes from "./routes/ktvLienHe";
+import khovanLookupRoutes from "./routes/khovanLookup";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
@@ -35,6 +36,7 @@ app.route("/api/logs", logsRoutes);
 app.route("/api/partner/sync", syncRoutes);
 app.route("/api/case-lookup", caseLookupRoutes);
 app.route("/api/ktv-lien-he", ktvLienHeRoutes);
+app.route("/api/partner/box-lookup", khovanLookupRoutes);
 
 app.onError((err, c) => {
   console.error(err);

@@ -9,6 +9,7 @@ import { computeEmailGs } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
 import { lookupCase } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
+import { pushBoxToKhovan } from "../lib/khovanPushClient";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -108,6 +109,10 @@ phieuGui.post("/", async (c) => {
     .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui ?? "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
     .run();
   await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tao phieu moi (tao ho cho KTV ${target})` : "Tao phieu moi");
+
+  const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(target).first<{ ten_hien_thi: string | null }>();
+  await pushBoxToKhovan(c.env, id, ktvInfo?.ten_hien_thi || target, target);
+
   return c.json({ id }, 201);
 });
 
