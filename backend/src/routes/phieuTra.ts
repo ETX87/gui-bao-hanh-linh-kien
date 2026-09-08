@@ -301,6 +301,26 @@ phieuTra.post("/:id/gui", async (c) => {
   return c.json({ ok: true });
 });
 
+// Kho xac nhan ket thuc KHONG gui hang (chot 2026-09-08: gop chung 2 y tuong "tru kho"/"ket
+// thuc" thanh 1 hanh dong duy nhat, co ghi chu tuy chon) - dung khi Kho quyet dinh dong phieu
+// ngay tu buoc dang "da_duyet_ke_toan" ma khong gui di (vd giao tay truc tiep, huy vi ly do
+// khac...). "trang_thai" khong co CHECK constraint tren cot nay (xem migrations/0001_init.sql)
+// nen them 1 gia tri moi khong can migration.
+phieuTra.post("/:id/ket-thuc-khong-gui", async (c) => {
+  const user = c.get("user");
+  if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ghi_chu?: string }>().catch(() => ({}) as { ghi_chu?: string });
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ket_thuc_khong_gui', updated_at = ? WHERE id = ?")
+    .bind(nowVN(), id)
+    .run();
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", user.email, "Kho xac nhan ket thuc, khong gui hang" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
+  return c.json({ ok: true });
+});
+
 // Kho xac nhan thay (du phong) - dung cho MOI phieu tra dang "da_gui" (khong chi khach le).
 phieuTra.post("/:id/kho-xac-nhan-ket-thuc", async (c) => {
   const user = c.get("user");

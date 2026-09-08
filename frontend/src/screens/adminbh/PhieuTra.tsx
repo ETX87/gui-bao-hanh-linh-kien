@@ -6,7 +6,7 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, EmptyState } from "../../ui/primitives";
 import { Table, StopClick, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
-import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, isDoiTacKey, doiTacKeyFromName, doiTacNameFromKey } from "../../lib/constants";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
 import type { AppUser, PhieuTra } from "../../lib/types";
 
@@ -58,13 +58,22 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     setBusy(true);
     try {
       await api.post("/phieu-tra", { ktv_key: ktvKey, loai_doi_tru: loai, unit_ids: ids });
-      toast(`Đã tạo phiếu trả cho ${ktvKey === KHACH_LE_KEY ? "Khách lẻ" : ktvKey}.`, "ok");
+      toast(`Đã tạo phiếu trả cho ${ktvKey === KHACH_LE_KEY ? "Khách lẻ" : isDoiTacKey(ktvKey) ? `đối tác ${doiTacNameFromKey(ktvKey)}` : ktvKey}.`, "ok");
       afterChange();
     } catch (e) {
       toast(errorMessage(e), "error");
     } finally {
       setBusy(false);
     }
+  };
+
+  // "Trả xác cho đối tác" (chốt 2026-09-08) - Admin BH gõ tên đối tác, tự sinh 1 khoá ktv_nhan
+  // ảo ổn định (xem doiTacKeyFromName trong lib/constants.ts) thay vì email KTV thật. Đây chính
+  // là hành động Kho sẽ dùng "Kho xác nhận hộ" sau này (người nhận không phải KTV thật).
+  const createForDoiTac = async (loai: "doi_tra" | "tru_cong_no", ids: string[]) => {
+    const ten = window.prompt("Tên đối tác nhận trả xác (vd: Công ty ABC):")?.trim();
+    if (!ten) return;
+    await createFromGroup(doiTacKeyFromName(ten), loai, ids);
   };
 
   const autoGom = async () => {
@@ -86,7 +95,18 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
     { key: "st", header: "Trạng thái", render: (r) => <Badge tone="blue">{TRANG_THAI_PHIEU_TRA_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
-    { key: "ktv", header: "KTV nhận", render: (r) => (r.ktv_nhan === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : r.ktv_nhan) },
+    {
+      key: "ktv",
+      header: "KTV nhận",
+      render: (r) =>
+        r.ktv_nhan === KHACH_LE_KEY ? (
+          <Badge tone="violet">Khách lẻ</Badge>
+        ) : isDoiTacKey(r.ktv_nhan) ? (
+          <Badge tone="orange">Đối tác: {doiTacNameFromKey(r.ktv_nhan)}</Badge>
+        ) : (
+          r.ktv_nhan
+        ),
+    },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },
@@ -115,13 +135,22 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                     <p className="text-sm font-semibold text-[var(--ink-900)]">
                       {ktvKey === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : ktvKey} · <Badge tone="gray">{LOAI_DOI_TRU_LABELS[loai]}</Badge>
                     </p>
-                    <Btn
-                      variant="primary"
-                      disabled={busy || !units.some((u) => selected.has(u.id))}
-                      onClick={() => createFromGroup(ktvKey, loai, units.filter((u) => selected.has(u.id)).map((u) => u.id))}
-                    >
-                      Tạo phiếu trả với mục đã chọn
-                    </Btn>
+                    <div className="flex items-center gap-2">
+                      <Btn
+                        variant="ghost"
+                        disabled={busy || !units.some((u) => selected.has(u.id))}
+                        onClick={() => createForDoiTac(loai, units.filter((u) => selected.has(u.id)).map((u) => u.id))}
+                      >
+                        Trả cho đối tác…
+                      </Btn>
+                      <Btn
+                        variant="primary"
+                        disabled={busy || !units.some((u) => selected.has(u.id))}
+                        onClick={() => createFromGroup(ktvKey, loai, units.filter((u) => selected.has(u.id)).map((u) => u.id))}
+                      >
+                        Tạo phiếu trả với mục đã chọn
+                      </Btn>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {units.map((u) => (

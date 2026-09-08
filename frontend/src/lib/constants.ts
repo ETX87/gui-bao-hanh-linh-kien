@@ -40,6 +40,32 @@ export const HUONG_CAN_NV = ["sua_chua", "dich_vu_tinh_phi"];
 // backend/src/lib/constants.ts) - KHONG phai email that.
 export const KHACH_LE_KEY = "__khach_le__";
 
+// Tien to nhan dien "ktv_nhan" la mot Doi tac ao (chot 2026-09-08: "trả xác cho đối tác" dung
+// LAI dung co che voi "khach le" o tren - phieu_tra_bh.ktv_nhan von la text tu do, khong FK -
+// tu sinh 1 khoa on dinh theo ten doi tac ngay luc Admin BH tao phieu, khong can bang/man quan
+// ly rieng). Sau nay neu doi tac tu dang nhap that, chi can doi ktv_nhan sang dung email ho.
+export const DOI_TAC_KEY_PREFIX = "__doi_tac__:";
+
+export function isDoiTacKey(key: string): boolean {
+  return key.startsWith(DOI_TAC_KEY_PREFIX);
+}
+
+export function doiTacKeyFromName(tenDoiTac: string): string {
+  const slug = tenDoiTac
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // bo dau
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${DOI_TAC_KEY_PREFIX}${slug || "chua-dat-ten"}`;
+}
+
+export function doiTacNameFromKey(key: string): string {
+  return key.slice(DOI_TAC_KEY_PREFIX.length).replace(/-/g, " ");
+}
+
 export const TRANG_THAI_UNIT_LABELS: Record<string, string> = {
   cho_phan_loai: "Chờ phân loại",
   admin_can_xem_lai: "Admin cần xem lại",

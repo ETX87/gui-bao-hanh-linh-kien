@@ -70,4 +70,39 @@ partnerKho.post("/phieu-tra/:id/gui", async (c) => {
   return c.json({ ok: true });
 });
 
+// Mirror phieuTra.ts POST /:id/ket-thuc-khong-gui ("da_duyet_ke_toan" -> "ket_thuc_khong_gui",
+// them 2026-09-08 - hanh dong Kho chuan hoa "Xac nhan ket thuc (khong gui hang)", dung chung
+// voi Luong B ben PXK-, xem Artifact "Ma tran luong Kho van").
+partnerKho.post("/phieu-tra/:id/ket-thuc-khong-gui", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{ ghi_chu?: string; actor_label?: string }>().catch(() => ({}) as { ghi_chu?: string; actor_label?: string });
+  const actor = body.actor_label?.trim() || "Kho (qua khovan)";
+
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
+
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ket_thuc_khong_gui', updated_at = ? WHERE id = ?")
+    .bind(nowVN(), id)
+    .run();
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", actor, "Kho xac nhan ket thuc, khong gui hang (qua khovan)" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
+  return c.json({ ok: true });
+});
+
+// Mirror phieuTra.ts POST /:id/kho-xac-nhan-ket-thuc ("da_gui" -> "ktv_da_nhan", du phong khi
+// KTV/doi tac im lang - them 2026-09-08, truoc day chi co ban session, khovan chua goi toi).
+partnerKho.post("/phieu-tra/:id/kho-xac-nhan-ket-thuc", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{ actor_label?: string }>().catch(() => ({}) as { actor_label?: string });
+  const actor = body.actor_label?.trim() || "Kho (qua khovan)";
+
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
+
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ktv_da_nhan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", actor, "Kho xac nhan thay, du phong (qua khovan)");
+  return c.json({ ok: true });
+});
+
 export default partnerKho;
