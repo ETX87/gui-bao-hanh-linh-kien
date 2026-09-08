@@ -8,6 +8,7 @@ import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
+import { pushBoxToKhovan } from "../lib/khovanPushClient";
 
 // Phieu tra bao hanh - Admin BH tao/gop, Ke toan duyet, Kho dong goi/gui/ket thuc, KTV xac nhan
 // nhan/khieu nai. State machine: nhap -> cho_ke_toan_duyet -> da_duyet_ke_toan -> da_gui ->
@@ -231,15 +232,23 @@ function requireKeToan(c: { get(k: "user"): { la_ke_toan: boolean; la_qtri: bool
   return u.la_ke_toan || u.la_qtri;
 }
 
+// Ke toan duyet la moc "san sang cho Kho xu ly" (nguyen tac "Kho chi thao tac qua app
+// kho van", chot 2026-09-07) - day "cho xu ly" sang khovan O DAY (khong phai luc gui
+// hang nua, vi buoc gui gio do chinh Kho THUC HIEN TU khovan qua routes/partnerKho.ts).
 phieuTra.post("/:id/duyet", async (c) => {
   const user = c.get("user");
   if (!requireKeToan(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
-  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  const t = await c.env.DB.prepare("SELECT trang_thai, ktv_nhan FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; ktv_nhan: string }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "cho_ke_toan_duyet") return c.json({ error: "WRONG_STATE" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_duyet_ke_toan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "da_duyet_ke_toan", user.email, "Ke toan duyet");
+
+  const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.ktv_nhan).first<{ ten_hien_thi: string | null }>();
+  const senderLabel = `Kho SC-BH (trả cho KTV ${ktvInfo?.ten_hien_thi || t.ktv_nhan})`;
+  await pushBoxToKhovan(c.env, id, senderLabel, user.email, "Trả bảo hành - chờ Kho đóng gói/gửi");
+
   return c.json({ ok: true });
 });
 

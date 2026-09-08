@@ -17,40 +17,63 @@ khovanLookup.use("*", async (c, next) => {
   await next();
 });
 
+async function lookupHangDoiTac(db: D1Database, caseId: string | null): Promise<{ brandName: string | null; partnerName: string | null }> {
+  if (!caseId) return { brandName: null, partnerName: null };
+  const snap = await db.prepare("SELECT data FROM case_lookup_snapshot WHERE case_id = ?").bind(caseId).first<{ data: string }>();
+  if (!snap) return { brandName: null, partnerName: null };
+  try {
+    const parsed = JSON.parse(snap.data) as { hang?: string | null; doi_tac?: string | null };
+    return { brandName: parsed.hang ?? null, partnerName: parsed.doi_tac ?? null };
+  } catch {
+    return { brandName: null, partnerName: null };
+  }
+}
+
+async function ktvTenHienThi(db: D1Database, email: string): Promise<string | null> {
+  const row = await db.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(email).first<{ ten_hien_thi: string | null }>();
+  return row?.ten_hien_thi ?? null;
+}
+
 khovanLookup.get("/:id", async (c) => {
   const id = c.req.param("id");
+
+  // Tra bao hanh (TR-...) - thung do Kho gui TRA lai cho KTV (nguyen tac "Kho chi thao
+  // tac qua app kho van", chot 2026-09-07) - khac chieu voi BH- (KTV gui VE kho).
+  if (id.startsWith("TR-")) {
+    const t = await c.env.DB.prepare("SELECT ktv_nhan FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ ktv_nhan: string }>();
+    if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+    const ktvName = await ktvTenHienThi(c.env.DB, t.ktv_nhan);
+
+    // "Don con dau tien" gan voi phieu tra nay (qua phieu_sua_chua_bh_ct.phieu_tra_id) -
+    // cung quy uoc dai dien hang/doi tac nhu nhanh BH- ben duoi (chot 07/09/2026: 1
+    // thung co the co nhieu don/hang/doi tac khac nhau, lay dai dien don dau tien).
+    const firstUnit = await c.env.DB.prepare(
+      `SELECT p.case_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE u.phieu_tra_id = ? ORDER BY u.rowid ASC LIMIT 1`,
+    ).bind(id).first<{ case_id: string | null }>();
+    const { brandName, partnerName } = await lookupHangDoiTac(c.env.DB, firstUnit?.case_id ?? null);
+
+    return c.json({
+      sender_name: `Kho SC-BH (trả cho KTV ${ktvName || t.ktv_nhan})`,
+      brand_name: brandName,
+      partner_name: partnerName,
+    });
+  }
+
   const box = await c.env.DB.prepare("SELECT nguoi_tao FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string }>();
   if (!box) return c.json({ error: "NOT_FOUND" }, 404);
 
-  const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?")
-    .bind(box.nguoi_tao)
-    .first<{ ten_hien_thi: string | null }>();
+  const ktvName = await ktvTenHienThi(c.env.DB, box.nguoi_tao);
 
   // "Don con dau tien" = ban ghi phieu_sua_chua_bh cu nhat cua thung nay (bang khong
   // co cot thoi gian tao rieng, dung rowid ngam dinh cua SQLite lam thu tu chen).
   const firstCase = await c.env.DB.prepare(
     "SELECT case_id FROM phieu_sua_chua_bh WHERE phieu_gui_id = ? ORDER BY rowid ASC LIMIT 1"
   ).bind(id).first<{ case_id: string | null }>();
-
-  let brandName: string | null = null;
-  let partnerName: string | null = null;
-  if (firstCase?.case_id) {
-    const snap = await c.env.DB.prepare("SELECT data FROM case_lookup_snapshot WHERE case_id = ?")
-      .bind(firstCase.case_id)
-      .first<{ data: string }>();
-    if (snap) {
-      try {
-        const parsed = JSON.parse(snap.data) as { hang?: string | null; doi_tac?: string | null };
-        brandName = parsed.hang ?? null;
-        partnerName = parsed.doi_tac ?? null;
-      } catch {
-        // du lieu snapshot hong - bo qua, tra ve null cho 2 truong nay
-      }
-    }
-  }
+  const { brandName, partnerName } = await lookupHangDoiTac(c.env.DB, firstCase?.case_id ?? null);
 
   return c.json({
-    sender_name: ktvInfo?.ten_hien_thi || box.nguoi_tao,
+    sender_name: ktvName || box.nguoi_tao,
     brand_name: brandName,
     partner_name: partnerName,
   });

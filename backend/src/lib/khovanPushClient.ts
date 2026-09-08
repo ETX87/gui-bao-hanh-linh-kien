@@ -7,7 +7,13 @@ import type { Env } from "../types";
 // nao, day som se tao rac ben khovan va can them 1 API huy rieng - day muon hon vua tranh duoc dieu
 // do, vua dung dung y nghia "hang SAP VE THAT".
 // Best-effort: loi/khovan down KHONG duoc chan thao tac cua nguoi dung (chi log).
-export async function pushBoxToKhovan(env: Env, orderCode: string, senderName: string, senderEmail: string): Promise<void> {
+export async function pushBoxToKhovan(
+  env: Env,
+  orderCode: string,
+  senderName: string,
+  senderEmail: string,
+  note = "Thùng bảo hành - chờ đóng hàng",
+): Promise<void> {
   const url = `${env.KHOVAN_PUSH_BASE_URL.replace(/\/$/, "")}/api/v1/inbound/orders`;
   try {
     // Service Binding (khong fetch() thang URL) - cung 1 tai khoan Cloudflare voi
@@ -19,7 +25,7 @@ export async function pushBoxToKhovan(env: Env, orderCode: string, senderName: s
         order_code: orderCode,
         sender_name: senderName,
         sender_info: { creator_email: senderEmail },
-        note: "Thùng bảo hành - chờ đóng hàng",
+        note,
       }),
     });
     if (!res.ok) {

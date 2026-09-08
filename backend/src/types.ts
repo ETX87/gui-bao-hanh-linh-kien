@@ -53,6 +53,11 @@ export interface Env {
   // kho quet ma (xem routes/khovanLookup.ts) - xac thuc bang 1 secret dung chung don
   // gian (X-Khovan-Key), cung khuon voi LINHKIEN_SYNC_API_KEY o tren.
   KHOVAN_LOOKUP_API_KEY?: string;
+  // Them 2026-09-07 (nguyen tac "Kho chi thao tac qua app kho van"): secret RIENG cho
+  // cac route hanh dong (routes/partnerKho.ts) - khovan goi vao day de THAY DOI trang
+  // thai (nhan hang/dong goi/gui) thay vi chi doc nhu KHOVAN_LOOKUP_API_KEY o tren -
+  // tach rieng theo nguyen tac least-privilege (lo key doc it rui ro hon lo key ghi).
+  KHOVAN_PARTNER_API_KEY?: string;
   // Cua sau dang nhap CHI danh cho local dev (xem routes/auth.ts GET /dev-login), giong co che
   // dvbh/linh-kien-app.
   LOCAL_DEV_BYPASS_AUTH?: string;

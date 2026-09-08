@@ -81,4 +81,8 @@
 	// hang sang khovan) va KHOVAN_LOOKUP_API_KEY (secret dung chung 1-1, PHAI dat gia tri GIONG HET
 	// truong lookup_api_key cua dong external_systems do ben khovan - dung khi khovan GOI VAO
 	// routes/khovanLookup.ts de tra cuu lai).
+	// Them 2026-09-07 (nguyen tac "Kho chi thao tac qua app kho van"): KHOVAN_PARTNER_API_KEY (secret
+	// dung chung 1-1, PHAI dat gia tri GIONG HET truong action_api_key cua dong external_systems
+	// code=suachua ben khovan - dung khi khovan GOI VAO routes/partnerKho.ts de THAY DOI trang thai,
+	// TACH RIENG khoi KHOVAN_LOOKUP_API_KEY o tren vi day la quyen GHI, khong phai chi doc).
 }
