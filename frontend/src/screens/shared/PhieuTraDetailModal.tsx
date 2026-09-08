@@ -5,7 +5,8 @@ import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, ReadField, Badge, Spinner } from "../../ui/primitives";
-import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
+import { useLkName } from "../../hooks/useLinhKien";
 import { LogBlock } from "./LogBlock";
 import type { AppUser, DonVi, LogRow, PhieuTra } from "../../lib/types";
 
@@ -22,6 +23,7 @@ interface DetailResponse {
 
 export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
+  const { nameOf } = useLkName();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [maDonHang, setMaDonHang] = useState("");
   const [maMisa, setMaMisa] = useState("");
@@ -219,14 +221,16 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
           <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">Đơn vị trong phiếu ({data.don_vi.length})</p>
           <div className="space-y-1.5">
             {data.don_vi.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
+              <div key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
                 <span className="font-mono text-xs">{u.id}</span>
-                <span className="flex-1 truncate text-[var(--ink-600)]">{u.huong_xu_ly}</span>
+                <span className="text-[var(--ink-900)]">{nameOf(u.ma_lk_thuc_te || u.ma_lk)}</span>
+                {u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
                 {user.la_admin_bh && t.trang_thai === "nhap" && (
-                  <Btn variant="danger" onClick={() => tachDonVi(u.id)} disabled={busy}>
+                  <Btn variant="danger" onClick={() => tachDonVi(u.id)} disabled={busy} className="ml-auto">
                     Tách khỏi phiếu
                   </Btn>
                 )}
+                {u.mo_ta_loi && <span className="w-full text-xs text-[var(--ink-500)] truncate">{u.mo_ta_loi}</span>}
               </div>
             ))}
           </div>

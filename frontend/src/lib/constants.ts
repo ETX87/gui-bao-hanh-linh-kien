@@ -99,6 +99,28 @@ export const LY_DO_BO_SUNG_OPTIONS = [
   { value: "khac", label: "Khác" },
 ];
 
+const LY_DO_BO_SUNG_LABELS: Record<string, string> = Object.fromEntries(LY_DO_BO_SUNG_OPTIONS.map((o) => [o.value, o.label]));
+
+// "<ma>: ghi chu tu do" -> "Nhan tieng Viet — ghi chu tu do" (Phat hien 4 vong ra soat UX): ban cu
+// hien nguyen <ma>: prefix trong bang thong nhat Admin.
+export function formatLyDoBoSung(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  const idx = raw.indexOf(":");
+  const code = (idx >= 0 ? raw.slice(0, idx) : raw).trim();
+  const rest = idx >= 0 ? raw.slice(idx + 1).trim() : "";
+  const label = LY_DO_BO_SUNG_LABELS[code] || code;
+  return rest ? `${label} — ${rest}` : label;
+}
+
+// Hinh thuc gui hang - 1 nguon su that (truoc day mang options nam trong PhieuGuiDetailModal, cac
+// bang danh sach lai hien gia tri tho `nha_xe`/`xe_noi_bo`). Phat hien 4 vong ra soat UX.
+export const HINH_THUC_GUI_OPTIONS = [
+  { value: "xe_noi_bo", label: "Xe nội bộ" },
+  { value: "nha_xe", label: "Nhà xe / vận chuyển" },
+  { value: "buu_dien", label: "Bưu điện / chuyển phát" },
+];
+export const HINH_THUC_GUI_LABELS: Record<string, string> = Object.fromEntries(HINH_THUC_GUI_OPTIONS.map((o) => [o.value, o.label]));
+
 export const FAST_ACTION_ICONS: Record<string, string> = {
   doi_moi_fast: "🆕",
   tru_no_fast: "💳",

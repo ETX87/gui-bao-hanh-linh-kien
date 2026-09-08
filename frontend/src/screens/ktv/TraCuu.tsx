@@ -5,6 +5,7 @@ import { Table, StopClick, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { Btn } from "../../ui/primitives";
 import { TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
+import { useLkName } from "../../hooks/useLinhKien";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { KtvBoSungModal } from "./KtvBoSungModal";
 import type { DonVi } from "../../lib/types";
@@ -21,13 +22,14 @@ export function KtvTraCuuScreen() {
     return () => clearTimeout(t);
   }, [qInput]);
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(`/phieu-gui/don-vi/tra-cuu${q ? `?q=${encodeURIComponent(q)}` : ""}`, "don_vi");
+  const { nameOf } = useLkName();
   const [boSungFor, setBoSungFor] = useState<DonVi | null>(null);
 
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
     { key: "st", header: "Trạng thái", render: (r) => <Badge tone={r.trang_thai === "cho_bo_sung_tt" ? "violet" : "blue"}>{TRANG_THAI_UNIT_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
     { key: "case", header: "Case", render: (r) => r.case_id || "—" },
-    { key: "lk", header: "Linh kiện", render: (r) => r.ma_lk },
+    { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk) },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
     {

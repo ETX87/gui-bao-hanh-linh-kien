@@ -39,11 +39,30 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
 };
 
 export function HomeScreen({ user }: { user: AppUser }) {
-  const { counts } = useWorkload();
+  const { counts, loading } = useWorkload();
   const { nav } = useRoute();
   const routeHashes = new Set(routesForUser(user).map((r) => r.hash));
   const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!));
   const myWork = relevantKeys.filter((k) => counts[k] > 0).sort((a, b) => counts[b] - counts[a]);
+
+  // Phat hien 16: khong hien "0" gia lap luc dang tai - hien skeleton cho toi khi co so lieu that.
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-5">
+          <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Tổng quan hàng đợi</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {relevantKeys.map((k) => (
+              <div key={k} className="p-4 rounded-xl bg-[var(--surface-100)] animate-pulse">
+                <div className="h-3 w-2/3 rounded bg-[var(--surface-200)] mb-3" />
+                <div className="h-7 w-10 rounded bg-[var(--surface-200)]" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

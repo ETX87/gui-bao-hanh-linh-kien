@@ -6,7 +6,7 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
-import { TRANG_THAI_PHIEU_GUI_LABELS } from "../../lib/constants";
+import { TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { fmtDateOnly } from "../../lib/format";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PickKtvModal } from "./PickKtvModal";
@@ -56,7 +56,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     { key: "st", header: "Trạng thái", render: (r) => <Badge tone="blue">{TRANG_THAI_PHIEU_GUI_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
     ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <span className="text-xs">{r.nguoi_tao}</span> } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },
-    { key: "hinhthuc", header: "Hình thức gửi", render: (r) => r.hinh_thuc_gui || "—" },
+    { key: "hinhthuc", header: "Hình thức gửi", render: (r) => (r.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[r.hinh_thuc_gui] || r.hinh_thuc_gui : "—") },
     { key: "sucos", header: "Sự cố", render: (r) => (r.su_co_tiep_nhan ? <Badge tone="red">⚠ Có</Badge> : "—") },
   ];
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -19,7 +19,13 @@ const VAI_TRO_OPTIONS = ["KTV", "CTV", "Tram", "Ve tinh"];
 
 export function QtriKtvScreen() {
   const toast = useToast();
-  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>("/ktv-lien-he", "ktv");
+  const [qInput, setQInput] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQ(qInput), 300);
+    return () => clearTimeout(t);
+  }, [qInput]);
+  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>(`/ktv-lien-he${q ? `?q=${encodeURIComponent(q)}` : ""}`, "ktv");
   const [editing, setEditing] = useState<KtvLienHe | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -38,11 +44,14 @@ export function QtriKtvScreen() {
 
   return (
     <Card className="p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
-        <Btn variant="primary" onClick={() => setAddOpen(true)}>
-          + Khai báo KTV
-        </Btn>
+        <div className="flex items-center gap-2">
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo tên / email / SĐT / mã…" className="!py-1.5 !w-60" />
+          <Btn variant="primary" onClick={() => setAddOpen(true)}>
+            + Khai báo KTV
+          </Btn>
+        </div>
       </div>
       <p className="text-xs text-[var(--ink-500)] mb-3">
         KTV có trong danh sách này sẽ <b>tự động được duyệt</b> ngay khi đăng nhập lần đầu bằng đúng email đăng nhập bên dưới — không cần chờ Admin hệ thống duyệt tay ở màn "Người dùng".

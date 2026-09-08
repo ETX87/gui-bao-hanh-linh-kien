@@ -6,6 +6,7 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
+import { HUONG_XU_LY_LABELS, KET_QUA_CHAN_DOAN_LABELS } from "../../lib/constants";
 import type { AppUser, DonVi } from "../../lib/types";
 
 // Hang doi "Xac nhan hoan tat" (sau khi NV nop ket qua chan doan) - port dung GET /admin/xac-nhan.
@@ -21,9 +22,9 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
 
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-    { key: "hxl", header: "Hướng xử lý", render: (r) => r.huong_xu_ly },
-    { key: "nv", header: "NV phụ trách", render: (r) => r.nguoi_sua_chua },
-    { key: "kq", header: "Kết quả chẩn đoán", render: (r) => r.ket_qua_chan_doan },
+    { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
+    { key: "nv", header: "NV phụ trách", render: (r) => r.nguoi_sua_chua || "—" },
+    { key: "kq", header: "Kết quả chẩn đoán", render: (r) => (r.ket_qua_chan_doan ? KET_QUA_CHAN_DOAN_LABELS[r.ket_qua_chan_doan] || r.ket_qua_chan_doan : "—") },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
   ];
 

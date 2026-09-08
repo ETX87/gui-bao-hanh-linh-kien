@@ -44,6 +44,9 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     reload: reloadPhieuGui,
   } = usePagedApi<PhieuGui>("/admin/phieu-gui", "phieu_gui");
   const [donCha, setDonCha] = useState<DonCha[]>([]);
+  // pageSize lon (Phat hien 14): AdminUnifiedTable gop don vi theo don cha + thu gon "xN" ngay tren
+  // client - can lay het 1 lo trong 1 lan. Hang doi bi gate nen thuc te khong lon; <Pagination> tu an
+  // vi chi con 1 trang.
   const {
     items: donVi,
     total: donViTotal,
@@ -52,7 +55,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     setPage: setDonViPage,
     loading: loadingDonVi,
     reload: reloadDonVi,
-  } = usePagedApi<DonVi>("/admin/don-vi", "don_vi");
+  } = usePagedApi<DonVi>("/admin/don-vi", "don_vi", 1000);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
@@ -104,12 +107,14 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGuiTotal})</h3>
           <div className="space-y-2">
             {phieuGui.map((g) => (
-              <div key={g.id} className="flex items-center gap-3 rounded-lg border border-[var(--line)] px-3 py-2.5">
-                <span className="font-mono text-xs font-semibold">{g.id}</span>
-                <span className="text-sm text-[var(--ink-700)] flex-1">{g.nguoi_tao}</span>
-                {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
-                <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
-                <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)}>
+              <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
+                  <span className="font-mono text-xs font-semibold">{g.id}</span>
+                  <span className="text-sm text-[var(--ink-700)] truncate">{g.nguoi_tao}</span>
+                  {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
+                  <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
+                </div>
+                <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)} className="shrink-0">
                   Xác nhận đã nhận
                 </Btn>
               </div>

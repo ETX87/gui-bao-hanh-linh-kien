@@ -24,8 +24,17 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   const user = c.get("user");
   if (!requireNv(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
+  // JOIN don cha (Phat hien 3 vong ra soat UX 08/09/2026): ma_lk / mo_ta_loi / case_id nam o don CHA,
+  // ban cu chi SELECT * FROM phieu_sua_chua_bh_ct nen hang doi cua NV TRONG cot "Linh kien" + "Mo ta
+  // loi" - dung y het cach GET /admin/don-vi da JOIN.
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ? ORDER BY updated_at LIMIT ? OFFSET ?").bind(user.email, limit, offset).all(),
+    c.env.DB.prepare(
+      `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id
+       FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ? ORDER BY u.updated_at LIMIT ? OFFSET ?`,
+    )
+      .bind(user.email, limit, offset)
+      .all(),
     c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ?").bind(user.email).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });

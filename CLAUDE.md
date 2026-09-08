@@ -157,7 +157,23 @@ Ngay sau đó (07/09/2026, cùng ngày): sửa lỗi "tạo ra 1 đống phiếu
 rỗng khi đóng modal chi tiết không thêm đơn nào + dời thời điểm báo khovan từ lúc tạo phiếu sang lúc
 KTV thật sự xác nhận đã gửi xe — nhờ vậy phiếu nháp bị bỏ dở không cần báo huỷ sang khovan vì chưa
 từng được báo từ đầu) và sửa layout mobile của màn "Phiếu gửi"/danh sách đơn bị chồng chéo — xem mục
-"Không tạo phiếu nháp thừa..." bên dưới.
+"Không tạo phiếu nháp thừa..." bên dưới. **Mốc mới nhất (08/09/2026): 1 vòng RÀ SOÁT UX toàn hệ
+thống theo vai trò** (chạy `wrangler dev` local + trình duyệt thật, đóng vai siêu người dùng 9 cờ,
+seed phủ mọi trạng thái) — **KHÔNG sửa mã nguồn nào**, chỉ phát hiện + lập kế hoạch, giao ra 1
+Artifact báo cáo (ma trận vai trò×màn hình + 16 phát hiện xếp mức độ kèm phản biện + lộ trình 3 đợt).
+3 lỗi thật đã chứng minh chạy thật, chờ người dùng chốt 5 câu hỏi trước khi sửa: **(1) badge SLA
+lệch đúng 7h ở `frontend/src/lib/format.ts hoursSince()`** (thêm nhầm hậu tố `"Z"`) → hiện số âm
+("-7h") + cổng SLA bế tắc trong khung 24–31h thật (frontend nói chưa quá hạn, backend trả 400
+`REQUIRE_LY_DO_CHAM` mà không có ô nhập); **(2) số "việc cần làm" bị chặn ở 20** (`useWorkload` đếm
+`.length` trên endpoint mặc định `limit=20`) → Trang chủ nói 20, màn hình nói 31, Giám sát nói 28;
+**(3) `GET /api/nv/viec-cua-toi` không JOIN đơn cha** → hàng đợi NV trống cột Linh kiện + Mô tả lỗi.
+Xem mục "Rà soát UX toàn hệ thống theo vai trò (08/09/2026)" bên dưới để có đầy đủ 16 phát hiện + 5
+câu hỏi mở + link Artifact. **[CẬP NHẬT cùng ngày] Người dùng đã bảo "lần lượt triển khai theo lộ
+trình" — CẢ 3 ĐỢT ĐÃ LÀM XONG (trừ P8 người dùng chốt bỏ): Đợt 1 (P1–P4 lỗi gốc), Đợt 2 (P5–P7
+mobile), Đợt 3 (P9–P16: bẫy lưu phiếu gửi, SearchableSelect tự mở, bảng desktop, Giám sát "quá hạn
+SLA" + lọc, quản trị tìm/gom-lưu, gộp đơn cha ×N, lý do có dấu). Typecheck 0 lỗi, kiểm thử chạy thật
+18/18 màn hình. File mới: `backend/src/routes/workload.ts`, `migrations/0004_ly_do_tieng_viet.sql`.
+v1.005. CHƯA deploy — xem 3 mục "Đợt N ... ĐÃ TRIỂN KHAI" bên dưới.**
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3342,6 +3358,210 @@ thông tin" rộng hết cỡ, dòng đơn tự xuống dòng đúng ý. `npm ru
 sửa. v1.004.
 
 **Việc còn lại thuộc người dùng:** `npm run deploy` để đưa các sửa đổi này lên production.
+
+## Rà soát UX toàn hệ thống theo vai trò (08/09/2026) — 16 phát hiện, CHƯA sửa gì, chờ chốt hướng
+
+Nguyên văn yêu cầu: *"khám phá toàn bộ dự án này => với vai trò 1 nhà thiết kế giao diện chuyên
+nghiệp => liệt kê ma trận các vai trò... => tự nhận thủ công test từng nghiệp vụ... => đánh giá điều
+bất hợp lý... => một AI khác phản biện => chốt lại vấn đề => đưa ra đề xuất cải tiến"*. Tiêu chí
+người dùng đặt: đầy đủ thông tin, hiển thị sạch/minh bạch, phong cách hiện đại, nhập liệu thuận tiện,
+ô nhập liền kề liên hệ nhau, thao tác liên tục (tab–nhập–tab), tận dụng tối đa diện tích web/mobile.
+"Không hiểu thì hỏi, không tự ý quyết."
+
+**Đã chốt phạm vi qua AskUserQuestion:** review **bản React production** (`frontend/src`, không phải
+prototype HTML), kiểm thử bằng **chạy `wrangler dev` local + trình duyệt thật** (đóng vai siêu người
+dùng `smarttrade.vp@gmail.com` gán đủ 9 cờ, seed dữ liệu phủ mọi trạng thái), giao ra **1 Artifact
+báo cáo** (đã publish: `https://claude.ai/code/artifact/2a0cc1df-1060-46d4-bc06-e58cc45850ef` — tiêu
+đề "Rà soát UX Sửa chữa Bảo hành", có ma trận vai trò×màn hình, 16 phát hiện xếp mức độ kèm phản biện
++ chốt + đề xuất, phần "đã làm tốt", danh sách câu hỏi cần người dùng chốt, lộ trình 3 đợt).
+
+**KHÔNG sửa mã nguồn nào ở vòng này** — đây là rà soát + lập kế hoạch. `wrangler.jsonc` đã bị sửa tạm
+(bỏ `services` + binding D1 remote thứ 2 để chạy local trên tài khoản sandbox `mikanovncloudflare`,
+KHÔNG phải `dichvu3t`) rồi **khôi phục nguyên trạng** — xác nhận `git diff wrangler.jsonc` sạch.
+
+**Phát hiện quan trọng — 3 lỗi thật đã chứng minh chạy thật (đừng phát hiện lại từ đầu ở phiên sau):**
+
+1. **[NGHIÊM TRỌNG] Badge SLA lệch đúng 7 giờ ở frontend.** `backend/src/lib/sla.ts hoursSince()` so
+   `Date.now()+7h` với chuỗi VN (đúng). Nhưng `frontend/src/lib/format.ts hoursSince()` **thêm hậu
+   tố `"Z"`** vào chuỗi `nowVN()` (vốn là giờ VN không có Z) rồi so với `Date.now()` → lệch −7h ở mọi
+   nơi. Hậu quả: (a) mọi đơn vừa thao tác hiện badge **âm** ("-7h", "-4h") trong viên xanh lá — đã
+   chụp màn hình thật; (b) đơn quá hạn thật 40h hiện "33h" tô xanh dương nhẹ, không đỏ; (c) **cổng
+   SLA bế tắc trong khung 24–31h thật**: seed đơn 27h tuổi → frontend `isOverdue`=false (không hiện
+   ô "Lý do chậm") → bấm "Lưu phân loại" → backend trả `400 REQUIRE_LY_DO_CHAM` + toast "vui lòng
+   chọn lý do chậm" **nhưng không có ô nào để chọn** → form không có lối thoát ~7h. Đã test trực tiếp
+   qua `fetch()`: `updated_at=2026-09-07 11:36:36`, frontend tính 20h, backend trả 400. **Sửa gốc:**
+   dùng 1 hàm `hoursSince` chung, bỏ việc thêm `"Z"` ở frontend.
+2. **[NGHIÊM TRỌNG] Số "việc cần làm" bị chặn ở 20.** `parsePage` mặc định `limit=20` khi query
+   không kèm `limit`. `useWorkload.fetchCounts()` gọi các endpoint list KHÔNG kèm `limit` rồi đếm bằng
+   `r.don_vi.length` (tối đa 20). Đã test: `GET /api/admin/don-vi` không limit → 20 dòng nhưng
+   `total: 30`. Hậu quả: Trang chủ StatCard + huy hiệu Sidebar/BottomNav **undercount** mọi hàng đợi
+   >20; Trang chủ nói "20", màn "Xử lý đơn bảo hành" nói "(31)", màn Giám sát Tổng quan (đếm đúng bằng
+   `GROUP BY`) nói "28" — 3 con số khác nhau cho cùng 1 thứ. **Sửa:** đọc `total` thay `.length`,
+   hoặc làm endpoint `GET /api/workload` gộp (cũng bớt ~12 request song song mỗi lần mở app).
+3. **[CAO] Hàng đợi NV sửa chữa thiếu tên linh kiện + mô tả lỗi.** `GET /api/nv/viec-cua-toi` chỉ
+   SELECT `phieu_sua_chua_bh_ct`, KHÔNG JOIN đơn cha — mà `ma_lk`/`mo_ta_loi`/`case_id` nằm ở đơn
+   cha. Response thật: không có `ma_lk`, không có `mo_ta_loi`. Màn "Việc của tôi" của NV hiện cột
+   Linh kiện + Mô tả lỗi **trống**. (Màn Admin `GET /admin/don-vi` JOIN đủ; chỉ endpoint NV thiếu.)
+   **Sửa:** thêm JOIN `phieu_sua_chua_bh` vào query, trả `ma_lk`/`mo_ta_loi`/`case_id`.
+
+**13 phát hiện còn lại (xem Artifact để có bằng chứng + phản biện + đề xuất từng mục):** (4) danh
+sách hiện mã enum thô `nha_xe`/`sua_chua`/`sua_duoc`/`tra_lai_ktv`/`linh_kien_khong_khop:` + mã LK
+thay tên, rải ở ≥6 màn (KTV list dùng `r.hinh_thuc_gui` thô, `XacNhan.tsx` dùng `r.huong_xu_ly`/
+`r.ket_qua_chan_doan` thô, `PhieuTraDetailModal` dùng `u.huong_xu_ly` thô — có sẵn `*_LABELS` nhưng
+không dùng); (5) mobile: BottomNav nhồi 16 mục vỡ vụn khi đa vai trò/qtri, và các list-row KHÔNG
+phải `<Table>` (Kho tiếp nhận, thẻ Admin tiếp nhận nội bộ, nhóm phiếu trả) là `flex` thủ công tràn/
+cắt nút → Kho không bấm nổi "Xác nhận tiếp nhận" trên điện thoại (không có container cuộn); (6)
+`Table` không chuyển sang layout thẻ dưới 768px — cuộn ngang giấu 4/6 cột (SLA, mô tả lỗi), thanh
+cuộn gần vô hình; (7) `NhanHang.tsx` + `AdminPhieuTra` khối "sẵn sàng gộp" đọc `.length` KHÔNG phân
+trang, không có nút trang → dữ liệu >20 dòng vô hình; (8) modal `full` bỏ trống 60–90% (UnitDetail
+cho đơn chưa phân loại, PhieuTraDetail), modal chồng 3 lớp (bảng→UnitDetail full→PhanLoai); (9) chi
+tiết Phiếu gửi: nút xám "Lưu thông tin" là điều kiện tiên quyết dễ bỏ qua trước nút xanh nổi bật
+"Xác nhận đã gửi xe" (chỉ POST `ngay_gui_xe`) → mất 4 chỉnh sửa vận chuyển, không cảnh báo "chưa
+lưu"; "Ngày gửi xe" xếp nhầm nhóm, cách nút xác nhận ~350px; (10) SearchableSelect là `<button>` cần
+Space/Enter để mở → phá luồng tab–nhập–tab ở 2 form chính; trường NV chèn giữa form làm lệch thứ tự
+tab; (11) bảng desktop thưa — `w-full` dồn khoảng dư cho cột cuối, SLA cách "Mô tả lỗi" ~600px
+trống, sidebar thu gọn còn nới container lên 1440px; (12) Giám sát "Tổng quan" chỉ 8 ô đếm, không có
+"quá hạn/tồn đọng/theo KTV", bấm ô → sang tra cứu KHÔNG lọc; (13) `qtri/NguoiDung` + `qtri/KtvLienHe`
+đã phân trang server nhưng KHÔNG có ô tìm/lọc/sắp xếp; mỗi tick cờ vai trò = 1 API + reload cả bảng;
+nút "Xoá" đỏ mọi dòng; (14) không gộp đơn cha — 1 lô 25 linh kiện = 25 dòng phẳng trùng lặp (CLAUDE.md
+"Ma trận CRUD & đơn cha/đơn vị con" ghi rõ đơn cha PHẢI hiển thị 1 dòng thu gọn "×N" — React
+production không port); (15) danh mục "Lý do chậm"/"Lý do huỷ" seed toàn ASCII không dấu (từ
+`migrations/0001_init.sql`), màn `qtri/CaiDat` chỉ bật/tắt + thêm, không sửa/xoá/đổi `stt`; (16)
+`useWorkload` khởi tạo `counts=EMPTY` (toàn 0) và hiện luôn cho tới khi ~12 fetch xong, không có
+skeleton → người dùng dễ tin nhầm "hết việc" lúc đang tải.
+
+**5 câu hỏi cần người dùng chốt (đã ghi trong Artifact, KHÔNG tự quyết):** (a) cổng cứng mã case —
+KTV không thêm được đơn nào nếu hệ DVBH/case-lookup không truy cập được, có cần đường vượt qua có
+kiểm soát khi DVBH gián đoạn không (đây là quyết định "strict" 05/09); (b) gộp đơn cha (#14) — port
+lại đầy đủ cơ chế "×N" hay giữ phẳng + dựa vào chọn hàng loạt; (c) modal `full` (#8) — thu nhỏ modal
+chi tiết ít dữ liệu hay giữ full đồng nhất; (d) ưu tiên mobile — đầu tư layout thẻ cho Kho/đa vai
+trò ngay hay chấp nhận Kho/Admin chủ yếu desktop, chỉ vá BottomNav; (e) SLA "giờ hành chính" — 24h
+đồng hồ liên tục hay bỏ qua ngoài giờ/cuối tuần (câu hỏi mở từ "Phản hồi vòng 2", chưa chốt, ảnh
+hưởng cả badge lẫn cổng SLA).
+
+**Đã làm tốt (ghi nhận để không phá khi sửa):** hệ token màu nhất quán với `linh-kien-app`; nguyên
+tắc "mờ khi = 0"; ý tưởng cổng SLA 3 mức (đúng hướng, chỉ sai lệch giờ); modal chống đóng nhầm
+(`mousedown`+`click` cùng trên nền); Sidebar thu gọn mặc định + nội dung tự giãn + huy hiệu chấm góc
+icon; `AddDonMobileSheet` riêng cho mobile (đúng 7 nguyên tắc); tuỳ biến cột bảng Admin; dải "Việc
+của tôi" ở Trang chủ.
+
+**Lưu ý phát sinh (không thuộc phiên này):** khi bắt đầu rà soát, working tree đã có 4 file sửa chưa
+commit từ **một phiên khác** — `backend/src/routes/partnerKho.ts`, `backend/src/routes/phieuTra.ts`,
+`frontend/src/lib/constants.ts`, `frontend/src/screens/adminbh/PhieuTra.tsx` — nội dung là tính năng
+"trả xác cho đối tác" (`DOI_TAC_KEY_PREFIX`, ngày 2026-09-08). KHÔNG đụng vào, chỉ ghi nhận.
+
+**Chưa chạy kiểm thử hồi quy nào** (không sửa code). Nhánh "case-lookup tìm thấy" không test được
+end-to-end (sandbox không có Worker `dvbh` thật). Việc tiếp theo thuộc người dùng: chốt 5 câu hỏi
+trên rồi mới triển khai sửa theo lộ trình 3 đợt trong Artifact (Đợt 1 = 4 lỗi P1–P4, chi phí thấp,
+gỡ 2 lỗi toàn hệ thống).
+
+### Đợt 1 (P1–P4) — ĐÃ TRIỂN KHAI + kiểm thử chạy thật (08/09/2026, cùng ngày)
+
+Người dùng: *"lần lượt triển khai theo lộ trình đã định"*. Đã làm Đợt 1, typecheck 0 lỗi, chạy
+`wrangler dev` local + trình duyệt thật xác minh từng điểm. **v1.005** (bump theo quy ước versioning).
+
+- **P1 — Lệch giờ SLA.** `frontend/src/lib/format.ts`: `hoursSince()` nay ép parse chuỗi giờ VN như
+  UTC (bỏ rồi re-add `"Z"`) và cộng `+7h` vào `Date.now()` — KHỚP đúng `backend/src/lib/sla.ts`
+  (hàm `parseVnWallClock` mới dùng chung cho cả `hoursSince` lẫn `fmtDate`). `fmtDate` thêm
+  `timeZone:"UTC"` để hiện đúng chữ số giờ VN đã lưu (trước đây máy user ở VN thấy mọi mốc thời gian
+  lệch +7h). **Xác minh:** đơn cập nhật 30 phút trước — badge từ `-7h` → `1h`; đơn 27h tuổi — từ
+  `20h` (frontend nghĩ chưa quá hạn, dead-end) → `28h` (`isOverdue` = true, form hiện ô "Lý do
+  chậm", khớp backend); đơn 40h tuổi — từ `33h` → `40h`. Hết badge âm, hết dead-end.
+- **P2 — Số liệu workload.** Thêm `backend/src/routes/workload.ts` (`GET /api/workload`) đếm bằng
+  `SELECT COUNT(*)` đúng y bộ lọc từng màn hình, mount ở `index.ts`. `frontend/src/hooks/
+  useWorkload.tsx` viết lại: 1 request thay ~12, đọc `total` thật, thêm cờ `loading`. `Home.tsx`
+  hiện skeleton khi `loading` (gỡ luôn P16). **Xác minh:** `/api/workload` trả `admin_cho_phan_loai:
+  30` (trước 20), `ketoan_cho_duyet: 2` (trước Home hiện 0); Trang chủ giờ khớp màn hình.
+- **P3 — Hàng đợi NV.** `backend/src/routes/nvSuaChua.ts` `/viec-cua-toi` JOIN `phieu_sua_chua_bh`,
+  trả `ma_lk`/`mo_ta_loi`/`case_id`. **Xác minh:** cột Linh kiện + Mô tả lỗi từ trống → "Bo mach
+  dieu khien KAT-M" / "Lo 5 bo mach loi cung loai".
+- **P4 — Nhãn enum + tên linh kiện.** `frontend/src/lib/constants.ts`: thêm `HINH_THUC_GUI_OPTIONS`/
+  `HINH_THUC_GUI_LABELS` (1 nguồn, `PhieuGuiDetailModal` dùng lại), `formatLyDoBoSung()` (bỏ tiền tố
+  `<mã>:`). `frontend/src/hooks/useLinhKien.ts`: thêm `useLkName()` → `nameOf(ma)`. Áp dụng:
+  `TaoPhieu` (hình thức gửi), `XacNhan` (hướng xử lý + kết quả chẩn đoán), `AdminUnifiedTable`
+  (lý do bổ sung), `KtvTraCuu`/`QuanLyTraCuu`/`NvViecCuaToi` (tên linh kiện thay mã),
+  `PhieuTraDetailModal` (đơn vị trong phiếu: tên LK + mô tả + badge hướng xử lý — cộng JOIN đơn cha
+  ở `backend/src/routes/phieuTra.ts` `GET /:id` để KTV/Kế toán thấy phiếu có gì). **Xác minh:**
+  "Sửa chữa"/"Sửa được" thay `sua_chua`/`sua_duoc`; "Nhà xe / vận chuyển" thay `nha_xe`; tên linh
+  kiện thay `LK011`; đơn vị phiếu trả từ `doi_moi` thô → `Bo mach... [Đổi mới] / Lo 5 bo mach...`.
+
+**Chưa deploy.** `wrangler.jsonc` đã khôi phục nguyên trạng sau khi test local. Các file "trả xác cho
+đối tác" của phiên khác không đụng vào — riêng `backend/src/routes/phieuTra.ts` giờ có CẢ thay đổi
+của phiên đó LẪN 1 JOIN nhỏ của P4 (bắt buộc, vì cùng file).
+
+### Đợt 2 (P5–P7 mobile) — ĐÃ TRIỂN KHAI + kiểm thử chạy thật (08/09/2026, cùng ngày)
+
+Người dùng đã bảo "lần lượt triển khai theo lộ trình" — làm tiếp Đợt 2. Typecheck 0 lỗi, chạy
+`wrangler dev` local + trình duyệt thật ở cả 375px lẫn 1400px.
+
+- **P5 — BottomNav vỡ vụn + list-row cắt nút trên mobile.**
+  - `frontend/src/layout/BottomNav.tsx` viết lại: giới hạn **5 tab** (4 mục đầu + nút "☰ Thêm" mở
+    bottom-sheet chứa phần còn lại, kèm badge số việc). Vai trò ≤5 mục không đổi. **Xác minh:** qtri
+    (16 mục) từ 16 tab cắt còn 1 chữ → 5 tab đọc được + sheet đầy đủ nhãn.
+  - `frontend/src/screens/kho/TiepNhan.tsx` + `frontend/src/screens/adminbh/PhanLoai.tsx` (thẻ
+    "Thùng chờ tiếp nhận nội bộ"): dòng đổi `flex` cứng → `flex flex-col sm:flex-row` (mobile xếp
+    dọc, nhóm nút xuống dòng riêng). **Xác minh:** ở 375px nút "Xác nhận tiếp nhận" từ bị đẩy ngoài
+    màn (không cuộn được) → nằm trong khung, `anyButtonClipped: false`; ở 1400px trở lại 1 hàng
+    (`flex-direction: row`, cao 59px) — không hồi quy.
+- **P6 — Bảng dữ liệu không xuống-thẻ trên mobile.** `frontend/src/ui/Table.tsx` thêm nhánh
+  `useIsMobile()`: <768px mỗi dòng render thành 1 THẺ (cột đầu = tiêu đề, các cột còn lại = cặp
+  nhãn–giá trị dạng `<dl>`, cột không header = nút hành động ở đáy thẻ). ≥768px giữ nguyên `<table>`
+  cũ (markup không đổi). Áp dụng tự động cho mọi màn dùng `<Table>` (TaoPhieu, NhanHang, TraCuu KTV/
+  Quản lý, DongGoi, Duyet, XacNhan, ViecCuaToi, AdminPhieuTra danh sách). **Xác minh:** KTV tra cứu
+  ở 375px — trước chỉ thấy ID + Trạng thái, giờ thấy đủ Case / Linh kiện / Mô tả lỗi / SLA trong thẻ,
+  không cần cuộn ngang. (`AdminUnifiedTable` là `<table>` tuỳ biến riêng — vẫn cuộn ngang, KHÔNG
+  clip, để lại cho vòng sau nếu cần.)
+- **P7 — `NhanHang.tsx` đọc `.length` không phân trang.** Chuyển sang `usePagedApi` + `<Pagination>`
+  như phần còn lại. (Kiểm lại: `AdminPhieuTra` khối "sẵn sàng gộp" gọi `/phieu-tra/san-sang` — endpoint
+  đó KHÔNG có `LIMIT`, trả hết, nên KHÔNG phải lỗi — đã bỏ khỏi phạm vi P7.)
+
+### Đợt 3 (P8–P16, trừ P8) — ĐÃ TRIỂN KHAI + kiểm thử chạy thật (08/09/2026, cùng ngày)
+
+Người dùng chốt qua AskUserQuestion: **P8 = giữ modal `full` đồng nhất, KHÔNG đổi** (bỏ P8 hẳn);
+**P14 = port lại đầy đủ cơ chế gộp đơn cha ×N**; **P12 = thêm khối "quá hạn SLA" + ô đếm bấm-để-lọc
+(bản vừa đủ)**. Typecheck 0 lỗi, `wrangler dev` local + trình duyệt thật, 18/18 màn hình 0 lỗi console.
+
+- **P9 — Bẫy lưu 2 bước phiếu gửi.** `PhieuGuiDetailModal.tsx`: nút "Xác nhận đã gửi xe" nay PATCH
+  header (4 trường vận chuyển) TRƯỚC rồi mới POST xác-nhận — không còn mất dữ liệu nếu KTV quên bấm
+  "Lưu thông tin". Bỏ nút xám khỏi lưới, "Ngày gửi xe" dời xuống 1 khối riêng có hint "…sẽ tự lưu
+  toàn bộ" + link "Lưu nháp bây giờ". **Xác minh:** modal render đủ hint/link, 0 lỗi.
+- **P10 — SearchableSelect phá luồng tab.** `ui/SearchableSelect.tsx`: Tab tới ô → gõ 1 phím bất kỳ
+  (chữ/Enter/mũi tên) là ô **tự mở** + seed ký tự vào ô lọc (`initialCharRef` + `useEffect([open])`).
+  Gần giống `<select>` native. (Cần xác nhận bằng bàn phím thật sau deploy — sandbox không gõ được.)
+- **P11 — Bảng desktop thưa.** `ui/Table.tsx`: thêm 1 cột đệm cuối (`w-full`) hút hết khoảng dư → các
+  cột thật xít nhau canh trái, header/viền vẫn kín chiều rộng thẻ. **Xác minh:** bảng Admin canh trái,
+  không còn khoảng trống lớn giữa các cột.
+- **P12 — Giám sát Tổng quan mỏng.** `traCuu.ts /tong-quan` trả thêm `qua_han` (COUNT đơn đang chờ xử
+  lý, `updated_at` cũ hơn 24h VN); `/don-vi` nhận `?trang_thai=` (kể cả `qua_han`). `TongQuan.tsx`
+  thêm thẻ đỏ "🔥 Đơn quá hạn SLA 24h — N" ở đầu; bấm mọi ô đếm → sang `#/quanly/tra-cuu?trang_thai=X`.
+  `QuanLyTraCuu.tsx` đọc query, lọc + hiện chip "Lọc: X ✕". **Xác minh:** `qua_han: 29` hiện đúng;
+  bấm → hash `?trang_thai=qua_han`, chip đúng, 29 dòng đều quá hạn; `?trang_thai=cho_phan_loai` → 28
+  dòng đều "Chờ phân loại".
+- **P13 — Màn quản trị.** `users.ts /` + `ktvLienHe.ts /` nhận `?q=` (LIKE email/tên/SĐT/mã/khu vực).
+  `NguoiDung.tsx` viết lại: ô tìm + **gom thay đổi cờ vai trò rồi LƯU 1 LẦN** (thanh "N thay đổi
+  chưa lưu / Lưu thay đổi", dòng bẩn tô nền); nút "Xoá" đổi `ghost` (bớt loè). `KtvLienHe.tsx` thêm ô
+  tìm. **Xác minh:** `GET /api/users?q=kho1` → total 1 (backend OK); UI render đủ, 0 lỗi.
+- **P14 — Gộp đơn cha ×N.** `AdminUnifiedTable.tsx`: nhóm `units` theo `parent_id`; nhóm ≥2 đơn vị →
+  1 dòng thu gọn (checkbox chọn-cả-nhóm có trạng thái indeterminate, `×N`, tóm tắt trạng thái dạng
+  chip "25 Chờ phân loại", SLA xấu nhất, chevron ▸/▾); bấm để sổ ra child rows (thụt lề). Nhóm 1 đơn
+  vị hiện trực tiếp. `adminBH.ts /don-vi` nâng `parsePage(c, 1000, 2000)` + `PhanLoai.tsx` dùng
+  `usePagedApi(..., 1000)` để lấy trọn 1 lô (hàng đợi bị gate nên thực tế không lớn; `<Pagination>`
+  tự ẩn). **Xác minh:** lô `DH-000009` từ 25 dòng phẳng → 1 dòng "×25 · 25 Chờ phân loại"; bấm sổ ra
+  đúng 25 child rows (5→30 dòng); chevron lật đúng.
+- **P15 — Lý do không dấu + không sửa/xoá.** `migrations/0004_ly_do_tieng_viet.sql` (UPDATE 13 dòng
+  seed sang tiếng Việt có dấu, match theo giá trị ASCII cũ). `settings.ts` thêm `DELETE /:id` (log/đơn
+  cũ lưu nguyên văn, không FK). `CaiDat.tsx` thêm nút "Sửa" (inline) + "Xoá". **Xác minh:** áp
+  migration local OK; màn hiện "Không có linh kiện" (có dấu) + Bật/Sửa/Xoá mỗi dòng.
+- **P16** — đã làm ở Đợt 1 (skeleton Trang chủ khi `useWorkload` đang tải).
+
+**Cả 3 đợt xong (trừ P8 người dùng chốt bỏ).** Không deploy. `wrangler.jsonc` khôi phục nguyên trạng.
+`backend/src/routes/phieuTra.ts` + `frontend/src/lib/constants.ts` giờ có CẢ thay đổi phiên "trả xác
+đối tác" LẪN sửa đổi của rà soát này (cùng file). File mới: `backend/src/routes/workload.ts`,
+`migrations/0004_ly_do_tieng_viet.sql`. Version `1.005`.
+
+**Việc còn lại thuộc người dùng:** áp `migrations/0004` lên production (`npm run db:migrate:remote`),
+`npm run deploy`. Sau deploy nên xác nhận bằng bàn phím thật: (a) SearchableSelect tự mở khi gõ (P10);
+(b) các màn quản trị lọc/tìm đúng khi gõ tay (P13 — sandbox không mô phỏng được input event của React).
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

@@ -28,12 +28,14 @@ export function SearchableSelect({
   const [highlight, setHighlight] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const initialCharRef = useRef<string>("");
 
   const selected = options.find((o) => o.value === value);
 
   useEffect(() => {
     if (open) {
-      setQuery("");
+      setQuery(initialCharRef.current);
+      initialCharRef.current = "";
       setHighlight(0);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
@@ -74,11 +76,26 @@ export function SearchableSelect({
     }
   };
 
+  // Phat hien 10 vong ra soat UX: truoc day phai bam Space/Enter de MO roi moi go duoc - pha luong
+  // "tab-nhap-tab". Nay Tab toi o -> go 1 phim bat ky (chu/Enter/mui ten) la o tu mo, gan giong
+  // <select> native.
+  const onButtonKeyDown = (e: React.KeyboardEvent) => {
+    if (open) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setOpen(true);
+    } else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      initialCharRef.current = e.key; // useEffect([open]) se dung lam query ban dau
+      setOpen(true);
+    }
+  };
+
   return (
     <div ref={rootRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={onButtonKeyDown}
         className="focus-ring w-full text-left rounded-lg border border-[var(--ocean-400)] bg-white px-3 py-2 text-sm text-[var(--ink-900)] truncate"
       >
         {selected ? selected.label : <span className="text-[var(--ink-400)]">{placeholder}</span>}

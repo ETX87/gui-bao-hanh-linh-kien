@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 import { Badge, Btn } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { useLinhKien } from "../../hooks/useLinhKien";
 import { useAdminCols, ADMIN_COLS_DEF, type AdminColKey } from "../../hooks/useAdminCols";
-import { TRANG_THAI_UNIT_LABELS, LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
+import { TRANG_THAI_UNIT_LABELS, LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS, formatLyDoBoSung } from "../../lib/constants";
 import { AdminColSettingsModal } from "./AdminColSettingsModal";
 import type { DonCha, DonVi } from "../../lib/types";
 
@@ -152,6 +152,94 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     };
   };
 
+  // --- Gop don vi theo don cha (Phat hien 14 vong ra soat UX): 1 lo 25 linh kien cung don cha =>
+  // 1 dong thu gon "x25" + tom tat trang thai, bam de so ra tung don vi. Nhom co 1 don vi thi hien
+  // truc tiep khong boc.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const groups = useMemo(() => {
+    const m = new Map<string, DonVi[]>();
+    for (const u of units) {
+      const arr = m.get(u.parent_id) || [];
+      arr.push(u);
+      m.set(u.parent_id, arr);
+    }
+    return [...m.entries()];
+  }, [units]);
+  const toggleExpand = (pid: string) =>
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      n.has(pid) ? n.delete(pid) : n.add(pid);
+      return n;
+    });
+  const selectableInGroup = (list: DonVi[]) => list.filter((u) => u.trang_thai !== "cho_bo_sung_tt");
+  const groupAllSelected = (list: DonVi[]) => {
+    const sel = selectableInGroup(list);
+    return sel.length > 0 && sel.every((u) => selected.has(u.id));
+  };
+  const toggleGroup = (list: DonVi[], checked: boolean) => selectableInGroup(list).forEach((u) => onToggleSelect(u.id, checked));
+  const groupStatusSummary = (list: DonVi[]): ReactNode => {
+    const by: Record<string, number> = {};
+    for (const u of list) by[u.trang_thai] = (by[u.trang_thai] || 0) + 1;
+    return (
+      <span className="flex flex-wrap gap-1">
+        {Object.entries(by).map(([st, n]) => (
+          <Badge key={st} tone={st === "cho_bo_sung_tt" ? "violet" : "blue"}>
+            {n} {TRANG_THAI_UNIT_LABELS[st] || st}
+          </Badge>
+        ))}
+      </span>
+    );
+  };
+  const groupWorstSla = (list: DonVi[]) => list.reduce((a, b) => (a.updated_at < b.updated_at ? a : b)).updated_at;
+
+  const renderUnitRow = (u: DonVi, indented: boolean) => {
+    const f = unitFields(u);
+    const isKhachLe = !u.phieu_gui_id;
+    const isBoSung = u.trang_thai === "cho_bo_sung_tt";
+    return (
+      <tr key={u.id} onClick={() => onOpenDetail(u.id)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--ocean-100)]/40 transition-colors">
+        <td className="px-2" onClick={(e) => e.stopPropagation()}>
+          {!isBoSung && <input type="checkbox" checked={selected.has(u.id)} onChange={(e) => onToggleSelect(u.id, e.target.checked)} />}
+        </td>
+        <td className={`px-3 py-2.5 font-semibold font-mono text-xs ${indented ? "pl-8" : ""}`}>
+          {u.id}
+          {u.trang_thai === "admin_can_xem_lai" && (
+            <Badge tone="red" className="ml-1.5">
+              NV trả lại
+            </Badge>
+          )}
+        </td>
+        {visibleCols.map((k) => (
+          <td key={k} className="px-3 py-2.5 align-middle">
+            {f[k]}
+          </td>
+        ))}
+        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+          {isBoSung ? (
+            <span className="text-xs text-[var(--ink-500)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
+          ) : (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Btn onClick={() => onOpenFast(u)} title="Các phương án phổ biến có sẵn, tự động điền thông tin">
+                ⚡
+              </Btn>
+              <Btn variant="primary" onClick={() => onOpenPhanLoai(u)}>
+                {u.trang_thai === "admin_can_xem_lai" ? "Phân loại lại" : "Phân loại"}
+              </Btn>
+              {!isKhachLe && (
+                <>
+                  {u.trang_thai === "cho_phan_loai" && <Btn onClick={() => onOpenBoSung(u.parent_id)}>Yêu cầu bổ sung</Btn>}
+                  <Btn onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
+                    🐞
+                  </Btn>
+                </>
+              )}
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
   const totalRows = parents.length + units.length;
 
   return (
@@ -222,52 +310,46 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                   </tr>
                 );
               })}
-              {units.map((u) => {
-                const f = unitFields(u);
-                const isKhachLe = !u.phieu_gui_id;
-                const isBoSung = u.trang_thai === "cho_bo_sung_tt";
-                return (
-                  <tr key={u.id} onClick={() => onOpenDetail(u.id)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--ocean-100)]/40 transition-colors">
-                    <td className="px-2" onClick={(e) => e.stopPropagation()}>
-                      {!isBoSung && <input type="checkbox" checked={selected.has(u.id)} onChange={(e) => onToggleSelect(u.id, e.target.checked)} />}
-                    </td>
-                    <td className="px-3 py-2.5 font-semibold font-mono text-xs">
-                      {u.id}
-                      {u.trang_thai === "admin_can_xem_lai" && (
-                        <Badge tone="red" className="ml-1.5">
-                          NV trả lại
-                        </Badge>
-                      )}
-                    </td>
-                    {visibleCols.map((k) => (
-                      <td key={k} className="px-3 py-2.5 align-middle">
-                        {f[k]}
-                      </td>
-                    ))}
-                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                      {isBoSung ? (
-                        <span className="text-xs text-[var(--ink-500)]">Lý do: {u.ly_do_bo_sung}</span>
-                      ) : (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Btn onClick={() => onOpenFast(u)} title="Các phương án phổ biến có sẵn, tự động điền thông tin">
-                            ⚡
-                          </Btn>
-                          <Btn variant="primary" onClick={() => onOpenPhanLoai(u)}>
-                            {u.trang_thai === "admin_can_xem_lai" ? "Phân loại lại" : "Phân loại"}
-                          </Btn>
-                          {!isKhachLe && (
-                            <>
-                              {u.trang_thai === "cho_phan_loai" && <Btn onClick={() => onOpenBoSung(u.parent_id)}>Yêu cầu bổ sung</Btn>}
-                              <Btn onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
-                                🐞
-                              </Btn>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
+              {groups.map(([pid, list]) => {
+                // Nhom nhieu don vi -> 1 dong thu gon "xN", bam de so ra.
+                if (list.length >= 2) {
+                  const isOpen = expanded.has(pid);
+                  const head = list[0];
+                  const hf = unitFields(head);
+                  return (
+                    <Fragment key={`g-${pid}`}>
+                      <tr onClick={() => toggleExpand(pid)} className="border-b border-[var(--line)] cursor-pointer bg-[var(--surface-100)]/60 hover:bg-[var(--ocean-100)]/40 transition-colors">
+                        <td className="px-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={groupAllSelected(list)}
+                            ref={(el) => {
+                              if (el) el.indeterminate = !groupAllSelected(list) && selectableInGroup(list).some((u) => selected.has(u.id));
+                            }}
+                            onChange={(e) => toggleGroup(list, e.target.checked)}
+                          />
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold font-mono text-xs">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-[var(--ink-400)]">{isOpen ? "▾" : "▸"}</span>
+                            {pid}
+                            <Badge tone="gray">×{list.length}</Badge>
+                          </span>
+                        </td>
+                        {visibleCols.map((k) => (
+                          <td key={k} className="px-3 py-2.5 align-middle">
+                            {k === "trangthai" ? groupStatusSummary(list) : k === "sla" ? <SlaBadge since={groupWorstSla(list)} /> : k === "donchacode" ? <span className="text-[var(--ink-500)] font-mono text-xs">{pid}</span> : hf[k]}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-xs text-[var(--ink-500)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
+                        </td>
+                      </tr>
+                      {isOpen && list.map((u) => renderUnitRow(u, true))}
+                    </Fragment>
+                  );
+                }
+                return renderUnitRow(list[0], false);
               })}
             </tbody>
           </table>

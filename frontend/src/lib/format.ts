@@ -1,11 +1,26 @@
 // Tien ich dinh dang dung chung - SLA 24h (port dung isOverdue()/slaBadge() cua prototype, 3 muc
 // khan cap da chot: <=24h xanh la, 24-72h vang, >72h do dac + icon).
+//
+// MUI GIO (sua 08/09/2026, Phat hien 1 vong ra soat UX): moi cot thoi gian trong D1 duoc backend ghi
+// bang nowVN() = gio VN dang "YYYY-MM-DD HH:MM:SS" KHONG co hau to Z. Ban cu o day them "Z" (ep parse
+// nhu UTC) roi so voi Date.now() (UTC that) => lech dung -7h o MOI badge SLA: don vua thao tac hien
+// so AM ("-7h"), don qua han that 40h hien "33h" mau nhe, va cong SLA frontend/backend bat dong trong
+// khung 24-31h (form be tac). Sua: ep parse chuoi nhu UTC (giu "Z") NHUNG cong 7h vao "now" - KHOP
+// dung backend/src/lib/sla.ts (Worker local = UTC nen ben do khong can ep, o trinh duyet phai ep de
+// khong phu thuoc mui gio may nguoi dung).
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+// Chuyen chuoi "YYYY-MM-DD HH:MM:SS[.sss][Z]" (gio VN) thanh mot instant epoch on dinh, doc lap mui
+// gio trinh duyet: bo mọi hau to Z roi re-add "Z" (ep hieu cac chu so nhu gio UTC).
+function parseVnWallClock(iso: string): number {
+  return new Date(iso.replace(" ", "T").replace(/Z$/i, "") + "Z").getTime();
+}
 
 export function hoursSince(iso: string | null | undefined): number {
   if (!iso) return 0;
-  const then = new Date(iso.replace(" ", "T") + (iso.includes("Z") ? "" : "Z")).getTime();
+  const then = parseVnWallClock(iso);
   if (Number.isNaN(then)) return 0;
-  return (Date.now() - then) / 3_600_000;
+  return (Date.now() + VN_OFFSET_MS - then) / 3_600_000;
 }
 
 export function isOverdue(iso: string | null | undefined): boolean {
@@ -28,9 +43,11 @@ export function fmtHours(iso: string | null | undefined): string {
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso.replace(" ", "T") + (iso.includes("Z") ? "" : "Z"));
+  const d = new Date(parseVnWallClock(iso));
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  // timeZone:"UTC" - hien nguyen cac chu so gio VN da luu, khong bi trinh duyet quy doi +7h nua
+  // (may nguoi dung o VN truoc day thay moi moc thoi gian lech +7h).
+  return d.toLocaleString("vi-VN", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function fmtDateOnly(iso: string | null | undefined): string {

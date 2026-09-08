@@ -136,7 +136,15 @@ phieuTra.get("/:id", async (c) => {
   const t = await c.env.DB.prepare("SELECT * FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ ktv_nhan: string }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if ((user.la_ktv_dvbh || user.la_ve_tinh) && t.ktv_nhan !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results: donVi } = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).all();
+  // JOIN don cha de tra ten linh kien / mo ta loi / case (Phat hien 4 vong ra soat UX): KTV nhan
+  // hang tra / Ke toan duyet can biet trong phieu co gi, ban cu chi hien ID + huong_xu_ly tho.
+  const { results: donVi } = await c.env.DB.prepare(
+    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi
+     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+     WHERE u.phieu_tra_id = ?`,
+  )
+    .bind(id)
+    .all();
   const { results: anh } = await c.env.DB.prepare("SELECT * FROM phieu_tra_bh_anh WHERE phieu_tra_id = ?").bind(id).all();
   const { results: logs } = await c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_tra' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all();
   return c.json({ phieu_tra: t, don_vi: donVi, anh, logs });

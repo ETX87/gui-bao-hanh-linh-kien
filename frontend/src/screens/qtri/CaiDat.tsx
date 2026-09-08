@@ -4,15 +4,16 @@ import { useToast } from "../../ui/Toast";
 import { Card, Btn, Input } from "../../ui/primitives";
 import type { SettingItem } from "../../lib/types";
 
-// "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang (port dung quyet
-// dinh 03/09/2026: bo popup rieng, hien truc tiep dang luoi 2 cot ngay tren trang). Goi thang API
-// (khong dung hook useLyDoCham/useLyDoTuChoi dung chung o noi khac - tranh goi hook co dieu kien theo
-// prop `path`, vi pham Rules of Hooks).
+// "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang.
+// Phat hien 15 vong ra soat UX: them SUA (doi ten) + XOA (truoc day chi bat/tat + them, go nham la
+// ket vinh vien).
 
 function SettingListCard({ title, path }: { title: string; path: string }) {
   const toast = useToast();
   const [items, setItems] = useState<SettingItem[]>([]);
   const [text, setText] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
 
   const load = () => api.get<{ items: SettingItem[] }>(path).then((r) => setItems(r.items));
   useEffect(() => {
@@ -38,22 +39,65 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
       toast(errorMessage(e), "error");
     }
   };
+  const saveEdit = async () => {
+    if (editId === null || !editText.trim()) return;
+    try {
+      await api.patch(`${path}/${editId}`, { noi_dung: editText.trim() });
+      setEditId(null);
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+  const remove = async (id: number) => {
+    if (!confirm("Xoá hẳn lý do này khỏi danh mục? (Các đơn/log cũ đã ghi nội dung này không bị ảnh hưởng.)")) return;
+    try {
+      await api.delete(`${path}/${id}`);
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
 
   return (
     <Card className="p-5">
       <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">{title}</h3>
       <div className="space-y-1.5 mb-3">
-        {items.map((it) => (
-          <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm">
-            <span className={`flex-1 ${!it.bat_tat ? "line-through text-[var(--ink-400)]" : ""}`}>{it.noi_dung}</span>
-            <label className="flex items-center gap-1.5 text-xs text-[var(--ink-500)]">
-              <input type="checkbox" checked={it.bat_tat} onChange={(e) => toggle(it.id, e.target.checked)} /> Bật
-            </label>
-          </div>
-        ))}
+        {items.map((it) =>
+          editId === it.id ? (
+            <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--ocean-400)] px-2 py-1.5">
+              <Input value={editText} onChange={(e) => setEditText(e.target.value)} className="flex-1 !py-1" autoFocus onKeyDown={(e) => e.key === "Enter" && saveEdit()} />
+              <Btn variant="primary" onClick={saveEdit} className="!py-1 !px-2.5">
+                Lưu
+              </Btn>
+              <Btn onClick={() => setEditId(null)} className="!py-1 !px-2.5">
+                Huỷ
+              </Btn>
+            </div>
+          ) : (
+            <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm">
+              <span className={`flex-1 ${!it.bat_tat ? "line-through text-[var(--ink-400)]" : ""}`}>{it.noi_dung}</span>
+              <label className="flex items-center gap-1.5 text-xs text-[var(--ink-500)]">
+                <input type="checkbox" checked={it.bat_tat} onChange={(e) => toggle(it.id, e.target.checked)} /> Bật
+              </label>
+              <button
+                onClick={() => {
+                  setEditId(it.id);
+                  setEditText(it.noi_dung);
+                }}
+                className="focus-ring text-xs text-[var(--ocean-700)] hover:underline"
+              >
+                Sửa
+              </button>
+              <button onClick={() => remove(it.id)} className="focus-ring text-xs text-[var(--coral-600)] hover:underline">
+                Xoá
+              </button>
+            </div>
+          ),
+        )}
       </div>
       <div className="flex gap-2">
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Thêm lý do mới..." className="flex-1" />
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Thêm lý do mới..." className="flex-1" onKeyDown={(e) => e.key === "Enter" && add()} />
         <Btn variant="primary" onClick={add} disabled={!text.trim()}>
           Thêm
         </Btn>

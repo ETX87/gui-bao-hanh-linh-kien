@@ -35,7 +35,15 @@ function crudFor(table: "settings_ly_do_cham_bh" | "settings_ly_do_tu_choi_bh") 
     if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
     const body = await c.req.json<{ bat_tat?: boolean; noi_dung?: string }>().catch(() => ({}) as { bat_tat?: boolean; noi_dung?: string });
     if (body.bat_tat !== undefined) await c.env.DB.prepare(`UPDATE ${table} SET bat_tat = ? WHERE id = ?`).bind(body.bat_tat ? 1 : 0, c.req.param("id")).run();
-    if (body.noi_dung !== undefined) await c.env.DB.prepare(`UPDATE ${table} SET noi_dung = ? WHERE id = ?`).bind(body.noi_dung.trim(), c.req.param("id")).run();
+    if (body.noi_dung !== undefined && body.noi_dung.trim()) await c.env.DB.prepare(`UPDATE ${table} SET noi_dung = ? WHERE id = ?`).bind(body.noi_dung.trim(), c.req.param("id")).run();
+    return c.json({ ok: true });
+  });
+
+  // DELETE (Phat hien 15): cho phep xoa han 1 ly do gõ nhầm - cac log/don cu luu NGUYEN VAN chuoi
+  // ly do (khong FK) nen xoa khong lam hong du lieu lich su.
+  group.delete("/:id", async (c) => {
+    if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
+    await c.env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(c.req.param("id")).run();
     return c.json({ ok: true });
   });
 

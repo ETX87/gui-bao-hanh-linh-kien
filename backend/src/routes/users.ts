@@ -25,9 +25,20 @@ function requireQtri(c: { get(k: "user"): { la_qtri: boolean } }): boolean {
 users.get("/", async (c) => {
   if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
+  // Phat hien 13 vong ra soat UX: them tim theo email/ten - truoc day khong co, phai bam qua tung
+  // trang de tim 1 nguoi giua hang tram tai khoan.
+  const kw = (c.req.query("q") || "").trim();
+  let where = "1=1";
+  const binds: unknown[] = [];
+  if (kw) {
+    where += " AND (email LIKE ? OR ten LIKE ?)";
+    binds.push(`%${kw}%`, `%${kw}%`);
+  }
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, ${ROLE_FLAGS.join(", ")}, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(limit, offset).all(),
-    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM users").first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, ${ROLE_FLAGS.join(", ")}, created_at FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+      .bind(...binds, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM users WHERE ${where}`).bind(...binds).first<{ cnt: number }>(),
   ]);
   return c.json({ users: results, total: totalRow?.cnt ?? 0 });
 });

@@ -37,6 +37,15 @@ traCuu.get("/don-vi", async (c) => {
     const like = `%${kw}%`;
     binds.push(like, like, like, like, like, like);
   }
+  // Loc theo trang thai (Phat hien 12): bam 1 o dem o man Tong quan -> sang day da loc san.
+  // "qua_han" = cac trang thai dang cho xu ly ma updated_at cu hon 24h (gio VN).
+  const st = (c.req.query("trang_thai") || "").trim();
+  if (st === "qua_han") {
+    where += " AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan') AND u.updated_at < datetime('now','+7 hours','-24 hours')";
+  } else if (st) {
+    where += " AND u.trang_thai = ?";
+    binds.push(st);
+  }
   const fromWhere = `FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
@@ -56,17 +65,22 @@ traCuu.get("/tong-quan", async (c) => {
   const user = c.get("user");
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
   const { where, binds } = scopeClause(user);
-  const { results } = await c.env.DB.prepare(
-    `SELECT u.trang_thai, COUNT(*) as cnt
-     FROM phieu_sua_chua_bh_ct u
+  const fromWhere = `FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE ${where}
-     GROUP BY u.trang_thai`,
-  )
-    .bind(...binds)
-    .all();
-  return c.json({ theo_trang_thai: results });
+     WHERE ${where}`;
+  const [{ results }, quaHanRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT u.trang_thai, COUNT(*) as cnt ${fromWhere} GROUP BY u.trang_thai`).bind(...binds).all(),
+    // "qua han SLA" (Phat hien 12): don dang cho xu ly, updated_at cu hon 24h gio VN.
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt ${fromWhere}
+         AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan')
+         AND u.updated_at < datetime('now','+7 hours','-24 hours')`,
+    )
+      .bind(...binds)
+      .first<{ cnt: number }>(),
+  ]);
+  return c.json({ theo_trang_thai: results, qua_han: quaHanRow?.cnt ?? 0 });
 });
 
 export default traCuu;

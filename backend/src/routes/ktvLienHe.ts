@@ -40,6 +40,13 @@ ktvLienHe.get("/", async (c) => {
     where = "khu_vuc_ma IN (SELECT ma FROM khu_vuc_bh WHERE gs_email = ?)";
     binds.push(user.email);
   }
+  // Phat hien 13 vong ra soat UX: tim theo ten/email/SDT/ma KTV/khu vuc.
+  const kw = (c.req.query("q") || "").trim();
+  if (kw) {
+    where += " AND (ten_hien_thi LIKE ? OR email_dang_nhap LIKE ? OR sdt LIKE ? OR ma_ktv LIKE ? OR khu_vuc_ma LIKE ?)";
+    const like = `%${kw}%`;
+    binds.push(like, like, like, like, like);
+  }
 
   if (c.req.query("limit") === undefined) {
     const { results } = await c.env.DB.prepare(`SELECT * FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv`)

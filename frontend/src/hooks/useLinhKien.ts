@@ -16,3 +16,15 @@ export function useLinhKien() {
   }, []);
   return { items, loading };
 }
+
+// Tra ten linh kien tu ma - dung o cac bang danh sach (KTV tra cuu, Giam sat tra cuu, hang doi NV)
+// truoc day hien nguyen ma "LK011" thay vi ten (Phat hien 4 vong ra soat UX). Chua co / dang tai thi
+// tra lai chinh ma (van co thong tin), khong render "undefined".
+export function useLkName() {
+  const { items, loading } = useLinhKien();
+  const nameOf = (ma: string | null | undefined): string => {
+    if (!ma) return "Cả sản phẩm";
+    return items.find((lk) => lk.ma_lk === ma)?.ten_lk || ma;
+  };
+  return { nameOf, loading };
+}

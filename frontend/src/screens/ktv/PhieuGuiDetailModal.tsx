@@ -4,7 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, Badge, ReadField, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
-import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_OPTIONS } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
 import { AddDonModal } from "./AddDonModal";
 import { AddDonMobileSheet } from "./AddDonMobileSheet";
@@ -12,11 +12,7 @@ import { QrCode } from "../../ui/QrCode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, PhieuGui } from "../../lib/types";
 
-const HINH_THUC_OPTIONS = [
-  { value: "xe_noi_bo", label: "Xe nội bộ" },
-  { value: "nha_xe", label: "Nhà xe / vận chuyển" },
-  { value: "buu_dien", label: "Bưu điện / chuyển phát" },
-];
+const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
 // Chi tiet phieu gui - port dung renderPhieuGuiDetail(): sua header (khi con "nhap"), them/xoa don,
 // xac nhan gui xe, xoa phieu (khi con "nhap" va rong), ghi chu/phan hoi. QR dan thung (da bo o Giai
@@ -92,7 +88,15 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   const isNhap = g.trang_thai === "nhap";
 
   const saveHeader = () => run(async () => { await api.patch(`/phieu-gui/${g.id}`, { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon }); toast("Đã lưu.", "ok"); }, false);
-  const xacNhanGui = () => run(async () => { await api.post(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe }); toast("Đã xác nhận gửi xe.", "ok"); });
+  // Phat hien 9 vong ra soat UX: truoc day "Xac nhan da gui xe" CHI POST ngay_gui_xe - neu KTV sua
+  // 4 truong van chuyen roi bam thang nut nay (khong bam nut xam "Luu thong tin" truoc) thi 4 sua
+  // do BI MAT. Nay nut xac nhan tu PATCH header trước rồi mới POST - khong con bay mat du lieu.
+  const xacNhanGui = () =>
+    run(async () => {
+      await api.patch(`/phieu-gui/${g.id}`, { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon });
+      await api.post(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe });
+      toast("Đã lưu thông tin & xác nhận gửi xe.", "ok");
+    });
   const xoaPhieu = () =>
     run(async () => {
       await api.delete(`/phieu-gui/${g.id}`);
@@ -160,13 +164,16 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
               <Field label="Mã vận đơn">
                 <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
               </Field>
-              <Field label="Ngày gửi xe">
-                <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
-              </Field>
-              <div className="flex items-end">
-                <Btn onClick={saveHeader} disabled={busy} className="w-full sm:w-auto">
-                  Lưu thông tin
-                </Btn>
+              <div className="sm:col-span-2 md:col-span-4 flex flex-wrap items-end gap-3 border-t border-[var(--line)] pt-3">
+                <Field label="Ngày gửi xe">
+                  <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} className="!w-44" />
+                </Field>
+                <p className="text-xs text-[var(--ink-500)] pb-2">
+                  Bấm <b>“Xác nhận đã gửi xe”</b> ở dưới sẽ tự lưu toàn bộ thông tin vận chuyển ở trên.
+                  <button onClick={saveHeader} disabled={busy} className="focus-ring ml-2 text-[var(--ocean-700)] underline underline-offset-2 hover:text-[var(--ocean-800)]">
+                    Lưu nháp bây giờ
+                  </button>
+                </p>
               </div>
             </div>
           ) : (

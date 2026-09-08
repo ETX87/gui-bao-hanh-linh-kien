@@ -128,7 +128,10 @@ adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
 // don qua duoc buoc nay - khong can pager rieng o frontend, chi can COUNT/LIMIT day du de an toan.
 adminBH.get("/don-vi", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { limit, offset } = parsePage(c);
+  // max cao (Phat hien 14): frontend gop don vi theo don cha va thu gon "xN" ngay tren client - can
+  // lay het don vi cua 1 lo (co the >20) trong 1 lan de nhom dung. Hang doi nay bi gate nen thuc te
+  // toi da vai tram dong; sau khi gop chi con vai chuc dong hien thi.
+  const { limit, offset } = parsePage(c, 1000, 2000);
   // them g.nguoi_tao AS ktv - xem comment o GET /don-cha o tren (cung ly do).
   const fromWhere = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
