@@ -13,10 +13,13 @@ import type { AppUser, PhieuTra } from "../../lib/types";
 // KHONG co nut trang - KTV co >20 phieu tra cho nhan thi 20 phieu con lai vo hinh (endpoint bi cat
 // o limit=20). Nay dung usePagedApi + Pagination nhu phan con lai cua app.
 
-export function KtvNhanHangScreen({ user }: { user: AppUser }) {
+export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; initialDetailId?: string }) {
   const { refresh } = useWorkload();
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuTra>("/phieu-tra?trang_thai=da_gui", "phieu_tra");
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // Link truy cap truc tiep theo ID (them 2026-09-09, xem App.tsx::Routed + lib/deepLink.ts) - mo San
+  // modal chi tiet ngay khi mount, KHONG phu thuoc phieu do co nam trong trang hien tai cua danh sach
+  // hay khong (PhieuTraDetailModal tu GET /phieu-tra/:id rieng, doc lap voi usePagedApi o tren).
+  const [detailId, setDetailId] = useState<string | null>(initialDetailId ?? null);
 
   if (loading && rows.length === 0) return <Spinner />;
 

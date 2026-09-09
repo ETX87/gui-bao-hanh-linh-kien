@@ -2,7 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AuthProvider } from "./auth/AuthContext";
 import { App } from "./App";
+import { captureDeepLinkFromHash } from "./lib/deepLink";
 import "./styles/tokens.css";
+
+// Ghi nho link truy cap truc tiep 1 phieu tra (vd "#/ktv/nhan-hang/TR-000001") CANG SOM CANG TOT,
+// truoc ca khi React mount - xem giai thich day du trong lib/deepLink.ts (can bat duoc hash truoc khi
+// nguoi dung dieu huong sang Google OAuth neu chua dang nhap, luc do hash goc se mat).
+captureDeepLinkFromHash();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

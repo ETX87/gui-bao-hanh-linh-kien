@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
 import { RouterProvider, useRoute } from "./router/Router";
+import { consumePendingDeepLinkHash } from "./lib/deepLink";
 import { WorkloadProvider } from "./hooks/useWorkload";
 import { ToastProvider } from "./ui/Toast";
 import { Shell } from "./layout/Shell";
@@ -41,7 +43,14 @@ function Routed({ user }: { user: AppUser }) {
   // muc 1) - KtvTaoPhieuScreen tu re nhanh giao dien theo vai tro (xem hoMode trong file do).
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri || user.la_giam_sat || user.la_admin_bh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen user={user} />;
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
-  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/nhan-hang") return <KtvNhanHangScreen user={user} />;
+  // Link truy cap truc tiep 1 phieu tra theo ID (them 2026-09-09, vd "#/ktv/nhan-hang/TR-000001") -
+  // xem giai thich day du trong lib/deepLink.ts. "/ktv/nhan-hang/TR-000001" khop nhanh nay qua regex
+  // (khac "/ktv/nhan-hang" so sanh chinh xac o tren), truyen ID trich duoc lam initialDetailId de
+  // KtvNhanHangScreen tu mo modal chi tiet ngay khi mount.
+  const nhanHangIdMatch = path.match(/^\/ktv\/nhan-hang\/(TR-\d+)$/i);
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && (path === "/ktv/nhan-hang" || nhanHangIdMatch)) {
+    return <KtvNhanHangScreen user={user} initialDetailId={nhanHangIdMatch?.[1]} />;
+  }
 
   if ((user.la_kho || user.la_qtri) && path === "/kho/tiep-nhan") return <KhoTiepNhanScreen />;
   if ((user.la_kho || user.la_qtri) && path === "/kho/dong-goi") return <KhoDongGoiScreen user={user} />;
@@ -73,6 +82,14 @@ function Routed({ user }: { user: AppUser }) {
 }
 
 function AuthedApp({ user }: { user: AppUser }) {
+  // Link truy cap truc tiep (them 2026-09-09, xem lib/deepLink.ts) - luc component nay mount la luc
+  // nguoi dung CHAC CHAN da dang nhap xong, nen day la diem doc lai an toan duy nhat. Gan lai
+  // window.location.hash de RouterProvider (bao ngoai App, mount tu truoc do voi hash mac dinh "/home")
+  // phat hien "hashchange" va tu dieu huong toi dung man - khong can dung useRoute()/nav() o day.
+  useEffect(() => {
+    const hash = consumePendingDeepLinkHash();
+    if (hash) window.location.hash = hash;
+  }, []);
   return (
     <WorkloadProvider user={user}>
       <Shell user={user}>
