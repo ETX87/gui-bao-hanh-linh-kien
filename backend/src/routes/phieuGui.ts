@@ -283,6 +283,68 @@ phieuGui.post("/:id/don", async (c) => {
   return c.json({ id }, 201);
 });
 
+// POST /api/phieu-gui/:id/don-tu-odoo - { odoo_ids: number[] } - KTV chon don bao hanh tao tren Odoo
+// (keo ve qua dvbh, xem lib/odooSync.ts) dua vao thung (yeu cau 04/10/2026, CHOT "KTV chon don vao
+// thung"). Moi don Odoo -> 1 don cha, tu dien ma ca/linh kien/so luong/mo ta. Thay cho cong case-lookup
+// cua POST /:id/don: don Odoo da gan san ma ca + KTV phu trach (tu case_dvbh), chi can kiem tra ma KTV
+// cua don khop KTV so huu thung. Linh kien chua co trong danh muc bao hanh -> tu them dong "noi_bo"
+// (FK phieu_sua_chua_bh.ma_lk) de giu dung linh kien Odoo thay vi bo trong.
+phieuGui.post("/:id/don-tu-odoo", async (c) => {
+  const user = c.get("user");
+  const guiId = c.req.param("id");
+  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(guiId).first<{ nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
+  if (!g) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
+
+  const body = await c.req.json<{ odoo_ids?: number[] }>().catch(() => ({}) as { odoo_ids?: number[] });
+  const ids = [...new Set((body.odoo_ids || []).map(Number).filter((x) => Number.isInteger(x) && x > 0))].slice(0, 100);
+  if (ids.length === 0) return c.json({ error: "MISSING_ODOO_IDS" }, 400);
+  const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
+  if (!ktvRow) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
+
+  const { results: rows } = await c.env.DB.prepare(
+    `SELECT o.*, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan FROM don_bh_odoo o WHERE o.odoo_id IN (${ids.map(() => "?").join(",")})`,
+  )
+    .bind(...ids)
+    .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; trang_thai: string | null; tinh_trang_loi: string | null; ghi_chu: string | null; con_hieu_luc: number; ma_ktv: string | null; da_gan: string | null }>();
+
+  const loi: { odoo_id: number; error: string }[] = [];
+  const ok = rows.filter((r) => {
+    let e: string | null = null;
+    if (r.da_gan) e = "DA_GAN_THUNG";
+    else if (!r.con_hieu_luc || !["new", "repairing"].includes(r.trang_thai || "")) e = "KHONG_CON_CHO_GUI";
+    else if (r.ma_ktv !== ktvRow.ma_ktv) e = "CASE_KTV_MISMATCH";
+    else if (!r.case_id) e = "MISSING_CASE_ID";
+    if (e) loi.push({ odoo_id: r.odoo_id, error: e });
+    return !e;
+  });
+  for (const id of ids) if (!rows.some((r) => r.odoo_id === id)) loi.push({ odoo_id: id, error: "NOT_FOUND" });
+
+  const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
+  const now = nowVN();
+  const created: string[] = [];
+  for (const r of ok) {
+    if (r.ma_linh_kien) {
+      await c.env.DB.prepare("INSERT INTO linh_kien_bh (ma_lk, ten_lk, nguon_du_lieu, ghi_chu) VALUES (?, ?, 'noi_bo', 'Tự thêm từ đơn bảo hành Odoo') ON CONFLICT(ma_lk) DO NOTHING")
+        .bind(r.ma_linh_kien, r.ten_linh_kien || r.ma_linh_kien)
+        .run();
+    }
+    const moTa = [r.tinh_trang_loi, r.ghi_chu].filter((x) => x && x.trim()).join(" — ") || `Lỗi ${r.ten_linh_kien || "linh kiện"}`;
+    const soLuong = Math.max(1, Math.round(Number(r.so_luong) || 1));
+    const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
+    await c.env.DB.prepare(
+      `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, ghi_chu, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, odoo_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'doi_tra', 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?)`,
+    )
+      .bind(id, guiId, r.case_id, r.ma_linh_kien || null, moTa, r.ma_don ? `Đơn Odoo ${r.ma_don}` : null, soLuong, emailGs, r.odoo_id, now)
+      .run();
+    created.push(id);
+  }
+  if (created.length > 0) await addLog(c.env.DB, "phieu_gui", guiId, "nhap", "nhap", user.email, `Them ${created.length} don tu Odoo: ${ok.map((r) => r.ma_don || r.odoo_id).join(", ")}`);
+  return c.json({ created, loi }, created.length > 0 ? 201 : 400);
+});
+
 // DELETE /api/phieu-gui-don/:id - xoa 1 don CHUA gui (phieu cha van "nhap").
 phieuGui.delete("/don/:donId", async (c) => {
   const user = c.get("user");

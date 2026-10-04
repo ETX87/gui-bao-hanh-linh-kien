@@ -18,10 +18,12 @@ import khovanLookupRoutes from "./routes/khovanLookup";
 import khuVucRoutes from "./routes/khuVuc";
 import partnerKhoRoutes from "./routes/partnerKho";
 import workloadRoutes from "./routes/workload";
+import odooDonRoutes from "./routes/odooDon";
+import { runOdooSync } from "./lib/odooSync";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
-// CLAUDE.md "Trien khai day du Giai doan 3-6". Khong co cron job (Worker nay la BEN NHAN cua co che
+// CLAUDE.md "Trien khai day du Giai doan 3-6". Cron 15 phut dong bo don Odoo (lib/odooSync.ts); Worker nay cung la BEN NHAN cua co che
 // day tu linh-kien-app, xem routes/sync.ts).
 const app = new Hono<{ Bindings: Env }>();
 
@@ -43,6 +45,7 @@ app.route("/api/partner/box-lookup", khovanLookupRoutes);
 app.route("/api/khu-vuc", khuVucRoutes);
 app.route("/api/partner/kho-action", partnerKhoRoutes);
 app.route("/api/workload", workloadRoutes);
+app.route("/api/odoo-don", odooDonRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -53,4 +56,9 @@ app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
+  // Cron 15 phut (wrangler.jsonc triggers) - keo don bao hanh Odoo tu dvbh + day trang thai gui sua
+  // nguoc ve dvbh (lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runOdooSync(env).then(() => undefined));
+  },
 };

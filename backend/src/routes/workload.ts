@@ -19,6 +19,7 @@ workload.use("*", verifySessionMiddleware, loadUser);
 
 const EMPTY = {
   ktv_phieu_nhap: 0,
+  ktv_odoo_cho_gui: 0,
   ktv_cho_bo_sung: 0,
   ktv_nhan_hang: 0,
   kho_cho_tiep_nhan: 0,
@@ -50,6 +51,15 @@ workload.get("/", async (c) => {
     jobs.push(
       one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ? AND trang_thai = 'nhap'`, user.email).then((r) => {
         counts.ktv_phieu_nhap = r?.cnt ?? 0;
+      }),
+      // Don bao hanh Odoo cua chinh KTV dang cho gui sua (chua dua vao thung) - khop GET /api/odoo-don/cho-gui.
+      one(
+        `SELECT COUNT(*) as cnt FROM don_bh_odoo o JOIN ktv_lien_he_bh k ON k.ma_ktv = o.ma_ktv
+         WHERE k.email_dang_nhap = ? AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
+           AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)`,
+        user.email,
+      ).then((r) => {
+        counts.ktv_odoo_cho_gui = r?.cnt ?? 0;
       }),
       // Don vi dang cho_bo_sung_tt thuoc phieu gui cua chinh minh - khop GET /phieu-gui/don-vi/tra-cuu
       // (loc g.nguoi_tao) + .filter(u.trang_thai === 'cho_bo_sung_tt') trong hook cu.

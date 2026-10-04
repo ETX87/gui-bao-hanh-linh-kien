@@ -6,6 +6,11 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	// Cron 15 phut: keo don bao hanh Odoo tu dvbh + day trang thai gui sua nguoc ve dvbh
+	// (backend/src/lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	},
 	// run_worker_first la BAT BUOC - bai hoc port tu ca dvbh lan linh-kien-app (xem CLAUDE.md 2 repo
 	// do): thieu no thi request navigate that (Sec-Fetch-Mode: navigate) se bi Workers Static Assets
 	// SPA fallback chan truoc khi toi duoc Worker, curl KHONG tai hien duoc loi nay. Dung xoa dong nay.
@@ -35,9 +40,8 @@
 			"remote": true
 		}
 	],
-	// Khong co "triggers.crons" o Giai doan 1 - Worker nay la BEN NHAN cua co che day (push sync, xem
-	// CLAUDE.md muc "Chot 5 cau hoi mo...") tu linh-kien-app, khong phai ben phat nen khong can cron
-	// rieng. Neu sau nay them "Dong bo lai toan bo" du phong (pull), se can 1 cron/route rieng luc do.
+	// Dong bo danh ba/linh kien tu linh-kien-app van la co che DAY (push, routes/sync.ts). Cron duy nhat
+	// (triggers o tren) la keo don bao hanh Odoo tu dvbh - 04/10/2026.
 	// Khong co "r2_buckets" - khong dung R2, dung quy uoc voi ca dvbh lan linh-kien-app.
 	// Service Binding toi dvbh (tra cuu case_dvbh theo ID - case-lookup, xem CLAUDE.md muc "Lien he he
 	// thong chinh") - dung Service Binding chu KHONG fetch() thang URL, vi 2 Worker cung 1 tai khoan

@@ -58,6 +58,7 @@ export interface DonCha {
   ma_lk: string | null;
   mo_ta_loi: string | null;
   so_luong_khai: number;
+  odoo_id?: number | null;
   so_luong_thuc_nhan: number | null;
   ly_do_chenh_lech_sl: string | null;
   loai_doi_tru_de_xuat: "doi_tra" | "tru_cong_no" | null;
@@ -227,4 +228,18 @@ export interface FastActionMeta {
   loaiDoiTru?: string;
   lyDoTuChoi?: string;
   special?: "bo_sung_tt" | "bao_cao_sai";
+}
+
+// Don bao hanh tao tren Odoo, keo ve qua dvbh (GET /api/odoo-don/cho-gui).
+export interface OdooDon {
+  odoo_id: number;
+  ma_don: string | null;
+  case_id: string | null;
+  ma_linh_kien: string | null;
+  ten_linh_kien: string | null;
+  so_luong: number | null;
+  trang_thai: string | null;
+  tinh_trang_loi: string | null;
+  ghi_chu: string | null;
+  ngay_tao: string | null;
 }

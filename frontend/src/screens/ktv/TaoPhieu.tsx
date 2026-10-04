@@ -11,6 +11,7 @@ import { TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_LABELS } from "../../lib/con
 import { fmtDateOnly } from "../../lib/format";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PickKtvModal } from "./PickKtvModal";
+import { OdooDonList, useOdooChoGui, useSelection } from "./OdooDonPicker";
 import type { AppUser, PhieuGui } from "../../lib/types";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
@@ -31,9 +32,30 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   const [pickOpen, setPickOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // Don bao hanh Odoo dang cho gui sua cua chinh KTV (yeu cau 04/10/2026) - chi hien voi KTV that;
+  // nguoi "tao ho" chon don Odoo trong chi tiet phieu sau khi da chon KTV.
+  const odoo = useOdooChoGui(null, isSelfKtv);
+  const sel = useSelection();
   const afterChange = () => {
     reload();
     refresh();
+    odoo.reload();
+  };
+  const taoThungTuOdoo = async () => {
+    setCreating(true);
+    try {
+      const r = await api.post<{ id: string }>("/phieu-gui");
+      const add = await api.post<{ created: string[]; loi: unknown[] }>(`/phieu-gui/${r.id}/don-tu-odoo`, { odoo_ids: [...sel.selected] });
+      toast(`Đã tạo phiếu ${r.id} với ${add.created.length} đơn Odoo.`, "ok");
+      sel.setSelected(new Set());
+      afterChange();
+      setDetailId(r.id);
+    } catch (e) {
+      toast(errorMessage(e), "error");
+      afterChange();
+    } finally {
+      setCreating(false);
+    }
   };
 
   const taoPhieu = async (ktvEmail?: string) => {
@@ -62,6 +84,21 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   ];
 
   return (
+    <div className="space-y-4">
+    {isSelfKtv && odoo.don && odoo.don.length > 0 && (
+      <Card className="p-5">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🧾 Đơn bảo hành Odoo chờ gửi sửa ({odoo.don.length})</h3>
+            <p className="text-xs text-[var(--ink-soft)]">Chọn các đơn sẽ gửi về kho rồi tạo thùng — mã ca, linh kiện, số lượng được điền sẵn.</p>
+          </div>
+          <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto">
+            Tạo thùng với {sel.selected.size || ""} đơn đã chọn
+          </Btn>
+        </div>
+        <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} />
+      </Card>
+    )}
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : "Phiếu gửi hàng của tôi"} ({total})</h3>
@@ -82,5 +119,6 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
         />
       )}
     </Card>
+    </div>
   );
 }

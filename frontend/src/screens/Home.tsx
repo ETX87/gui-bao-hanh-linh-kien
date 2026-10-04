@@ -12,6 +12,7 @@ import type { AppUser } from "../lib/types";
 
 const LABELS: Record<keyof WorkloadCounts, string> = {
   ktv_phieu_nhap: "Phiếu gửi còn nháp",
+  ktv_odoo_cho_gui: "Đơn Odoo chờ gửi sửa",
   ktv_cho_bo_sung: "Đơn cần bổ sung thông tin",
   ktv_nhan_hang: "Hàng trả chờ xác nhận nhận",
   kho_cho_tiep_nhan: "Thùng chờ tiếp nhận",
@@ -27,6 +28,7 @@ const LABELS: Record<keyof WorkloadCounts, string> = {
 
 const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   ktv_phieu_nhap: "/ktv/tao-phieu",
+  ktv_odoo_cho_gui: "/ktv/tao-phieu",
   ktv_cho_bo_sung: "/ktv/tra-cuu",
   ktv_nhan_hang: "/ktv/nhan-hang",
   kho_cho_tiep_nhan: "/kho/tiep-nhan",
@@ -42,6 +44,7 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
 
 const ICON_OF: Record<keyof WorkloadCounts, string> = {
   ktv_phieu_nhap: "📦",
+  ktv_odoo_cho_gui: "🧾",
   ktv_cho_bo_sung: "✍️",
   ktv_nhan_hang: "📬",
   kho_cho_tiep_nhan: "📥",
@@ -59,6 +62,7 @@ const ICON_OF: Record<keyof WorkloadCounts, string> = {
 // nguoi khac/tham khao = blue, sap xong/san sang = brand. So 0 tu chuyen slate (mo).
 const TONE_OF: Record<keyof WorkloadCounts, "amber" | "blue" | "brand" | "red"> = {
   ktv_phieu_nhap: "amber",
+  ktv_odoo_cho_gui: "red",
   ktv_cho_bo_sung: "red",
   ktv_nhan_hang: "brand",
   kho_cho_tiep_nhan: "amber",

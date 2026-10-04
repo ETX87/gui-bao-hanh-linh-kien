@@ -106,11 +106,59 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
   );
 }
 
+interface OdooSyncStatus {
+  last_run: { ok: boolean; keo_ve: number; bo_sung_ktv: number; day_trang_thai: number; loi: string[]; luc: string } | null;
+  tong: number;
+  cho_gui: number;
+  chua_ktv: number;
+}
+
+// Dong bo don bao hanh Odoo (dvbh -> suachua, cron 15 phut - backend/src/lib/odooSync.ts).
+function OdooSyncCard() {
+  const toast = useToast();
+  const [st, setSt] = useState<OdooSyncStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => api.get<OdooSyncStatus>("/odoo-don/sync-status").then(setSt).catch((e) => toast(errorMessage(e), "error"));
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const syncNow = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ ok: boolean; keo_ve: number; day_trang_thai: number; loi: string[] }>("/odoo-don/sync-now");
+      toast(r.ok ? `Đã đồng bộ: kéo về ${r.keo_ve} đơn, đẩy ${r.day_trang_thai} trạng thái.` : `Đồng bộ lỗi: ${r.loi.join("; ")}`, r.ok ? "ok" : "error");
+      await load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const lr = st?.last_run;
+  return (
+    <Card title="🧾 Đồng bộ đơn bảo hành Odoo" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={syncNow}>Đồng bộ ngay</Btn>}>
+      <p className="text-xs text-[var(--ink-soft)] mb-3">Tự động 15 phút/lần: kéo đơn Odoo từ DVBH về và đẩy trạng thái gửi sửa ngược lại DVBH.</p>
+      {st && (
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-lg bg-[var(--surface-2)] p-2"><div className="text-lg font-bold">{st.tong}</div><div className="text-[11px] text-[var(--ink-soft)]">Đơn đã kéo về</div></div>
+          <div className="rounded-lg bg-[var(--surface-2)] p-2"><div className="text-lg font-bold">{st.cho_gui}</div><div className="text-[11px] text-[var(--ink-soft)]">Chờ gửi sửa</div></div>
+          <div className="rounded-lg bg-[var(--surface-2)] p-2"><div className="text-lg font-bold">{st.chua_ktv}</div><div className="text-[11px] text-[var(--ink-soft)]">Chưa rõ KTV</div></div>
+        </div>
+      )}
+      <p className={`mt-3 text-xs ${lr && !lr.ok ? "text-[var(--red-700)] font-semibold" : "text-[var(--ink-soft)]"}`}>
+        {lr ? `Lần gần nhất ${lr.luc}: ${lr.ok ? "thành công" : "lỗi"} — kéo về ${lr.keo_ve}, bổ sung KTV ${lr.bo_sung_ktv}, đẩy ${lr.day_trang_thai} trạng thái.${lr.loi.length ? " " + lr.loi.join("; ") : ""}` : "Chưa chạy lần nào."}
+      </p>
+    </Card>
+  );
+}
+
 export function QtriCaiDatScreen() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <SettingListCard title="⏱ Lý do chậm" path="/settings/ly-do-cham" />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
+      <OdooSyncCard />
     </div>
   );
 }

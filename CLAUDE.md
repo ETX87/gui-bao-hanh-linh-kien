@@ -3949,3 +3949,74 @@ thông lệ ngành đáng cân nhắc thêm:
 8. **[Mới 21/08/2026]** Đưa toàn bộ 8 điểm "đẩy ngược" (sheet "Diem day nguoc" trong #5) và cấu trúc
    đơn cha/đơn vị con (`phieu_sua_chua_bh` + `phieu_sua_chua_bh_ct`) vào bản cập nhật tiếp theo của
    #4 — đây là thay đổi schema thật sự, không chỉ là ghi chú UI.
+
+## Kéo đơn bảo hành Odoo về app + đẩy trạng thái ngược về dvbh (04/10/2026) — ĐÃ TRIỂN KHAI (v1.008)
+
+**(a) Nguyên văn yêu cầu:** *"tôi cần kéo danh sách đơn bảo hành được tạo trên odoo về app này, tạo
+thành danh sách đơn bảo hành đang chờ gửi sửa (KTV nhìn thấy đơn của bản thân thông qua ID KTV phụ
+trách). Khi đơn bảo hành thay đổi trạng thái cũng sẽ bắn ngược kết quả về app dvbh. => bên hệ thống
+dvbh sẽ tính toán 1 lần vào thời gian hệ thống nhận data => hệ thống app bảo hành nên để bên dvbh chủ
+động đẩy sang hay tự xin định kỳ sau 1 khoảng thời gian"*. Đã chốt qua AskUserQuestion: (1) **KTV chọn
+đơn Odoo vào thùng**, app tự điền mã ca/linh kiện/số lượng, đơn cha lưu `odoo_id`; (2) "chờ gửi sửa" =
+Odoo `trang_thai IN ('new','repairing')`; (3) dvbh lưu trạng thái gửi sửa ở **cột riêng**, giữ nguyên
+trạng thái Odoo.
+
+Người dùng hỏi tiếp: *"giữa việc dvbh chủ động đẩy khi có data mới với việc app bảo hành xin định kỳ,
+phương án nào tiết kiệm chi phí, lượt đọc ghi hơn, hãy phân tích ở cả 2 hướng, tìm hiểu đủ dữ liệu cần
+thiết rồi mới đánh giá"*.
+
+**(b) Số liệu thật đo trên production dvbh (chỉ đọc, 04/10/2026):**
+- `don_bao_hanh_odoo`: 484 dòng (bắt đầu có từ 01/10, ~100–173 đơn mới/ngày), 483 đang `new`. Cả
+  bảng mới chỉ được đồng bộ 1 lần (19:01 04/10).
+- Pipeline auto qs đẩy dữ liệu vào dvbh **4–5 đợt/ngày, giờ cố định** 07h, 09h, 13h, 14–15h (+19h hôm
+  04/10) — đếm từ `import_history` 27/09–04/10. Giữa các đợt dữ liệu Odoo trong dvbh KHÔNG đổi.
+- `case_dvbh` 127.415 dòng; 1 đợt `tong_hop` ghi đè ~2.000–3.800 case.
+- D1 dvbh đã 541MB (> giới hạn 500MB của gói miễn phí) → tài khoản đang ở gói Workers Paid.
+- Partner API dvbh: giới hạn tần suất theo key dùng Cache API (không ghi D1); xác thực key = 1 lượt đọc
+  bảng `partner_api_keys` (vài dòng). `logPartnerApiCall` ghi 1 dòng D1/lần gọi — endpoint mới KHÔNG nên
+  dùng hàm này.
+
+Kết luận phân tích: xem trả lời trong phiên. Tóm tắt: chi phí cả 2 hướng đều ≈ 0 (vài trăm lượt đọc/
+ghi mỗi ngày so với hạn mức hàng tỷ), chênh lệch không đáng kể; khác biệt thật nằm ở độ tin cậy và độ
+phức tạp — khuyến nghị **suachua tự xin định kỳ** (có con trỏ, tự phục hồi), chiều trạng thái ngược
+**suachua gom đẩy theo lô** trong cùng cron. Phát hiện quyết định: đơn có thể về dvbh TRƯỚC case (chưa
+biết KTV) → nếu dvbh tự đẩy thì mỗi đợt nhập 2.000–3.800 case phải dò lại đơn đang mở; pull chỉ cần hỏi
+lại riêng vài đơn thiếu KTV. Người dùng chốt: *"ok"*.
+
+**(c) Đã triển khai:**
+- **dvbh** (repo `../cloudflare smarttrade base`, v1.413): migration `0123` (cột `sc_trang_thai/sc_ma_phieu/
+  sc_chi_tiet/sc_cap_nhat/sc_ngay_nhan` + index `(ngay_dong_bo, odoo_id)`); `partnerApi.ts` `GET
+  /don-bao-hanh-odoo` (con trỏ `since/after_id`, hoặc `?ids=`, LEFT JOIN `case_dvbh.ky_thuat_vien`, giới
+  hạn theo key qua Cache API, KHÔNG ghi `partner_api_call_log`) + `POST /sync/sua-chua-trang-thai` (ghi cột
+  `sc_*`, bỏ bản tin cũ đến muộn, không đụng `ngay_dong_bo`); `LoiLinhKienPanel` hiện badge "Sửa chữa: …".
+- **suachua** (v1.008): migration `0005` (`don_bh_odoo`, `phieu_sua_chua_bh.odoo_id` + unique index,
+  `sync_state`, `odoo_status_sync`); `lib/odooSync.ts` (`runOdooSync`: kéo theo con trỏ → hỏi lại đơn thiếu
+  KTV → tính trạng thái suy ra và đẩy phần thay đổi, tối đa 200 dòng/request); cron `*/15 * * * *` +
+  `scheduled()` ở `index.ts`; `routes/odooDon.ts` (`GET /cho-gui`, `GET /sync-status`, `POST /sync-now`);
+  `POST /api/phieu-gui/:id/don-tu-odoo` (kiểm tra chủ phiếu, mã KTV của đơn = KTV sở hữu thùng, đơn chưa
+  gắn, còn new/repairing; điền sẵn `case_id`, `ma_lk`, `so_luong_khai` = làm tròn ≥1, `mo_ta_loi` = tình
+  trạng lỗi + ghi chú, `ghi_chu` = "Đơn Odoo <mã>"); workload `ktv_odoo_cho_gui`.
+  - Giao diện: thẻ "🧾 Đơn bảo hành Odoo chờ gửi sửa" ở màn Gửi hàng (KTV thật, chọn nhiều → "Tạo thùng
+    với N đơn"); nút "🧾 Chọn đơn Odoo" trong chi tiết phiếu nháp (dùng được cả khi tạo hộ); badge "Odoo"
+    trên dòng đơn; thẻ "Đồng bộ đơn bảo hành Odoo" ở Cài đặt hệ thống (số liệu + "Đồng bộ ngay").
+  - Trạng thái gửi sửa đẩy về dvbh: `cho_gui` (thùng nháp) → `dang_gui` → `kho_da_nhan` → `dang_xu_ly` →
+    `cho_tra` → `dang_tra` → `hoan_tat` / `tu_choi`. Đơn tách nhiều đơn vị lấy giai đoạn thấp nhất còn mở,
+    kèm "k/N hoàn tất". Gỡ đơn khỏi thùng nháp → gửi `null` để dvbh xoá. Đơn đã kết thúc không tính lại
+    (số dòng đọc mỗi lần cron tỉ lệ với số đơn đang xử lý, không phình theo lịch sử).
+
+**(d) Lỗi/vấn đề phát hiện:**
+- `phieu_sua_chua_bh.ma_lk` có FOREIGN KEY tới `linh_kien_bh` (D1 thực thi FK), mà chỉ 85/177 mã linh kiện
+  Odoo có trong danh mục bảo hành → tự thêm dòng `noi_bo` (tên lấy từ Odoo) trước khi tạo đơn, thay vì bỏ
+  trống linh kiện.
+- Kiểm thử local: wrangler dev registry nối được 2 Worker local qua service binding (bỏ `remote: true`
+  tạm thời); khi khởi động lại Worker đích thì Worker gọi bị "Network connection lost" — phải khởi động lại
+  cả bên gọi. Đường dẫn `/tmp` của Git Bash truyền cho node thành `F:	mp` → dùng đường dẫn Windows.
+
+**(e) Kiểm thử:** typecheck backend+frontend cả 2 repo 0 lỗi; build sạch. E2E chạy thật 2 Worker local
+(dvbh dữ liệu tạm riêng, 5 đơn mẫu, 1 đơn chưa có case): 37/38 đạt — mục còn lại là lỗi của script test
+(đọc sai `counts.ktv_odoo_cho_gui`), backend trả đúng. Đã xác minh: kéo 5 đơn, lần 2 không kéo lại; 1 đơn
+"chưa rõ KTV"; KTV chỉ thấy đơn của mình, không xem được của KTV khác, Admin BH xem hộ được; chặn đơn KTV
+khác/đơn đã gắn; điền sẵn đúng; đẩy đủ chuỗi trạng thái tới `hoan_tat 1/2` và đọc lại trên dvbh thấy cột
+`sc_*` đúng trong khi `trang_thai` Odoo giữ nguyên; không đẩy lại khi không đổi; gỡ đơn → dvbh reset. UI
+kiểm tra trên trình duyệt (1440px + 375px): chọn đơn → tạo thùng mở đúng chi tiết có badge Odoo, modal chọn
+đơn hiện trạng thái rỗng đúng. `wrangler.jsonc`/`.claude/launch.json` đã khôi phục.

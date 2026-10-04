@@ -9,6 +9,7 @@ import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_OPTIONS
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
 import { AddDonModal } from "./AddDonModal";
 import { AddDonMobileSheet } from "./AddDonMobileSheet";
+import { OdooDonPickerModal } from "./OdooDonPicker";
 import { QrCode } from "../../ui/QrCode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, PhieuGui } from "../../lib/types";
@@ -29,6 +30,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   const [maVanDon, setMaVanDon] = useState("");
   const [ngayGuiXe, setNgayGuiXe] = useState("");
   const [addDonOpen, setAddDonOpen] = useState(false);
+  const [odooOpen, setOdooOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = () =>
@@ -205,9 +207,14 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">Đơn bảo hành trong phiếu ({data.don_cha.length})</p>
               {isNhap && (
-                <Btn variant="primary" onClick={() => setAddDonOpen(true)}>
-                  + Thêm đơn
-                </Btn>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Btn variant="secondary" onClick={() => setOdooOpen(true)}>
+                    🧾 Chọn đơn Odoo
+                  </Btn>
+                  <Btn variant="primary" onClick={() => setAddDonOpen(true)}>
+                    + Thêm đơn
+                  </Btn>
+                </div>
               )}
             </div>
             <div className="space-y-1.5">
@@ -220,7 +227,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
                 <div key={d.id} className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
+                    {d.case_id && <span className="font-mono text-xs text-[var(--ink-soft)]">{d.case_id}</span>}
                     <span className="text-xs text-[var(--ink-soft)]">SL: {d.so_luong_khai}</span>
+                    {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
                     {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
                     {isNhap && (
                       <Btn variant="ghost" size="sm" onClick={() => xoaDon(d.id)} disabled={busy} className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]">
@@ -239,6 +248,19 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
           </div>
         </div>
       </Modal>
+      {odooOpen && (
+        <OdooDonPickerModal
+          guiId={g.id}
+          ktvEmail={g.nguoi_tao}
+          onClose={() => setOdooOpen(false)}
+          onDone={(msg) => {
+            setOdooOpen(false);
+            toast(msg, "ok");
+            load();
+            onChanged();
+          }}
+        />
+      )}
       {addDonOpen &&
         (isMobile ? (
           <AddDonMobileSheet guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
