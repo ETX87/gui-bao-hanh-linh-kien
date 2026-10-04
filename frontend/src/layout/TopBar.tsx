@@ -1,5 +1,7 @@
 import type { AppUser } from "../lib/types";
+import { useState } from "react";
 import { InstallAppButton } from "./InstallAppButton";
+import { TestModeModal, useTestMode } from "./TestMode";
 
 // TopBar (DESIGN_SYSTEM.md §4):
 // - Mobile: header gradient xanh la (cung nen Sidebar) de nhan dien thuong hieu - icon + ten app + nut
@@ -27,14 +29,31 @@ async function logout() {
 export function TopBar({ user }: { user: AppUser }) {
   const roles = ROLE_LABELS.filter((r) => user[r.flag]).map((r) => r.label);
   const initial = (user.ten || user.email).trim().charAt(0).toUpperCase();
+  const test = useTestMode();
+  const [testOpen, setTestOpen] = useState(false);
+  // Nut "Chế độ test" chi cho tai khoan THAT la Admin he thong (ke ca khi dang test duoi vai tro khac).
+  const testBtn = (onDark: boolean) =>
+    test?.realIsAdmin ? (
+      <button
+        onClick={() => setTestOpen(true)}
+        title="Test theo vai trò hoặc xem như 1 người dùng thật"
+        className={`focus-ring shrink-0 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+          onDark ? "text-white/90 hover:bg-white/10" : "border border-[var(--line-strong)] text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)]"
+        }`}
+      >
+        🧪 <span className={onDark ? "sr-only" : ""}>Chế độ test</span>
+      </button>
+    ) : null;
   return (
     <>
+      {testOpen && <TestModeModal onClose={() => setTestOpen(false)} />}
       <header className="md:hidden sticky top-0 z-40 bg-sidebar text-white shadow-brand px-4 py-2.5 flex items-center gap-3">
         <img src="/icon-192.png" alt="" className="w-9 h-9 rounded-xl shrink-0 ring-1 ring-white/30" />
         <div className="min-w-0 flex-1">
           <p className="font-bold text-base leading-tight truncate">Sửa chữa 3T</p>
           <p className="text-xs text-white/75 leading-tight truncate">{user.ten || user.email}</p>
         </div>
+        {testBtn(true)}
         <InstallAppButton onDark />
         <button onClick={logout} className="focus-ring shrink-0 rounded-lg px-2.5 py-2 text-sm font-semibold text-white/85 hover:bg-white/10">
           Thoát
@@ -49,9 +68,11 @@ export function TopBar({ user }: { user: AppUser }) {
           <p className="text-sm text-[var(--ink)] font-semibold truncate">Xin chào, {user.ten || user.email}</p>
           <p className="text-xs text-[var(--ink-soft)] truncate">{roles.join(" · ") || "Chưa gán vai trò"}</p>
         </div>
+        <div className="ml-auto" />
+        {testBtn(false)}
         <button
           onClick={logout}
-          className="focus-ring ml-auto shrink-0 rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] hover:border-[var(--brand-300)] transition-colors"
+          className="focus-ring shrink-0 rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] hover:border-[var(--brand-300)] transition-colors"
         >
           Đăng xuất
         </button>

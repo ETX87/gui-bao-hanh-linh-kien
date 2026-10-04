@@ -84,7 +84,9 @@ export function HomeScreen({ user }: { user: AppUser }) {
   const { counts, loading } = useWorkload();
   const { nav } = useRoute();
   const routeHashes = new Set(routesForUser(user).map((r) => r.hash));
-  const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!));
+  // "Don Odoo cho gui sua" chi dem don cua chinh KTV that - an voi nguoi "tao ho" (GS/Admin BH/qtri).
+  const isRealKtv = user.la_ktv_dvbh || user.la_ve_tinh;
+  const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!) && (k !== "ktv_odoo_cho_gui" || isRealKtv));
   const myWork = relevantKeys.filter((k) => counts[k] > 0).sort((a, b) => counts[b] - counts[a]);
   const total = myWork.reduce((s, k) => s + counts[k], 0);
   // DESIGN_SYSTEM.md §8.4: danh sach dai tren mobile chi hien vai muc dau + "Xem them".

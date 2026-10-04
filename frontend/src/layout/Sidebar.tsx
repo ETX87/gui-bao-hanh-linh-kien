@@ -27,7 +27,7 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
 
   return (
     <aside
-      className={`hidden md:flex ${collapsed ? "w-16" : "w-64"} shrink-0 h-screen sticky top-0 flex-col bg-sidebar text-white transition-[width] duration-200`}
+      className={`hidden md:flex ${collapsed ? "w-[76px]" : "w-64"} shrink-0 h-screen sticky top-0 flex-col bg-sidebar text-white transition-[width] duration-200`}
     >
       <div className={`flex items-center gap-3 border-b border-white/10 py-4 ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <img src="/icon-192.png" alt="3T" className="h-10 w-10 shrink-0 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.25)] ring-1 ring-white/30" />
@@ -42,12 +42,16 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-3">
         {groups.map((g) => (
           <div key={g.label} className="space-y-0.5">
-            {!collapsed && g.label && g.label !== "Chung" && <p className="px-3 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/55">{g.label}</p>}
-            {collapsed && g.label !== "Chung" && <div className="mx-3 my-1.5 border-t border-white/10" />}
+            {!collapsed && g.label && <p className="px-3 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/55">{g.label}</p>}
+            {collapsed && g.label && <div className="mx-2 my-1.5 border-t border-white/15" title={g.label} />}
             {g.items.map((it) => {
               const active = path === it.hash;
               const count = it.workloadKey ? counts[it.workloadKey] : 0;
-              const cls = `focus-ring relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${collapsed ? "justify-center" : ""} ${
+              // Thu gon: icon + nhan ngan BEN DUOI (05/10/2026 - truoc day chi con icon, 16+ emoji khong nhan
+              // khien khong biet muc nao dung de lam gi). Mo rong: nhan + mo ta 1 dong.
+              const cls = `focus-ring relative w-full flex rounded-lg text-[13.5px] font-medium transition-colors ${
+                collapsed ? "flex-col items-center gap-1 px-1 py-2" : "items-center gap-2.5 px-3 py-2"
+              } ${
                 active ? "bg-white/[0.22] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]" : "text-white/85 hover:bg-white/10 hover:text-white"
               }`;
               const body = (
@@ -60,7 +64,13 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
                       </span>
                     )}
                   </span>
-                  {!collapsed && <span className="flex-1 text-left truncate">{it.label}</span>}
+                  {collapsed && <span className="w-full text-center text-[10px] font-semibold leading-[1.15] line-clamp-2 break-words">{it.short || it.label}</span>}
+                  {!collapsed && (
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block truncate">{it.label}</span>
+                      {it.desc && <span className="block truncate text-[11px] font-normal text-white/60">{it.desc}</span>}
+                    </span>
+                  )}
                   {!collapsed && count > 0 && (
                     <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[#EF4444] ring-1 ring-white/80 text-white text-[11px] font-bold flex items-center justify-center">
                       {count > 99 ? "99+" : count}
@@ -68,7 +78,7 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
                   )}
                 </>
               );
-              const title = `${it.label}${count > 0 ? ` (${count} việc cần làm)` : ""}`;
+              const title = `${g.label ? g.label + " › " : ""}${it.label}${it.desc ? " — " + it.desc : ""}${count > 0 ? ` (${count} việc cần làm)` : ""}`;
               return it.href ? (
                 <a key={it.hash} href={it.href} title={title} className={cls}>
                   {body}

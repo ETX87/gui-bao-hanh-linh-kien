@@ -44,6 +44,9 @@ export const api = {
 // Khong co trong danh sach nay thi hien nguyen code (van con thong tin hon la an di).
 export const ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
+  XEM_NHU_CHI_DOC: "Đang ở chế độ \"Xem như người dùng\" — chỉ xem, không thao tác được. Thoát về Admin để thao tác.",
+  INVALID_ROLE: "Vai trò test không hợp lệ.",
+  TAI_KHOAN_KHONG_HOAT_DONG: "Tài khoản này đang bị khoá hoặc chưa được duyệt.",
   NOT_FOUND: "Không tìm thấy dữ liệu.",
   NOT_DRAFT: "Chỉ thực hiện được khi phiếu còn ở trạng thái Nháp.",
   MISSING_ODOO_IDS: "Chưa chọn đơn Odoo nào.",

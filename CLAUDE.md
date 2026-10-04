@@ -181,7 +181,12 @@ tone, `ImagePicker`, hero Trang chủ) + tạo `DESIGN_SYSTEM.md` riêng; **ch�
 chủ nhật"** (backend + frontend cùng thuật toán); **QA chức năng chạy thật** (e2e HTTP 51/51 bước với
 7 tài khoản đơn vai trò + quét 18/18 màn hình 0 lỗi console) — tìm và sửa 2 lỗi backend thật (cho gửi
 thùng rỗng; "tự động gộp" không gộp vào phiếu nháp sẵn có). v1.007, đã commit + deploy (quy ước mới: tự commit rồi deploy cuối mỗi phiên) — xem mục "Áp
-dụng design system App Khiếu nại..." ở cuối file.
+dụng design system App Khiếu nại..." ở cuối file. Tiếp theo (04/10/2026): kéo đơn bảo hành Odoo từ
+dvbh về app (cron 15 phút) + đẩy trạng thái gửi sửa ngược về dvbh (v1.008). **Mốc mới nhất
+(05/10/2026, v1.009):** sắp xếp lại menu Admin theo đúng thứ tự quy trình (nhóm "1 · Gửi hàng → 2 · Kho
+→ 3 · Xử lý bảo hành → 4 · Trả hàng → Danh mục & quản trị", có mô tả từng mục) + **"🧪 Chế độ test"**
+cho Admin hệ thống (xem thử theo vai trò / xem như gmail người dùng thật, port từ `linh-kien-app`) —
+xem 2 mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4020,3 +4025,59 @@ khác/đơn đã gắn; điền sẵn đúng; đẩy đủ chuỗi trạng thái
 `sc_*` đúng trong khi `trang_thai` Odoo giữ nguyên; không đẩy lại khi không đổi; gỡ đơn → dvbh reset. UI
 kiểm tra trên trình duyệt (1440px + 375px): chọn đơn → tạo thùng mở đúng chi tiết có badge Odoo, modal chọn
 đơn hiện trạng thái rỗng đúng. `wrangler.jsonc`/`.claude/launch.json` đã khôi phục.
+
+## Sắp xếp lại menu Admin + "Chế độ test" theo vai trò / theo gmail người dùng thật (05/10/2026) — v1.009
+
+**(a) Nguyên văn yêu cầu:**
+
+> 1. tại sao giao diện admin lại hiện nhiều mục menu vậy? nó sắp xếp hỗn loạn và không biết dùng cho việc
+>    gì, sắp xếp lại cho hợp lý
+> 2. Vai trò admin cho tôi lựa chọn test theo vai trò và theo gmail người sử dụng thật (tham khảo bên hệ
+>    thống linh-kien-app tính năng test của admin)
+
+**Vì sao menu loạn:** từ 04/09/2026 (QA "Admin nhìn được tất cả module"), `la_qtri` đi qua mọi cổng vai
+trò, và `routesForUser()` nối menu của từng vai trò theo thứ tự code → Admin có ~19 mục không theo thứ
+tự quy trình, không mô tả, lẫn cả các màn "cá nhân" (Tra cứu của tôi / Nhận hàng của tôi / Việc NV của
+tôi) vốn luôn rỗng với Admin.
+
+**(b) Đã triển khai:**
+
+1. **Menu** (`frontend/src/layout/routes.ts`, viết lại thành 1 `CATALOG` có `show(u)`): sắp theo đúng
+   thứ tự quy trình: Trang chủ → Theo dõi (Tổng quan, Tra cứu) → **1 · Gửi hàng** → **2 · Kho** → **3 · Xử
+   lý bảo hành** → **4 · Trả hàng** (+ Kế toán duyệt) → **Danh mục & quản trị** → Liên kết (Mua hàng).
+   Mỗi mục có `desc` (dòng mô tả khi sidebar mở rộng + tooltip "Nhóm › Mục — mô tả"); bỏ trùng theo
+   hash. Sidebar thu gọn rộng `w-[76px]`, hiện icon + nhãn ngắn 2 dòng bên dưới (không còn chỉ icon).
+   **Ghi đè 1 phần quyết định 04/09/2026** ("Admin nhìn được tất cả module"): Admin vẫn thấy & thao tác
+   mọi module, **TRỪ 3 màn cá nhân** `/ktv/tra-cuu`, `/ktv/nhan-hang`, `/nv/viec-cua-toi` (lọc theo
+   email chính người đăng nhập → luôn rỗng với Admin) — muốn xem các màn đó thì dùng Chế độ test. Admin
+   thấy mục "Tạo hộ đơn cho KTV" thay cho "Gửi hàng của tôi". Backend KHÔNG đổi — `la_qtri` vẫn superuser.
+2. **Chế độ test** (port từ `linh-kien-app` "Xem thử vai trò" + "Xem như người dùng"), chỉ áp dụng khi
+   tài khoản THẬT là `la_qtri`:
+   - Backend: `backend/src/lib/viewAs.ts` (mới), `middleware/loadUser.ts` (`loadTargetUser()` đọc
+     `users` — phải đã duyệt & không khoá — hoặc fallback danh bạ `ktv_lien_he_bh` cho KTV **chưa từng
+     đăng nhập**), `routes/auth.ts`: `POST /api/auth/view-as {role|null}`, `GET
+     /api/auth/view-as-user/options?q=` (gộp users + KTV danh bạ chưa đăng nhập, tối đa 50), `POST
+     /api/auth/view-as-user {email|null}`; `/me` trả thêm `realIsAdmin/realEmail/viewAsRole/viewAsUser`;
+     logout xoá cả 2 cookie.
+   - **Theo vai trò** (cookie `suachua_view_as`): giữ email Admin, chỉ đổi cờ sang đúng 1 vai trò (bỏ
+     cả `la_qtri`) — **thao tác được, ghi nhận thật dưới email Admin**. Lưu ý: màn lọc theo email (KTV,
+     NV, GS) sẽ rỗng vì Admin không phải KTV/NV/GS thật — dùng chế độ dưới để xem dữ liệu thật.
+   - **Theo gmail người dùng thật** (cookie `suachua_view_as_user`, ưu tiên hơn cookie vai trò): mang
+     đúng email + cờ + dữ liệu của người đó — **chỉ xem**: mọi request ghi bị chặn `403 XEM_NHU_CHI_DOC`
+     (trừ chính các API bật/tắt chế độ test và logout), để không ghi nhận dưới tên người khác.
+   - Frontend: `frontend/src/layout/TestMode.tsx` (mới — `TestModeModal`, `TestModeBanner`), nút "🧪 Chế
+     độ test" trên TopBar (mobile + desktop, chỉ Admin thật), banner dính trên cùng (vàng = vai trò, xanh
+     = xem như người dùng) có "Thoát về Admin"; `AuthContext` thêm `test`.
+3. `Home.tsx`: thẻ "Đơn Odoo chờ gửi sửa" chỉ hiện cho KTV/Vệ tinh thật (Admin thấy thẻ này = 0 vô nghĩa).
+
+**(c) Lỗi/vấn đề trong lúc làm:** nhãn sidebar thu gọn bị cắt cụt → đổi `line-clamp-2`. Không có lỗi
+backend.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chạy `wrangler dev` local (đã bỏ tạm
+binding remote rồi khôi phục `wrangler.jsonc`, `git diff` sạch), đăng nhập `qtri@t.vn`: sidebar 16 mục
+đúng thứ tự nhóm; bật vai trò "Kho" → `/me` chỉ còn `la_kho`, `GET /api/users` bị 403 (đúng); tìm
+"ktva" → ra đúng `ktva@t.vn`; xem như `ktva@t.vn` → `/me` trả email KTV A, sidebar chỉ còn Gửi hàng /
+Tiến độ / Nhận hàng, Trang chủ hiện số liệu của KTV A, banner "Đang xem như KTV A… chỉ xem", `POST
+/api/phieu-gui` bị 403 `XEM_NHU_CHI_DOC`; thoát → về lại Admin, không banner, không còn thẻ Odoo trên
+Trang chủ Admin; modal Chế độ test mở đủ 2 phần (8 thẻ vai trò + danh sách người dùng). Không chụp được
+ảnh màn hình (pane trình duyệt không vẽ) — đã kiểm bằng đọc DOM/API thật. Không có migration mới.

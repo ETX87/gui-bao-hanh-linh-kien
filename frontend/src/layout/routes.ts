@@ -20,63 +20,63 @@ export interface RouteItem {
   // Nhom menu (DESIGN_SYSTEM.md §4 - nhan nhom 11px HOA tren Sidebar) - giup qtri/nguoi da vai tro
   // (toi 16 muc) quet nhanh theo khau nghiep vu thay vi 1 danh sach phang.
   group?: string;
-  // Nhan ngan cho BottomNav mobile (1 tab chi ~70px - nhan day du bi cat "Gửi hàng bả…").
+  // Nhan ngan cho BottomNav mobile va Sidebar thu gon (hien duoi icon).
   short?: string;
+  // Mo ta 1 dong "muc nay dung de lam gi" - hien duoi nhan khi Sidebar mo rong + tooltip.
+  desc?: string;
 }
 
+// Sap xep lai 05/10/2026 (phan hoi "giao dien admin hien nhieu muc menu... sap xep hon loan va khong biet
+// dung cho viec gi"): menu chia nhom THEO LUONG NGHIEP VU (Theo doi -> 1 Gui hang -> 2 Kho -> 3 Xu ly ->
+// 4 Tra hang -> Danh muc & quan tri), moi muc co mo ta (desc) hien duoi nhan/tooltip. Admin he thong
+// (la_qtri) VAN thay du moi module nghiep vu (giu quyet dinh 04/09/2026), tru 3 man "cua toi" chi co
+// nghia voi chinh nguoi do (KTV: Tien do don cua toi / Nhan hang tra; NV: Chan doan duoc giao) - voi
+// Admin cac man nay luon rong; muon xem dung nhu KTV/NV thi dung "Che do test" (layout/TestMode.tsx).
+// Thu tu trong mang = thu tu hien thi; nhom hien theo lan xuat hien dau tien.
+interface CatalogItem extends RouteItem {
+  show: (u: AppUser) => boolean;
+}
+
+const isKtv = (u: AppUser) => u.la_ktv_dvbh || u.la_ve_tinh;
+
+const CATALOG: CatalogItem[] = [
+  { hash: "/home", label: "Trang chủ", short: "Trang chủ", icon: "🏠", group: "", desc: "Việc cần làm của bạn", show: () => true },
+
+  { hash: "/quanly/tong-quan", label: "Tổng quan hệ thống", short: "Tổng quan", icon: "📊", group: "Theo dõi", desc: "Số đơn theo trạng thái, đơn quá hạn", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri },
+  { hash: "/quanly/tra-cuu", label: "Tra cứu mọi đơn", short: "Tra cứu", icon: "🔎", group: "Theo dõi", desc: "Tìm đơn bảo hành bất kỳ", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri },
+
+  { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", short: "Gửi hàng", icon: "📦", group: "1 · Gửi hàng", desc: "Tạo thùng, thêm đơn, gửi về kho", workloadKey: "ktv_phieu_nhap", show: isKtv },
+  { hash: "/ktv/tao-phieu", label: "Tạo hộ đơn cho KTV", short: "Tạo hộ", icon: "📦", group: "1 · Gửi hàng", desc: "Tạo thùng thay cho 1 KTV", show: (u) => !isKtv(u) && (u.la_giam_sat || u.la_admin_bh || u.la_qtri) },
+  { hash: "/ktv/tra-cuu", label: "Tiến độ đơn của tôi", short: "Tiến độ", icon: "🔍", group: "1 · Gửi hàng", desc: "Đơn đã gửi đang ở bước nào", show: isKtv },
+  { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", short: "Nhận hàng", icon: "📬", group: "1 · Gửi hàng", desc: "Xác nhận đã nhận hàng trả về", workloadKey: "ktv_nhan_hang", show: isKtv },
+
+  { hash: "/kho/tiep-nhan", label: "Tiếp nhận thùng", short: "Tiếp nhận", icon: "📥", group: "2 · Kho", desc: "Kho nhận thùng KTV gửi về", workloadKey: "kho_cho_tiep_nhan", show: (u) => u.la_kho || u.la_qtri },
+  { hash: "/kho/dong-goi", label: "Đóng gói & gửi trả", short: "Đóng gói", icon: "📤", group: "2 · Kho", desc: "Đóng gói phiếu trả đã duyệt, gửi KTV", workloadKey: "kho_cho_dong_goi", show: (u) => u.la_kho || u.la_qtri },
+
+  { hash: "/admin/phan-loai", label: "Xử lý đơn bảo hành", short: "Xử lý đơn", icon: "🗂️", group: "3 · Xử lý bảo hành", desc: "Nhận thùng nội bộ, xác nhận SL, phân loại", workloadKey: "admin_cho_phan_loai", show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/nv/viec-cua-toi", label: "Chẩn đoán sửa chữa", short: "Chẩn đoán", icon: "🔧", group: "3 · Xử lý bảo hành", desc: "Đơn được giao cho bạn chẩn đoán", workloadKey: "nv_cho_chan_doan", show: (u) => u.la_nv_sua_chua },
+  { hash: "/admin/xac-nhan", label: "Xác nhận hoàn tất", short: "Hoàn tất", icon: "✔️", group: "3 · Xử lý bảo hành", desc: "Duyệt kết quả NV sửa chữa", workloadKey: "admin_cho_xac_nhan_hoan_tat", show: (u) => u.la_admin_bh || u.la_qtri },
+
+  { hash: "/admin/phieu-tra", label: "Phiếu trả bảo hành", short: "Phiếu trả", icon: "↩️", group: "4 · Trả hàng", desc: "Gộp đơn xong thành phiếu trả KTV", workloadKey: "admin_san_sang_gom", show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/ketoan/duyet", label: "Duyệt phiếu trả", short: "Duyệt", icon: "💰", group: "4 · Trả hàng", desc: "Kế toán duyệt trước khi Kho gửi", workloadKey: "ketoan_cho_duyet", show: (u) => u.la_ke_toan || u.la_qtri },
+
+  { hash: "/linh-kien", label: "Danh mục linh kiện", short: "Linh kiện", icon: "🔩", group: "Danh mục & quản trị", desc: "Linh kiện dùng trong bảo hành", show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/qtri/ktv", label: "Danh sách KTV", short: "DS KTV", icon: "📇", group: "Danh mục & quản trị", desc: "Danh bạ KTV, tự duyệt khi đăng nhập", show: (u) => u.la_qtri },
+  { hash: "/qtri/khu-vuc", label: "Giám sát khu vực", short: "Khu vực", icon: "🗺️", group: "Danh mục & quản trị", desc: "Gán giám sát phụ trách từng khu vực", show: (u) => u.la_qtri },
+  { hash: "/qtri/nguoi-dung", label: "Người dùng & phân quyền", short: "Người dùng", icon: "👥", group: "Danh mục & quản trị", desc: "Duyệt tài khoản, gán vai trò", show: (u) => u.la_qtri },
+  { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", short: "Cài đặt", icon: "⚙️", group: "Danh mục & quản trị", desc: "Lý do chậm/huỷ, đồng bộ Odoo", show: (u) => u.la_qtri },
+
+  // Lien ket ra ngoai sang he "Dat mua linh kien" (05/09/2026) - luon hien cho moi nguoi.
+  { hash: "/mua-hang", label: "Mua hàng", short: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/", group: "Liên kết", desc: "Mở hệ Đặt mua linh kiện", show: () => true },
+];
+
 export function routesForUser(u: AppUser): RouteItem[] {
-  const items: RouteItem[] = [{ hash: "/home", label: "Trang chủ", short: "Trang chủ", icon: "🏠", group: "Chung" }];
-  // la_qtri (Admin he thong) la superuser - phan hoi 04/09/2026 "Vai trò Admin cần nhìn được tất cả
-  // các modules của hệ thống": moi nhanh duoi day mo them cho ca la_qtri, khong chi rieng vai tro
-  // nghiep vu tuong ung - dong bo voi backend (moi ham requireX() da them u.la_qtri lam loi rem).
-  if (u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri) {
-    items.push(
-      { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", short: "Gửi hàng", icon: "📦", workloadKey: "ktv_phieu_nhap", group: "KTV / Gửi hàng" },
-      { hash: "/ktv/tra-cuu", label: "Tra cứu tiến độ", short: "Tra cứu", icon: "🔍", group: "KTV / Gửi hàng" },
-      { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", short: "Nhận hàng", icon: "📬", workloadKey: "ktv_nhan_hang", group: "KTV / Gửi hàng" },
-    );
-  }
-  // GS/Admin bao hanh (khong dong thoi la KTV/Ve tinh/qtri - da co hash nay tu nhanh tren) - "tạo hộ
-  // đơn bảo hành" (yeu cau 05/09/2026 muc 1): dung LAI dung man #/ktv/tao-phieu, tu re nhanh giao
-  // dien theo vai tro (xem KtvTaoPhieuScreen).
-  if ((u.la_giam_sat || u.la_admin_bh) && !(u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri)) {
-    items.push({ hash: "/ktv/tao-phieu", label: "Tạo hộ đơn KTV", short: "Tạo hộ", icon: "📦", group: "KTV / Gửi hàng" });
-  }
-  if (u.la_kho || u.la_qtri) {
-    items.push({ hash: "/kho/tiep-nhan", label: "Tiếp nhận", short: "Tiếp nhận", icon: "📥", workloadKey: "kho_cho_tiep_nhan", group: "Kho" }, { hash: "/kho/dong-goi", label: "Đóng gói & gửi", short: "Đóng gói", icon: "📤", workloadKey: "kho_cho_dong_goi", group: "Kho" });
-  }
-  if (u.la_admin_bh || u.la_qtri) {
-    items.push(
-      { hash: "/admin/phan-loai", label: "Xử lý đơn bảo hành", short: "Xử lý đơn", icon: "🗂️", workloadKey: "admin_cho_phan_loai", group: "Admin bảo hành" },
-      { hash: "/admin/xac-nhan", label: "Xác nhận hoàn tất", short: "Hoàn tất", icon: "✔️", workloadKey: "admin_cho_xac_nhan_hoan_tat", group: "Admin bảo hành" },
-      { hash: "/admin/phieu-tra", label: "Phiếu trả bảo hành", short: "Phiếu trả", icon: "↩️", workloadKey: "admin_san_sang_gom", group: "Admin bảo hành" },
-      { hash: "/linh-kien", label: "Danh mục linh kiện", short: "Linh kiện", icon: "🔩", group: "Admin bảo hành" },
-    );
-  }
-  if (u.la_nv_sua_chua || u.la_qtri) {
-    items.push({ hash: "/nv/viec-cua-toi", label: "Việc của tôi", short: "Việc tôi", icon: "🔧", workloadKey: "nv_cho_chan_doan", group: "Sửa chữa" });
-  }
-  if (u.la_ke_toan || u.la_qtri) {
-    items.push({ hash: "/ketoan/duyet", label: "Duyệt phiếu trả", short: "Duyệt", icon: "💰", workloadKey: "ketoan_cho_duyet", group: "Kế toán" });
-  }
-  if (u.la_giam_sat || u.la_view || u.la_qtri) {
-    items.push({ hash: "/quanly/tong-quan", label: "Tổng quan", short: "Tổng quan", icon: "📊", group: "Giám sát" }, { hash: "/quanly/tra-cuu", label: "Tra cứu", short: "Tra cứu", icon: "🔍", group: "Giám sát" });
-  }
-  if (u.la_qtri) {
-    items.push(
-      { hash: "/qtri/nguoi-dung", label: "Người dùng", short: "Người dùng", icon: "👥", group: "Quản trị" },
-      { hash: "/qtri/ktv", label: "Danh sách KTV", short: "DS KTV", icon: "📇", group: "Quản trị" },
-      { hash: "/qtri/khu-vuc", label: "Giám sát khu vực", short: "Khu vực", icon: "🗺️", group: "Quản trị" },
-      { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", short: "Cài đặt", icon: "⚙️", group: "Quản trị" },
-      { hash: "/linh-kien", label: "Danh mục linh kiện", short: "Linh kiện", icon: "🔩", group: "Admin bảo hành" },
-    );
-  }
-  // "Mua hàng" (them 05/09/2026) - lien ket ra ngoai sang he "Dat mua linh kien" (linh-kien-app),
-  // LUON hien cho MOI nguoi dang nhap bat ke vai tro (giong cach linh-kien-app lam nguoc lai voi muc
-  // "Sửa chữa" cua ho) - dat cuoi danh sach, truoc buoc dedupe.
-  items.push({ hash: "/mua-hang", label: "Mua hàng", short: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/", group: "Liên kết" });
-  // Khu vuc dedupe theo hash - nhieu nhanh o tren co the cung push 1 hash (VD "/linh-kien" tu ca
-  // nhanh admin_bh lan nhanh qtri, hoac 1 nguoi dung vua co nhieu co vai tro that vua la_qtri).
   const seen = new Set<string>();
-  return items.filter((it) => (seen.has(it.hash) ? false : (seen.add(it.hash), true)));
+  const out: RouteItem[] = [];
+  for (const { show, ...it } of CATALOG) {
+    if (!show(u) || seen.has(it.hash)) continue;
+    seen.add(it.hash);
+    out.push(it);
+  }
+  return out;
 }

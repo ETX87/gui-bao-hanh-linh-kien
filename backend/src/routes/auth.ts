@@ -3,12 +3,12 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { Env } from "../types";
 import { signSession } from "../lib/jwt";
 import { verifySessionMiddleware, SESSION_COOKIE, SESSION_TTL_SECONDS } from "../middleware/session";
-import { loadUser } from "../middleware/loadUser";
+import { loadUser, loadTargetUser } from "../middleware/loadUser";
+import { VIEW_AS_COOKIE, VIEW_AS_USER_COOKIE, isViewAsRole } from "../lib/viewAs";
 import { nowVN } from "../lib/vnTime";
 
-// Adapted tu linh-kien-app/backend/src/routes/auth.ts - Giai doan 1 BO "xem thu vai tro" (view-as) va
-// "nguoi-directory" (danh ba email->ten dung chung toan he thong), chua can cho scaffold ban dau; co
-// the them lai khi port cac man hinh thuc su dung chung.
+// Adapted tu linh-kien-app/backend/src/routes/auth.ts. "Xem thu vai tro"/"Xem nhu nguoi dung" cua Admin
+// them lai 05/10/2026 (cuoi file, xem lib/viewAs.ts); "nguoi-directory" van chua port.
 
 const STATE_COOKIE = "suachua_oauth_state";
 
@@ -158,12 +158,71 @@ auth.get("/dev-login", async (c) => {
 
 auth.post("/logout", async (c) => {
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
+  deleteCookie(c, VIEW_AS_COOKIE, { path: "/" });
+  deleteCookie(c, VIEW_AS_USER_COOKIE, { path: "/" });
   return c.json({ ok: true });
 });
 
 auth.get("/me", verifySessionMiddleware, loadUser, async (c) => {
   const user = c.get("user");
-  return c.json({ user });
+  return c.json({ user, realIsAdmin: c.get("realIsAdmin"), realEmail: c.get("realEmail"), viewAsRole: c.get("viewAsRole"), viewAsUser: c.get("viewAsUser") });
+});
+
+// ===== Che do test cua Admin he thong (lib/viewAs.ts) - moi check dung realIsAdmin (tai khoan THAT) =====
+const cookieOpts = { httpOnly: true, secure: true, sameSite: "Lax" as const, maxAge: SESSION_TTL_SECONDS, path: "/" };
+
+// POST /api/auth/view-as { role | null } - "Xem thử vai trò"; null = ve Admin that. Tat "xem nhu nguoi dung".
+auth.post("/view-as", verifySessionMiddleware, loadUser, async (c) => {
+  if (!c.get("realIsAdmin")) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ role?: unknown }>().catch(() => ({}) as { role?: unknown });
+  deleteCookie(c, VIEW_AS_USER_COOKIE, { path: "/" });
+  if (body.role === null || body.role === undefined || body.role === "") {
+    deleteCookie(c, VIEW_AS_COOKIE, { path: "/" });
+    return c.json({ ok: true });
+  }
+  if (!isViewAsRole(body.role)) return c.json({ error: "INVALID_ROLE" }, 400);
+  setCookie(c, VIEW_AS_COOKIE, body.role, cookieOpts);
+  return c.json({ ok: true });
+});
+
+// GET /api/auth/view-as-user/options?q= - tai khoan that (users da duyet, chua khoa) + KTV trong danh ba
+// chua tung dang nhap. Loc o server (danh ba KTV ~1000 dong), toi da 50 ket qua.
+auth.get("/view-as-user/options", verifySessionMiddleware, loadUser, async (c) => {
+  if (!c.get("realIsAdmin")) return c.json({ error: "FORBIDDEN" }, 403);
+  const q = `%${(c.req.query("q") || "").trim()}%`;
+  const { results } = await c.env.DB.prepare(
+    `SELECT * FROM (
+       SELECT u.email, COALESCE(u.ten, k.ten_hien_thi) AS ten, k.ma_ktv, 1 AS da_dang_nhap,
+              u.la_ktv_dvbh, u.la_ve_tinh, u.la_kho, u.la_admin_bh, u.la_nv_sua_chua, u.la_ke_toan, u.la_giam_sat, u.la_view, u.la_qtri
+       FROM users u LEFT JOIN ktv_lien_he_bh k ON k.email_dang_nhap = u.email
+       WHERE u.trang_thai_duyet = 'Da duyet' AND COALESCE(u.bi_khoa, 0) = 0 AND u.email != ?
+       UNION ALL
+       SELECT k.email_dang_nhap, k.ten_hien_thi, k.ma_ktv, 0,
+              CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 0 ELSE 1 END, CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 1 ELSE 0 END, 0, 0, 0, 0, 0, 0, 0
+       FROM ktv_lien_he_bh k
+       WHERE k.email_dang_nhap IS NOT NULL AND k.email_dang_nhap != '' AND NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.email = k.email_dang_nhap)
+     ) t
+     WHERE t.email LIKE ? OR COALESCE(t.ten, '') LIKE ? OR COALESCE(t.ma_ktv, '') LIKE ?
+     ORDER BY t.da_dang_nhap DESC, t.ten LIMIT 50`,
+  )
+    .bind(c.get("realEmail"), q, q, q)
+    .all();
+  return c.json({ rows: results });
+});
+
+// POST /api/auth/view-as-user { email | null } - bat/doi/thoat "Xem như người dùng". Tat "xem thu vai tro".
+auth.post("/view-as-user", verifySessionMiddleware, loadUser, async (c) => {
+  if (!c.get("realIsAdmin")) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ email?: string | null }>().catch(() => ({}) as { email?: string | null });
+  const email = body.email?.trim();
+  deleteCookie(c, VIEW_AS_COOKIE, { path: "/" });
+  if (!email || email === c.get("realEmail")) {
+    deleteCookie(c, VIEW_AS_USER_COOKIE, { path: "/" });
+    return c.json({ ok: true });
+  }
+  if (!(await loadTargetUser(c.env.DB, email))) return c.json({ error: "TAI_KHOAN_KHONG_HOAT_DONG" }, 400);
+  setCookie(c, VIEW_AS_USER_COOKIE, email, cookieOpts);
+  return c.json({ ok: true });
 });
 
 export default auth;

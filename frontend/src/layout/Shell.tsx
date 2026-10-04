@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { TopBar } from "./TopBar";
+import { TestModeBanner } from "./TestMode";
 import type { AppUser } from "../lib/types";
 
 // Khung trang (DESIGN_SYSTEM.md §4): Desktop = Sidebar gradient (h-screen) | cot phai (TopBar trang +
@@ -13,6 +14,7 @@ export function Shell({ user, children }: { user: AppUser; children: ReactNode }
     <div className="min-h-full flex">
       <Sidebar user={user} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <div className="flex-1 min-w-0 flex flex-col">
+        <TestModeBanner />
         <TopBar user={user} />
         <main className="flex-1 min-w-0 px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
           <div className={`mx-auto space-y-4 transition-[max-width] duration-150 ${collapsed ? "max-w-[1440px]" : "max-w-6xl"}`}>{children}</div>

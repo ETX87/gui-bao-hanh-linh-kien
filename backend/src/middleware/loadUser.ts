@@ -1,9 +1,10 @@
 import type { Context, Next } from "hono";
+import { getCookie } from "hono/cookie";
 import type { AppUser, Env } from "../types";
+import { VIEW_AS_COOKIE, VIEW_AS_USER_COOKIE, VIEW_AS_USER_WRITE_ALLOW, applyViewAsRole, isViewAsRole } from "../lib/viewAs";
 
-// Adapted tu linh-kien-app/backend/src/middleware/loadUser.ts - BO phan "xem thu vai tro" (view-as,
-// Admin-only) o Giai doan 1 nay, chua can thiet cho scaffold ban dau; co the them lai sau neu Admin
-// he thong (la_qtri) can test nhanh theo tung vai tro giong linh-kien-app.
+// Adapted tu linh-kien-app/backend/src/middleware/loadUser.ts. Che do test cua Admin he thong ("Xem thử vai
+// trò" / "Xem như người dùng") them lai 05/10/2026 - xem lib/viewAs.ts.
 
 interface UserRow {
   email: string;
@@ -47,7 +48,44 @@ export async function loadUser(c: Context<{ Bindings: Env }>, next: Next) {
   if (row.trang_thai_duyet === "Cho duyet") return c.json({ error: "PENDING_APPROVAL" }, 403);
   if (row.trang_thai_duyet === "Tu choi") return c.json({ error: "REJECTED" }, 403);
 
-  const user: AppUser = {
+  const user = toAppUser(row);
+  const realIsAdmin = user.la_qtri;
+  c.set("realIsAdmin", realIsAdmin);
+  c.set("realEmail", user.email);
+  c.set("viewAsRole", null);
+  c.set("viewAsUser", null);
+
+  if (realIsAdmin) {
+    // "Xem như người dùng" - uu tien hon "xem thu vai tro". Tai khoan dich bi khoa/chua duyet -> bo qua.
+    const viewAsEmail = getCookie(c, VIEW_AS_USER_COOKIE);
+    if (viewAsEmail && viewAsEmail !== user.email) {
+      const target = await loadTargetUser(c.env.DB, viewAsEmail);
+      if (target) {
+        const m = c.req.method;
+        if (m !== "GET" && m !== "HEAD" && m !== "OPTIONS" && !VIEW_AS_USER_WRITE_ALLOW.has(c.req.path)) {
+          return c.json({ error: "XEM_NHU_CHI_DOC" }, 403);
+        }
+        c.set("viewAsUser", { email: target.email, ten: target.ten });
+        c.set("user", target);
+        await next();
+        return;
+      }
+    }
+    const role = getCookie(c, VIEW_AS_COOKIE);
+    if (isViewAsRole(role)) {
+      c.set("viewAsRole", role);
+      c.set("user", applyViewAsRole(user, role));
+      await next();
+      return;
+    }
+  }
+
+  c.set("user", user);
+  await next();
+}
+
+function toAppUser(row: UserRow): AppUser {
+  return {
     email: row.email,
     ten: row.ten,
     trang_thai_duyet: row.trang_thai_duyet,
@@ -62,7 +100,30 @@ export async function loadUser(c: Context<{ Bindings: Env }>, next: Next) {
     la_view: !!row.la_view,
     la_qtri: !!row.la_qtri,
   };
+}
 
-  c.set("user", user);
-  await next();
+// Tai khoan dich cua "Xem như người dùng": bang users (da duyet, chua khoa), hoac KTV co trong danh ba
+// ktv_lien_he_bh nhung CHUA TUNG dang nhap (dung mau tu kich hoat cua routes/auth.ts - lan dang nhap dau
+// se duoc duyet san voi dung co KTV/Ve tinh) - de Admin xem truoc dung nhung gi KTV do se thay.
+export async function loadTargetUser(db: D1Database, email: string): Promise<AppUser | null> {
+  const row = await db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE email = ?`).bind(email).first<UserRow>();
+  if (row) return !row.bi_khoa && row.trang_thai_duyet === "Da duyet" ? toAppUser(row) : null;
+  const k = await db.prepare("SELECT ten_hien_thi, vai_tro_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(email).first<{ ten_hien_thi: string | null; vai_tro_ktv: string | null }>();
+  if (!k) return null;
+  const veTinh = k.vai_tro_ktv === "Ve tinh";
+  return {
+    email,
+    ten: k.ten_hien_thi,
+    trang_thai_duyet: "Da duyet",
+    bi_khoa: false,
+    la_ktv_dvbh: !veTinh,
+    la_ve_tinh: veTinh,
+    la_kho: false,
+    la_admin_bh: false,
+    la_nv_sua_chua: false,
+    la_ke_toan: false,
+    la_giam_sat: false,
+    la_view: false,
+    la_qtri: false,
+  };
 }

@@ -67,5 +67,10 @@ declare module "hono" {
   interface ContextVariableMap {
     email: string;
     user: AppUser;
+    // Che do test cua Admin he thong (lib/viewAs.ts) - realIsAdmin/realEmail luon la tai khoan THAT.
+    realIsAdmin: boolean;
+    realEmail: string;
+    viewAsRole: string | null;
+    viewAsUser: { email: string; ten: string | null } | null;
   }
 }
