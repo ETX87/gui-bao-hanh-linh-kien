@@ -34,14 +34,14 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
           <div
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 ${onRowClick ? "cursor-pointer active:bg-[var(--ocean-100)]/40" : ""}`}
+            className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-card p-3.5 ${onRowClick ? "cursor-pointer active:bg-[var(--accent-soft)]" : ""}`}
           >
-            {head && <div className="font-semibold text-[var(--ink-900)] text-sm mb-1.5">{head.render(row)}</div>}
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            {head && <div className="font-semibold text-[var(--ink)] text-[15px] mb-2">{head.render(row)}</div>}
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
               {labelled.map((c) => (
                 <div key={c.key} className="contents">
-                  <dt className="text-[var(--ink-500)] uppercase tracking-wide font-medium">{c.header}</dt>
-                  <dd className="text-[var(--ink-800)] min-w-0 break-words">{c.render(row)}</dd>
+                  <dt className="text-[var(--ink-soft)] text-xs font-semibold pt-0.5">{c.header}</dt>
+                  <dd className="text-[var(--ink-body)] min-w-0 break-words">{c.render(row)}</dd>
                 </div>
               ))}
             </dl>
@@ -65,9 +65,9 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
     <div className="overflow-x-auto rounded-xl border border-[var(--line)] scrollbar-thin">
       <table className="w-full text-sm whitespace-nowrap">
         <thead>
-          <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
+          <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
             {columns.map((c) => (
-              <th key={c.key} className={`text-left font-semibold text-[var(--ink-600)] px-3 py-2.5 text-xs uppercase tracking-wide ${c.className || ""}`}>
+              <th key={c.key} className={`text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs ${c.className || ""}`}>
                 {c.header}
               </th>
             ))}
@@ -79,10 +79,10 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
             <tr
               key={rowKey(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`border-b border-[var(--line)] last:border-0 ${onRowClick ? "cursor-pointer hover:bg-[var(--ocean-100)]/40" : ""} transition-colors`}
+              className={`border-b border-[var(--line)] last:border-0 ${onRowClick ? "cursor-pointer hover:bg-[var(--accent-soft)]" : ""} transition-colors`}
             >
               {columns.map((c) => (
-                <td key={c.key} className={`px-3 py-2.5 align-middle ${c.className || ""}`}>
+                <td key={c.key} className={`px-3 py-2 align-middle text-[var(--ink-body)] ${c.className || ""}`}>
                   {c.render(row)}
                 </td>
               ))}

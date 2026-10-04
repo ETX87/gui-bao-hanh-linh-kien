@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, StopClick } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -45,58 +46,42 @@ export function QtriKtvScreen() {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
-        <div className="flex items-center gap-2">
-          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo tên / email / SĐT / mã…" className="!py-1.5 !w-60" />
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo tên / email / SĐT / mã…" className="sm:!w-60" />
           <Btn variant="primary" onClick={() => setAddOpen(true)}>
             + Khai báo KTV
           </Btn>
         </div>
       </div>
-      <p className="text-xs text-[var(--ink-500)] mb-3">
+      <p className="text-xs text-[var(--ink-soft)] mb-3">
         KTV có trong danh sách này sẽ <b>tự động được duyệt</b> ngay khi đăng nhập lần đầu bằng đúng email đăng nhập bên dưới — không cần chờ Admin hệ thống duyệt tay ở màn "Người dùng".
       </p>
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-sm whitespace-nowrap">
-          <thead>
-            <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Tên hiển thị</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Email đăng nhập</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">SĐT</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Vai trò</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Khu vực</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Nguồn</th>
-              <th className="px-3 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center py-8 text-[var(--ink-400)]">
-                  Chưa có KTV nào trong danh bạ — bấm "+ Khai báo KTV" để thêm.
-                </td>
-              </tr>
-            )}
-            {items.map((k) => (
-              <tr key={k.ma_ktv} className="border-b border-[var(--line)] last:border-0 clickable-row cursor-pointer hover:bg-[var(--surface-100)]" onClick={() => setEditing(k)}>
-                <td className="px-3 py-2 font-medium text-[var(--ink-900)]">{k.ten_hien_thi || "—"}</td>
-                <td className="px-3 py-2 font-mono text-xs">{k.email_dang_nhap || "—"}</td>
-                <td className="px-3 py-2">{k.sdt || "—"}</td>
-                <td className="px-3 py-2">{k.vai_tro_ktv || "—"}</td>
-                <td className="px-3 py-2">{k.khu_vuc_ma || "—"}</td>
-                <td className="px-3 py-2">
-                  <Badge tone={k.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{k.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge>
-                </td>
-                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                  <Btn variant="danger" onClick={() => xoa(k.ma_ktv)}>
-                    Xoá
-                  </Btn>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table
+        rows={items}
+        rowKey={(k) => k.ma_ktv}
+        onRowClick={(k) => setEditing(k)}
+        emptyText='Chưa có KTV nào trong danh bạ — bấm "+ Khai báo KTV" để thêm.'
+        columns={[
+          { key: "ten", header: "Tên hiển thị", render: (k) => <span className="font-semibold text-[var(--ink)]">{k.ten_hien_thi || "—"}</span> },
+          { key: "email", header: "Email đăng nhập", render: (k) => <span className="font-mono text-xs">{k.email_dang_nhap || "—"}</span> },
+          { key: "sdt", header: "SĐT", render: (k) => k.sdt || "—" },
+          { key: "vt", header: "Vai trò", render: (k) => k.vai_tro_ktv || "—" },
+          { key: "kv", header: "Khu vực", render: (k) => k.khu_vuc_ma || "—" },
+          { key: "nguon", header: "Nguồn", render: (k) => <Badge tone={k.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{k.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
+          {
+            key: "act",
+            header: "",
+            render: (k) => (
+              <StopClick>
+                <Btn variant="ghost" size="sm" className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]" onClick={() => xoa(k.ma_ktv)}>
+                  ✕ Xoá
+                </Btn>
+              </StopClick>
+            ),
+          },
+        ]}
+      />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {addOpen && <KtvFormModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); reload(); }} />}
       {editing && <KtvFormModal existing={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}

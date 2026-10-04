@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { Modal } from "../../ui/Modal";
@@ -6,6 +7,7 @@ import { Btn, Badge, ReadField, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, KET_QUA_CHAN_DOAN_LABELS, XU_LY_XAC_LABELS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
 import { LogBlock } from "./LogBlock";
+import { useLkName } from "../../hooks/useLinhKien";
 import { CaseSnapshotPanel } from "./CaseSnapshotPanel";
 import { PhanLoaiModal } from "./PhanLoaiModal";
 import { FastActionsModal } from "./FastActionsModal";
@@ -33,6 +35,7 @@ type SubModal = "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | 
 
 export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const [data, setData] = useState<DetailResponse | null>(null);
+  const { nameOf: lkName } = useLkName();
   const [sub, setSub] = useState<SubModal>(null);
 
   const load = () => api.get<DetailResponse>(`/admin/don-vi/${unitId}`).then(setData);
@@ -90,7 +93,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
         full
         headerActions={
           <div className="flex items-center gap-2">
-            <Badge tone="blue">{TRANG_THAI_UNIT_LABELS[u.trang_thai] || u.trang_thai}</Badge>
+            <StatusBadge kind="unit" value={u.trang_thai} />
             <SlaBadge since={u.updated_at} entityType="phieu_sc_ct" entityId={u.id} clickable={user.la_admin_bh || user.la_nv_sua_chua || user.la_qtri} />
           </div>
         }
@@ -109,7 +112,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <ReadField label="Mã case" value={p.case_id} />
-            <ReadField label="Linh kiện" value={daDoiLk ? <>{effLk} <Badge tone="blue" className="ml-1">Đã đổi LK</Badge></> : effLk} />
+            <ReadField label="Linh kiện" value={daDoiLk ? <>{lkName(effLk)} <Badge tone="blue" className="ml-1">Đã đổi LK</Badge></> : lkName(effLk)} />
             <ReadField label="Nguồn" value={isKhachLe ? <Badge tone="violet">Khách lẻ</Badge> : p.nguon_tao === "admin_dich_vu" ? "Đơn dịch vụ" : "KTV gửi hàng"} />
             <ReadField label="Đối trừ đề xuất" value={p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—"} />
           </div>
@@ -138,7 +141,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
           {(anh.don_vi.length > 0 || anh.don_cha.length > 0) && (
             <div className="border-t border-[var(--line)] pt-4">
-              <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">Ảnh</p>
+              <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Ảnh</p>
               <div className="flex flex-wrap gap-2">
                 {anh.don_cha.map((a) => (
                   <img key={`p${a.id}`} src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)]" title="Ảnh lỗi lúc gửi hàng" />
@@ -152,10 +155,10 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
           {bao_cao_sai_thong_tin.length > 0 && (
             <div className="border-t border-[var(--line)] pt-4">
-              <p className="text-xs font-bold text-[var(--coral-700)] uppercase tracking-wide mb-2">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</p>
+              <p className="text-xs font-bold text-[var(--red-700)] uppercase tracking-wide mb-2">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</p>
               <div className="space-y-1.5">
                 {(bao_cao_sai_thong_tin as { id: number; tac_gia: string; thoi_gian: string; noi_dung: string }[]).map((b) => (
-                  <div key={b.id} className="text-xs bg-[var(--coral-100)] text-[var(--coral-700)] rounded-lg px-2.5 py-1.5">
+                  <div key={b.id} className="text-xs bg-[var(--red-100)] text-[var(--red-700)] rounded-lg px-2.5 py-1.5">
                     <p>{b.noi_dung}</p>
                     <p className="mt-0.5 text-[10px] font-mono opacity-70">
                       {b.tac_gia} · {fmtDate(b.thoi_gian)}

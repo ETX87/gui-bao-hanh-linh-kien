@@ -41,7 +41,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[150] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-0 md:p-4"
       onMouseDown={(e) => {
         mouseDownOnOverlay = e.target === e.currentTarget;
       }}
@@ -50,19 +50,20 @@ export function Modal({
       }}
     >
       <div
-        className={`anim-in bg-[var(--surface)] rounded-2xl shadow-2xl flex flex-col ${
-          full ? "w-full h-full max-w-none max-h-none md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : `w-full ${maxWidthClass || "max-w-2xl"} max-h-[90vh]`
+        // DESIGN_SYSTEM.md §6.8: modal rounded-xl, TRAN MAN HINH tren mobile (moi modal), desktop giu 2 co.
+        className={`anim-in bg-[var(--surface)] shadow-2xl flex flex-col w-full h-full rounded-none md:rounded-xl ${
+          full ? "md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : `md:h-auto ${maxWidthClass ? maxWidthClass.split(" ").map((c) => (c.startsWith("md:") ? c : `md:${c}`)).join(" ") : "md:max-w-2xl"} md:max-h-[90vh]`
         }`}
       >
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--line)] shrink-0">
-          <h3 className="font-display font-bold text-base text-[var(--ink-900)] flex-1 truncate">{title}</h3>
+        <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-[var(--line)] shrink-0">
+          <h3 className="font-bold text-base text-[var(--ink)] flex-1 truncate">{title}</h3>
           {headerActions && <div className="flex items-center gap-2 shrink-0">{headerActions}</div>}
-          <button onClick={onClose} className="focus-ring shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ink-500)] hover:bg-[var(--surface-100)] hover:text-[var(--ink-900)] transition-colors">
+          <button onClick={onClose} className="focus-ring shrink-0 w-10 h-10 md:w-8 md:h-8 rounded-lg flex items-center justify-center text-lg md:text-base text-[var(--ink-soft)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] transition-colors">
             ✕
           </button>
         </div>
-        <div className="px-6 py-5 overflow-y-auto flex-1">{children}</div>
-        {footerActions && <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--line)] shrink-0">{footerActions}</div>}
+        <div className="px-4 md:px-6 py-4 md:py-5 overflow-y-auto flex-1">{children}</div>
+        {footerActions && <div className="flex flex-wrap items-center justify-end gap-2 px-4 md:px-6 py-3 md:py-4 border-t border-[var(--line)] bg-[var(--surface)] shrink-0 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-4">{footerActions}</div>}
       </div>
     </div>,
     document.body,

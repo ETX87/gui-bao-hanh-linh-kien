@@ -60,7 +60,7 @@ export function KhoTiepNhanScreen() {
     <div className="space-y-6">
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
         </div>
         {pending.length === 0 ? (
@@ -72,9 +72,9 @@ export function KhoTiepNhanScreen() {
               // nut "Xac nhan tiep nhan" bi day ra ngoai man, Kho khong bam duoc tren dien thoai.
               <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <span className="font-mono text-xs font-semibold">{g.id}</span>
-                  <span className="text-sm text-[var(--ink-700)] truncate">{g.nguoi_tao}</span>
-                  <span className="text-xs text-[var(--ink-500)]">{g.don_vi_van_chuyen}</span>
+                  <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                  <span className="text-sm text-[var(--ink-body)] truncate">{g.nguoi_tao}</span>
+                  <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
                   <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
@@ -94,15 +94,15 @@ export function KhoTiepNhanScreen() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Đã tiếp nhận gần đây</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Đã tiếp nhận gần đây</h3>
         {recent.length === 0 ? (
           <EmptyState text="Chưa tiếp nhận thùng nào." />
         ) : (
           <div className="space-y-1.5">
             {recent.map((g) => (
-              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm hover:bg-[var(--surface-100)] cursor-pointer" onClick={() => setLogFor(g.id)}>
-                <span className="font-mono text-xs">{g.id}</span>
-                <span className="flex-1 min-w-0 truncate text-[var(--ink-600)]">{g.nguoi_tao}</span>
+              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
+                <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                <span className="flex-1 min-w-0 truncate text-[var(--ink-soft)]">{g.nguoi_tao}</span>
                 {/* !! bat buoc - D1 tra ve so 0/1 chu khong phai true/false that, "0 && <Badge/>" se render chu "0" ra man hinh */}
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                 {!!g.admin_tiep_nhan && <Badge tone="green">Admin BH đã nhận</Badge>}

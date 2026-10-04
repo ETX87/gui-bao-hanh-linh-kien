@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ImagePicker } from "../../ui/ImagePicker";
 import { api, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
@@ -106,7 +107,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
           <Textarea rows={2} value={moTa} onChange={(e) => setMoTa(e.target.value)} />
         </Field>
         <Field label="Ảnh linh kiện lỗi (tuỳ chọn)">
-          <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => setAnhFiles(e.target.files)} className="text-xs" />
+          <ImagePicker onChange={setAnhFiles} />
         </Field>
       </div>
     </Modal>

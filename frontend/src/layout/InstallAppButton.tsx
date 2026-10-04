@@ -10,7 +10,7 @@ import { usePwaInstall, isIosSafari, isStandalonePwa } from "../hooks/usePwaInst
 // Modal huong dan thao tac thu cong (Chia se > Them vao MH chinh).
 // Khac ban linh-kien-app o cho: Modal cua suachua khong co prop "open" (dieu khien qua conditional
 // render, dung nguyen tac chung cua toan bo modal khac trong app nay).
-export function InstallAppButton() {
+export function InstallAppButton({ onDark = false }: { onDark?: boolean } = {}) {
   const { available, promptInstall } = usePwaInstall();
   const [showIosGuide, setShowIosGuide] = useState(false);
 
@@ -32,24 +32,24 @@ export function InstallAppButton() {
         type="button"
         onClick={handleClick}
         title="Cài đặt vào màn hình chính"
-        className="focus-ring flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--ink-500)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-100)] transition-colors"
+        className={`focus-ring flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition-colors ${onDark ? "text-white/90 hover:bg-white/10" : "text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)]"}`}
       >
         <span className="text-base leading-none">📲</span>
         <span className="hidden sm:inline">Cài đặt</span>
       </button>
       {showIosGuide && (
         <Modal title="📲 Cài đặt vào màn hình chính" onClose={() => setShowIosGuide(false)} maxWidthClass="max-w-sm">
-          <div className="space-y-3 text-sm text-[var(--ink-700)]">
+          <div className="space-y-3 text-sm text-[var(--ink-body)]">
             <p>Trình duyệt này không hỗ trợ cài đặt tự động. Làm theo hướng dẫn thủ công:</p>
-            <div className="space-y-1.5 bg-[var(--surface-100)] rounded-lg p-3">
-              <div className="font-semibold text-[var(--ocean-800)]">iPhone/iPad (Safari)</div>
+            <div className="space-y-1.5 bg-[var(--surface-2)] rounded-lg p-3">
+              <div className="font-semibold text-[var(--accent)]">iPhone/iPad (Safari)</div>
               <div>
                 1. Bấm nút Chia sẻ <span className="font-mono">⬆️</span> ở thanh trình duyệt.
               </div>
               <div>2. Chọn "Thêm vào Màn hình chính" (Add to Home Screen).</div>
             </div>
-            <div className="space-y-1.5 bg-[var(--surface-100)] rounded-lg p-3">
-              <div className="font-semibold text-[var(--ocean-800)]">Android (Chrome)</div>
+            <div className="space-y-1.5 bg-[var(--surface-2)] rounded-lg p-3">
+              <div className="font-semibold text-[var(--accent)]">Android (Chrome)</div>
               <div>1. Bấm menu ⋮ ở góc trên bên phải.</div>
               <div>2. Chọn "Cài đặt ứng dụng" hoặc "Thêm vào Màn hình chính".</div>
             </div>

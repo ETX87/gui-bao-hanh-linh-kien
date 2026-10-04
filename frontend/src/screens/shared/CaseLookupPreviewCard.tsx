@@ -41,13 +41,13 @@ export function CaseLookupPreviewCard({
   }, [ktvEmail, status, khopKtv, onValidityChange]);
 
   if (!caseId.trim()) return null;
-  if (status === "loading") return <p className="text-xs text-[var(--ink-500)]">Đang tra cứu case…</p>;
-  if (status === "error") return <p className="text-xs text-[var(--coral-600)]">Không tra cứu được case lúc này (có thể do mất kết nối tới hệ DVBH) — vẫn nhập tiếp được, mã case sẽ được lưu nguyên trạng.</p>;
+  if (status === "loading") return <p className="text-xs text-[var(--ink-soft)]">Đang tra cứu case…</p>;
+  if (status === "error") return <p className="text-xs text-[var(--red-600)]">Không tra cứu được case lúc này (có thể do mất kết nối tới hệ DVBH) — vẫn nhập tiếp được, mã case sẽ được lưu nguyên trạng.</p>;
   if (status === "not_found") {
     return ktvEmail ? (
-      <p className="text-xs font-bold text-[var(--coral-700)] bg-[var(--coral-100)] rounded px-2 py-1.5">⚠ Sai mã sự vụ — không tìm thấy case này bên hệ DVBH. Kiểm tra lại mã, chưa thể tạo đơn.</p>
+      <p className="text-xs font-bold text-[var(--red-700)] bg-[var(--red-100)] rounded px-2 py-1.5">⚠ Sai mã sự vụ — không tìm thấy case này bên hệ DVBH. Kiểm tra lại mã, chưa thể tạo đơn.</p>
     ) : (
-      <p className="text-xs text-[var(--ink-500)]">Không tìm thấy case với mã này bên hệ DVBH — kiểm tra lại mã, hoặc vẫn có thể tiếp tục nếu đây là mã case mới/chưa đồng bộ.</p>
+      <p className="text-xs text-[var(--ink-soft)]">Không tìm thấy case với mã này bên hệ DVBH — kiểm tra lại mã, hoặc vẫn có thể tiếp tục nếu đây là mã case mới/chưa đồng bộ.</p>
     );
   }
   if (status !== "found" || !preview) return null;
@@ -56,24 +56,24 @@ export function CaseLookupPreviewCard({
   const w = computeWarranty(preview.ngay_mua, lk?.so_thang_bao_hanh ?? null, preview.thoi_gian_cskh_tiep_nhan);
 
   return (
-    <div className="rounded-lg border border-[var(--teal-200)] bg-[var(--teal-50)] px-3 py-2.5 space-y-1.5">
+    <div className="rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] px-3 py-2.5 space-y-1.5">
       <div className="flex items-center gap-2">
         <Badge tone="green">✔ Tìm thấy case</Badge>
-        {preview.khach_hang && <span className="text-sm font-semibold text-[var(--ink-900)]">{preview.khach_hang}</span>}
+        {preview.khach_hang && <span className="text-sm font-semibold text-[var(--ink)]">{preview.khach_hang}</span>}
       </div>
-      <div className="text-xs text-[var(--ink-700)] grid grid-cols-2 gap-x-3 gap-y-0.5">
+      <div className="text-xs text-[var(--ink-body)] grid grid-cols-2 gap-x-3 gap-y-0.5">
         {preview.san_pham_bao_hanh && <span>Sản phẩm: {preview.san_pham_bao_hanh}</span>}
         {preview.seri_san_pham && <span>Serial: {preview.seri_san_pham}</span>}
         {preview.ngay_mua && <span>Ngày mua: {preview.ngay_mua}</span>}
         {preview.hang && <span>Hãng: {preview.hang}</span>}
       </div>
       {ktvEmail && khopKtv === false && (
-        <p className="text-xs font-bold text-[var(--coral-700)] bg-[var(--coral-100)] rounded px-2 py-1.5">
+        <p className="text-xs font-bold text-[var(--red-700)] bg-[var(--red-100)] rounded px-2 py-1.5">
           ⚠ Sai mã sự vụ — case này không thuộc về KTV đang được tạo đơn (kỹ thuật viên trên case: {preview.ky_thuat_vien || "không xác định"}). Chưa thể tạo đơn với mã sự cố này.
         </p>
       )}
       {lk && w.known && w.expired && (
-        <p className="text-xs font-bold text-[var(--coral-700)] bg-[var(--coral-100)] rounded px-2 py-1.5">
+        <p className="text-xs font-bold text-[var(--red-700)] bg-[var(--red-100)] rounded px-2 py-1.5">
           ⚠ Sản phẩm này đã hết thời gian bảo hành (hạn {w.limitDate}, đã dùng {w.daysUsed} ngày / {w.months} tháng bảo hành) — chỉ là cảnh báo, vẫn chọn "Trong bảo hành" được nếu cần.
         </p>
       )}

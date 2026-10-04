@@ -43,19 +43,19 @@ export function CaseSnapshotPanel({ caseId, canSync }: { caseId: string; canSync
   };
 
   if (loading) return null;
-  if (!data) return <p className="text-xs text-[var(--ink-400)]">Chưa có bằng chứng case nào được lưu.</p>;
+  if (!data) return <p className="text-xs text-[var(--ink-faint)]">Chưa có bằng chứng case nào được lưu.</p>;
 
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-100)] px-3 py-2.5 space-y-1.5">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide">📎 Bằng chứng case (đồng bộ lúc {syncedAt || "—"})</p>
+        <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">📎 Bằng chứng case (đồng bộ lúc {syncedAt || "—"})</p>
         {canSync && (
           <Btn onClick={sync} disabled={syncing}>
             {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ lại"}
           </Btn>
         )}
       </div>
-      <div className="text-xs text-[var(--ink-700)] grid grid-cols-2 gap-x-3 gap-y-0.5">
+      <div className="text-xs text-[var(--ink-body)] grid grid-cols-2 gap-x-3 gap-y-0.5">
         {data.khach_hang && <span>Khách hàng: {data.khach_hang}</span>}
         {data.san_pham_bao_hanh && <span>Sản phẩm: {data.san_pham_bao_hanh}</span>}
         {data.seri_san_pham && <span>Serial: {data.seri_san_pham}</span>}

@@ -34,7 +34,7 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
   if (loading1 && loading2 && choDongGoi.length === 0 && daGui.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "ktv", header: "KTV nhận", render: (r) => (r.ktv_nhan === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : r.ktv_nhan) },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
@@ -44,12 +44,12 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
   return (
     <div className="space-y-6">
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📦 Chờ đóng gói & gửi ({choDongGoiTotal})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📦 Chờ đóng gói & gửi ({choDongGoiTotal})</h3>
         <Table columns={cols} rows={choDongGoi} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ đóng gói." />
         <Pagination page={choDongGoiPage} pageCount={choDongGoiPageCount} total={choDongGoiTotal} onChange={setChoDongGoiPage} />
       </Card>
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay, dự phòng)</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay, dự phòng)</h3>
         <Table columns={cols} rows={daGui} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào đang chờ." />
         <Pagination page={daGuiPage} pageCount={daGuiPageCount} total={daGuiTotal} onChange={setDaGuiPage} />
       </Card>

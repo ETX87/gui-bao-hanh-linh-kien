@@ -90,11 +90,24 @@ phieuTra.post("/tu-dong-gom", async (c) => {
     groups.get(key)!.push(row.id);
   }
   const created: string[] = [];
+  const merged: string[] = [];
   for (const [key, ids] of groups) {
     const [ktvKey, loai] = key.split("::");
+    // QA 04/10/2026: gop vao phieu "nhap" SAN CO cua dung KTV + loai doi tru (neu co) thay vi luon
+    // tao phieu moi - dong bo voi attachToOrCreatePhieuTra() cua nut thao tac nhanh (quyet dinh
+    // 03/09/2026: "gop vao phieu Nhap co san ... giong het autoGomPhieuTraTatCa()").
+    const existing = await c.env.DB.prepare("SELECT id FROM phieu_tra_bh WHERE trang_thai = 'nhap' AND ktv_nhan = ? AND loai_doi_tru = ? ORDER BY created_at LIMIT 1")
+      .bind(ktvKey, loai)
+      .first<{ id: string }>();
+    if (existing) {
+      for (const uid of ids) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(existing.id, uid).run();
+      await addLog(c.env.DB, "phieu_tra", existing.id, "nhap", "nhap", user.email, `Tu dong gop them ${ids.length} don vi: ${ids.join(", ")}`);
+      merged.push(existing.id);
+      continue;
+    }
     created.push(await createPhieuTraForUnits(c.env.DB, ktvKey, loai as LoaiDoiTru, ids, user.email));
   }
-  return c.json({ so_phieu_tao: created.length, phieu_tra_ids: created });
+  return c.json({ so_phieu_tao: created.length, phieu_tra_ids: created, so_phieu_gop_them: merged.length, phieu_tra_gop_ids: merged });
 });
 
 // GET /api/phieu-tra?ktv=&trang_thai=&limit=&offset=

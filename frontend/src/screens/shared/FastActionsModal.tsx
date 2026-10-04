@@ -48,10 +48,10 @@ export function FastActionsModal({
           <button
             key={a.key}
             onClick={() => (a.special ? onNavigate(a.special) : setPicked(a))}
-            className="focus-ring flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] p-4 text-center hover:border-[var(--ocean-400)] hover:bg-[var(--ocean-100)]/40 transition-colors"
+            className="focus-ring flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] p-4 text-center hover:border-[var(--brand-400)] hover:bg-[var(--accent-soft)] transition-colors"
           >
             <span className="text-2xl">{FAST_ACTION_ICONS[a.key] || "⚡"}</span>
-            <span className="text-xs font-semibold text-[var(--ink-700)] leading-tight">{a.label}</span>
+            <span className="text-xs font-semibold text-[var(--ink-body)] leading-tight">{a.label}</span>
           </button>
         ))}
       </div>

@@ -4,6 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
 import { parsePage } from "../lib/pagination";
+import { slaCutoffVn } from "../lib/sla";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -41,7 +42,9 @@ traCuu.get("/don-vi", async (c) => {
   // "qua_han" = cac trang thai dang cho xu ly ma updated_at cu hon 24h (gio VN).
   const st = (c.req.query("trang_thai") || "").trim();
   if (st === "qua_han") {
-    where += " AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan') AND u.updated_at < datetime('now','+7 hours','-24 hours')";
+    // Moc cat tinh trong JS (slaCutoffVn) vi SLA khong tinh Chu nhat (chot 04/10/2026).
+    where += " AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan') AND u.updated_at < ?";
+    binds.push(slaCutoffVn(24));
   } else if (st) {
     where += " AND u.trang_thai = ?";
     binds.push(st);
@@ -75,9 +78,9 @@ traCuu.get("/tong-quan", async (c) => {
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt ${fromWhere}
          AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan')
-         AND u.updated_at < datetime('now','+7 hours','-24 hours')`,
+         AND u.updated_at < ?`,
     )
-      .bind(...binds)
+      .bind(...binds, slaCutoffVn(24))
       .first<{ cnt: number }>(),
   ]);
   return c.json({ theo_trang_thai: results, qua_han: quaHanRow?.cnt ?? 0 });

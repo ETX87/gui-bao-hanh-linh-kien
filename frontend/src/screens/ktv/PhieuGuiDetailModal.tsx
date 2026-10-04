@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
@@ -111,7 +112,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         title={`Phiếu gửi ${g.id}`}
         onClose={handleClose}
         full
-        headerActions={<Badge tone="blue">{TRANG_THAI_PHIEU_GUI_LABELS[g.trang_thai] || g.trang_thai}</Badge>}
+        headerActions={<StatusBadge kind="gui" value={g.trang_thai} />}
         footerActions={
           isNhap ? (
             <>
@@ -128,76 +129,81 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         }
       >
         <div className="space-y-6">
-          <div className="flex items-start justify-between gap-3">
-            {g.nguoi_tao_ho ? (
-              <p className="text-xs text-[var(--ink-500)]">
-                Được tạo hộ bởi <span className="font-semibold text-[var(--ink-700)]">{g.nguoi_tao_ho}</span> cho KTV <span className="font-semibold text-[var(--ink-700)]">{g.nguoi_tao}</span>
-              </p>
-            ) : (
-              <span />
-            )}
-            <QrCode text={g.id} sizePx={100} />
-          </div>
-          {isNhap ? (
-            // Grid 1 cot tren mobile (< sm), 2 cot tu ~640px, 4 cot tu 768px - sua 07/09/2026 (phan
-            // hoi "giao diện tạo phiếu... trên mobile khó nhập liệu, thông tin bị quá ngắn và chồng
-            // chéo đè lên nhau"): truoc day luon co san 2 cot ngay ca tren dien thoai hep nhat, va
-            // "Ngày gửi xe" + nut "Lưu thông tin" nam chung 1 hang flex khong co chieu rong co dinh -
-            // 2 phan tu tranh cho nhau tren man hinh hep, de vo dong/de len nhau. Nay moi truong 1 o
-            // luoi rieng, "Lưu thông tin" thanh 1 nut rong het chieu rong o cua no tren mobile.
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <Field label="Hình thức gửi">
-                <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
-                  {HINH_THUC_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Mã xe / Tài xế">
-                <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} />
-              </Field>
-              <Field label="Đơn vị vận chuyển">
-                <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} />
-              </Field>
-              <Field label="Mã vận đơn">
-                <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
-              </Field>
-              <div className="sm:col-span-2 md:col-span-4 flex flex-wrap items-end gap-3 border-t border-[var(--line)] pt-3">
-                <Field label="Ngày gửi xe">
-                  <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} className="!w-44" />
-                </Field>
-                <p className="text-xs text-[var(--ink-500)] pb-2">
-                  Bấm <b>“Xác nhận đã gửi xe”</b> ở dưới sẽ tự lưu toàn bộ thông tin vận chuyển ở trên.
-                  <button onClick={saveHeader} disabled={busy} className="focus-ring ml-2 text-[var(--ocean-700)] underline underline-offset-2 hover:text-[var(--ocean-800)]">
-                    Lưu nháp bây giờ
-                  </button>
+          {/* QR dat cot phai canh thong tin van chuyen (truoc day dung 1 hang rieng, ben trai trong) */}
+          <div className="flex flex-col-reverse md:flex-row gap-4">
+            <div className="flex-1 min-w-0 space-y-3">
+              {g.nguoi_tao_ho ? (
+                <p className="text-xs text-[var(--ink-soft)]">
+                  Được tạo hộ bởi <span className="font-semibold text-[var(--ink-body)]">{g.nguoi_tao_ho}</span> cho KTV <span className="font-semibold text-[var(--ink-body)]">{g.nguoi_tao}</span>
                 </p>
+              ) : (
+                null
+              )}
+            {isNhap ? (
+              // Grid 1 cot tren mobile (< sm), 2 cot tu ~640px, 4 cot tu 768px - sua 07/09/2026 (phan
+              // hoi "giao diện tạo phiếu... trên mobile khó nhập liệu, thông tin bị quá ngắn và chồng
+              // chéo đè lên nhau"): truoc day luon co san 2 cot ngay ca tren dien thoai hep nhat, va
+              // "Ngày gửi xe" + nut "Lưu thông tin" nam chung 1 hang flex khong co chieu rong co dinh -
+              // 2 phan tu tranh cho nhau tren man hinh hep, de vo dong/de len nhau. Nay moi truong 1 o
+              // luoi rieng, "Lưu thông tin" thanh 1 nut rong het chieu rong o cua no tren mobile.
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <Field label="Hình thức gửi">
+                  <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
+                    {HINH_THUC_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Mã xe / Tài xế">
+                  <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} />
+                </Field>
+                <Field label="Đơn vị vận chuyển">
+                  <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} />
+                </Field>
+                <Field label="Mã vận đơn">
+                  <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                </Field>
+                <div className="sm:col-span-2 xl:col-span-4 flex flex-wrap items-end gap-3 border-t border-[var(--line)] pt-3">
+                  <Field label="Ngày gửi xe">
+                    <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} className="!w-44" />
+                  </Field>
+                  <p className="text-xs text-[var(--ink-soft)] pb-2">
+                    Bấm <b>“Xác nhận đã gửi xe”</b> ở dưới sẽ tự lưu toàn bộ thông tin vận chuyển ở trên.
+                    <button onClick={saveHeader} disabled={busy} className="focus-ring ml-2 text-[var(--accent-ink)] underline underline-offset-2 hover:text-[var(--accent)]">
+                      Lưu nháp bây giờ
+                    </button>
+                  </p>
+                </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <ReadField label="Hình thức gửi" value={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui} />
+                <ReadField label="Mã xe / Tài xế" value={g.ma_xe_hoac_tai_xe} />
+                <ReadField label="Đơn vị vận chuyển" value={g.don_vi_van_chuyen} />
+                <ReadField label="Ngày gửi xe" value={g.ngay_gui_xe} />
+              </div>
+            )}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <ReadField label="Hình thức gửi" value={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui} />
-              <ReadField label="Mã xe / Tài xế" value={g.ma_xe_hoac_tai_xe} />
-              <ReadField label="Đơn vị vận chuyển" value={g.don_vi_van_chuyen} />
-              <ReadField label="Ngày gửi xe" value={g.ngay_gui_xe} />
+            <div className="shrink-0 flex justify-center md:block">
+              <QrCode text={g.id} sizePx={100} />
             </div>
-          )}
+          </div>
           {!!g.su_co_tiep_nhan && (
-            <p className="rounded-lg bg-[var(--coral-100)] text-[var(--coral-700)] text-xs font-bold px-3 py-2">
+            <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">
               ⚠ Kho báo sự cố tiếp nhận: {g.su_co_ly_do} {g.su_co_ghi_chu && `— ${g.su_co_ghi_chu}`}
             </p>
           )}
           {g.thoi_gian_nhan_kho && (
-            <div className="flex items-center gap-2 text-xs text-[var(--ink-500)]">
+            <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)]">
               Kho tiếp nhận lúc {g.thoi_gian_nhan_kho} · <SlaBadge since={g.thoi_gian_nhan_kho} />
             </div>
           )}
 
           <div className="border-t border-[var(--line)] pt-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide">Đơn bảo hành trong phiếu ({data.don_cha.length})</p>
+              <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">Đơn bảo hành trong phiếu ({data.don_cha.length})</p>
               {isNhap && (
                 <Btn variant="primary" onClick={() => setAddDonOpen(true)}>
                   + Thêm đơn
@@ -205,7 +211,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
               )}
             </div>
             <div className="space-y-1.5">
-              {data.don_cha.length === 0 && <p className="text-xs text-[var(--ink-400)]">Chưa có đơn nào — bấm "+ Thêm đơn" trước khi xác nhận gửi.</p>}
+              {data.don_cha.length === 0 && <p className="text-xs text-[var(--ink-faint)]">Chưa có đơn nào — bấm "+ Thêm đơn" trước khi xác nhận gửi.</p>}
               {data.don_cha.map((d) => (
                 // flex-wrap thay vi ep 1 hang cung (sua 07/09/2026, cung ly do voi grid header o
                 // tren) - tren man hinh hep, id/SL/badge/nut "Xoá" tu xuong hang thay vi bop chet mo
@@ -213,12 +219,12 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
                 // the khac) de khong con bi cham/de len nhau.
                 <div key={d.id} className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs">{d.id}</span>
-                    <span className="text-xs text-[var(--ink-500)]">SL: {d.so_luong_khai}</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
+                    <span className="text-xs text-[var(--ink-soft)]">SL: {d.so_luong_khai}</span>
                     {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
                     {isNhap && (
-                      <Btn variant="danger" onClick={() => xoaDon(d.id)} disabled={busy} className="ml-auto">
-                        Xoá
+                      <Btn variant="ghost" size="sm" onClick={() => xoaDon(d.id)} disabled={busy} className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]">
+                        ✕ Xoá
                       </Btn>
                     )}
                   </div>

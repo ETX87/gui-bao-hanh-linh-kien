@@ -1,4 +1,5 @@
 import { Modal } from "../../ui/Modal";
+import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
@@ -54,7 +55,7 @@ export function AddDonModal({ guiId, ktvEmail, onClose, onDone }: { guiId: strin
           </Select>
         </Field>
         <Field label="Ảnh linh kiện lỗi (tuỳ chọn)">
-          <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => f.setAnhFiles(e.target.files)} className="text-xs" />
+          <ImagePicker onChange={f.setAnhFiles} />
         </Field>
       </div>
     </Modal>

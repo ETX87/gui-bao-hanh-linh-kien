@@ -74,8 +74,8 @@ function Routed({ user }: { user: AppUser }) {
   if ((user.la_admin_bh || user.la_qtri) && path === "/linh-kien") return <LinhKienScreen />;
 
   return (
-    <div className="text-center py-16 text-[var(--ink-500)]">
-      <p className="text-lg font-display font-bold mb-1">Không tìm thấy trang</p>
+    <div className="text-center py-16 text-[var(--ink-soft)]">
+      <p className="text-lg font-bold mb-1">Không tìm thấy trang</p>
       <p className="text-sm">Bạn không có quyền truy cập màn hình này, hoặc đường dẫn không tồn tại.</p>
     </div>
   );
@@ -101,19 +101,19 @@ function AuthedApp({ user }: { user: AppUser }) {
 
 function Shell_Login() {
   return (
-    <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
-      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
+    <div className="min-h-full flex items-center justify-center bg-gradient-to-br from-[var(--brand-100)] via-[var(--bg)] to-[var(--brand-50)] px-4">
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-pop p-8 text-center anim-in">
         <div className="flex flex-col items-center gap-3 mb-6">
-          <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-xl shadow-sm" />
+          <img src="/icon-192.png" alt="" className="w-16 h-16 rounded-2xl shadow-brand" />
           <div>
-            <h1 className="font-display font-extrabold text-lg text-[var(--ink-900)]">Sửa chữa bảo hành</h1>
-            <p className="text-xs text-[var(--ink-500)] mt-0.5">Dịch Vụ 3T</p>
+            <h1 className="font-bold text-xl text-[var(--ink)]">Sửa chữa bảo hành 3T</h1>
+            <p className="text-sm text-[var(--ink-soft)] mt-0.5">Gửi · Sửa · Trả linh kiện bảo hành</p>
           </div>
         </div>
-        <p className="text-sm text-[var(--ink-600)] mb-6">Đăng nhập bằng tài khoản Google được cấp để tiếp tục.</p>
+        <p className="text-sm text-[var(--ink-soft)] mb-6">Đăng nhập bằng tài khoản Google được cấp để tiếp tục.</p>
         <a
           href="/api/auth/login"
-          className="focus-ring inline-flex items-center justify-center gap-2 w-full rounded-lg bg-[var(--ocean-800)] text-white font-medium text-sm py-2.5 hover:bg-[var(--ocean-900)] transition-colors"
+          className="focus-ring inline-flex items-center justify-center gap-2 w-full rounded-lg bg-[var(--accent)] text-white font-semibold text-base lg:text-sm py-3 lg:py-2.5 shadow-brand hover:bg-[var(--accent-dark)] transition-colors"
         >
           Đăng nhập với Google
         </a>
@@ -123,16 +123,16 @@ function Shell_Login() {
 }
 
 function StatusScreen({ title, body, tone }: { title: string; body: string; tone: "amber" | "coral" }) {
-  const dot = tone === "amber" ? "bg-[var(--amber-500)]" : "bg-[var(--coral-500)]";
+  const dot = tone === "amber" ? "bg-[var(--amber-500)]" : "bg-[var(--red-500)]";
   return (
-    <div className="min-h-full flex items-center justify-center bg-[var(--bg)] px-4">
-      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm p-8 text-center anim-in">
-        <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-xl shadow-sm mx-auto mb-4" />
+    <div className="min-h-full flex items-center justify-center bg-gradient-to-br from-[var(--brand-100)] via-[var(--bg)] to-[var(--brand-50)] px-4">
+      <div className="w-full max-w-sm bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-pop p-8 text-center anim-in">
+        <img src="/icon-192.png" alt="" className="w-16 h-16 rounded-2xl shadow-brand mx-auto mb-4" />
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className={`w-2 h-2 rounded-full ${dot}`} />
-          <h2 className="font-display font-bold text-base text-[var(--ink-900)]">{title}</h2>
+          <h2 className="font-bold text-base text-[var(--ink)]">{title}</h2>
         </div>
-        <p className="text-sm text-[var(--ink-600)]">{body}</p>
+        <p className="text-sm text-[var(--ink-soft)]">{body}</p>
       </div>
     </div>
   );

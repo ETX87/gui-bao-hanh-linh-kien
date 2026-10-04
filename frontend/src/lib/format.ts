@@ -16,11 +16,31 @@ function parseVnWallClock(iso: string): number {
   return new Date(iso.replace(" ", "T").replace(/Z$/i, "") + "Z").getTime();
 }
 
+// QUY TAC (chot 04/10/2026, "24h liên tục bỏ qua chủ nhật"): dong ho lien tuc nhung TRU moi khoang roi
+// vao Chu nhat (00:00-24:00 gio VN). Thuat toan GIONG HET backend/src/lib/sla.ts - sua 1 ben phai sua 2.
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+function sundayOverlapMs(a: number, b: number): number {
+  if (b <= a) return 0;
+  let total = 0;
+  let d = Math.floor(a / DAY) * DAY;
+  const dow = new Date(d).getUTCDay();
+  if (dow !== 0) d += (7 - dow) * DAY;
+  else if (d < a) {
+    total += Math.min(b, d + DAY) - a;
+    d += 7 * DAY;
+  }
+  for (; d < b; d += 7 * DAY) total += Math.min(b, d + DAY) - Math.max(a, d);
+  return total;
+}
+
 export function hoursSince(iso: string | null | undefined): number {
   if (!iso) return 0;
   const then = parseVnWallClock(iso);
   if (Number.isNaN(then)) return 0;
-  return (Date.now() + VN_OFFSET_MS - then) / 3_600_000;
+  const now = Date.now() + VN_OFFSET_MS;
+  if (now <= then) return (now - then) / HOUR;
+  return (now - then - sundayOverlapMs(then, now)) / HOUR;
 }
 
 export function isOverdue(iso: string | null | undefined): boolean {

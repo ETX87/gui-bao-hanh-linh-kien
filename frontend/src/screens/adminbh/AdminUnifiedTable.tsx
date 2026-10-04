@@ -1,10 +1,12 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { StatusBadge, UNIT_STATUS } from "../../ui/StatusBadge";
 import { Badge, Btn } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { useLinhKien } from "../../hooks/useLinhKien";
 import { useAdminCols, ADMIN_COLS_DEF, type AdminColKey } from "../../hooks/useAdminCols";
 import { TRANG_THAI_UNIT_LABELS, LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS, formatLyDoBoSung } from "../../lib/constants";
 import { AdminColSettingsModal } from "./AdminColSettingsModal";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, DonVi } from "../../lib/types";
 
 // "Bang thong nhat" Admin BH - port dung renderAdminUnifiedTable() cua prototype: 1 bang GOP ca don
@@ -43,6 +45,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
   const lkName = (ma: string | null | undefined) => (ma ? linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk || ma : "Cả sản phẩm");
   const { order, hidden, visibleCols, colWidth, reorder, toggleHidden, commitWidth, reset } = useAdminCols();
   const [colSettingsOpen, setColSettingsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // --- Keo doi vi tri cot (HTML5 drag-and-drop thuan).
   const dragKeyRef = useRef<AdminColKey | null>(null);
@@ -89,12 +92,12 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
   // --- Gia tri tung o du lieu theo dung 12 key cua ADMIN_COLS_DEF, khop chinh xac
   // adminParentRowFields()/adminUnitRowFields() cua prototype.
   const parentFields = (p: DonCha): Record<AdminColKey, ReactNode> => ({
-    trangthai: <Badge tone="blue">Chờ xác nhận SL (khai {p.so_luong_khai})</Badge>,
+    trangthai: <Badge tone="amber" dot>Chờ xác nhận SL (khai {p.so_luong_khai})</Badge>,
     nguon: (
       <Ellipsis
         text={
           <>
-            {p.ktv || "—"} <span className="text-[var(--ink-400)]">· {p.phieu_gui_id}</span>
+            {p.ktv || "—"} <span className="text-[var(--ink-faint)]">· {p.phieu_gui_id}</span>
           </>
         }
         title={`${p.ktv || ""} · ${p.phieu_gui_id}`}
@@ -105,11 +108,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     mota: <Ellipsis text={p.mo_ta_loi} title={p.mo_ta_loi || ""} />,
     sla: <SlaBadge since={p.created_at} entityType="phieu_sc" entityId={p.id} clickable />,
     sdt: "—",
-    donchacode: <span className="text-[var(--ink-500)] font-mono text-xs">{p.id}</span>,
-    phieuguicode: <span className="text-[var(--ink-500)] font-mono text-xs">{p.phieu_gui_id || "—"}</span>,
+    donchacode: <span className="text-[var(--ink-soft)] font-mono text-xs">{p.id}</span>,
+    phieuguicode: <span className="text-[var(--ink-soft)] font-mono text-xs">{p.phieu_gui_id || "—"}</span>,
     doitru: p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—",
-    huongxuly: <span className="text-[var(--ink-500)]">Chưa phân loại</span>,
-    baohanh: <span className="text-[var(--ink-500)]">—</span>,
+    huongxuly: <span className="text-[var(--ink-soft)]">Chưa phân loại</span>,
+    baohanh: <span className="text-[var(--ink-soft)]">—</span>,
   });
 
   const unitFields = (u: DonVi): Record<AdminColKey, ReactNode> => {
@@ -117,14 +120,14 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const effLk = u.ma_lk_thuc_te || u.ma_lk;
     const daDoiLk = !!(u.ma_lk_thuc_te && u.ma_lk_thuc_te !== u.ma_lk);
     return {
-      trangthai: <Badge tone={u.trang_thai === "cho_bo_sung_tt" ? "violet" : "blue"}>{TRANG_THAI_UNIT_LABELS[u.trang_thai] || u.trang_thai}</Badge>,
+      trangthai: <StatusBadge kind="unit" value={u.trang_thai} />,
       nguon: isKhachLe ? (
         <Badge tone="violet">Khách lẻ</Badge>
       ) : (
         <Ellipsis
           text={
             <>
-              {u.ktv || "—"} <span className="text-[var(--ink-400)]">· {u.phieu_gui_id}</span>
+              {u.ktv || "—"} <span className="text-[var(--ink-faint)]">· {u.phieu_gui_id}</span>
             </>
           }
           title={`${u.ktv || ""} · ${u.phieu_gui_id}`}
@@ -144,11 +147,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
       mota: <Ellipsis text={u.mo_ta_loi} title={u.mo_ta_loi || ""} />,
       sla: <SlaBadge since={u.updated_at} entityType="phieu_sc_ct" entityId={u.id} clickable />,
       sdt: u.nguon_tao === "admin_dich_vu" ? u.sdt_khach_hang || "—" : "—",
-      donchacode: <span className="text-[var(--ink-500)] font-mono text-xs">{u.parent_id}</span>,
-      phieuguicode: <span className="text-[var(--ink-500)] font-mono text-xs">{u.phieu_gui_id || "—"}</span>,
+      donchacode: <span className="text-[var(--ink-soft)] font-mono text-xs">{u.parent_id}</span>,
+      phieuguicode: <span className="text-[var(--ink-soft)] font-mono text-xs">{u.phieu_gui_id || "—"}</span>,
       doitru: u.loai_doi_tru || u.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[(u.loai_doi_tru || u.loai_doi_tru_de_xuat)!] : "—",
-      huongxuly: u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] : <span className="text-[var(--ink-500)]">Chưa phân loại</span>,
-      baohanh: <span className="text-[var(--ink-500)]">—</span>,
+      huongxuly: u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] : <span className="text-[var(--ink-soft)]">Chưa phân loại</span>,
+      baohanh: <span className="text-[var(--ink-soft)]">—</span>,
     };
   };
 
@@ -183,7 +186,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     return (
       <span className="flex flex-wrap gap-1">
         {Object.entries(by).map(([st, n]) => (
-          <Badge key={st} tone={st === "cho_bo_sung_tt" ? "violet" : "blue"}>
+          <Badge key={st} tone={UNIT_STATUS[st]?.tone || "gray"} dot={UNIT_STATUS[st]?.dot}>
             {n} {TRANG_THAI_UNIT_LABELS[st] || st}
           </Badge>
         ))}
@@ -197,11 +200,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const isKhachLe = !u.phieu_gui_id;
     const isBoSung = u.trang_thai === "cho_bo_sung_tt";
     return (
-      <tr key={u.id} onClick={() => onOpenDetail(u.id)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--ocean-100)]/40 transition-colors">
+      <tr key={u.id} onClick={() => onOpenDetail(u.id)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--accent-soft)] transition-colors">
         <td className="px-2" onClick={(e) => e.stopPropagation()}>
           {!isBoSung && <input type="checkbox" checked={selected.has(u.id)} onChange={(e) => onToggleSelect(u.id, e.target.checked)} />}
         </td>
-        <td className={`px-3 py-2.5 font-semibold font-mono text-xs ${indented ? "pl-8" : ""}`}>
+        <td className={`px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)] ${indented ? "pl-8" : ""}`}>
           {u.id}
           {u.trang_thai === "admin_can_xem_lai" && (
             <Badge tone="red" className="ml-1.5">
@@ -216,7 +219,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         ))}
         <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
           {isBoSung ? (
-            <span className="text-xs text-[var(--ink-500)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
+            <span className="text-xs text-[var(--ink-soft)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
           ) : (
             <div className="flex items-center gap-1.5 flex-wrap">
               <Btn onClick={() => onOpenFast(u)} title="Các phương án phổ biến có sẵn, tự động điền thông tin">
@@ -240,18 +243,127 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     );
   };
 
+  // --- Mobile (DESIGN_SYSTEM.md §6.5 "co bang -> co phuong an the"): moi don cha cho xac nhan SL / don
+  // vi / nhom xN la 1 THE; giu nguyen gop nhom, chon hang loat va nut thao tac nhu bang desktop.
+  // Tuy bien cot chi co y nghia tren bang desktop nen an o day.
+  const unitActions = (u: DonVi) => {
+    const isKhachLe = !u.phieu_gui_id;
+    if (u.trang_thai === "cho_bo_sung_tt") return <p className="text-xs text-[var(--ink-soft)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</p>;
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Btn variant="primary" onClick={() => onOpenPhanLoai(u)}>
+          {u.trang_thai === "admin_can_xem_lai" ? "Phân loại lại" : "Phân loại"}
+        </Btn>
+        <Btn onClick={() => onOpenFast(u)}>⚡ Xử lý nhanh</Btn>
+        {!isKhachLe && u.trang_thai === "cho_phan_loai" && <Btn onClick={() => onOpenBoSung(u.parent_id)}>Yêu cầu bổ sung</Btn>}
+        {!isKhachLe && (
+          <Btn onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
+            🐞
+          </Btn>
+        )}
+      </div>
+    );
+  };
+  const unitCard = (u: DonVi, nested: boolean) => {
+    const f = unitFields(u);
+    return (
+      <div key={u.id} onClick={() => onOpenDetail(u.id)} className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 ${nested ? "" : "shadow-card"} active:bg-[var(--accent-soft)]`}>
+        <div className="flex items-start gap-2.5">
+          {u.trang_thai !== "cho_bo_sung_tt" && (
+            <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+              <input type="checkbox" className="w-5 h-5" checked={selected.has(u.id)} onChange={(e) => onToggleSelect(u.id, e.target.checked)} />
+            </span>
+          )}
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-mono text-xs font-semibold text-[var(--link)]">{u.id}</span>
+              {f.trangthai}
+              <span className="ml-auto">{f.sla}</span>
+            </div>
+            <p className="text-sm font-semibold text-[var(--ink)]">{f.linhkien}</p>
+            {u.mo_ta_loi && <p className="text-sm text-[var(--ink-body)] line-clamp-2">{u.mo_ta_loi}</p>}
+            <div className="text-xs text-[var(--ink-soft)]">{f.nguon}</div>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-[var(--line)]" onClick={(e) => e.stopPropagation()}>
+          {unitActions(u)}
+        </div>
+      </div>
+    );
+  };
+  const renderMobile = () => (
+    <div className="space-y-2.5">
+      {parents.map((p) => {
+        const f = parentFields(p);
+        return (
+          <div key={p.id} onClick={() => onOpenXacNhanSl(p)} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-card p-3.5 space-y-1.5 active:bg-[var(--accent-soft)]">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-mono text-xs font-semibold text-[var(--link)]">{p.id}</span>
+              {f.trangthai}
+              <span className="ml-auto">{f.sla}</span>
+            </div>
+            <p className="text-sm font-semibold text-[var(--ink)]">{lkName(p.ma_lk)}</p>
+            {p.mo_ta_loi && <p className="text-sm text-[var(--ink-body)] line-clamp-2">{p.mo_ta_loi}</p>}
+            <div className="text-xs text-[var(--ink-soft)]">{f.nguon}</div>
+            <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+              <Btn variant="primary" onClick={() => onOpenXacNhanSl(p)}>
+                Xác nhận số lượng
+              </Btn>
+            </div>
+          </div>
+        );
+      })}
+      {groups.map(([pid, list]) => {
+        if (list.length < 2) return unitCard(list[0], false);
+        const isOpen = expanded.has(pid);
+        return (
+          <div key={`g-${pid}`} className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] shadow-card">
+            <div onClick={() => toggleExpand(pid)} className="p-3.5 flex items-start gap-2.5 cursor-pointer">
+              <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5"
+                  checked={groupAllSelected(list)}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !groupAllSelected(list) && selectableInGroup(list).some((u) => selected.has(u.id));
+                  }}
+                  onChange={(e) => toggleGroup(list, e.target.checked)}
+                />
+              </span>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-mono text-xs font-semibold text-[var(--link)]">{pid}</span>
+                  <Badge tone="gray">×{list.length}</Badge>
+                  <span className="ml-auto">
+                    <SlaBadge since={groupWorstSla(list)} />
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-[var(--ink)]">{lkName(list[0].ma_lk_thuc_te || list[0].ma_lk)}</p>
+                {groupStatusSummary(list)}
+                <p className="text-xs font-semibold text-[var(--accent-ink)]">{isOpen ? "▾ Thu gọn" : `▸ Mở ${list.length} đơn vị`}</p>
+              </div>
+            </div>
+            {isOpen && <div className="px-2.5 pb-2.5 space-y-2">{list.map((u) => unitCard(u, true))}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const totalRows = parents.length + units.length;
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className={`items-center gap-2 mb-2 ${isMobile ? "hidden" : "flex"}`}>
         <Btn onClick={() => setColSettingsOpen(true)} title="Bật/tắt cột, đổi vị trí, đổi độ rộng">
           ⚙ Tuỳ chỉnh cột
         </Btn>
       </div>
 
       {totalRows === 0 ? (
-        <p className="text-center py-10 text-sm text-[var(--ink-400)]">Không có đơn nào cần xử lý ngay lúc này.</p>
+        <p className="text-center py-10 text-sm text-[var(--ink-faint)]">Không có đơn nào cần xử lý ngay lúc này.</p>
+      ) : isMobile ? (
+        renderMobile()
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--line)] scrollbar-thin">
           <table ref={tableRef} className="text-sm whitespace-nowrap" style={{ tableLayout: "fixed", width: "max-content" }}>
@@ -264,9 +376,9 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
               <col style={{ width: 230 }} />
             </colgroup>
             <thead>
-              <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
+              <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
                 <th />
-                <th className="text-left font-semibold text-[var(--ink-600)] px-3 py-2.5 text-xs uppercase tracking-wide">ID</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">ID</th>
                 {visibleCols.map((k) => (
                   <th
                     key={k}
@@ -277,26 +389,26 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     onDragEnter={() => setDragOverKey(k)}
                     onDragLeave={() => setDragOverKey((cur) => (cur === k ? null : cur))}
                     onDrop={() => onColDrop(k)}
-                    className={`relative text-left font-semibold text-[var(--ink-600)] px-3 py-2.5 text-xs uppercase tracking-wide cursor-move select-none ${dragOverKey === k ? "bg-[var(--ocean-100)]" : ""}`}
+                    className={`relative text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs cursor-move select-none ${dragOverKey === k ? "bg-[var(--accent-soft)]" : ""}`}
                   >
                     {ADMIN_COLS_DEF[k].label}
                     <span
                       onMouseDown={(e) => onResizeStart(e, k)}
                       title="Kéo để đổi độ rộng"
-                      className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-[var(--ocean-400)] after:content-[''] after:absolute after:top-[22%] after:bottom-[22%] after:left-1/2 after:-translate-x-1/2 after:w-[2px] after:rounded after:bg-[var(--ink-400)] hover:after:bg-white"
+                      className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-[var(--brand-400)] after:content-[''] after:absolute after:top-[22%] after:bottom-[22%] after:left-1/2 after:-translate-x-1/2 after:w-[2px] after:rounded after:bg-[var(--ink-faint)] hover:after:bg-white"
                     />
                   </th>
                 ))}
-                <th className="text-left font-semibold text-[var(--ink-600)] px-3 py-2.5 text-xs uppercase tracking-wide">Hành động</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {parents.map((p) => {
                 const f = parentFields(p);
                 return (
-                  <tr key={p.id} onClick={() => onOpenXacNhanSl(p)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--ocean-100)]/40 transition-colors">
+                  <tr key={p.id} onClick={() => onOpenXacNhanSl(p)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--accent-soft)] transition-colors">
                     <td />
-                    <td className="px-3 py-2.5 font-semibold font-mono text-xs">{p.id}</td>
+                    <td className="px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)]">{p.id}</td>
                     {visibleCols.map((k) => (
                       <td key={k} className="px-3 py-2.5 align-middle">
                         {f[k]}
@@ -318,7 +430,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                   const hf = unitFields(head);
                   return (
                     <Fragment key={`g-${pid}`}>
-                      <tr onClick={() => toggleExpand(pid)} className="border-b border-[var(--line)] cursor-pointer bg-[var(--surface-100)]/60 hover:bg-[var(--ocean-100)]/40 transition-colors">
+                      <tr onClick={() => toggleExpand(pid)} className="border-b border-[var(--line)] cursor-pointer bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] transition-colors">
                         <td className="px-2" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -329,20 +441,20 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                             onChange={(e) => toggleGroup(list, e.target.checked)}
                           />
                         </td>
-                        <td className="px-3 py-2.5 font-semibold font-mono text-xs">
+                        <td className="px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)]">
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="text-[var(--ink-400)]">{isOpen ? "▾" : "▸"}</span>
+                            <span className="text-[var(--ink-faint)]">{isOpen ? "▾" : "▸"}</span>
                             {pid}
                             <Badge tone="gray">×{list.length}</Badge>
                           </span>
                         </td>
                         {visibleCols.map((k) => (
                           <td key={k} className="px-3 py-2.5 align-middle">
-                            {k === "trangthai" ? groupStatusSummary(list) : k === "sla" ? <SlaBadge since={groupWorstSla(list)} /> : k === "donchacode" ? <span className="text-[var(--ink-500)] font-mono text-xs">{pid}</span> : hf[k]}
+                            {k === "trangthai" ? groupStatusSummary(list) : k === "sla" ? <SlaBadge since={groupWorstSla(list)} /> : k === "donchacode" ? <span className="text-[var(--ink-soft)] font-mono text-xs">{pid}</span> : hf[k]}
                           </td>
                         ))}
                         <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs text-[var(--ink-500)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
+                          <span className="text-xs text-[var(--ink-soft)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
                         </td>
                       </tr>
                       {isOpen && list.map((u) => renderUnitRow(u, true))}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -38,59 +39,49 @@ export function LinhKienScreen() {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🔩 Danh mục linh kiện ({total})</h3>
-        <div className="flex items-center gap-2">
-          <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tìm theo mã/tên…" className="!py-1.5 !w-52" />
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Danh mục linh kiện ({total})</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tìm theo mã/tên…" className="sm:!w-52" />
           <Btn variant="primary" onClick={() => setAddOpen(true)}>
             + Thêm linh kiện (nội bộ)
           </Btn>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-sm whitespace-nowrap">
-          <thead>
-            <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Mã</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Tên</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Nguồn</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Tháng BH</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Dùng trong BH</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && items.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-[var(--ink-400)]">
-                  Không có linh kiện nào khớp.
-                </td>
-              </tr>
-            )}
-            {items.map((lk) => (
-              <tr key={lk.ma_lk} className="border-b border-[var(--line)] last:border-0">
-                <td className="px-3 py-2 font-mono text-xs">{lk.ma_lk}</td>
-                <td className="px-3 py-2">{lk.ten_lk}</td>
-                <td className="px-3 py-2">
-                  <Badge tone={lk.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{lk.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge>
-                </td>
-                <td className="px-3 py-2">
-                  <Input
-                    type="number"
-                    defaultValue={lk.so_thang_bao_hanh ?? ""}
-                    className="!py-1 !w-20"
-                    onBlur={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : null;
-                      if (v !== lk.so_thang_bao_hanh) patch(lk.ma_lk, { so_thang_bao_hanh: v ?? undefined });
-                    }}
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input type="checkbox" checked={lk.duoc_dung_bao_hanh} onChange={(e) => patch(lk.ma_lk, { duoc_dung_bao_hanh: e.target.checked })} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table
+        rows={loading ? [] : items}
+        rowKey={(lk) => lk.ma_lk}
+        emptyText={loading ? "Đang tải…" : "Không có linh kiện nào khớp."}
+        columns={[
+          { key: "ten", header: "Tên", render: (lk) => <span className="font-semibold text-[var(--ink)] whitespace-normal">{lk.ten_lk}</span> },
+          { key: "ma", header: "Mã", render: (lk) => <span className="font-mono text-xs">{lk.ma_lk}</span> },
+          { key: "nguon", header: "Nguồn", render: (lk) => <Badge tone={lk.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{lk.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
+          {
+            key: "thang",
+            header: "Tháng BH",
+            render: (lk) => (
+              <Input
+                type="number"
+                defaultValue={lk.so_thang_bao_hanh ?? ""}
+                className="!w-24"
+                onBlur={(e) => {
+                  const v = e.target.value ? Number(e.target.value) : null;
+                  if (v !== lk.so_thang_bao_hanh) patch(lk.ma_lk, { so_thang_bao_hanh: v ?? undefined });
+                }}
+              />
+            ),
+          },
+          {
+            key: "dung",
+            header: "Dùng trong BH",
+            render: (lk) => (
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-5 h-5" checked={lk.duoc_dung_bao_hanh} onChange={(e) => patch(lk.ma_lk, { duoc_dung_bao_hanh: e.target.checked })} />
+                <span className="text-xs text-[var(--ink-soft)]">{lk.duoc_dung_bao_hanh ? "Đang bật" : "Đang tắt"}</span>
+              </label>
+            ),
+          },
+        ]}
+      />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {addOpen && <AddLinhKienModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); reload(); }} />}
     </Card>

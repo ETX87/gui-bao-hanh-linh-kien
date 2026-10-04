@@ -104,13 +104,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     <div className="space-y-6">
       {phieuGuiTotal > 0 && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGuiTotal})</h3>
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGuiTotal})</h3>
           <div className="space-y-2">
             {phieuGui.map((g) => (
               <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <span className="font-mono text-xs font-semibold">{g.id}</span>
-                  <span className="text-sm text-[var(--ink-700)] truncate">{g.nguoi_tao}</span>
+                  <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                  <span className="text-sm text-[var(--ink-body)] truncate">{g.nguoi_tao}</span>
                   {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                   <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
                 </div>
@@ -126,7 +126,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🗂️ Đơn bảo hành cần xử lý ({donCha.length + donViTotal})</h3>
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗂️ Đơn bảo hành cần xử lý ({donCha.length + donViTotal})</h3>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
               <>

@@ -1,14 +1,11 @@
 import type { AppUser } from "../lib/types";
 import { InstallAppButton } from "./InstallAppButton";
 
-// TopBar - logo + loi chao (port dung quyet dinh "loi chao len topbar" 03/09/2026, chi hien desktop)
-// + dang xuat.
-// InstallAppButton chi hien mobile (md:hidden) - yeu cau 05/09/2026 "check lại bản mobile, không
-// thấy chức năng tạo shortcut... hãy làm theo chức năng giống bên linh-kien-app". Ben linh-kien-app
-// dat nut nay trong drawer mobile cua Sidebar, nhung suachua da doi sang BottomNav co dinh (QA vong 2,
-// 04/09/2026) nen khong con drawer tuong duong - TopBar la vi tri gan nhat con "ml-auto" trong da co
-// san (chi co nut Dang xuat), theo dung mau "hidden md:block" da dung cho loi chao desktop (dao nguoc
-// lai thanh md:hidden cho rieng nut nay).
+// TopBar (DESIGN_SYSTEM.md §4):
+// - Mobile: header gradient xanh la (cung nen Sidebar) de nhan dien thuong hieu - icon + ten app + nut
+//   "Cai dat" (05/09/2026) + Dang xuat.
+// - Desktop: thanh trang mong trong cot noi dung - loi chao + vai tro (quyet dinh 03/09/2026 "loi chao
+//   len topbar") + Dang xuat. Logo da nam tren Sidebar nen khong lap lai o day.
 
 const ROLE_LABELS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ktv_dvbh", label: "KTV / CTV / Trạm" },
@@ -22,33 +19,43 @@ const ROLE_LABELS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_qtri", label: "Admin hệ thống" },
 ];
 
+async function logout() {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  location.reload();
+}
+
 export function TopBar({ user }: { user: AppUser }) {
   const roles = ROLE_LABELS.filter((r) => user[r.flag]).map((r) => r.label);
+  const initial = (user.ten || user.email).trim().charAt(0).toUpperCase();
   return (
-    <header className="sticky top-0 z-40 bg-[var(--topbar-bg)] border-b border-[var(--line)] px-4 md:px-6 py-3 flex items-center gap-3">
-      <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg shrink-0" />
-      <div className="min-w-0">
-        <p className="font-display font-bold text-sm text-[var(--ink-900)] leading-tight truncate">Sửa chữa bảo hành</p>
-        <p className="text-[11px] text-[var(--ink-500)] leading-tight">Dịch Vụ 3T</p>
-      </div>
-      <div className="hidden md:block ml-4 pl-4 border-l border-[var(--line)] min-w-0" title={`${roles.join(", ")} · ${user.email}`}>
-        <p className="text-sm text-[var(--ink-900)] font-medium truncate">Xin chào, {user.ten || user.email}</p>
-        <p className="text-[11px] text-[var(--ink-500)] truncate">{roles.join(" · ") || "Chưa gán vai trò"}</p>
-      </div>
-      <div className="ml-auto flex items-center gap-3 shrink-0">
-        <div className="md:hidden">
-          <InstallAppButton />
+    <>
+      <header className="md:hidden sticky top-0 z-40 bg-sidebar text-white shadow-brand px-4 py-2.5 flex items-center gap-3">
+        <img src="/icon-192.png" alt="" className="w-9 h-9 rounded-xl shrink-0 ring-1 ring-white/30" />
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-base leading-tight truncate">Sửa chữa 3T</p>
+          <p className="text-xs text-white/75 leading-tight truncate">{user.ten || user.email}</p>
+        </div>
+        <InstallAppButton onDark />
+        <button onClick={logout} className="focus-ring shrink-0 rounded-lg px-2.5 py-2 text-sm font-semibold text-white/85 hover:bg-white/10">
+          Thoát
+        </button>
+      </header>
+
+      <header className="hidden md:flex sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[var(--line)] px-6 py-2.5 items-center gap-3">
+        <span className="w-9 h-9 rounded-full bg-[var(--accent-soft)] text-[var(--accent-ink)] font-bold flex items-center justify-center shrink-0 ring-1 ring-[var(--brand-200)]">
+          {initial}
+        </span>
+        <div className="min-w-0" title={`${roles.join(", ")} · ${user.email}`}>
+          <p className="text-sm text-[var(--ink)] font-semibold truncate">Xin chào, {user.ten || user.email}</p>
+          <p className="text-xs text-[var(--ink-soft)] truncate">{roles.join(" · ") || "Chưa gán vai trò"}</p>
         </div>
         <button
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-            location.reload();
-          }}
-          className="focus-ring text-xs font-medium text-[var(--ink-500)] hover:text-[var(--ink-900)] transition-colors"
+          onClick={logout}
+          className="focus-ring ml-auto shrink-0 rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] hover:border-[var(--brand-300)] transition-colors"
         >
           Đăng xuất
         </button>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

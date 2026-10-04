@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useRoute } from "../router/Router";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useWorkload, type WorkloadCounts } from "../hooks/useWorkload";
 import { routesForUser } from "../layout/routes";
 import { Card, StatCard } from "../ui/primitives";
@@ -38,59 +40,96 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   ketoan_cho_duyet: "/ketoan/duyet",
 };
 
+const ICON_OF: Record<keyof WorkloadCounts, string> = {
+  ktv_phieu_nhap: "📦",
+  ktv_cho_bo_sung: "✍️",
+  ktv_nhan_hang: "📬",
+  kho_cho_tiep_nhan: "📥",
+  kho_cho_dong_goi: "📤",
+  admin_cho_tiep_nhan_noi_bo: "🚚",
+  admin_cho_xac_nhan_sl: "🔢",
+  admin_cho_phan_loai: "🗂️",
+  admin_cho_xac_nhan_hoan_tat: "✔️",
+  admin_san_sang_gom: "↩️",
+  nv_cho_chan_doan: "🔧",
+  ketoan_cho_duyet: "💰",
+};
+
+// Tone KPI theo nhom nghiep vu (DESIGN_SYSTEM.md §2.5): viec dang CHO minh xu ly = amber, viec cua
+// nguoi khac/tham khao = blue, sap xong/san sang = brand. So 0 tu chuyen slate (mo).
+const TONE_OF: Record<keyof WorkloadCounts, "amber" | "blue" | "brand" | "red"> = {
+  ktv_phieu_nhap: "amber",
+  ktv_cho_bo_sung: "red",
+  ktv_nhan_hang: "brand",
+  kho_cho_tiep_nhan: "amber",
+  kho_cho_dong_goi: "amber",
+  admin_cho_tiep_nhan_noi_bo: "blue",
+  admin_cho_xac_nhan_sl: "blue",
+  admin_cho_phan_loai: "amber",
+  admin_cho_xac_nhan_hoan_tat: "amber",
+  admin_san_sang_gom: "brand",
+  nv_cho_chan_doan: "amber",
+  ketoan_cho_duyet: "amber",
+};
+
+function todayLabel() {
+  return new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 export function HomeScreen({ user }: { user: AppUser }) {
   const { counts, loading } = useWorkload();
   const { nav } = useRoute();
   const routeHashes = new Set(routesForUser(user).map((r) => r.hash));
   const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!));
   const myWork = relevantKeys.filter((k) => counts[k] > 0).sort((a, b) => counts[b] - counts[a]);
-
-  // Phat hien 16: khong hien "0" gia lap luc dang tai - hien skeleton cho toi khi co so lieu that.
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Card className="p-5">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Tổng quan hàng đợi</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {relevantKeys.map((k) => (
-              <div key={k} className="p-4 rounded-xl bg-[var(--surface-100)] animate-pulse">
-                <div className="h-3 w-2/3 rounded bg-[var(--surface-200)] mb-3" />
-                <div className="h-7 w-10 rounded bg-[var(--surface-200)]" />
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  const total = myWork.reduce((s, k) => s + counts[k], 0);
+  // DESIGN_SYSTEM.md §8.4: danh sach dai tren mobile chi hien vai muc dau + "Xem them".
+  const isMobile = useIsMobile();
+  const [showAll, setShowAll] = useState(false);
+  const MOBILE_LIMIT = 4;
+  const pills = isMobile && !showAll ? myWork.slice(0, MOBILE_LIMIT) : myWork;
 
   return (
-    <div className="space-y-6">
-      {myWork.length > 0 && (
-        <Card className="p-5 border-l-4 !border-l-[var(--coral-600)]">
-          <h3 className="font-display font-bold text-sm text-[var(--coral-700)] mb-3">🔥 Việc của tôi</h3>
-          <div className="flex flex-wrap gap-2">
-            {myWork.map((k) => (
+    <>
+      {/* Hero (DESIGN_SYSTEM.md §4) - "Viec cua toi" noi bat nhat trang, chi hien muc co viec. */}
+      <section className="rounded-[14px] bg-hero text-white shadow-brand p-5 md:p-6">
+        <p className="text-sm text-white/80 capitalize">{todayLabel()}</p>
+        <h2 className="mt-1 text-xl md:text-[21px] font-bold">
+          {loading ? "Đang tải việc của bạn…" : total > 0 ? `🔥 Bạn có ${total} việc cần làm` : "✨ Không có việc nào đang chờ bạn"}
+        </h2>
+        {!loading && myWork.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pills.map((k) => (
               <button
                 key={k}
                 onClick={() => nav(HASH_OF[k]!)}
-                className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--coral-100)] text-[var(--coral-700)] px-3.5 py-1.5 text-xs font-bold hover:bg-[var(--coral-400)]/30 transition-colors"
+                className="focus-ring inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 ring-1 ring-inset ring-white/25 px-3.5 py-2 text-sm font-semibold transition-colors"
               >
-                {LABELS[k]} <span className="rounded-full bg-[var(--coral-600)] text-white w-5 h-5 flex items-center justify-center text-[10px]">{counts[k]}</span>
+                <span>{ICON_OF[k]}</span>
+                {LABELS[k]}
+                <span className="rounded-full bg-white text-[var(--accent-ink)] min-w-[22px] h-[22px] px-1.5 flex items-center justify-center text-xs font-extrabold">{counts[k]}</span>
               </button>
             ))}
+            {isMobile && myWork.length > MOBILE_LIMIT && (
+              <button onClick={() => setShowAll((v) => !v)} className="focus-ring rounded-full px-3.5 py-2 text-sm font-semibold text-white underline underline-offset-2">
+                {showAll ? "Thu gọn" : `Xem thêm ${myWork.length - MOBILE_LIMIT} mục`}
+              </button>
+            )}
           </div>
-        </Card>
-      )}
+        )}
+      </section>
 
-      <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Tổng quan hàng đợi</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {relevantKeys.map((k) => (
-            <StatCard key={k} label={LABELS[k]} value={counts[k]} tone={counts[k] > 0 ? "blue" : "gray"} onClick={() => nav(HASH_OF[k]!)} />
-          ))}
+      <Card className="p-4 md:p-5" title="Tổng quan hàng đợi">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          {relevantKeys.map((k) =>
+            loading ? (
+              <div key={k} className="h-[128px] rounded-[14px] bg-[var(--surface-2)] animate-pulse" />
+            ) : (
+              <StatCard key={k} label={LABELS[k]} value={counts[k]} tone={TONE_OF[k]} icon={ICON_OF[k]} onClick={() => nav(HASH_OF[k]!)} />
+            ),
+          )}
         </div>
       </Card>
-    </div>
+    </>
   );
 }

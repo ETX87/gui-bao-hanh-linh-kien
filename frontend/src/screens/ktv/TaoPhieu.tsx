@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
@@ -52,8 +53,8 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<PhieuGui>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-    { key: "st", header: "Trạng thái", render: (r) => <Badge tone="blue">{TRANG_THAI_PHIEU_GUI_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
+    { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="gui" value={r.trang_thai} /> },
     ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <span className="text-xs">{r.nguoi_tao}</span> } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },
     { key: "hinhthuc", header: "Hình thức gửi", render: (r) => (r.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[r.hinh_thuc_gui] || r.hinh_thuc_gui : "—") },
@@ -63,7 +64,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : "Phiếu gửi hàng của tôi"} ({total})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : "Phiếu gửi hàng của tôi"} ({total})</h3>
         <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu())}>
           + Tạo phiếu mới
         </Btn>

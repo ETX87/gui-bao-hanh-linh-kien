@@ -61,11 +61,11 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">{title}</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">{title}</h3>
       <div className="space-y-1.5 mb-3">
         {items.map((it) =>
           editId === it.id ? (
-            <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--ocean-400)] px-2 py-1.5">
+            <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--brand-400)] px-2 py-1.5">
               <Input value={editText} onChange={(e) => setEditText(e.target.value)} className="flex-1 !py-1" autoFocus onKeyDown={(e) => e.key === "Enter" && saveEdit()} />
               <Btn variant="primary" onClick={saveEdit} className="!py-1 !px-2.5">
                 Lưu
@@ -76,8 +76,8 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
             </div>
           ) : (
             <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm">
-              <span className={`flex-1 ${!it.bat_tat ? "line-through text-[var(--ink-400)]" : ""}`}>{it.noi_dung}</span>
-              <label className="flex items-center gap-1.5 text-xs text-[var(--ink-500)]">
+              <span className={`flex-1 ${!it.bat_tat ? "line-through text-[var(--ink-faint)]" : ""}`}>{it.noi_dung}</span>
+              <label className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
                 <input type="checkbox" checked={it.bat_tat} onChange={(e) => toggle(it.id, e.target.checked)} /> Bật
               </label>
               <button
@@ -85,11 +85,11 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
                   setEditId(it.id);
                   setEditText(it.noi_dung);
                 }}
-                className="focus-ring text-xs text-[var(--ocean-700)] hover:underline"
+                className="focus-ring text-xs text-[var(--accent-ink)] hover:underline"
               >
                 Sửa
               </button>
-              <button onClick={() => remove(it.id)} className="focus-ring text-xs text-[var(--coral-600)] hover:underline">
+              <button onClick={() => remove(it.id)} className="focus-ring text-xs text-[var(--red-600)] hover:underline">
                 Xoá
               </button>
             </div>

@@ -42,7 +42,7 @@ export function TraTrucTiepModal({ unitId, mode, onClose, onDone }: { unitId: st
       }
     >
       <div className="space-y-4">
-        <p className="text-xs text-[var(--ink-500)]">
+        <p className="text-xs text-[var(--ink-soft)]">
           Bỏ qua bước gộm nhóm và duyệt kế toán, tạo thẳng 1 phiếu trả cho đúng đơn vị này —{" "}
           {mode === "ktv" ? "chuyển ngay sang chờ KTV xác nhận nhận." : "chuyển ngay sang chờ Kho đóng gói."}
         </p>

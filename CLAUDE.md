@@ -173,7 +173,15 @@ trình" — CẢ 3 ĐỢT ĐÃ LÀM XONG (trừ P8 người dùng chốt bỏ): 
 mobile), Đợt 3 (P9–P16: bẫy lưu phiếu gửi, SearchableSelect tự mở, bảng desktop, Giám sát "quá hạn
 SLA" + lọc, quản trị tìm/gom-lưu, gộp đơn cha ×N, lý do có dấu). Typecheck 0 lỗi, kiểm thử chạy thật
 18/18 màn hình. File mới: `backend/src/routes/workload.ts`, `migrations/0004_ly_do_tieng_viet.sql`.
-v1.005. CHƯA deploy — xem 3 mục "Đợt N ... ĐÃ TRIỂN KHAI" bên dưới.**
+v1.005. CHƯA deploy — xem 3 mục "Đợt N ... ĐÃ TRIỂN KHAI" bên dưới.** **Mốc mới nhất (04/10/2026): áp
+dụng toàn bộ design system của "App Khiếu nại" (`../App Khieu nai/DESIGN_SYSTEM.md`) sang mọi màn
+hình, đổi gam màu sang XANH LÁ theo icon app** (Plus Jakarta Sans, token ô nhập/bóng/bo góc, Sidebar
+gradient nhóm menu, bottom nav trắng có capsule, bảng→thẻ trên mobile, `StatusBadge` mỗi trạng thái 1
+tone, `ImagePicker`, hero Trang chủ) + tạo `DESIGN_SYSTEM.md` riêng; **chốt SLA "24h liên tục bỏ qua
+chủ nhật"** (backend + frontend cùng thuật toán); **QA chức năng chạy thật** (e2e HTTP 51/51 bước với
+7 tài khoản đơn vai trò + quét 18/18 màn hình 0 lỗi console) — tìm và sửa 2 lỗi backend thật (cho gửi
+thùng rỗng; "tự động gộp" không gộp vào phiếu nháp sẵn có). v1.007, đã commit + deploy (quy ước mới: tự commit rồi deploy cuối mỗi phiên) — xem mục "Áp
+dụng design system App Khiếu nại..." ở cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -452,9 +460,10 @@ prototype ở mức có thể; các điểm còn mơ hồ được đánh dấu 
    - Khi bấm hành động xử lý mà đã quá 24h: hệ thống chèn thêm 1 trường "Lý do chậm" **bắt buộc**
      (chọn từ danh mục Settings + ghi chú tự do) ngay trong cùng form/hành động đó — không phải 1
      bước chặn riêng, người dùng chọn lý do xong là thao tác tiếp tục được luôn trong cùng 1 lần bấm.
-   - **[CẦN XÁC NHẬN]** mốc "24h tính từ thời điểm gửi sang" có tính giờ hành chính (bỏ qua ngoài giờ
-     làm việc/cuối tuần) hay tính đủ 24h đồng hồ liên tục? Prototype đang tính **đủ 24h đồng hồ liên
-     tục** (đơn giản nhất, không có khái niệm giờ hành chính) — cần xác nhận trước khi build thật.
+   - ~~**[CẦN XÁC NHẬN]** mốc "24h tính từ thời điểm gửi sang" có tính giờ hành chính (bỏ qua ngoài giờ
+     làm việc/cuối tuần) hay tính đủ 24h đồng hồ liên tục?~~ — **[ĐÃ CHỐT 04/10/2026]** nguyên văn: *"24h
+     liên tục bỏ qua chủ nhật"* — đếm liên tục cả đêm/thứ 7, chỉ trừ trọn thời gian rơi vào Chủ nhật.
+     Xem mục "Áp dụng design system App Khiếu nại + SLA bỏ Chủ nhật + QA chức năng (04/10/2026)".
 5. **[MỚI] Rà soát `PHƯƠNG ÁN XỬ LÝ` thật (nguyên văn từ SETTINGS) so với `huong_xu_ly` hiện có (chỉ
    4 giá trị: Sửa chữa | Đổi mới | Từ chối-Huỷ | Chuyển kho) — phát hiện các bước còn thiếu:**
 
@@ -3435,9 +3444,9 @@ KTV không thêm được đơn nào nếu hệ DVBH/case-lookup không truy c�
 kiểm soát khi DVBH gián đoạn không (đây là quyết định "strict" 05/09); (b) gộp đơn cha (#14) — port
 lại đầy đủ cơ chế "×N" hay giữ phẳng + dựa vào chọn hàng loạt; (c) modal `full` (#8) — thu nhỏ modal
 chi tiết ít dữ liệu hay giữ full đồng nhất; (d) ưu tiên mobile — đầu tư layout thẻ cho Kho/đa vai
-trò ngay hay chấp nhận Kho/Admin chủ yếu desktop, chỉ vá BottomNav; (e) SLA "giờ hành chính" — 24h
-đồng hồ liên tục hay bỏ qua ngoài giờ/cuối tuần (câu hỏi mở từ "Phản hồi vòng 2", chưa chốt, ảnh
-hưởng cả badge lẫn cổng SLA).
+trò ngay hay chấp nhận Kho/Admin chủ yếu desktop, chỉ vá BottomNav; ~~(e) SLA "giờ hành chính" — 24h
+đồng hồ liên tục hay bỏ qua ngoài giờ/cuối tuần~~ **[ĐÃ CHỐT 04/10/2026: "24h liên tục bỏ qua chủ
+nhật"]** (đồng thời (d) được giải quyết bằng việc làm bảng→thẻ cho mọi màn ở vòng 04/10/2026).
 
 **Đã làm tốt (ghi nhận để không phá khi sửa):** hệ token màu nhất quán với `linh-kien-app`; nguyên
 tắc "mờ khi = 0"; ý tưởng cổng SLA 3 mức (đúng hướng, chỉ sai lệch giờ); modal chống đóng nhầm
@@ -3562,6 +3571,113 @@ Người dùng chốt qua AskUserQuestion: **P8 = giữ modal `full` đồng nh�
 **Việc còn lại thuộc người dùng:** áp `migrations/0004` lên production (`npm run db:migrate:remote`),
 `npm run deploy`. Sau deploy nên xác nhận bằng bàn phím thật: (a) SearchableSelect tự mở khi gõ (P10);
 (b) các màn quản trị lọc/tìm đúng khi gõ tay (P13 — sandbox không mô phỏng được input event của React).
+
+## Deep-link phiếu trả (v1.006, 09/09/2026) + đối chiếu trạng thái production (04/10/2026)
+
+Commit `cab78a2` (từ 1 phiên khác, chưa từng ghi vào CLAUDE.md — bổ sung lại theo nguyên tắc #1):
+thêm link `#/ktv/nhan-hang/TR-000001` mở thẳng modal chi tiết phiếu trả trong màn KTV "Nhận hàng".
+`frontend/src/lib/deepLink.ts` lưu đường dẫn vào `sessionStorage` để giữ qua vòng Google OAuth (backend
+redirect callback về `/`, làm mất hash nếu chưa đăng nhập). `APP_VERSION` = `1.006`.
+
+Phiên 04/10/2026 (yêu cầu nguyên văn: *"tiếp tục dự án"*) kiểm tra lại: `wrangler d1 migrations list
+DB --remote` (ép `CLOUDFLARE_ACCOUNT_ID` tài khoản `dichvu3t`) → **"No migrations to apply"** — tức
+`0004_ly_do_tieng_viet.sql` đã được áp lên production. Git sạch, roadmap 6 giai đoạn + 3 đợt rà soát UX
+đã xong. Không sửa code ở lượt này; các việc còn mở xem "Câu hỏi mở còn lại" + 5 câu hỏi của mục
+"Rà soát UX toàn hệ thống" (a, d, e vẫn chưa chốt; b, c đã chốt ở Đợt 3).
+
+## Áp dụng design system App Khiếu nại + SLA bỏ Chủ nhật + QA chức năng (04/10/2026)
+
+**(a) Nguyên văn yêu cầu** (trả lời câu hỏi định hướng sau *"tiếp tục dự án"*):
+
+> 1. tôi cần tối ưu lại web, hãy rà soát toàn bộ các màn hình, áp dụng quy tắc giao diện theo tiep nhan
+>    app (đổi gam màu theo gam màu icon hiện có)
+> 2. Đồng thời kiểm soát lại toàn bộ các tính năng, UI, UX có hoạt động thật không?
+
+Câu hỏi SLA (e) còn treo → *"24h liên tục bỏ qua chủ nhật"*. Hỏi lại "tiếp nhận app" là app nào →
+**"App Khiếu nại"** (`F:\claude\QLBH 3T\App Khieu nai`, rulebook `DESIGN_SYSTEM.md` gốc màu tím theo
+icon của app đó).
+
+**(b) Đã triển khai:**
+
+1. **Design system** — port toàn bộ quy tắc App Khiếu nại, đổi brand tím → xanh lá lấy từ icon
+   `logo sua chua 3t.png`. Ghi lại thành `DESIGN_SYSTEM.md` ở gốc repo (nguồn tham chiếu cho mọi màn
+   hình sau này). Điểm chính:
+   - `styles/tokens.css` viết lại: thang `--brand-50…900` (`--accent` = `#15803f`, chữ trắng ~5.1:1),
+     chữ `--ink/-body/-soft/-faint`, `--link`, bề mặt `--bg/--surface/--surface-2`, ô nhập
+     `--field-bg/--field-border`, tone `red/blue/amber(vàng thật)/green/violet/orange/slate`,
+     `--sidebar-gradient`. Font Plus Jakarta Sans qua npm `@fontsource/plus-jakarta-sans` (không gọi
+     CDN). `tailwind.config.js` map đủ token + `shadow-card/pop/brand`, `bg-sidebar`, `bg-hero`.
+   - Đổi tên hàng loạt biến cũ (`--ocean-*`, `--amber-*` (vốn là xanh dương), `--teal-*`, `--coral-*`,
+     `--ink-900…400`, `--surface-100/200`) sang token mới ở toàn bộ `frontend/src`.
+   - `ui/primitives.tsx` viết lại (Btn 5 biến thể + size `touch`, Badge có `dot`, `FIELD_CLASS` "to trên
+     mobile, gọn trên desktop", StatCard KPI pastel có icon). `Modal` toàn màn hình trên mobile cho MỌI
+     modal. `Table` header không viết hoa. Toast nổi trên bottom nav. `SearchableSelect` cùng kiểu ô
+     nhập. `SlaBadge` mức vàng dùng vàng thật.
+   - Mới: `ui/StatusBadge.tsx` (mỗi trạng thái 1 tone + chấm "đang chờ"), `ui/ImagePicker.tsx` (ô chọn
+     ảnh lớn viền nét đứt, xem trước) thay 6 ô `<input type=file>` mặc định.
+   - Layout: Sidebar gradient xanh lá, nhóm menu theo vai trò (`group`/`short` mới trong
+     `layout/routes.ts`), thu gọn `w-16`/mở `w-64`; TopBar mobile gradient (icon + tên + Cài đặt +
+     Thoát), desktop trắng mờ có avatar chữ cái; BottomNav trắng mờ có capsule; Trang chủ có hero
+     gradient ("Bạn có N việc cần làm" + pill) + lưới KPI icon.
+   - Bảng → thẻ trên mobile cho cả các màn còn tự dựng bảng riêng: `qtri/KtvLienHe`, `LinhKienScreen`,
+     `qtri/KhuVuc` (chuyển sang `<Table>` dùng chung), `qtri/NguoiDung` (bố cục thẻ riêng, tick cờ vai
+     trò dạng lưới 2 cột), `AdminUnifiedTable` (nhánh thẻ mobile riêng, ẩn nút tuỳ chỉnh cột).
+   - Mã ID đồng loạt `font-mono font-semibold text-[var(--link)]`. `PhieuGuiDetailModal`: QR dời sang
+     cột phải cạnh thông tin vận chuyển. `index.html`/`manifest.webmanifest`: theme `#116a34`, nền
+     `#f4f8f5`. Màn đăng nhập/chờ duyệt đổi nền gradient.
+2. **SLA "24h liên tục bỏ qua Chủ nhật"** — `backend/src/lib/sla.ts` viết lại (`sundayOverlapMs`,
+   `slaHoursBetween`, `hoursSince`, `isOverdue`, `slaCutoffVn`); `frontend/src/lib/format.ts`
+   `hoursSince` dùng ĐÚNG thuật toán đó (sửa 1 bên phải sửa cả 2). Truy vấn "quá hạn" ở
+   `routes/traCuu.ts` (lọc + đếm Tổng quan) đổi từ `datetime('now','+7 hours','-24 hours')` sang tham số
+   `slaCutoffVn(24)` tính bằng JS (SQLite không tự bỏ Chủ nhật được).
+3. **QA chức năng chạy thật** — script e2e tạm (gọi HTTP thật vào `wrangler dev`, tự ký session cho các
+   tài khoản ĐƠN vai trò ktv1/kho1/adminbh1/nv1/nv2/ketoan1/gs1/view1 để `la_qtri` không che lỗi phân
+   quyền; đã xoá sau khi chạy) đi hết: KTV tạo phiếu → cổng mã case → gửi xe → Kho tiếp nhận → Admin
+   nội bộ + xác nhận SL (tách 2 đơn vị) → phân loại (chặn thiếu NV / thiếu mail PD) + FAST đổi mới → NV
+   chẩn đoán (NV khác không thấy/không làm hộ) → xác nhận hoàn tất → tự động gộp → chặn thiếu MISA → Kế
+   toán duyệt (Admin không tự duyệt được) → Kho đóng gói/gửi → KTV nhận; nhánh bổ sung thông tin (đổi
+   linh kiện, quay về chờ phân loại) + FAST huỷ không có hàng; phạm vi Giám sát/View, View không ghi
+   được, KTV không vào Tổng quan; workload; ghi lý do chậm độc lập; đơn dịch vụ khách lẻ.
+
+**(c) Lỗi/vấn đề phát hiện + đã sửa:**
+- Tailwind 3.4: class opacity trên màu biến CSS tuỳ ý (`bg-[var(--x)]/40`…) **không sinh CSS** — nhiều
+  hover/viền từ trước tới nay "chết" âm thầm. Đã thay bằng token đặc/rgba, ghi vào `DESIGN_SYSTEM.md`.
+- Token `--amber-*` cũ thực chất là **xanh dương** (từ đợt `linh-kien-app` đổi màu 27/08) → badge SLA
+  mức "vàng" hiển thị xanh dương. Đã sửa bằng vàng thật.
+- 4 biến CSS không được định nghĩa (`--ink-800`, `--teal-50`, `--teal-200`, `--amber-800`) — rơi về
+  màu mặc định. Đã sửa khi đổi tên.
+- Mọi badge trạng thái cùng 1 màu xanh dương → `StatusBadge`.
+- `UnitDetailModal` còn hiện mã linh kiện thô (sót từ P4) → hiện tên.
+- Thanh công cụ (ô tìm + nút) tràn/cắt nút trên mobile ở các màn quản trị → xếp dọc trên mobile.
+- **[Backend, thật]** `POST /phieu-gui/:id/xac-nhan-gui` cho phép gửi **phiếu rỗng** (0 đơn) → Kho nhận
+  thùng trống, khovan cũng được báo thùng trống. Đã chặn bằng lỗi `EMPTY_PHIEU` (+ thông báo tiếng
+  Việt trong `lib/api.ts`).
+- **[Backend, thật]** `POST /phieu-tra/tu-dong-gom` luôn tạo phiếu MỚI, kể cả khi đã có phiếu "Nhập"
+  của đúng KTV + loại đối trừ (VD vừa tạo bởi nút FAST) → 1 KTV bị tách thành 2 phiếu trả, trái quyết
+  định 03/09/2026. Đã sửa: gộp vào phiếu nháp sẵn có trước, chỉ tạo mới khi chưa có; response thêm
+  `so_phieu_gop_them`, toast màn Admin báo cả số phiếu gộp thêm.
+- Phát sinh trong lúc test (không phải lỗi code): dữ liệu seed tay ở local D1 chèn ID mà không tăng
+  `id_counters` → lần tạo phiếu đầu bị trùng khoá chính. Chỉ là dữ liệu test, đã nâng bộ đếm local.
+
+**(d) Kiểm thử đã chạy:** `npm run typecheck` (backend + frontend) 0 lỗi sau mỗi bước; `npm run build`
+sạch. Thuật toán SLA đối chiếu brute-force (300 ca ngẫu nhiên + ca biên) và `slaCutoffVn` nhất quán
+với `hoursSince` (2000 ca) — đều khớp. E2E HTTP: **51/51 đạt** sau khi sửa 2 lỗi backend (trước sửa
+46/51 — 3 lỗi dây chuyền từ lỗi phiếu rỗng). Quét 18/18 màn hình trên trình duyệt thật: mở được đủ, 0
+lỗi console. Rà giao diện bằng mắt ở 1440px và 375px cho Trang chủ, bảng thống nhất Admin + UI chi
+tiết, KTV tạo phiếu/thêm đơn, Kho tiếp nhận, phiếu trả, Tổng quan, các màn quản trị, danh mục linh
+kiện. `wrangler.jsonc` bị sửa tạm để chạy local (bỏ binding remote tới dvbh/khovan/D1 production —
+phiên này đang đăng nhập đúng tài khoản thật `dichvu3t` nên chạy local nguyên trạng sẽ chạm production)
+và **đã khôi phục**, `git diff wrangler.jsonc` sạch. Chưa kiểm được: nhánh "case tìm thấy + khớp KTV"
+(không có `dvbh` thật ở local).
+
+**Trạng thái:** `APP_VERSION` = `1.007`. Khi deploy: không có migration mới.
+
+**Quy ước mới (04/10/2026, cùng phiên)** — nguyên văn: *"tự động commit rồi deploy sau mỗi phiên làm
+việc"*. Từ nay, cuối MỖI phiên làm việc (khi thay đổi đã xong + typecheck/build sạch), tự động: tăng
+`APP_VERSION` 0.001 → cập nhật CLAUDE.md → `git commit` → áp migration remote còn pending → `npm run
+deploy` (luôn ép `CLOUDFLARE_ACCOUNT_ID=b1f870d7f2df6701219ac095926a67e5`), **không cần hỏi lại**.
+Vẫn giữ thứ tự commit TRƯỚC deploy. Vẫn dừng lại hỏi nếu kiểm thử thất bại hoặc thay đổi có tính phá
+huỷ. Phiên này áp dụng ngay: đã commit + deploy v1.007.
 
 ## Đối chiếu bản góp ý Gemini (`implementation_plan.md`, 22/08/2026) — đã áp dụng phần lớn, sửa 2 điểm
 

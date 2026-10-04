@@ -79,7 +79,7 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
       }
     >
       <div className="space-y-4">
-        <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-700)] text-xs font-bold px-3 py-2">
+        <p className="rounded-lg bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-bold px-3 py-2">
           Áp dụng cùng 1 lựa chọn cho toàn bộ {unitIds.length} đơn vị đã chọn. Đơn vị nào đang quá hạn SLA hoặc sai trạng thái sẽ báo lỗi riêng, không chặn các đơn còn lại.
         </p>
         <Field label="Lý do chậm (nếu có đơn quá hạn SLA)">

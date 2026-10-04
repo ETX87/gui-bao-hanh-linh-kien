@@ -46,6 +46,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
   NOT_FOUND: "Không tìm thấy dữ liệu.",
   NOT_DRAFT: "Chỉ thực hiện được khi phiếu còn ở trạng thái Nháp.",
+  EMPTY_PHIEU: "Phiếu chưa có đơn bảo hành nào — thêm ít nhất 1 đơn trước khi xác nhận gửi.",
   HAS_CHILDREN: "Phiếu đang có đơn bên trong, không xoá được.",
   WRONG_STATE: "Trạng thái hiện tại không cho phép thao tác này.",
   MISSING_MO_TA_LOI: "Vui lòng nhập mô tả lỗi.",

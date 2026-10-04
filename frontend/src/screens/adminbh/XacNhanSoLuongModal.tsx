@@ -45,7 +45,7 @@ export function XacNhanSoLuongModal({ parent, onClose, onDone }: { parent: DonCh
       }
     >
       <div className="space-y-4">
-        <p className="text-sm text-[var(--ink-600)]">
+        <p className="text-sm text-[var(--ink-soft)]">
           KTV khai <b>{parent.so_luong_khai}</b> — {parent.mo_ta_loi}
         </p>
         <Field label="Số lượng thực nhận" required>

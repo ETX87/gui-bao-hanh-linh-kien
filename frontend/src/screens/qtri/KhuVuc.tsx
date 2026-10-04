@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Table, StopClick } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Card, Btn, Badge, Spinner, Field, Input } from "../../ui/primitives";
@@ -26,45 +27,33 @@ export function QtriKhuVucScreen() {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">🗺️ Giám sát khu vực ({rows.length})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗺️ Giám sát khu vực ({rows.length})</h3>
       </div>
-      <p className="text-xs text-[var(--ink-500)] mb-3">
+      <p className="text-xs text-[var(--ink-soft)] mb-3">
         Danh sách Khu vực lấy từ mã khu vực đã có sẵn trên từng KTV (đồng bộ từ hệ Đặt mua linh kiện). Gán "Giám sát phụ trách" cho 1 Khu vực để tài khoản đó (vai trò{" "}
         <b>Giám sát</b>) thấy được đúng KTV/đơn bảo hành thuộc khu vực mình, và "tạo hộ đơn" được cho đúng KTV trong khu vực.
       </p>
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-sm whitespace-nowrap">
-          <thead>
-            <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Mã khu vực</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Tên</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Số KTV</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Giám sát phụ trách</th>
-              <th className="px-3 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-[var(--ink-400)]">
-                  Chưa có KTV nào có mã khu vực — chưa có gì để gán.
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.ma} className="border-b border-[var(--line)] last:border-0 clickable-row cursor-pointer hover:bg-[var(--surface-100)]" onClick={() => setEditing(r)}>
-                <td className="px-3 py-2 font-mono text-xs">{r.ma}</td>
-                <td className="px-3 py-2 font-medium text-[var(--ink-900)]">{r.ten || <span className="text-[var(--ink-400)]">Chưa đặt tên</span>}</td>
-                <td className="px-3 py-2">{r.so_ktv}</td>
-                <td className="px-3 py-2">{r.gs_email ? <span className="text-xs">{r.gs_email}</span> : <Badge tone="orange">Chưa gán</Badge>}</td>
-                <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                  <Btn onClick={() => setEditing(r)}>Gán Giám sát</Btn>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table
+        rows={rows}
+        rowKey={(r) => r.ma}
+        onRowClick={(r) => setEditing(r)}
+        emptyText="Chưa có KTV nào có mã khu vực — chưa có gì để gán."
+        columns={[
+          { key: "ten", header: "Khu vực", render: (r) => <span className="font-semibold text-[var(--ink)]">{r.ten || r.ma}</span> },
+          { key: "ma", header: "Mã", render: (r) => <span className="font-mono text-xs">{r.ma}</span> },
+          { key: "so", header: "Số KTV", render: (r) => r.so_ktv },
+          { key: "gs", header: "Giám sát phụ trách", render: (r) => (r.gs_email ? <span className="text-xs">{r.gs_email}</span> : <Badge tone="orange">Chưa gán</Badge>) },
+          {
+            key: "act",
+            header: "",
+            render: (r) => (
+              <StopClick>
+                <Btn size="sm" onClick={() => setEditing(r)}>Gán Giám sát</Btn>
+              </StopClick>
+            ),
+          },
+        ]}
+      />
       {editing && <GanGsModal khuVuc={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}
     </Card>
   );
@@ -116,7 +105,7 @@ function GanGsModal({ khuVuc, onClose, onDone }: { khuVuc: KhuVucQuanSat; onClos
           {gsList === null ? (
             <Spinner />
           ) : gsList.length === 0 ? (
-            <p className="text-xs text-[var(--coral-600)]">Chưa có tài khoản nào mang vai trò Giám sát — gán vai trò ở màn "Người dùng" trước.</p>
+            <p className="text-xs text-[var(--red-600)]">Chưa có tài khoản nào mang vai trò Giám sát — gán vai trò ở màn "Người dùng" trước.</p>
           ) : (
             <SearchableSelect
               placeholder="— Không gán ai —"

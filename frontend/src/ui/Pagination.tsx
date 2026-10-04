@@ -5,7 +5,7 @@ import { Btn } from "./primitives";
 export function Pagination({ page, pageCount, total, onChange }: { page: number; pageCount: number; total: number; onChange: (p: number) => void }) {
   if (pageCount <= 1) return null;
   return (
-    <div className="flex items-center justify-between mt-3 text-xs text-[var(--ink-600)]">
+    <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-sm lg:text-xs text-[var(--ink-soft)]">
       <span>
         Trang {page + 1}/{pageCount} — {total} dòng
       </span>

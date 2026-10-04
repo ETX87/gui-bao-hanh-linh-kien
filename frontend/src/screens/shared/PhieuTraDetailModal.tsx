@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { fileToDataUrl } from "../../lib/format";
@@ -91,7 +92,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
       title={`Phiếu trả bảo hành ${t.id}`}
       onClose={onClose}
       full
-      headerActions={<Badge tone="blue">{TRANG_THAI_PHIEU_TRA_LABELS[t.trang_thai] || t.trang_thai}</Badge>}
+      headerActions={<StatusBadge kind="tra" value={t.trang_thai} />}
       footerActions={
         <>
           {user.la_admin_bh && t.trang_thai === "nhap" && (
@@ -116,7 +117,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
           )}
           {user.la_kho && t.trang_thai === "da_duyet_ke_toan" && (
             <>
-              <label className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-white text-[var(--ink-700)] border border-[var(--line)] hover:bg-[var(--surface-100)] cursor-pointer">
+              <label className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-white text-[var(--ink-body)] border border-[var(--line)] hover:bg-[var(--surface-2)] cursor-pointer">
                 📦 Đóng gói (ảnh tuỳ chọn)
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => dongGoi(e.target.files)} />
               </label>
@@ -145,7 +146,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
     >
       <div className="space-y-6">
         {showTuChoi && (
-          <div className="rounded-lg border border-[var(--coral-400)] bg-[var(--coral-100)] p-3 space-y-2">
+          <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
             <Field label="Lý do từ chối" required>
               <Textarea rows={2} value={lyDoTuChoi} onChange={(e) => setLyDoTuChoi(e.target.value)} />
             </Field>
@@ -158,7 +159,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
           </div>
         )}
         {showKhieuNai && (
-          <div className="rounded-lg border border-[var(--coral-400)] bg-[var(--coral-100)] p-3 space-y-2">
+          <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
             <Field label="Nội dung khiếu nại" required>
               <Textarea rows={2} value={khieuNai} onChange={(e) => setKhieuNai(e.target.value)} placeholder="Mô tả sự cố không nhận được hàng..." />
             </Field>
@@ -208,7 +209,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
 
         {data.anh.length > 0 && (
           <div className="border-t border-[var(--line)] pt-4">
-            <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">Ảnh biên bản đóng gói</p>
+            <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Ảnh biên bản đóng gói</p>
             <div className="flex flex-wrap gap-2">
               {data.anh.map((a) => (
                 <img key={a.id} src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)]" />
@@ -218,19 +219,19 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
         )}
 
         <div className="border-t border-[var(--line)] pt-4">
-          <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">Đơn vị trong phiếu ({data.don_vi.length})</p>
+          <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Đơn vị trong phiếu ({data.don_vi.length})</p>
           <div className="space-y-1.5">
             {data.don_vi.map((u) => (
               <div key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
-                <span className="font-mono text-xs">{u.id}</span>
-                <span className="text-[var(--ink-900)]">{nameOf(u.ma_lk_thuc_te || u.ma_lk)}</span>
+                <span className="font-mono text-xs font-semibold text-[var(--link)]">{u.id}</span>
+                <span className="text-[var(--ink)]">{nameOf(u.ma_lk_thuc_te || u.ma_lk)}</span>
                 {u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
                 {user.la_admin_bh && t.trang_thai === "nhap" && (
                   <Btn variant="danger" onClick={() => tachDonVi(u.id)} disabled={busy} className="ml-auto">
                     Tách khỏi phiếu
                   </Btn>
                 )}
-                {u.mo_ta_loi && <span className="w-full text-xs text-[var(--ink-500)] truncate">{u.mo_ta_loi}</span>}
+                {u.mo_ta_loi && <span className="w-full text-xs text-[var(--ink-soft)] truncate">{u.mo_ta_loi}</span>}
               </div>
             ))}
           </div>

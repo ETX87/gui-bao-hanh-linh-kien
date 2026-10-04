@@ -36,7 +36,7 @@ export function PickKtvModal({ onClose, onPick }: { onClose: () => void; onPick:
         {list === null ? (
           <Spinner />
         ) : list.length === 0 ? (
-          <p className="text-xs text-[var(--coral-600)]">
+          <p className="text-xs text-[var(--red-600)]">
             Không có KTV nào trong danh bạ (khu vực của bạn có thể chưa có ai, hoặc chưa đồng bộ) — báo Admin hệ thống bổ sung ở màn "Danh sách KTV".
           </p>
         ) : (

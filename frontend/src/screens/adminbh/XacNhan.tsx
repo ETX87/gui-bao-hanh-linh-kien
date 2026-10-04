@@ -21,7 +21,7 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
   if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<DonVi>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
     { key: "nv", header: "NV phụ trách", render: (r) => r.nguoi_sua_chua || "—" },
     { key: "kq", header: "Kết quả chẩn đoán", render: (r) => (r.ket_qua_chan_doan ? KET_QUA_CHAN_DOAN_LABELS[r.ket_qua_chan_doan] || r.ket_qua_chan_doan : "—") },
@@ -30,7 +30,7 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">✔️ Chờ Admin BH xác nhận hoàn tất ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">✔️ Chờ Admin BH xác nhận hoàn tất ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có đơn nào chờ xác nhận." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

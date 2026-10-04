@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -28,6 +29,7 @@ const ROLE_FLAGS: Array<{ flag: keyof AppUser; label: string }> = [
 type PendingFlags = Record<string, Partial<Record<keyof AppUser, boolean>>>;
 
 export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) {
+  const isMobile = useIsMobile();
   const toast = useToast();
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
@@ -114,9 +116,9 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">👥 Người dùng ({total})</h3>
-        <div className="flex items-center gap-2">
-          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo email / tên…" className="!py-1.5 !w-56" />
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">👥 Người dùng ({total})</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo email / tên…" className="sm:!w-56" />
           <Btn variant="primary" onClick={() => setAddOpen(true)}>
             + Thêm người dùng
           </Btn>
@@ -124,8 +126,8 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
       </div>
 
       {pendingCount > 0 && (
-        <div className="flex items-center justify-between gap-3 mb-3 rounded-lg border border-[var(--ocean-400)] bg-[var(--ocean-100)]/50 px-3 py-2">
-          <span className="text-sm text-[var(--ink-800)]">
+        <div className="flex items-center justify-between gap-3 mb-3 rounded-lg border border-[var(--brand-400)] bg-[var(--accent-soft)] px-3 py-2">
+          <span className="text-sm text-[var(--ink-body)]">
             <b>{pendingCount}</b> thay đổi vai trò chưa lưu
           </span>
           <div className="flex gap-2">
@@ -139,70 +141,123 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-        <table className="w-full text-sm whitespace-nowrap">
-          <thead>
-            <tr className="bg-[var(--surface-100)] border-b border-[var(--line)]">
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Người dùng</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Duyệt</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">Khoá</th>
-              {ROLE_FLAGS.map((r) => (
-                <th key={r.flag} className="text-center px-2 py-2.5 text-xs font-semibold uppercase text-[var(--ink-600)]">
-                  {r.label}
-                </th>
-              ))}
-              <th className="px-3 py-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => {
-              const rowDirty = !!pending[u.email] && Object.keys(pending[u.email]).length > 0;
-              return (
-                <tr key={u.email} className={`border-b border-[var(--line)] last:border-0 ${rowDirty ? "bg-[var(--ocean-100)]/30" : ""}`}>
-                  <td className="px-3 py-2">
-                    <p className="font-medium text-[var(--ink-900)]">
+      {isMobile ? (
+        // Mobile (DESIGN_SYSTEM.md §6.5): ma tran 12 cot checkbox -> moi nguoi dung 1 the, co vai tro
+        // xep luoi 2 cot (o cham lon), dung chung handler voi bang desktop (gom thay doi -> Luu 1 lan).
+        <div className="space-y-2.5">
+          {users.map((u) => {
+            const rowDirty = !!pending[u.email] && Object.keys(pending[u.email]).length > 0;
+            return (
+              <div key={u.email} className={`rounded-xl border p-3.5 shadow-card ${rowDirty ? "border-[var(--brand-300)] bg-[var(--accent-soft)]" : "border-[var(--line)] bg-[var(--surface)]"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[var(--ink)] truncate">
                       {u.ten || "—"}
-                      {u.email === currentEmail && <span className="ml-1.5 text-[10px] text-[var(--ink-400)]">(bạn)</span>}
+                      {u.email === currentEmail && <span className="ml-1.5 text-xs text-[var(--ink-faint)]">(bạn)</span>}
                     </p>
-                    <p className="text-xs text-[var(--ink-500)] font-mono">{u.email}</p>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs">
-                      <option value="Cho duyet">Chờ duyệt</option>
-                      <option value="Da duyet">Đã duyệt</option>
-                      <option value="Tu choi">Từ chối</option>
-                    </Select>
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {u.email === currentEmail ? (
-                      <Badge tone="gray">—</Badge>
-                    ) : (
-                      <input type="checkbox" checked={u.bi_khoa} onChange={(e) => toggleKhoa(u.email, e.target.checked)} />
-                    )}
-                  </td>
+                    <p className="text-xs text-[var(--ink-soft)] font-mono truncate">{u.email}</p>
+                  </div>
+                  {u.email !== currentEmail && (
+                    <Btn variant="ghost" size="sm" onClick={() => xoa(u.email)} className="!text-[var(--red-600)] hover:!bg-[var(--red-50)] shrink-0">
+                      ✕ Xoá
+                    </Btn>
+                  )}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)}>
+                    <option value="Cho duyet">Chờ duyệt</option>
+                    <option value="Da duyet">Đã duyệt</option>
+                    <option value="Tu choi">Từ chối</option>
+                  </Select>
+                  <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 text-sm">
+                    <input type="checkbox" className="w-5 h-5" disabled={u.email === currentEmail} checked={u.bi_khoa} onChange={(e) => toggleKhoa(u.email, e.target.checked)} />
+                    Khoá tài khoản
+                  </label>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {ROLE_FLAGS.map((r) => (
-                    <td key={r.flag} className="px-2 py-2 text-center">
+                    <label key={r.flag} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-sm text-[var(--ink-body)]">
                       <input
                         type="checkbox"
+                        className="w-5 h-5"
                         checked={effFlag(u.email, r.flag, u)}
                         disabled={u.email === currentEmail && r.flag === "la_qtri"}
                         onChange={() => toggleFlag(u.email, r.flag, u)}
                       />
-                    </td>
+                      <span className="truncate">{r.label}</span>
+                    </label>
                   ))}
-                  <td className="px-3 py-2 text-right">
-                    {u.email !== currentEmail && (
-                      <Btn variant="ghost" onClick={() => xoa(u.email)} className="!text-[var(--coral-600)] !px-2">
-                        Xoá
-                      </Btn>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+          <table className="w-full text-sm whitespace-nowrap">
+            <thead>
+              <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Người dùng</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Duyệt</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Khoá</th>
+                {ROLE_FLAGS.map((r) => (
+                  <th key={r.flag} className="text-center px-2 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">
+                    {r.label}
+                  </th>
+                ))}
+                <th className="px-3 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const rowDirty = !!pending[u.email] && Object.keys(pending[u.email]).length > 0;
+                return (
+                  <tr key={u.email} className={`border-b border-[var(--line)] last:border-0 ${rowDirty ? "bg-[var(--accent-soft)]" : ""}`}>
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-[var(--ink)]">
+                        {u.ten || "—"}
+                        {u.email === currentEmail && <span className="ml-1.5 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
+                      </p>
+                      <p className="text-xs text-[var(--ink-soft)] font-mono">{u.email}</p>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs">
+                        <option value="Cho duyet">Chờ duyệt</option>
+                        <option value="Da duyet">Đã duyệt</option>
+                        <option value="Tu choi">Từ chối</option>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {u.email === currentEmail ? (
+                        <Badge tone="gray">—</Badge>
+                      ) : (
+                        <input type="checkbox" checked={u.bi_khoa} onChange={(e) => toggleKhoa(u.email, e.target.checked)} />
+                      )}
+                    </td>
+                    {ROLE_FLAGS.map((r) => (
+                      <td key={r.flag} className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={effFlag(u.email, r.flag, u)}
+                          disabled={u.email === currentEmail && r.flag === "la_qtri"}
+                          onChange={() => toggleFlag(u.email, r.flag, u)}
+                        />
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right">
+                      {u.email !== currentEmail && (
+                        <Btn variant="ghost" onClick={() => xoa(u.email)} className="!text-[var(--red-600)] !px-2">
+                          Xoá
+                        </Btn>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); reload(); }} />}
     </Card>

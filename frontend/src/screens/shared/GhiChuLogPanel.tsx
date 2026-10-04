@@ -35,13 +35,13 @@ export function GhiChuLogPanel({ guiId }: { guiId: string }) {
 
   return (
     <div>
-      <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">💬 Trao đổi / Phản hồi ({logs.length})</p>
+      <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">💬 Trao đổi / Phản hồi ({logs.length})</p>
       <div className="max-h-56 overflow-y-auto space-y-2 mb-3 scrollbar-thin">
-        {logs.length === 0 && <p className="text-xs text-[var(--ink-400)]">Chưa có trao đổi nào.</p>}
+        {logs.length === 0 && <p className="text-xs text-[var(--ink-faint)]">Chưa có trao đổi nào.</p>}
         {logs.map((l) => (
-          <div key={l.id} className={`text-xs rounded-lg px-3 py-2 ${l.noi_dung.startsWith("⚠") ? "bg-[var(--coral-100)] text-[var(--coral-700)]" : "bg-[var(--surface-100)] text-[var(--ink-700)]"}`}>
+          <div key={l.id} className={`text-xs rounded-lg px-3 py-2 ${l.noi_dung.startsWith("⚠") ? "bg-[var(--red-100)] text-[var(--red-700)]" : "bg-[var(--surface-2)] text-[var(--ink-body)]"}`}>
             <p className="whitespace-pre-wrap">{l.noi_dung}</p>
-            <p className="mt-1 text-[10px] text-[var(--ink-400)] font-mono">
+            <p className="mt-1 text-[10px] text-[var(--ink-faint)] font-mono">
               {l.tac_gia} · {fmtDate(l.thoi_gian)}
             </p>
           </div>

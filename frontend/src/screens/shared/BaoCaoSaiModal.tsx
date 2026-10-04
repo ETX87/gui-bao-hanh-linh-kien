@@ -44,13 +44,13 @@ export function BaoCaoSaiModal({ parentId, onClose, onDone }: { parentId: string
 
   return (
     <Modal title="🐞 KTV báo cáo sai thông tin" onClose={onClose} maxWidthClass="max-w-md">
-      <p className="text-xs text-[var(--ink-500)] mb-3">Ghi nhận nội bộ, chỉ vai trò giám sát đọc được — có thể dùng để xử lý vi phạm báo cáo sau này.</p>
+      <p className="text-xs text-[var(--ink-soft)] mb-3">Ghi nhận nội bộ, chỉ vai trò giám sát đọc được — có thể dùng để xử lý vi phạm báo cáo sau này.</p>
       <div className="max-h-48 overflow-y-auto space-y-2 mb-3 scrollbar-thin">
-        {rows.length === 0 && <p className="text-xs text-[var(--ink-400)]">Chưa có ghi nhận nào.</p>}
+        {rows.length === 0 && <p className="text-xs text-[var(--ink-faint)]">Chưa có ghi nhận nào.</p>}
         {rows.map((r) => (
-          <div key={r.id} className="text-xs bg-[var(--surface-100)] rounded-lg px-3 py-2">
+          <div key={r.id} className="text-xs bg-[var(--surface-2)] rounded-lg px-3 py-2">
             <p className="whitespace-pre-wrap">{r.noi_dung}</p>
-            <p className="mt-1 text-[10px] text-[var(--ink-400)] font-mono">
+            <p className="mt-1 text-[10px] text-[var(--ink-faint)] font-mono">
               {r.tac_gia} · {fmtDate(r.thoi_gian)}
             </p>
           </div>

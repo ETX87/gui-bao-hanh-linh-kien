@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
@@ -26,8 +27,8 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
   return createPortal(
     <div className="fixed inset-0 z-[160] bg-[var(--surface)] flex flex-col" style={{ height: "100dvh" }}>
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--line)] shrink-0">
-        <h3 className="font-display font-bold text-base text-[var(--ink-900)] flex-1">Thêm đơn bảo hành</h3>
-        <button onClick={onClose} className="focus-ring w-9 h-9 rounded-lg flex items-center justify-center text-[var(--ink-500)] hover:bg-[var(--surface-100)]">
+        <h3 className="font-bold text-base text-[var(--ink)] flex-1">Thêm đơn bảo hành</h3>
+        <button onClick={onClose} className="focus-ring w-9 h-9 rounded-lg flex items-center justify-center text-[var(--ink-soft)] hover:bg-[var(--surface-2)]">
           ✕
         </button>
       </div>
@@ -45,7 +46,7 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
             <button
               type="button"
               onClick={() => stepSoLuong(-1)}
-              className="focus-ring w-11 h-11 shrink-0 rounded-lg border border-[var(--line)] bg-white text-lg font-bold text-[var(--ink-700)] flex items-center justify-center"
+              className="focus-ring w-11 h-11 shrink-0 rounded-lg border border-[var(--line)] bg-white text-lg font-bold text-[var(--ink-body)] flex items-center justify-center"
             >
               −
             </button>
@@ -53,7 +54,7 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
             <button
               type="button"
               onClick={() => stepSoLuong(1)}
-              className="focus-ring w-11 h-11 shrink-0 rounded-lg border border-[var(--line)] bg-white text-lg font-bold text-[var(--ink-700)] flex items-center justify-center"
+              className="focus-ring w-11 h-11 shrink-0 rounded-lg border border-[var(--line)] bg-white text-lg font-bold text-[var(--ink-body)] flex items-center justify-center"
             >
               +
             </button>
@@ -72,7 +73,7 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
           </Select>
         </Field>
         <Field label="Ảnh linh kiện lỗi (tuỳ chọn)">
-          <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => f.setAnhFiles(e.target.files)} className="text-sm" />
+          <ImagePicker onChange={f.setAnhFiles} />
         </Field>
       </div>
 

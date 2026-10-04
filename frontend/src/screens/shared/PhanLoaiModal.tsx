@@ -84,9 +84,9 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
 
         {loaiBaoHanh === "ngoai_bh" && (
-          <p className="rounded-lg bg-[var(--coral-100)] text-[var(--coral-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>
+          <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>
         )}
-        {unit.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-500)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[unit.loai_doi_tru_de_xuat]}</b></p>}
+        {unit.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-soft)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[unit.loai_doi_tru_de_xuat]}</b></p>}
         {unit.case_id && <CaseLookupPreviewCard caseId={unit.case_id} maLk={maLkThucTe || unit.ma_lk || ""} linhKien={linhKien} />}
 
         <SectionLabel>Phân loại bảo hành</SectionLabel>

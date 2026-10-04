@@ -50,7 +50,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
       }
     >
       <div className="space-y-4">
-        <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-700)] text-xs font-bold px-3 py-2">Admin bảo hành yêu cầu bổ sung: {lyDoLabel}{lyDoRaw.includes(":") ? ` — ${lyDoRaw.split(":").slice(1).join(":").trim()}` : ""}</p>
+        <p className="rounded-lg bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-bold px-3 py-2">Admin bảo hành yêu cầu bổ sung: {lyDoLabel}{lyDoRaw.includes(":") ? ` — ${lyDoRaw.split(":").slice(1).join(":").trim()}` : ""}</p>
         <Field label="Linh kiện lỗi">
           <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
         </Field>

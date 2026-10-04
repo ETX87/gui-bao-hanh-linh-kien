@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
@@ -80,8 +81,9 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     if (!confirm("Tự động gộp phiếu trả cho TẤT CẢ nhân viên đang có đơn sẵn sàng? Mỗi phiếu vẫn cần Admin BH bổ sung mã và gửi duyệt Kế toán như bình thường.")) return;
     setBusy(true);
     try {
-      const r = await api.post<{ so_phieu_tao: number }>("/phieu-tra/tu-dong-gom");
-      toast(`Đã tạo ${r.so_phieu_tao} phiếu trả.`, "ok");
+      const r = await api.post<{ so_phieu_tao: number; so_phieu_gop_them?: number }>("/phieu-tra/tu-dong-gom");
+      const gop = r.so_phieu_gop_them || 0;
+      toast(`Đã tạo ${r.so_phieu_tao} phiếu trả mới${gop ? `, gộp thêm vào ${gop} phiếu nháp sẵn có` : ""}.`, "ok");
       afterChange();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -93,8 +95,8 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   if (loadingSanSang && loadingList && sanSang.length === 0 && list.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-    { key: "st", header: "Trạng thái", render: (r) => <Badge tone="blue">{TRANG_THAI_PHIEU_TRA_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
+    { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="tra" value={r.trang_thai} /> },
     {
       key: "ktv",
       header: "KTV nhận",
@@ -116,7 +118,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     <div className="space-y-6">
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-display font-bold text-sm text-[var(--ink-900)]">Đơn vị sẵn sàng gộp phiếu trả ({sanSang.length})</h3>
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">Đơn vị sẵn sàng gộp phiếu trả ({sanSang.length})</h3>
           {sanSang.length > 0 && (
             <Btn variant="primary" disabled={busy} onClick={autoGom}>
               ⚡ Tự động gộp phiếu trả cho tất cả nhân viên
@@ -132,7 +134,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
               return (
                 <div key={key} className="rounded-lg border border-[var(--line)] p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-[var(--ink-900)]">
+                    <p className="text-sm font-semibold text-[var(--ink)]">
                       {ktvKey === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : ktvKey} · <Badge tone="gray">{LOAI_DOI_TRU_LABELS[loai]}</Badge>
                     </p>
                     <div className="flex items-center gap-2">
@@ -154,7 +156,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {units.map((u) => (
-                      <label key={u.id} className="flex items-center gap-1.5 text-xs font-mono bg-[var(--surface-100)] rounded-lg px-2 py-1 cursor-pointer">
+                      <label key={u.id} className="flex items-center gap-1.5 text-xs font-mono bg-[var(--surface-2)] rounded-lg px-2 py-1 cursor-pointer">
                         <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
                         {u.id}
                       </label>
@@ -168,7 +170,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">Danh sách phiếu trả ({listTotal})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Danh sách phiếu trả ({listTotal})</h3>
         <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Chưa có phiếu trả nào." />
         <Pagination page={listPage} pageCount={listPageCount} total={listTotal} onChange={setListPage} />
       </Card>

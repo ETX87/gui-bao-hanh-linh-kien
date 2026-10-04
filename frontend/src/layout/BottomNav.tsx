@@ -26,21 +26,21 @@ export function BottomNav({ user }: { user: AppUser }) {
   const overflow = needsMore ? items.slice(MAX_TABS - 1) : [];
   const overflowActive = overflow.some((it) => it.hash === path);
 
+  // DESIGN_SYSTEM.md §4: nen trang mo + "vien nang" accent-soft sau icon cho muc dang chon.
   const tabClass = (active: boolean) =>
-    `focus-ring flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-lg text-[10px] font-bold ${
-      active ? "text-[var(--sidebar-ink)] bg-[var(--sidebar-highlight)]" : "text-[var(--sidebar-ink-dim)]"
-    }`;
+    `focus-ring flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] ${active ? "font-bold text-[var(--accent)]" : "font-medium text-[var(--ink-soft)]"}`;
+  const capsule = (active: boolean) => `relative flex h-8 w-14 max-w-full items-center justify-center rounded-full text-xl leading-none transition-colors ${active ? "bg-[var(--accent-soft)]" : ""}`;
 
   const renderItem = (it: (typeof items)[number]) => {
     const active = path === it.hash;
     const showDot = it.hash === "/home" && totalCount > 0;
     const content = (
       <>
-        <span className="relative text-lg leading-none">
+        <span className={capsule(active)}>
           {it.icon}
-          {showDot && <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[var(--coral-500)] border border-[var(--sidebar-to)]" />}
+          {showDot && <span className="absolute top-0 right-2.5 w-2.5 h-2.5 rounded-full bg-[var(--red-500)] ring-2 ring-white" />}
         </span>
-        <span className="max-w-full truncate">{it.label}</span>
+        <span className="max-w-full truncate">{it.short || it.label}</span>
       </>
     );
     if (it.href) {
@@ -60,16 +60,16 @@ export function BottomNav({ user }: { user: AppUser }) {
   return (
     <>
       <nav
-        className="md:hidden fixed left-0 right-0 bottom-0 z-[60] flex bg-gradient-to-b from-[var(--sidebar-from)] to-[var(--sidebar-to)] shadow-[0_-3px_12px_rgba(5,32,51,0.28)]"
+        className="md:hidden fixed left-0 right-0 bottom-0 z-[60] flex h-[4.5rem] border-t border-[var(--line)] bg-white/95 backdrop-blur shadow-[0_-4px_16px_rgba(15,23,42,0.06)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {primary.map(renderItem)}
         {needsMore && (
           <button onClick={() => setMoreOpen(true)} className={tabClass(overflowActive)}>
-            <span className="relative text-lg leading-none">
+            <span className={capsule(overflowActive)}>
               ☰
               {overflow.some((it) => it.workloadKey && counts[it.workloadKey] > 0) && (
-                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[var(--coral-500)] border border-[var(--sidebar-to)]" />
+                <span className="absolute top-0 right-2.5 w-2.5 h-2.5 rounded-full bg-[var(--red-500)] ring-2 ring-white" />
               )}
             </span>
             <span className="max-w-full truncate">Thêm</span>
@@ -81,12 +81,12 @@ export function BottomNav({ user }: { user: AppUser }) {
         createPortal(
           <div className="md:hidden fixed inset-0 z-[120] flex flex-col justify-end bg-black/40" onClick={() => setMoreOpen(false)}>
             <div
-              className="anim-in bg-[var(--surface)] rounded-t-2xl max-h-[75vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+              className="anim-in bg-[var(--surface)] rounded-t-2xl max-h-[75vh] shadow-pop overflow-y-auto pb-[env(safe-area-inset-bottom)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
-                <span className="font-display font-bold text-sm text-[var(--ink-900)]">Menu</span>
-                <button onClick={() => setMoreOpen(false)} className="focus-ring w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ink-500)] hover:bg-[var(--surface-100)]">
+                <span className="font-bold text-base text-[var(--ink)]">Menu</span>
+                <button onClick={() => setMoreOpen(false)} className="focus-ring w-10 h-10 rounded-lg flex items-center justify-center text-[var(--ink-soft)] hover:bg-[var(--surface-2)]">
                   ✕
                 </button>
               </div>
@@ -94,15 +94,15 @@ export function BottomNav({ user }: { user: AppUser }) {
                 {overflow.map((it) => {
                   const active = path === it.hash;
                   const count = it.workloadKey ? counts[it.workloadKey] : 0;
-                  const cls = `w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium ${
-                    active ? "bg-[var(--sidebar-highlight)] text-[var(--ocean-800)]" : "text-[var(--ink-700)] hover:bg-[var(--surface-100)]"
+                  const cls = `w-full flex items-center gap-3 px-3 py-3.5 rounded-lg text-base font-medium ${
+                    active ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-body)] hover:bg-[var(--surface-2)]"
                   }`;
                   const body = (
                     <>
                       <span className="text-lg leading-none shrink-0">{it.icon}</span>
                       <span className="flex-1 text-left">{it.label}</span>
                       {count > 0 && (
-                        <span className="shrink-0 min-w-[20px] h-5 px-1 rounded-full bg-[var(--coral-600)] text-white text-[10px] font-bold flex items-center justify-center">
+                        <span className="shrink-0 min-w-[20px] h-5 px-1 rounded-full bg-[var(--red-600)] text-white text-[10px] font-bold flex items-center justify-center">
                           {count > 99 ? "99+" : count}
                         </span>
                       )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ImagePicker } from "../../ui/ImagePicker";
 import { api, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
@@ -71,13 +72,13 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         </Field>
         <div className="grid grid-cols-3 gap-3">
           <Field label="Ảnh trước sửa">
-            <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => setAnhTruoc(e.target.files)} className="text-xs" />
+            <ImagePicker compact onChange={setAnhTruoc} />
           </Field>
           <Field label="Ảnh sau sửa">
-            <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => setAnhSau(e.target.files)} className="text-xs" />
+            <ImagePicker compact onChange={setAnhSau} />
           </Field>
           <Field label="Ảnh lỗi thực tế">
-            <input type="file" accept="image/*" multiple capture="environment" onChange={(e) => setAnhLoi(e.target.files)} className="text-xs" />
+            <ImagePicker compact onChange={setAnhLoi} />
           </Field>
         </div>
       </div>

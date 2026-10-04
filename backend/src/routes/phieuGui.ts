@@ -184,6 +184,10 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
   if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
+  // QA 04/10/2026: chan gui thung RONG (truoc day cho qua -> Kho nhan 1 thung trong, khovan cung bi
+  // bao 1 thung trong). Frontend da an nut khi 0 don, day la chot chan o backend.
+  const donCount = await c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh WHERE phieu_gui_id = ?").bind(id).first<{ cnt: number }>();
+  if ((donCount?.cnt ?? 0) === 0) return c.json({ error: "EMPTY_PHIEU" }, 400);
   const body = await c.req.json<{ ngay_gui_xe?: string }>().catch(() => ({}) as { ngay_gui_xe?: string });
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_gui', ngay_gui_xe = ?, updated_at = ? WHERE id = ?")
     .bind(body.ngay_gui_xe || nowVN().slice(0, 10), nowVN(), id)

@@ -1,3 +1,4 @@
+import { FIELD_CLASS } from "./primitives";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // O chon co tim kiem (thay <select> thuong khi danh sach dai, vd linh kien ~400 dong that) - tinh
@@ -96,12 +97,13 @@ export function SearchableSelect({
         type="button"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={onButtonKeyDown}
-        className="focus-ring w-full text-left rounded-lg border border-[var(--ocean-400)] bg-white px-3 py-2 text-sm text-[var(--ink-900)] truncate"
+        className={`${FIELD_CLASS} text-left truncate pr-8 relative`}
       >
-        {selected ? selected.label : <span className="text-[var(--ink-400)]">{placeholder}</span>}
+        {selected ? selected.label : <span className="text-[var(--ink-faint)]">{placeholder}</span>}
+        <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-soft)]">▼</span>
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-[var(--line)] bg-white shadow-lg overflow-hidden">
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-[var(--line)] bg-white shadow-pop overflow-hidden">
           <input
             ref={inputRef}
             value={query}
@@ -111,25 +113,25 @@ export function SearchableSelect({
             }}
             onKeyDown={onKeyDown}
             placeholder="Gõ để tìm…"
-            className="w-full px-3 py-2 text-sm border-b border-[var(--line)] focus:outline-none"
+            className="w-full px-3 py-2.5 text-base lg:py-2 lg:text-sm border-b border-[var(--line)] bg-[var(--field-bg)] focus:bg-white focus:outline-none"
           />
           <div className="max-h-56 overflow-y-auto">
             {allowEmpty && (
               <div
                 onClick={() => pick("")}
-                className={`px-3 py-2 text-sm cursor-pointer text-[var(--ink-500)] ${highlight === -1 ? "bg-[var(--surface-100)]" : ""} hover:bg-[var(--surface-100)]`}
+                className={`px-3 py-2.5 lg:py-2 text-base lg:text-sm cursor-pointer text-[var(--ink-soft)] ${highlight === -1 ? "bg-[var(--accent-soft)]" : ""} hover:bg-[var(--accent-soft)]`}
               >
                 {placeholder}
               </div>
             )}
-            {filtered.length === 0 && <div className="px-3 py-2 text-sm text-[var(--ink-400)]">Không có kết quả.</div>}
+            {filtered.length === 0 && <div className="px-3 py-2 text-sm text-[var(--ink-faint)]">Không có kết quả.</div>}
             {filtered.map((o, i) => (
               <div
                 key={o.value}
                 onMouseEnter={() => setHighlight(i)}
                 onClick={() => pick(o.value)}
-                className={`px-3 py-2 text-sm cursor-pointer truncate ${o.value === value ? "font-semibold text-[var(--ocean-700)]" : "text-[var(--ink-800)]"} ${
-                  highlight === i ? "bg-[var(--surface-100)]" : ""
+                className={`px-3 py-2.5 lg:py-2 text-base lg:text-sm cursor-pointer truncate ${o.value === value ? "font-semibold text-[var(--accent-ink)]" : "text-[var(--ink-body)]"} ${
+                  highlight === i ? "bg-[var(--accent-soft)]" : ""
                 }`}
               >
                 {o.label}

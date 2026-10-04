@@ -10,14 +10,14 @@ export function LogBlock({ title, logs }: { title: string; logs: LogRow[] }) {
   const sorted = [...logs].sort((a, b) => new Date(b.thoi_gian).getTime() - new Date(a.thoi_gian).getTime());
   return (
     <div>
-      <p className="text-xs font-bold text-[var(--ocean-700)] uppercase tracking-wide mb-2">
+      <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">
         {title} ({logs.length})
       </p>
       <div className="max-h-48 overflow-y-auto space-y-1.5 scrollbar-thin">
         {sorted.map((l) => (
-          <div key={l.id} className="text-xs bg-[var(--surface-100)] rounded-lg px-2.5 py-1.5">
-            <p className="text-[var(--ink-700)]">{l.ghi_chu || `${l.tu_trang_thai ?? "—"} → ${l.den_trang_thai ?? "—"}`}</p>
-            <p className="mt-0.5 text-[10px] text-[var(--ink-400)] font-mono">
+          <div key={l.id} className="text-xs bg-[var(--surface-2)] rounded-lg px-2.5 py-1.5">
+            <p className="text-[var(--ink-body)]">{l.ghi_chu || `${l.tu_trang_thai ?? "—"} → ${l.den_trang_thai ?? "—"}`}</p>
+            <p className="mt-0.5 text-[10px] text-[var(--ink-faint)] font-mono">
               {l.nguoi_thuc_hien} · {fmtDate(l.thoi_gian)}
             </p>
           </div>

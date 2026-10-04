@@ -22,7 +22,7 @@ export function AdminColSettingsModal({
   return (
     <Modal title="Tuỳ chỉnh cột hiển thị" onClose={onClose} maxWidthClass="max-w-sm">
       <div className="space-y-4">
-        <p className="text-xs text-[var(--ink-500)]">Tick để hiện/ẩn cột. Kéo tiêu đề cột trên bảng để đổi vị trí, kéo cạnh phải tiêu đề để đổi độ rộng.</p>
+        <p className="text-xs text-[var(--ink-soft)]">Tick để hiện/ẩn cột. Kéo tiêu đề cột trên bảng để đổi vị trí, kéo cạnh phải tiêu đề để đổi độ rộng.</p>
         <div className="divide-y divide-[var(--line)]">
           {order.map((k) => (
             <label key={k} className="flex items-center gap-2 py-1.5 text-sm cursor-pointer">

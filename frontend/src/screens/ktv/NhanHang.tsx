@@ -24,7 +24,7 @@ export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; in
   if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "vandon", header: "Mã vận đơn", render: (r) => r.ma_van_don || "—" },
@@ -32,7 +32,7 @@ export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; in
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">📬 Hàng trả đang chờ xác nhận nhận ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📬 Hàng trả đang chờ xác nhận nhận ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào đang chờ." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

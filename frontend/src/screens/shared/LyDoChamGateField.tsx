@@ -14,8 +14,8 @@ export function LyDoChamGateField({ overdue, value, onChange }: { overdue: boole
   const { items } = useLyDoCham();
   if (!overdue) return null;
   return (
-    <div className="rounded-lg border border-[var(--coral-400)] bg-[var(--coral-100)] p-3">
-      <p className="text-xs font-bold text-[var(--coral-700)] mb-2">⚠ Đơn đã quá hạn SLA 24h — vui lòng chọn lý do chậm để tiếp tục.</p>
+    <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3">
+      <p className="text-xs font-bold text-[var(--red-700)] mb-2">⚠ Đơn đã quá hạn SLA 24h — vui lòng chọn lý do chậm để tiếp tục.</p>
       <Field label="Lý do chậm" required>
         <Select value={value} onChange={(e) => onChange(e.target.value)}>
           <option value="">— Chọn lý do —</option>

@@ -70,14 +70,14 @@ export function CameraScanModal({ onClose, onScanned }: { onClose: () => void; o
     <Modal title="Quét mã QR phiếu gửi" onClose={onClose} maxWidthClass="max-w-sm">
       <div className="space-y-3">
         {error ? (
-          <p className="text-sm text-[var(--coral-700)] bg-[var(--coral-100)] rounded-lg px-3 py-2">{error}</p>
+          <p className="text-sm text-[var(--red-700)] bg-[var(--red-100)] rounded-lg px-3 py-2">{error}</p>
         ) : (
           <div className="rounded-lg overflow-hidden bg-black">
             <video ref={videoRef} className="w-full" muted playsInline />
           </div>
         )}
         <canvas ref={canvasRef} className="hidden" />
-        <p className="text-xs text-[var(--ink-500)]">Đưa mã QR trên thùng hàng vào giữa khung hình.</p>
+        <p className="text-xs text-[var(--ink-soft)]">Đưa mã QR trên thùng hàng vào giữa khung hình.</p>
         <Btn onClick={onClose} className="w-full">
           Huỷ
         </Btn>

@@ -17,9 +17,9 @@ export function useToast() {
 }
 
 const TONE_CLASSES: Record<ToastTone, string> = {
-  ok: "bg-[var(--teal-600)]",
-  error: "bg-[var(--coral-600)]",
-  info: "bg-[var(--ocean-800)]",
+  ok: "bg-[var(--green-600)]",
+  error: "bg-[var(--red-600)]",
+  info: "bg-[var(--ink)]",
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -35,9 +35,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 max-w-xs">
+      <div className="fixed left-4 right-4 bottom-24 md:left-auto md:right-5 md:bottom-5 z-[200] flex flex-col items-center md:items-end gap-2 md:max-w-xs pointer-events-none">
         {items.map((t) => (
-          <div key={t.id} className={`toast-in rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg ${TONE_CLASSES[t.tone]}`}>
+          <div key={t.id} className={`toast-in pointer-events-auto rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-pop ${TONE_CLASSES[t.tone]}`}>
             {t.text}
           </div>
         ))}

@@ -22,7 +22,7 @@ export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
   if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<DonVi>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "lbh", header: "Loại BH", render: (r) => (r.loai_bao_hanh ? LOAI_BAO_HANH_LABELS[r.loai_bao_hanh] : "—") },
     { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk_thuc_te || r.ma_lk) },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[260px] truncate", render: (r) => r.mo_ta_loi || "—" },
@@ -31,7 +31,7 @@ export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔧 Việc của tôi ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">🔧 Việc của tôi ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có việc nào đang chờ." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

@@ -3,6 +3,18 @@ import { api } from "../../lib/api";
 import { useRoute } from "../../router/Router";
 import { Card, Spinner, StatCard } from "../../ui/primitives";
 import { TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
+import { UNIT_STATUS } from "../../ui/StatusBadge";
+
+const ICON_OF_STATUS: Record<string, string> = {
+  cho_phan_loai: "🗂️",
+  admin_can_xem_lai: "🔁",
+  cho_bo_sung_tt: "✍️",
+  cho_chan_doan: "🔧",
+  cho_admin_xac_nhan: "✔️",
+  san_sang_gom_phieu_tra: "↩️",
+  ket_thuc_tu_choi: "⛔",
+  ket_thuc_chuyen_kho: "🏬",
+};
 
 // "Tong quan he thong" (Giam sat/View) - THUAN CHI XEM. So lieu theo dung pham vi da scope o backend
 // (Giam sat qua email_gs, View qua Khu vuc).
@@ -33,27 +45,27 @@ export function QuanLyTongQuanScreen() {
 
   return (
     <div className="space-y-6">
-      <Card className={`p-5 ${quaHan > 0 ? "border-l-4 !border-l-[var(--coral-600)]" : ""}`}>
+      <Card className={`p-5 ${quaHan > 0 ? "border-l-4 !border-l-[var(--red-600)]" : ""}`}>
         <button
           onClick={() => quaHan > 0 && goto("qua_han")}
           disabled={quaHan === 0}
           className={`focus-ring w-full text-left flex items-center justify-between gap-4 ${quaHan > 0 ? "cursor-pointer" : "cursor-default"}`}
         >
           <div>
-            <p className={`font-display font-bold text-sm ${quaHan > 0 ? "text-[var(--coral-700)]" : "text-[var(--ink-500)]"}`}>
+            <p className={`font-bold text-sm ${quaHan > 0 ? "text-[var(--red-700)]" : "text-[var(--ink-soft)]"}`}>
               {quaHan > 0 ? "🔥 Đơn quá hạn SLA 24h" : "Đơn quá hạn SLA 24h"}
             </p>
-            <p className="text-xs text-[var(--ink-500)] mt-0.5">Các đơn đang chờ xử lý mà đã trôi quá 24 giờ — {quaHan > 0 ? "bấm để xem danh sách" : "không có"}</p>
+            <p className="text-xs text-[var(--ink-soft)] mt-0.5">Các đơn đang chờ xử lý mà đã trôi quá 24 giờ — {quaHan > 0 ? "bấm để xem danh sách" : "không có"}</p>
           </div>
-          <span className={`font-display font-extrabold text-3xl tabular-nums ${quaHan > 0 ? "text-[var(--coral-600)]" : "text-[var(--ink-400)]"}`}>{quaHan}</span>
+          <span className={`font-extrabold text-3xl tabular-nums ${quaHan > 0 ? "text-[var(--red-600)]" : "text-[var(--ink-faint)]"}`}>{quaHan}</span>
         </button>
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-4">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-4">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Object.entries(TRANG_THAI_UNIT_LABELS).map(([key, label]) => (
-            <StatCard key={key} label={label} value={counts[key] || 0} tone={counts[key] ? "blue" : "gray"} onClick={() => goto(key)} />
+            <StatCard key={key} label={label} value={counts[key] || 0} tone={UNIT_STATUS[key]?.tone || "gray"} icon={ICON_OF_STATUS[key]} onClick={() => goto(key)} />
           ))}
         </div>
       </Card>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { StatusBadge } from "../../ui/StatusBadge";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Badge, Spinner, Input } from "../../ui/primitives";
 import { Table, StopClick, type Column } from "../../ui/Table";
@@ -26,8 +27,8 @@ export function KtvTraCuuScreen() {
   const [boSungFor, setBoSungFor] = useState<DonVi | null>(null);
 
   const cols: Column<DonVi>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-    { key: "st", header: "Trạng thái", render: (r) => <Badge tone={r.trang_thai === "cho_bo_sung_tt" ? "violet" : "blue"}>{TRANG_THAI_UNIT_LABELS[r.trang_thai] || r.trang_thai}</Badge> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
+    { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="unit" value={r.trang_thai} /> },
     { key: "case", header: "Case", render: (r) => r.case_id || "—" },
     { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk) },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
@@ -50,7 +51,7 @@ export function KtvTraCuuScreen() {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">🔍 Tra cứu tiến độ đơn của tôi ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">🔍 Tra cứu tiến độ đơn của tôi ({total})</h3>
       <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, case, mô tả lỗi..." className="mb-3 max-w-sm" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} emptyText="Không tìm thấy đơn nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />

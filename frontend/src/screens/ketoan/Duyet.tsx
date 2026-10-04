@@ -20,7 +20,7 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
   if (loading && rows.length === 0) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "ktv", header: "KTV nhận", render: (r) => (r.ktv_nhan === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : r.ktv_nhan) },
     { key: "loai", header: "Loại đối trừ", render: (r) => <Badge tone={r.loai_doi_tru === "tru_cong_no" ? "orange" : "blue"}>{LOAI_DOI_TRU_LABELS[r.loai_doi_tru]}</Badge> },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
@@ -29,7 +29,7 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
 
   return (
     <Card className="p-5">
-      <h3 className="font-display font-bold text-sm text-[var(--ink-900)] mb-3">💰 Chờ duyệt ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">💰 Chờ duyệt ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ duyệt." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

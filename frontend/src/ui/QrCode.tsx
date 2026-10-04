@@ -9,7 +9,7 @@ export function QrCode({ text, sizePx = 120, withDownload = true }: { text: stri
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="rounded-lg border border-[var(--line)] p-2 bg-white" dangerouslySetInnerHTML={{ __html: svg }} />
-      <span className="font-mono text-xs text-[var(--ink-600)]">{text}</span>
+      <span className="font-mono text-xs text-[var(--ink-soft)]">{text}</span>
       {withDownload && (
         <Btn onClick={() => downloadQrLabel(text)} className="!py-1 !px-2 !text-xs">
           ⬇ Tải ảnh QR (in tem)

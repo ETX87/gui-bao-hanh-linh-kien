@@ -21,10 +21,10 @@ export function SlaBadge({ since, entityType, entityId, clickable }: { since: st
 
   const cls =
     level === "critical"
-      ? "bg-[var(--coral-600)] text-white"
+      ? "bg-[var(--red-600)] text-white"
       : level === "warn"
-        ? "bg-[var(--amber-100)] text-[var(--amber-700)]"
-        : "bg-[var(--teal-100)] text-[var(--teal-700)]";
+        ? "bg-[var(--amber-100)] text-[var(--amber-800)] ring-1 ring-inset ring-[var(--amber-200)]"
+        : "bg-[var(--green-50)] text-[var(--green-700)] ring-1 ring-inset ring-[var(--green-200)]";
 
   const badge = (
     <span
@@ -68,7 +68,7 @@ function QuickLyDoChamModal({ entityType, entityId, onClose }: { entityType: Log
   return (
     <Modal title="Ghi lý do chậm" onClose={onClose} maxWidthClass="max-w-sm">
       <div className="space-y-4">
-        <p className="text-sm text-[var(--ink-600)]">Đơn này đang quá hạn SLA 24h. Ghi nhận lý do chậm — không thay đổi trạng thái đơn.</p>
+        <p className="text-sm text-[var(--ink-soft)]">Đơn này đang quá hạn SLA 24h. Ghi nhận lý do chậm — không thay đổi trạng thái đơn.</p>
         <Field label="Lý do chậm" required>
           <Select value={val} onChange={(e) => setVal(e.target.value)}>
             <option value="">— Chọn lý do —</option>
