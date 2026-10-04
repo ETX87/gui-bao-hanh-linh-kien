@@ -4081,3 +4081,11 @@ Tiến độ / Nhận hàng, Trang chủ hiện số liệu của KTV A, banner 
 /api/phieu-gui` bị 403 `XEM_NHU_CHI_DOC`; thoát → về lại Admin, không banner, không còn thẻ Odoo trên
 Trang chủ Admin; modal Chế độ test mở đủ 2 phần (8 thẻ vai trò + danh sách người dùng). Không chụp được
 ảnh màn hình (pane trình duyệt không vẽ) — đã kiểm bằng đọc DOM/API thật. Không có migration mới.
+
+**Theo dõi cron Odoo trên production (05/10/2026):** sau lần deploy v1.008 (lịch `*/15` đăng ký lúc
+16:32Z 04/10) cron **không chạy lần nào** trong ~1 giờ (`sync_state` rỗng — mà `runOdooSync` luôn ghi
+`odoo_last_run` kể cả khi lỗi, nên rỗng = `scheduled()` chưa từng được gọi). Sau khi deploy lại v1.009
+(lịch đăng ký lại), cron chạy đúng mốc 17:45Z: `keo_ve: 484`, `loi: []`, con trỏ
+`since 2026-10-04 19:01:04 / after_id 505`; 11/484 đơn còn chưa rõ KTV (đơn về trước case — sẽ được hỏi
+lại ở các lần cron sau). Bài học: deploy lần đầu có cron mới mà không thấy chạy thì kiểm `sync_state`;
+deploy lại là cách khắc phục đã hiệu quả.
