@@ -116,6 +116,11 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
             <ReadField label="Nguồn" value={isKhachLe ? <Badge tone="violet">Khách lẻ</Badge> : p.nguon_tao === "admin_dich_vu" ? "Đơn dịch vụ" : "KTV gửi hàng"} />
             <ReadField label="Đối trừ đề xuất" value={p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—"} />
           </div>
+          {p.xac_nhan_khac_ktv && (
+            <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">
+              ⚠ Đơn được tạo thay: case thuộc KTV khác trên hệ thống ({p.ktv_tren_case || "không xác định"}) — {p.xac_nhan_khac_ktv} đã xác nhận khi tạo hộ.
+            </p>
+          )}
           {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} />}
           <ReadField label="Mô tả lỗi" value={p.mo_ta_loi} />
           {isKhachLe && (

@@ -1,3 +1,4 @@
+import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
@@ -23,7 +24,9 @@ const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: string; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
   const isMobile = useIsMobile();
-  const [data, setData] = useState<{ phieu_gui: PhieuGui; don_cha: DonCha[] } | null>(null);
+  const [data, setData] = useState<{ phieu_gui: PhieuGui; don_cha: DonCha[]; goi_y?: { ma_xe: string[]; dvvc: string[] } } | null>(null);
+  const { items: lkItems } = useLinhKien();
+  const lkName = (ma: string | null) => (ma ? lkLabel(lkItems.find((l) => l.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
   const [hinhThuc, setHinhThuc] = useState("");
   const [maXe, setMaXe] = useState("");
   const [dvvc, setDvvc] = useState("");
@@ -34,7 +37,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   const [busy, setBusy] = useState(false);
 
   const load = () =>
-    api.get<{ phieu_gui: PhieuGui; don_cha: DonCha[] }>(`/phieu-gui/${guiId}`).then((r) => {
+    api.get<{ phieu_gui: PhieuGui; don_cha: DonCha[]; goi_y?: { ma_xe: string[]; dvvc: string[] } }>(`/phieu-gui/${guiId}`).then((r) => {
       setData(r);
       setHinhThuc(r.phieu_gui.hinh_thuc_gui || "xe_noi_bo");
       setMaXe(r.phieu_gui.ma_xe_hoac_tai_xe || "");
@@ -42,6 +45,12 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
       setMaVanDon(r.phieu_gui.ma_van_don || "");
       setNgayGuiXe(r.phieu_gui.ngay_gui_xe || "");
     });
+  // Don Odoo vua them co the mang linh kien moi tu them vao danh muc -> danh sach cache tren may chua
+  // co ten; tai lai danh muc 1 lan (server da tang version).
+  const missingLk = !!data && lkItems.length > 0 && data.don_cha.some((d) => d.ma_lk && !lkItems.some((l) => l.ma_lk === d.ma_lk));
+  useEffect(() => {
+    if (missingLk) refreshLinhKien();
+  }, [missingLk]);
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,11 +168,22 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
                   </Select>
                 </Field>
                 <Field label="Mã xe / Tài xế">
-                  <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} />
+                  <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
                 </Field>
                 <Field label="Đơn vị vận chuyển">
-                  <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} />
+                  <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
                 </Field>
+                {/* Goi y go nhanh tu cac lan gui truoc cua KTV (05/10/2026 muc 4). */}
+                <datalist id="goiy-ma-xe">
+                  {(data.goi_y?.ma_xe ?? []).map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="goiy-dvvc">
+                  {(data.goi_y?.dvvc ?? []).map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
                 <Field label="Mã vận đơn">
                   <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
                 </Field>
@@ -237,7 +257,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
                       </Btn>
                     )}
                   </div>
-                  <p className="mt-1 truncate">{d.mo_ta_loi}</p>
+                  <p className="mt-1 text-sm font-medium text-[var(--ink)] truncate">🔩 {lkName(d.ma_lk)}</p>
+                  <p className="truncate text-[var(--ink-body)]">{d.mo_ta_loi}</p>
+                  {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
                 </div>
               ))}
             </div>

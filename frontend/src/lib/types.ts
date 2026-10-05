@@ -69,6 +69,8 @@ export interface DonCha {
   san_pham_bh: string | null;
   trang_thai_cha: "cho_xac_nhan_so_luong" | "da_tach";
   email_gs: string | null;
+  xac_nhan_khac_ktv?: string | null; // 05/10/2026 muc 9: email nguoi xac nhan tao don du case thuoc KTV khac
+  ktv_tren_case?: string | null;
   created_at: string;
   // Cot join them (tu GET /admin/don-cha) - email KTV tao phieu gui chua don nay (null neu don dich
   // vu khach le, khong thuoc phieu gui nao).
@@ -148,6 +150,8 @@ export interface LinhKien {
   nguon_du_lieu: "dong_bo" | "noi_bo";
   duoc_dung_bao_hanh: boolean;
   ngay_cap_nhat: string;
+  top_hang?: number | null; // hang top xu ly thanh cong 30 ngay (05/10/2026 muc 7)
+  top_so_luong?: number | null;
 }
 
 export interface SettingItem {

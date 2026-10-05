@@ -3,6 +3,7 @@ import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Btn } from "../../ui/primitives";
 import type { CaseLookupPreview } from "../../lib/types";
+import { CrmLink } from "./CaseLookupPreviewCard";
 
 // "Bằng chứng" case đã lưu san luc tao don (yeu cau 05/09/2026 muc 2: "khi đơn được tạo, các thông
 // tin liên quan đến mã yêu cầu sẽ được lưu về hệ thống đơn bảo hành làm bằng chứng") - CHI doc cache
@@ -49,11 +50,14 @@ export function CaseSnapshotPanel({ caseId, canSync }: { caseId: string; canSync
     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">📎 Bằng chứng case (đồng bộ lúc {syncedAt || "—"})</p>
-        {canSync && (
-          <Btn onClick={sync} disabled={syncing}>
-            {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ lại"}
-          </Btn>
-        )}
+        <div className="flex items-center gap-2">
+          <CrmLink url={data.link_crm} />
+          {canSync && (
+            <Btn onClick={sync} disabled={syncing}>
+              {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ lại"}
+            </Btn>
+          )}
+        </div>
       </div>
       <div className="text-xs text-[var(--ink-body)] grid grid-cols-2 gap-x-3 gap-y-0.5">
         {data.khach_hang && <span>Khách hàng: {data.khach_hang}</span>}

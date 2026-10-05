@@ -1,6 +1,7 @@
 import { FIELD_CLASS } from "./primitives";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { normalizeVi } from "../lib/normalizeVi";
 
 // O chon co tim kiem (thay <select> thuong khi danh sach dai, vd linh kien ~400 dong that) - tinh
 // nang da ghi nhan la "ton dong thuc can lam" tu vong redesign UI 22/08/2026 (prototype), CHUA tung
@@ -10,7 +11,9 @@ import { createPortal } from "react-dom";
 export interface SearchableOption {
   value: string;
   label: string;
+  hint?: string; // nhan phu ben phai (vd "🔥 Top 3")
 }
+
 
 export function SearchableSelect({
   options,
@@ -81,11 +84,14 @@ export function SearchableSelect({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  // Chi muc tim kiem tinh 1 lan theo danh sach (khong tinh lai moi phim go).
+  const index = useMemo(() => options.map((o) => normalizeVi(`${o.label} ${o.value}`)), [options]);
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = q ? options.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : options;
+    // Tach tu: moi tu go vao deu phai co mat, KHONG can dung thu tu ("loc tho" khop "Lõi lọc thô").
+    const tokens = normalizeVi(query).split(/\s+/).filter(Boolean);
+    const list = tokens.length ? options.filter((_, i) => tokens.every((t) => index[i].includes(t))) : options;
     return list.slice(0, 200); // chan render qua nhieu dong neu danh sach rat dai
-  }, [options, query]);
+  }, [options, index, query]);
 
   const pick = (v: string) => {
     onChange(v);
@@ -148,7 +154,7 @@ export function SearchableSelect({
               setHighlight(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Gõ để tìm…"
+            placeholder="Gõ để tìm (không dấu cũng được)…"
             className="w-full px-3 py-2.5 text-base lg:py-2 lg:text-sm border-b border-[var(--line)] bg-[var(--field-bg)] focus:bg-white focus:outline-none"
           />
           <div className="flex-1 min-h-0 overflow-y-auto">
@@ -170,7 +176,14 @@ export function SearchableSelect({
                   highlight === i ? "bg-[var(--accent-soft)]" : ""
                 }`}
               >
-                {o.label}
+                {o.hint ? (
+                  <span className="flex items-center gap-2">
+                    <span className="truncate flex-1">{o.label}</span>
+                    <span className="shrink-0 text-[11px] font-semibold text-[var(--orange-700)]">{o.hint}</span>
+                  </span>
+                ) : (
+                  o.label
+                )}
               </div>
             ))}
           </div>

@@ -1,3 +1,4 @@
+import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -111,11 +112,18 @@ phieuGui.post("/", async (c) => {
     nguoiTaoHo = null;
   }
 
-  const last = await c.env.DB.prepare(
-    "SELECT hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen FROM phieu_gui_bh WHERE nguoi_tao = ? AND hinh_thuc_gui IS NOT NULL ORDER BY created_at DESC LIMIT 1",
-  )
-    .bind(target)
-    .first<{ hinh_thuc_gui: string; ma_xe_hoac_tai_xe: string | null; don_vi_van_chuyen: string | null }>();
+  // Tu dien phuong an gui hang theo LUA CHON THAT lan gan nhat cua KTV (05/10/2026 muc 4): uu tien
+  // ktv_nha_xe_bh (ghi moi lan KTV luu/xac nhan gui), chua co thi lay phieu DA GUI gan nhat - KHONG lay
+  // phieu nhap (phieu nhap moi tao chi mang gia tri mac dinh, chep lai se "quen" lua chon cua KTV).
+  const last =
+    (await c.env.DB.prepare("SELECT hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen FROM ktv_nha_xe_bh WHERE email = ?")
+      .bind(target)
+      .first<{ hinh_thuc_gui: string | null; ma_xe_hoac_tai_xe: string | null; don_vi_van_chuyen: string | null }>()) ??
+    (await c.env.DB.prepare(
+      "SELECT hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen FROM phieu_gui_bh WHERE nguoi_tao = ? AND trang_thai <> 'nhap' AND COALESCE(hinh_thuc_gui, '') <> '' ORDER BY created_at DESC LIMIT 1",
+    )
+      .bind(target)
+      .first<{ hinh_thuc_gui: string | null; ma_xe_hoac_tai_xe: string | null; don_vi_van_chuyen: string | null }>());
 
   const id = await nextSequentialId(c.env.DB, "phieu_gui_bh", "BH");
   const now = nowVN();
@@ -123,7 +131,7 @@ phieuGui.post("/", async (c) => {
     `INSERT INTO phieu_gui_bh (id, nguoi_tao, nguoi_tao_ho, ngay_tao, ngay_gui_xe, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, trang_thai, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nhap', ?, ?)`,
   )
-    .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui ?? "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
+    .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui || "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
     .run();
   await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tao phieu moi (tao ho cho KTV ${target})` : "Tao phieu moi");
 
@@ -171,6 +179,16 @@ phieuGui.patch("/:id", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET hinh_thuc_gui = ?, ma_xe_hoac_tai_xe = ?, don_vi_van_chuyen = ?, ma_van_don = ?, updated_at = ? WHERE id = ?")
     .bind(body.hinh_thuc_gui ?? "", body.ma_xe_hoac_tai_xe ?? "", body.don_vi_van_chuyen ?? "", body.ma_van_don ?? "", nowVN(), id)
     .run();
+  // Luu vet phuong an gui hang cua KTV so huu thung (muc 4) - lan tao phieu sau tu dien lai.
+  if (body.hinh_thuc_gui) {
+    await c.env.DB.prepare(
+      `INSERT INTO ktv_nha_xe_bh (email, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(email) DO UPDATE SET hinh_thuc_gui = excluded.hinh_thuc_gui, ma_xe_hoac_tai_xe = excluded.ma_xe_hoac_tai_xe,
+         don_vi_van_chuyen = excluded.don_vi_van_chuyen, updated_at = excluded.updated_at`,
+    )
+      .bind(g.nguoi_tao, body.hinh_thuc_gui, body.ma_xe_hoac_tai_xe ?? "", body.don_vi_van_chuyen ?? "", nowVN())
+      .run();
+  }
   return c.json({ ok: true });
 });
 
@@ -212,7 +230,16 @@ phieuGui.get("/:id", async (c) => {
   }
   const { results: donCha } = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh WHERE phieu_gui_id = ? ORDER BY created_at").bind(id).all();
   const { results: ghiChu } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh_ghi_chu WHERE phieu_gui_id = ? ORDER BY thoi_gian DESC").bind(id).all();
-  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu });
+  // Goi y go nhanh (05/10/2026 muc 4): ma xe / don vi van chuyen KTV nay tung dung (8 gia tri gan nhat).
+  let goiY: { ma_xe: string[]; dvvc: string[] } | undefined;
+  if ((g as { trang_thai: string }).trang_thai === "nhap") {
+    const [mx, dv] = await Promise.all([
+      c.env.DB.prepare("SELECT ma_xe_hoac_tai_xe AS v, MAX(created_at) AS t FROM phieu_gui_bh WHERE nguoi_tao = ? AND COALESCE(ma_xe_hoac_tai_xe, '') <> '' GROUP BY 1 ORDER BY t DESC LIMIT 8").bind(gRow.nguoi_tao).all<{ v: string }>(),
+      c.env.DB.prepare("SELECT don_vi_van_chuyen AS v, MAX(created_at) AS t FROM phieu_gui_bh WHERE nguoi_tao = ? AND COALESCE(don_vi_van_chuyen, '') <> '' GROUP BY 1 ORDER BY t DESC LIMIT 8").bind(gRow.nguoi_tao).all<{ v: string }>(),
+    ]);
+    goiY = { ma_xe: mx.results.map((r) => r.v), dvvc: dv.results.map((r) => r.v) };
+  }
+  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu, goi_y: goiY });
 });
 
 interface AddDonBody {
@@ -226,6 +253,8 @@ interface AddDonBody {
   // Admin BH doc lai (GET /admin/don-vi/:id) nhung CHUA tung co route ghi - gap that phat hien o
   // "QA vong 3" (nguoi dung hoi "chuc nang tao shortcut... co bo sot gi khong").
   anh?: string[];
+  // 05/10/2026 muc 9: Admin BH / Giam sat (/qtri) tao don HO xac nhan tao don du case thuoc KTV khac.
+  xac_nhan_khac_ktv?: boolean;
 }
 
 // POST /api/phieu-gui/:id/don - them 1 don (phieu_sua_chua_bh) vao phieu gui, port dung
@@ -254,7 +283,11 @@ phieuGui.post("/:id/don", async (c) => {
   if (!casePreview) return c.json({ error: "CASE_NOT_FOUND" }, 400);
   const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
   const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
-  if (!maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
+  const lechKtv = !maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase;
+  // Chi nguoi tao HO (khong phai chinh KTV so huu thung) co quyen tao ho moi duoc xac nhan vuot qua.
+  const duocVuot = (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== g.nguoi_tao;
+  if (lechKtv && !(duocVuot && body.xac_nhan_khac_ktv === true)) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
+  const xacNhanKhac = lechKtv ? user.email : null;
 
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
   // email_gs phai tinh theo KTV SO HUU thung (g.nguoi_tao), KHONG phai user.email dang thao tac - o
@@ -263,11 +296,14 @@ phieuGui.post("/:id/don", async (c) => {
   // dung user.email se luon tra ve NULL - da sua tan goc, khong chi vá luc them "tao ho".
   const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?)`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?)`,
   )
-    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, nowVN())
+    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview.ky_thuat_vien ?? null, nowVN())
     .run();
+  if (xacNhanKhac) {
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xac nhan tao don cho KTV ${g.nguoi_tao} du case thuoc nguoi khac (KTV tren case: ${casePreview.ky_thuat_vien || "khong xac dinh"})`);
+  }
   // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
   // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai
   // duoc, va Admin BH bam "dong bo lai" (POST /case-lookup/detail/:id/sync) lam moi duoc cho ca nhom.
@@ -326,9 +362,10 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
   const created: string[] = [];
   for (const r of ok) {
     if (r.ma_linh_kien) {
-      await c.env.DB.prepare("INSERT INTO linh_kien_bh (ma_lk, ten_lk, nguon_du_lieu, ghi_chu) VALUES (?, ?, 'noi_bo', 'Tự thêm từ đơn bảo hành Odoo') ON CONFLICT(ma_lk) DO NOTHING")
+      const ins = await c.env.DB.prepare("INSERT INTO linh_kien_bh (ma_lk, ten_lk, nguon_du_lieu, ghi_chu) VALUES (?, ?, 'noi_bo', 'Tự thêm từ đơn bảo hành Odoo') ON CONFLICT(ma_lk) DO NOTHING")
         .bind(r.ma_linh_kien, r.ten_linh_kien || r.ma_linh_kien)
         .run();
+      if (ins.meta.changes) await bumpLinhKienVersion(c.env.DB);
     }
     const moTa = [r.tinh_trang_loi, r.ghi_chu].filter((x) => x && x.trim()).join(" — ") || `Lỗi ${r.ten_linh_kien || "linh kiện"}`;
     const soLuong = Math.max(1, Math.round(Number(r.so_luong) || 1));

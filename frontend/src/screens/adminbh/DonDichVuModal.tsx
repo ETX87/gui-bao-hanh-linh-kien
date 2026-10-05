@@ -6,8 +6,8 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, SectionLabel } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
-import { useLinhKien } from "../../hooks/useLinhKien";
-import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
+import { useLinhKien, lkOptions } from "../../hooks/useLinhKien";
+import { CaseIdField } from "../shared/CaseLookupPreviewCard";
 
 // Admin BH tu tao 1 don cha truc tiep - danh cho khach hang le tra phi, khong qua KTV/Kho (port dung
 // "dich vu tinh phi" da chot 21/08/2026 vong 2 muc 5c). case_id tuy chon - neu khong co bat buoc nhap
@@ -69,10 +69,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
       }
     >
       <div className="space-y-4">
-        <Field label="Mã case (nếu có — để trống nếu khách lẻ không có case CRM)">
-          <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} />
-        </Field>
-        {hasCase && <CaseLookupPreviewCard caseId={caseId} maLk={maLk} linhKien={linhKien} />}
+        <CaseIdField label="Mã case (nếu có — để trống nếu khách lẻ không có case CRM)" caseId={caseId} setCaseId={setCaseId} maLk={maLk} linhKien={linhKien} />
         {!hasCase && (
           <>
             <SectionLabel>Thông tin khách lẻ</SectionLabel>
@@ -96,7 +93,7 @@ export function DonDichVuModal({ onClose, onDone }: { onClose: () => void; onDon
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
             <Field label="Linh kiện">
-              <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
+              <SearchableSelect options={lkOptions(linhKien)} value={maLk} onChange={setMaLk} />
             </Field>
           </div>
           <Field label="Số lượng" required>

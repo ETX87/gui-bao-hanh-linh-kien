@@ -1,3 +1,4 @@
+import { maybeComputeTopLinhKien } from "./lib/topLinhKien";
 import { Hono } from "hono";
 import type { Env } from "./types";
 import authRoutes from "./routes/auth";
@@ -60,5 +61,7 @@ export default {
   // nguoc ve dvbh (lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
+    // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
+    ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));
   },
 };

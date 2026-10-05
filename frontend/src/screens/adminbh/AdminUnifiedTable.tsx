@@ -2,7 +2,7 @@ import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 import { StatusBadge, UNIT_STATUS } from "../../ui/StatusBadge";
 import { Badge, Btn } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
-import { useLinhKien } from "../../hooks/useLinhKien";
+import { useLinhKien, lkLabel } from "../../hooks/useLinhKien";
 import { useAdminCols, ADMIN_COLS_DEF, type AdminColKey } from "../../hooks/useAdminCols";
 import { TRANG_THAI_UNIT_LABELS, LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS, formatLyDoBoSung } from "../../lib/constants";
 import { AdminColSettingsModal } from "./AdminColSettingsModal";
@@ -42,7 +42,7 @@ function Ellipsis({ text, title }: { text: ReactNode; title?: string }) {
 
 export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai }: Props) {
   const { items: linhKienList } = useLinhKien();
-  const lkName = (ma: string | null | undefined) => (ma ? linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk || ma : "Cả sản phẩm");
+  const lkName = (ma: string | null | undefined) => (ma ? lkLabel(linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
   const { order, hidden, visibleCols, colWidth, reorder, toggleHidden, commitWidth, reset } = useAdminCols();
   const [colSettingsOpen, setColSettingsOpen] = useState(false);
   const isMobile = useIsMobile();

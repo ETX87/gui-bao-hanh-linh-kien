@@ -1,3 +1,4 @@
+import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { nowVN } from "../lib/vnTime";
@@ -58,7 +59,9 @@ sync.post("/ktv", async (c) => {
       ).bind(row.ma_ktv, row.ten_hien_thi ?? null, row.sdt ?? null, row.gmail ?? null, row.email_dang_nhap ?? null, row.vai_tro_ktv ?? null, row.khu_vuc_ma ?? null, row.ktv_cap1_phu_trach ?? null, now),
     );
   }
-  if (statements.length) await c.env.DB.batch(statements);
+  if (statements.length) {
+    await c.env.DB.batch(statements);
+  }
   return c.json({ upserted: statements.length, skipped });
 });
 
@@ -87,7 +90,9 @@ sync.post("/khu-vuc", async (c) => {
       ).bind(row.ma, row.ten, row.gs_email ?? null, now),
     );
   }
-  if (statements.length) await c.env.DB.batch(statements);
+  if (statements.length) {
+    await c.env.DB.batch(statements);
+  }
   return c.json({ upserted: statements.length, skipped });
 });
 
@@ -131,7 +136,10 @@ sync.post("/linh-kien", async (c) => {
       ).bind(row.ma_linh_kien, row.ten_linh_kien, row.don_vi ?? null, row.ghi_chu ?? null, row.anh_demo ?? null, row.ma_linh_kien, now, now),
     );
   }
-  if (statements.length) await c.env.DB.batch(statements);
+  if (statements.length) {
+    await c.env.DB.batch(statements);
+    await bumpLinhKienVersion(c.env.DB);
+  }
   return c.json({ upserted: statements.length, skipped });
 });
 

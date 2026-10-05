@@ -3,6 +3,7 @@ import { api, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { useLinhKien } from "../../hooks/useLinhKien";
+import { useAuth } from "../../auth/AuthContext";
 
 // 1 nguon su that dung chung giua AddDonModal (desktop) va AddDonMobileSheet (mobile) - port dung
 // nguyen tac "khong co 2 nguon su that" da ap dung cho submitAddDon()/updateCaseInfo() o prototype
@@ -27,6 +28,12 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const [loaiDoiTru, setLoaiDoiTru] = useState("doi_tra");
   const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
+  // 05/10/2026 muc 9: Admin BH / Giam sat (/qtri) tao don HO cho KTV khac duoc tich xac nhan tao don du
+  // case thuoc KTV khac tren he thong - KTV tu tao cho chinh minh KHONG co lua chon nay.
+  const auth = useAuth();
+  const user = auth.status === "authenticated" ? auth.user : null;
+  const allowOverride = !!user && (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== ktvEmail;
+  const [override, setOverride] = useState(false);
 
   const valid = !!moTa.trim() && Number(soLuong) >= 1 && !!caseId.trim() && caseValid;
 
@@ -41,6 +48,7 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
         mo_ta_loi: moTa.trim(),
         loai_doi_tru_de_xuat: loaiDoiTru,
         anh,
+        xac_nhan_khac_ktv: allowOverride && override,
       });
       toast("Đã thêm đơn vào phiếu.", "ok");
       onDone();
@@ -51,5 +59,5 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
     }
   };
 
-  return { linhKien, ktvEmail, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, submit };
+  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, submit };
 }

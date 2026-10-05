@@ -4115,3 +4115,36 @@ dev` local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), Ch�
 rộng 448px (trước: hết chiều ngang), bấm ô chọn → danh sách hiện ngay dưới ô, đủ 6 KTV, ô tìm tự focus,
 chọn KTV xong nút "Tạo phiếu" bật. Xem lại icon mới bằng mắt — hết viền trắng. Lưu ý: PWA đã cài trên điện
 thoại có thể còn icon cũ trong bộ nhớ đệm cho tới khi cài lại.
+
+## 7 yêu cầu: nút Kiểm tra case, nhớ nhà xe, "Tên (mã)", link CRM, top linh kiện, cache + tìm không dấu, tạo thay khi lệch KTV (05/10/2026) — v1.011
+
+**(a) Nguyên văn** (người dùng đánh số 3–9, kèm ảnh thẻ "Sai mã sự vụ — case này không thuộc về KTV…"):
+
+> 3. khi tìm mã sự vụ bảo hành, thêm nút ấn kiểm tra thì mới kiểm tra với bên dvbh, tránh việc gửi api hỏi liên tục mỗi khi nhập 1 ký tự
+> 4. với KTV thường mặc định 1 hình thức gửi phát, lưu vết phương án nhập của KTV để lần sau tự điền: Hình thức gửi, Mã xe / Tài xế, Đơn vị vận chuyển
+> 5. Đơn từ odoo cần hiện"tên linh (mã)" rõ ràng trong mọi phiên xử lý
+> 6. thông tin xin được từ app dvbh bổ sung thêm nút xem chi tiết theo link crm ở các vị trí xem ID case (UI xem chi tiết, phần tìm mã ID case)
+> 7. Danh sách linh kiện lỗi hàng ngày sẽ setup 1 khu giờ để đánh giá top các linh kiện được xử lý thành công trong 30 ngày gần nhất để sắp xếp top linh kiện => khi hiện danh sách sẽ hiện theo top các linh kiện này)
+> 8. Danh sách linh kiện sửa chữa bổ sung thêm mã phía sau tên (linh kiện + (1201021012)), + hỗ trợ tìm kiếm không đấu, có dấu, tìm cách từ... (việc tìm kiếm này triển khai trên máy người dùng không hao phí serer) - tải danh sách linh kiện về máy người dùng, lưu cache. chỉ cập nhật khi server có update)
+> 9. Trường hợp Admin hoặc Giám sát tạo đơn bảo hành hộ mà case không đúng KTV phụ trách case đó, cho phép tích chọn "Xác nhận tạo đơn bảo hành cho người khác người phụ trách case trên hệ thống" => nếu họ tích cái này sẽ cho phép tạo đơn thay.
+
+**(b) Đã triển khai** (migration mới `0006_top_lk_nha_xe_tao_khac_ktv.sql`):
+- **3** `hooks/useCaseLookup.ts` chuyển sang thủ công: chỉ gọi `/case-lookup` khi bấm "🔍 Kiểm tra" hoặc Enter; sửa mã case → kết quả cũ bị xoá, phải kiểm tra lại. Component chung mới `CaseIdField` (ô nhập + nút + thẻ preview) dùng ở `AddDonModal`, `AddDonMobileSheet`, `DonDichVuModal`. `PhanLoaiModal` (mã case cố định, không gõ) dùng `CaseLookupAuto` — tra 1 lần khi mở.
+- **4** Bảng mới `ktv_nha_xe_bh` (theo email KTV sở hữu thùng), ghi mỗi lần `PATCH /phieu-gui/:id` (gồm cả lúc "Xác nhận đã gửi xe", vốn PATCH header trước). Tạo phiếu mới đọc bảng này; chưa có thì lấy phiếu **đã gửi** gần nhất. Trước đây lấy phiếu tạo gần nhất, kể cả phiếu nháp chưa sửa, nên hay chép lại giá trị mặc định. `GET /phieu-gui/:id` (phiếu nháp) trả thêm `goi_y` (8 mã xe / đơn vị vận chuyển gần nhất) → `<datalist>` gợi ý khi gõ.
+- **5 + 8 (nhãn)** Mọi chỗ hiện linh kiện: `"Tên (mã)"` (`lkLabel`, `lkOptions`, `useLkName` trong `hooks/useLinhKien.ts`). Đã áp cho các ô chọn linh kiện, bảng Admin, tra cứu, việc NV, phiếu trả, UI chi tiết, modal chọn đơn Odoo và dòng đơn trong chi tiết phiếu gửi (mới hiện thêm dòng "🔩 linh kiện"). Phiếu có đơn mang linh kiện chưa có trong cache (linh kiện Odoo vừa tự thêm) → tự tải lại danh mục.
+- **6** `CrmLink` ("Xem trên CRM ↗", lấy `link_crm` từ dvbh) trong thẻ kết quả tra cứu case và trong khối "📎 Bằng chứng case" của UI chi tiết.
+- **7** `lib/topLinhKien.ts`: "xử lý thành công" = đơn vị con `admin_xac_nhan_hoan_tat=1`, không tính `huong_xu_ly='tu_choi'`, `updated_at` trong 30 ngày, đếm theo linh kiện thực tế (`COALESCE(ma_lk_thuc_te, đơn cha.ma_lk)`); ghi bảng `linh_kien_top_bh` (tối đa 200). **Không thêm cron mới**: cron 15 phút sẵn có gọi `maybeComputeTopLinhKien` — từ khung giờ cài đặt trở đi (`sync_state.lk_top_gio`, mặc định 02:00 VN), nếu hôm nay chưa tính thì tính 1 lần. Thẻ "🔥 Top linh kiện (30 ngày)" ở Cài đặt hệ thống: chọn khung giờ (chỉ qtri lưu được) + "Tính ngay" (Admin BH/qtri). Ô chọn linh kiện xếp top trước, kèm nhãn "🔥 Top N".
+- **8 (cache + tìm)** `GET /linh-kien` (không `limit`) chỉ trả `ma_lk, ten_lk, so_thang_bao_hanh, duoc_dung_bao_hanh, top_hang, top_so_luong` + `version` (production có 6.280 linh kiện). Client lưu `localStorage` (`lk_cache_v2`), mỗi lần mở app chỉ gọi `GET /linh-kien/version` (đọc 1 dòng `sync_state.linh_kien_version`), khác phiên bản mới tải lại. Phiên bản tăng ở MỌI chỗ ghi linh kiện: thêm/sửa ở màn danh mục, đồng bộ từ linh-kien-app, tự thêm từ đơn Odoo (chỉ khi thật sự thêm dòng), tính lại top. Store dùng chung cho cả trang → nhiều component chỉ 1 lượt gọi mạng. Ô chọn chỉ liệt kê dòng `duoc_dung_bao_hanh=1`; tra tên dùng cả danh mục. Tìm kiếm trong `SearchableSelect` (áp cho MỌI ô chọn): bỏ dấu (`lib/normalizeVi.ts`), tách từ — mọi từ gõ vào phải có mặt, không cần đúng thứ tự, khớp cả mã; chỉ mục chuẩn hoá tính 1 lần theo danh sách.
+- **9** `POST /phieu-gui/:id/don` nhận `xac_nhan_khac_ktv`. Chỉ người có quyền tạo hộ (`la_admin_bh` / `la_giam_sat` / `la_qtri`) **và không phải chính KTV sở hữu thùng** mới được vượt cổng `CASE_KTV_MISMATCH`. `CASE_NOT_FOUND` vẫn chặn cứng. Lưu `phieu_sua_chua_bh.xac_nhan_khac_ktv` (email người xác nhận) + `ktv_tren_case` + 1 dòng log. Frontend: khi lệch KTV mà người dùng có quyền → thẻ vàng có ô tích đúng câu chữ yêu cầu; nút "Thêm vào phiếu" chỉ bật khi đã tích. Đơn tạo thay hiện cảnh báo trong chi tiết phiếu gửi và UI chi tiết đơn.
+
+**(c) Vấn đề trong lúc làm:**
+- Công cụ ghi file/heredoc biến chuỗi `\u0300-\u036f` thành ký tự tổ hợp thật trong mã nguồn (chạy được nhưng vô hình khi đọc) → dựng regex bằng `String.fromCharCode(0x300)`.
+- Một lần thay chuỗi đã chèn nhầm lệnh tăng phiên bản linh kiện vào cả route đồng bộ KTV/khu vực (cùng mẫu code) → đã gỡ.
+- Ở local không có Worker dvbh → tạm cho `lookupCase` trả case mẫu khi mã bắt đầu bằng `TEST` để thử nhánh lệch KTV; đã hoàn tác bằng `git checkout` trước khi commit.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (bỏ tạm binding remote rồi khôi phục): migration 0006 áp được.
+- API: thiếu ô tích → 400 `CASE_KTV_MISMATCH`; có ô tích → 201 và lưu đúng người xác nhận + KTV trên case; case đúng KTV → 201 với `xac_nhan_khac_ktv=null`.
+- PATCH header rồi tạo phiếu mới → tự điền đúng "Nhà xe / 29B-12345 Anh Tuấn / Nhà xe Hoàng Long", `goi_y` có 2 giá trị. "Tính ngay" → 3 linh kiện, phiên bản 0→1, `GET /linh-kien` xếp top 1–3 trước.
+- UI (Chế độ test vai trò Admin BH): gõ mã case → 0 lượt gọi API; bấm Kiểm tra → 1 lượt; có link CRM; nút submit tắt cho tới khi tích. Ô linh kiện hiện "Loi loc so 1 PP 5 micron (LK005) 🔥 Top 1"…; tìm "vòi", "voi inox", "inox voi", "5 micron loc", "LK011" đều ra đúng 1 kết quả.
+- Tải lại trang → chỉ 1 lượt gọi `/linh-kien/version` (dùng cache). Thẻ Top linh kiện ở Cài đặt hiển thị đúng.
+- Chưa kiểm được với dvbh thật (link CRM thật, case thật).

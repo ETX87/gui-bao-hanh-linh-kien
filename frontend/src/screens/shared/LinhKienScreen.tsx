@@ -1,3 +1,4 @@
+import { refreshLinhKien } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { Table } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
@@ -31,6 +32,7 @@ export function LinhKienScreen() {
     try {
       await api.patch(`/linh-kien/${encodeURIComponent(ma)}`, body);
       reload();
+      refreshLinhKien();
     } catch (e) {
       toast(errorMessage(e), "error");
     }
@@ -100,6 +102,7 @@ function AddLinhKienModal({ onClose, onDone }: { onClose: () => void; onDone: ()
     try {
       await api.post("/linh-kien", { ma_lk: ma.trim(), ten_lk: ten.trim(), so_thang_bao_hanh: thangBh ? Number(thangBh) : undefined });
       toast("Đã thêm linh kiện.", "ok");
+      refreshLinhKien();
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");

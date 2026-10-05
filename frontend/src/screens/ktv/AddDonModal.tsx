@@ -1,9 +1,10 @@
 import { Modal } from "../../ui/Modal";
 import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
+import { lkOptions } from "../../hooks/useLinhKien";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
-import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
+import { CaseIdField } from "../shared/CaseLookupPreviewCard";
 import { useAddDonForm } from "./useAddDonForm";
 
 // KTV them 1 don vao phieu gui (ban desktop - modal can giua) - port dung submitAddDon(). "Loai doi
@@ -28,14 +29,24 @@ export function AddDonModal({ guiId, ktvEmail, onClose, onDone }: { guiId: strin
       }
     >
       <div className="space-y-4">
-        <Field label="Mã case" required>
-          <Input value={f.caseId} onChange={(e) => f.setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
-        </Field>
-        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} ktvEmail={f.ktvEmail} onValidityChange={f.setCaseValid} />
+        <CaseIdField
+          label="Mã case"
+          required
+          placeholder="Mã case bên hệ thống CRM/DVBH"
+          caseId={f.caseId}
+          setCaseId={f.setCaseId}
+          maLk={f.maLk}
+          linhKien={f.linhKien}
+          ktvEmail={f.ktvEmail}
+          onValidityChange={f.setCaseValid}
+          allowOverride={f.allowOverride}
+          override={f.override}
+          onOverrideChange={f.setOverride}
+        />
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
             <Field label="Linh kiện lỗi">
-              <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
+              <SearchableSelect options={lkOptions(f.linhKien)} value={f.maLk} onChange={f.setMaLk} />
             </Field>
           </div>
           <Field label="Số lượng" required>

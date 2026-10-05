@@ -4,7 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
-import { useLinhKien } from "../../hooks/useLinhKien";
+import { useLinhKien, lkOptions } from "../../hooks/useLinhKien";
 import { LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
 import type { DonVi } from "../../lib/types";
 
@@ -52,7 +52,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
       <div className="space-y-4">
         <p className="rounded-lg bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-bold px-3 py-2">Admin bảo hành yêu cầu bổ sung: {lyDoLabel}{lyDoRaw.includes(":") ? ` — ${lyDoRaw.split(":").slice(1).join(":").trim()}` : ""}</p>
         <Field label="Linh kiện lỗi">
-          <SearchableSelect options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={maLk} onChange={setMaLk} />
+          <SearchableSelect options={lkOptions(linhKien)} value={maLk} onChange={setMaLk} />
         </Field>
         <Field label="Mô tả lỗi" required>
           <Textarea rows={3} value={moTa} onChange={(e) => setMoTa(e.target.value)} />

@@ -1,3 +1,4 @@
+import { lkLabel } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { Btn, Badge, Spinner } from "../../ui/primitives";
@@ -52,7 +53,7 @@ export function OdooDonList({ don, selected, onToggle, onToggleAll }: { don: Odo
               <Badge tone={d.trang_thai === "repairing" ? "blue" : "amber"}>{ODOO_TT_LABELS[d.trang_thai || ""] || d.trang_thai}</Badge>
               <span className="text-xs text-[var(--ink-soft)]">SL {d.so_luong ?? 1}</span>
             </span>
-            <span className="mt-0.5 block text-sm font-medium text-[var(--ink-body)]">{d.ten_linh_kien || d.ma_linh_kien || "—"}</span>
+            <span className="mt-0.5 block text-sm font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
             {(d.tinh_trang_loi || d.ghi_chu) && <span className="block text-xs text-[var(--ink-soft)]">{[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ")}</span>}
             {d.ngay_tao && <span className="block text-[11px] text-[var(--ink-faint)]">Tạo trên Odoo {fmtDate(d.ngay_tao)}</span>}
           </span>

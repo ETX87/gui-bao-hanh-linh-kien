@@ -1,9 +1,10 @@
 import { createPortal } from "react-dom";
 import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
+import { lkOptions } from "../../hooks/useLinhKien";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
-import { CaseLookupPreviewCard } from "../shared/CaseLookupPreviewCard";
+import { CaseIdField } from "../shared/CaseLookupPreviewCard";
 import { useAddDonForm } from "./useAddDonForm";
 
 // Man "Them don bao hanh" RIENG cho mobile - port dung 7 nguyen tac da chot o vong redesign UI
@@ -34,12 +35,22 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
       </div>
 
       <div className="px-4 py-4 overflow-y-auto flex-1 space-y-4">
-        <Field label="Mã case" required>
-          <Input value={f.caseId} onChange={(e) => f.setCaseId(e.target.value)} placeholder="Mã case bên hệ thống CRM/DVBH" />
-        </Field>
-        <CaseLookupPreviewCard caseId={f.caseId} maLk={f.maLk} linhKien={f.linhKien} ktvEmail={f.ktvEmail} onValidityChange={f.setCaseValid} />
+        <CaseIdField
+          label="Mã case"
+          required
+          placeholder="Mã case bên hệ thống CRM/DVBH"
+          caseId={f.caseId}
+          setCaseId={f.setCaseId}
+          maLk={f.maLk}
+          linhKien={f.linhKien}
+          ktvEmail={f.ktvEmail}
+          onValidityChange={f.setCaseValid}
+          allowOverride={f.allowOverride}
+          override={f.override}
+          onOverrideChange={f.setOverride}
+        />
         <Field label="Linh kiện lỗi">
-          <SearchableSelect options={f.linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))} value={f.maLk} onChange={f.setMaLk} />
+          <SearchableSelect options={lkOptions(f.linhKien)} value={f.maLk} onChange={f.setMaLk} />
         </Field>
         <Field label="Số lượng" required>
           <div className="flex items-center gap-2">

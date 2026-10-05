@@ -7,9 +7,9 @@ import { SearchableSelect } from "../../ui/SearchableSelect";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
-import { useLinhKien } from "../../hooks/useLinhKien";
+import { useLinhKien, lkOptions, lkLabel } from "../../hooks/useLinhKien";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
-import { CaseLookupPreviewCard } from "./CaseLookupPreviewCard";
+import { CaseLookupAuto } from "./CaseLookupPreviewCard";
 import type { DonVi } from "../../lib/types";
 
 const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
@@ -87,7 +87,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
           <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>
         )}
         {unit.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-soft)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[unit.loai_doi_tru_de_xuat]}</b></p>}
-        {unit.case_id && <CaseLookupPreviewCard caseId={unit.case_id} maLk={maLkThucTe || unit.ma_lk || ""} linhKien={linhKien} />}
+        {unit.case_id && <CaseLookupAuto caseId={unit.case_id} maLk={maLkThucTe || unit.ma_lk || ""} linhKien={linhKien} />}
 
         <SectionLabel>Phân loại bảo hành</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
@@ -158,10 +158,10 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         )}
         <Field label="Linh kiện sửa chữa thực tế">
           <SearchableSelect
-            options={linhKien.map((lk) => ({ value: lk.ma_lk, label: lk.ten_lk }))}
+            options={lkOptions(linhKien)}
             value={maLkThucTe}
             onChange={setMaLkThucTe}
-            placeholder={`— (dùng đúng linh kiện KTV đã chọn: ${unit.ma_lk || "—"}) —`}
+            placeholder={`— (dùng đúng linh kiện KTV đã chọn: ${unit.ma_lk ? lkLabel(linhKien.find((l) => l.ma_lk === unit.ma_lk)?.ten_lk, unit.ma_lk) : "—"}) —`}
           />
         </Field>
       </div>

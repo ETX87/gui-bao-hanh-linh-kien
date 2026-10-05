@@ -3,6 +3,7 @@ import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Card, Btn, Input } from "../../ui/primitives";
 import type { SettingItem } from "../../lib/types";
+import { refreshLinhKien } from "../../hooks/useLinhKien";
 
 // "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang.
 // Phat hien 15 vong ra soat UX: them SUA (doi ten) + XOA (truoc day chi bat/tat + them, go nham la
@@ -153,12 +154,74 @@ function OdooSyncCard() {
   );
 }
 
+// Top linh kien xu ly thanh cong 30 ngay (05/10/2026 muc 7): moi ngay tu tinh 1 lan khi toi khung gio
+// cai dat (cron 15 phut kiem tra), dung de xep thu tu danh sach chon linh kien.
+function TopLinhKienCard() {
+  const toast = useToast();
+  const [gio, setGio] = useState<number | null>(null);
+  const [last, setLast] = useState<{ so_lk: number; tinh_luc: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () =>
+    api
+      .get<{ gio: number; last: { so_lk: number; tinh_luc: string } | null }>("/linh-kien/top-settings")
+      .then((r) => {
+        setGio(r.gio);
+        setLast(r.last);
+      })
+      .catch((e) => toast(errorMessage(e), "error"));
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const saveGio = async (v: number) => {
+    setGio(v);
+    try {
+      await api.patch("/linh-kien/top-settings", { gio: v });
+      toast("Đã lưu khung giờ.", "ok");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+  const tinhNgay = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ so_lk: number; tinh_luc: string }>("/linh-kien/top/tinh-ngay");
+      setLast(r);
+      refreshLinhKien();
+      toast(`Đã tính lại: ${r.so_lk} linh kiện có lượt xử lý thành công trong 30 ngày.`, "ok");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card title="🔥 Top linh kiện (30 ngày)" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={tinhNgay}>{busy ? "Đang tính…" : "Tính ngay"}</Btn>}>
+      <p className="text-xs text-[var(--ink-soft)] mb-3">
+        Mỗi ngày hệ thống tự đếm các linh kiện được xử lý thành công (Admin bảo hành đã xác nhận hoàn tất, không tính đơn từ chối) trong 30 ngày gần nhất, rồi đưa các linh kiện này lên đầu danh sách chọn linh kiện.
+      </p>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-semibold text-[var(--ink)]">Khung giờ tính hằng ngày:</span>
+        <select className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1.5 text-sm" value={gio ?? ""} onChange={(e) => saveGio(Number(e.target.value))} disabled={gio === null}>
+          {Array.from({ length: 24 }, (_, h) => (
+            <option key={h} value={h}>
+              {String(h).padStart(2, "0")}:00
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="mt-3 text-xs text-[var(--ink-soft)]">{last ? `Lần tính gần nhất ${last.tinh_luc}: ${last.so_lk} linh kiện có lượt xử lý thành công.` : "Chưa tính lần nào."}</p>
+    </Card>
+  );
+}
+
 export function QtriCaiDatScreen() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <SettingListCard title="⏱ Lý do chậm" path="/settings/ly-do-cham" />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />
+      <TopLinhKienCard />
     </div>
   );
 }

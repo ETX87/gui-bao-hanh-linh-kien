@@ -1,40 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { CaseLookupPreview } from "../lib/types";
 
 export type CaseLookupStatus = "idle" | "loading" | "found" | "not_found" | "error";
 
-// Tra cuu 1 case theo ID, debounce 500ms - dung o AddDonModal/AddDonMobileSheet (KTV)/DonDichVuModal
-// (Admin BH)/PhanLoaiModal, goi GET /api/case-lookup (proxy sang he DVBH goc). Bo qua ket qua cu neu
-// caseId da doi truoc khi request tra ve (tranh "race" khi go nhanh nhieu ky tu).
+export interface CaseLookupResult {
+  preview: CaseLookupPreview | null;
+  status: CaseLookupStatus;
+  khopKtv: boolean | null;
+  check: () => void;
+}
+
+// Tra cuu 1 case theo ID qua GET /api/case-lookup (proxy sang he DVBH goc).
 //
-// ktvEmail (tuy chon, them 05/09/2026 muc 2 "mã sự cố... phải đúng của ktv đó mới cho tạo"): khi co,
-// backend tra them `khopKtv` (true/false/null - null = chua tra cuu xong/khong co case_id) doi chieu
-// ma KTV trich tu case voi chinh KTV nay - dung cho AddDonModal/AddDonMobileSheet (context luon gan
-// voi 1 KTV cu the), KHONG dung cho DonDichVuModal/PhanLoaiModal (khong co "1 KTV" ro rang hoac case
-// tuy chon).
-export function useCaseLookup(caseId: string, ktvEmail?: string) {
+// 05/10/2026 (yeu cau "thêm nút ấn kiểm tra thì mới kiểm tra với bên dvbh, tránh việc gửi api hỏi liên
+// tục mỗi khi nhập 1 ký tự"): mac dinh CHE DO THU CONG - chi goi khi bam "Kiểm tra" (hoac Enter); go
+// sua ma case thi ket qua cu bi xoa ve "idle". auto=true chi dung cho noi ma case CO DINH, khong go
+// (PhanLoaiModal) - goi 1 lan khi mo.
+//
+// ktvEmail (tuy chon): backend tra them `khopKtv` doi chieu ma KTV tren case voi KTV nay.
+export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): CaseLookupResult {
   const [preview, setPreview] = useState<CaseLookupPreview | null>(null);
   const [status, setStatus] = useState<CaseLookupStatus>("idle");
   const [khopKtv, setKhopKtv] = useState<boolean | null>(null);
+  const checkedId = useRef("");
   const seq = useRef(0);
 
-  useEffect(() => {
-    const id = caseId.trim();
-    if (!id) {
-      setPreview(null);
-      setStatus("idle");
-      setKhopKtv(null);
-      return;
-    }
-    setStatus("loading");
-    const mySeq = ++seq.current;
-    const t = setTimeout(async () => {
+  const run = useCallback(
+    async (id: string) => {
+      if (!id) return;
+      setStatus("loading");
+      checkedId.current = id;
+      const mySeq = ++seq.current;
       try {
         const qs = new URLSearchParams({ id });
         if (ktvEmail) qs.set("ktv_email", ktvEmail);
         const r = await api.get<{ found: boolean; preview: CaseLookupPreview | null; khopKtv: boolean | null }>(`/case-lookup?${qs.toString()}`);
-        if (seq.current !== mySeq) return; // caseId da doi, bo ket qua cu
+        if (seq.current !== mySeq) return;
         setPreview(r.preview);
         setStatus(r.found ? "found" : "not_found");
         setKhopKtv(r.khopKtv ?? null);
@@ -44,9 +46,29 @@ export function useCaseLookup(caseId: string, ktvEmail?: string) {
         setStatus("error");
         setKhopKtv(null);
       }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [caseId, ktvEmail]);
+    },
+    [ktvEmail],
+  );
 
-  return { preview, status, khopKtv };
+  useEffect(() => {
+    const id = caseId.trim();
+    if (auto) {
+      if (id) run(id);
+      return;
+    }
+    // Che do thu cong: ma case doi khac ma da kiem tra -> xoa ket qua cu (bat kiem tra lai).
+    if (id !== checkedId.current) {
+      seq.current++;
+      checkedId.current = "";
+      setPreview(null);
+      setStatus("idle");
+      setKhopKtv(null);
+    }
+  }, [caseId, auto, run]);
+
+  const check = useCallback(() => {
+    run(caseId.trim());
+  }, [run, caseId]);
+
+  return { preview, status, khopKtv, check };
 }

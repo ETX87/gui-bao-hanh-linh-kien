@@ -4,6 +4,8 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { parsePage } from "../lib/pagination";
+import { bumpLinhKienVersion, getLinhKienVersion } from "../lib/linhKienVersion";
+import { computeTopLinhKien, getLkTopGio } from "../lib/topLinhKien";
 
 // Danh muc linh kien - HYBRID dong bo (nguon_du_lieu='dong_bo', Giai doan 5 se nhan qua
 // /api/sync/linh-kien) + tu tao them noi bo (nguon_du_lieu='noi_bo', CRUD day du o day). Admin BH
@@ -38,10 +40,19 @@ linhKien.get("/", async (c) => {
     binds.push(like, like);
   }
   if (c.req.query("limit") === undefined) {
-    const { results } = await c.env.DB.prepare(`SELECT * FROM linh_kien_bh WHERE ${where} ORDER BY ten_lk`)
-      .bind(...binds)
-      .all();
-    return c.json({ linh_kien: results });
+    // Kem hang top 30 ngay (05/10/2026 muc 7) - picker xep top truoc, con lai theo ten. Kem "version"
+    // de client luu cache tren may (muc 8). Chi tra cot can cho o chon/tra ten (danh muc ~6.300 dong,
+    // bo anh_demo/ghi_chu cho goi cache nhe).
+    const [{ results }, version] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT l.ma_lk, l.ten_lk, l.so_thang_bao_hanh, l.duoc_dung_bao_hanh, t.hang AS top_hang, t.so_luong AS top_so_luong FROM linh_kien_bh l LEFT JOIN linh_kien_top_bh t ON t.ma_lk = l.ma_lk
+         WHERE ${where.replace("ma_lk LIKE", "l.ma_lk LIKE")} ORDER BY (t.hang IS NULL), t.hang, l.ten_lk`,
+      )
+        .bind(...binds)
+        .all(),
+      getLinhKienVersion(c.env.DB),
+    ]);
+    return c.json({ linh_kien: results, version });
   }
   const { limit, offset } = parsePage(c);
   const fromWhere = `FROM linh_kien_bh WHERE ${where}`;
@@ -54,6 +65,29 @@ linhKien.get("/", async (c) => {
       .first<{ cnt: number }>(),
   ]);
   return c.json({ linh_kien: results, total: totalRow?.cnt ?? 0 });
+});
+
+// GET /linh-kien/version - 1 dong, client so voi ban cache tren may (05/10/2026 muc 8).
+linhKien.get("/version", async (c) => c.json({ version: await getLinhKienVersion(c.env.DB) }));
+
+// GET/PATCH /linh-kien/top-settings - khung gio tinh top linh kien hang ngay + lan tinh gan nhat.
+linhKien.get("/top-settings", async (c) => {
+  const last = await c.env.DB.prepare("SELECT value FROM sync_state WHERE key = 'lk_top_last'").first<{ value: string }>();
+  return c.json({ gio: await getLkTopGio(c.env.DB), last: last ? JSON.parse(last.value) : null });
+});
+linhKien.patch("/top-settings", async (c) => {
+  if (!c.get("user").la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ gio?: number }>().catch(() => ({}) as { gio?: number });
+  const gio = Number(body.gio);
+  if (!Number.isInteger(gio) || gio < 0 || gio > 23) return c.json({ error: "INVALID_GIO" }, 400);
+  await c.env.DB.prepare("INSERT INTO sync_state (key, value, updated_at) VALUES ('lk_top_gio', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
+    .bind(String(gio), nowVN())
+    .run();
+  return c.json({ ok: true });
+});
+linhKien.post("/top/tinh-ngay", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  return c.json(await computeTopLinhKien(c.env.DB));
 });
 
 interface CreateBody {
@@ -79,6 +113,7 @@ linhKien.post("/", async (c) => {
   )
     .bind(body.ma_lk.trim(), body.ten_lk.trim(), body.don_vi || "", body.ghi_chu || "", body.anh_demo || "", body.so_thang_bao_hanh ?? null, body.loai_hang || "", user.email, nowVN())
     .run();
+  await bumpLinhKienVersion(c.env.DB);
   return c.json({ ok: true }, 201);
 });
 
@@ -128,6 +163,7 @@ linhKien.patch("/:ma", async (c) => {
       )
       .run();
   }
+  await bumpLinhKienVersion(c.env.DB);
   return c.json({ ok: true });
 });
 
