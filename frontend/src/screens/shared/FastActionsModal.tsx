@@ -5,6 +5,7 @@ import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select } from "../../ui/primitives";
 import { FAST_ACTION_ICONS } from "../../lib/constants";
 import { useNvList } from "../../hooks/useNvList";
+import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
 import type { DonVi, FastActionMeta } from "../../lib/types";
 
@@ -65,20 +66,25 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
   const overdue = useSlaGate(unit.updated_at);
   const needsNv = meta.huong && ["sua_chua", "dich_vu_tinh_phi"].includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";
+  // "Từ chối" (khong co ly do huy dat san) phai hoi ly do huy - truoc day form khong hoi nen backend
+  // luon tra 400 REQUIRE_LY_DO_TU_CHOI (ra soat Admin BH 05/10/2026).
+  const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
+  const { items: lyDoTuChoiList } = useLyDoTuChoi();
 
   const [nv, setNv] = useState("");
   const [mailPd, setMailPd] = useState("");
   const [maPd, setMaPd] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
+  const [lyDoTuChoi, setLyDoTuChoi] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const needsForm = needsNv || needsMailPd || overdue;
-  const valid = (!needsNv || nv) && (!needsMailPd || mailPd.trim()) && (!overdue || lyDoCham);
+  const needsForm = needsNv || needsMailPd || needsLyDoTuChoi || overdue;
+  const valid = (!needsNv || nv) && (!needsMailPd || mailPd.trim()) && (!needsLyDoTuChoi || lyDoTuChoi) && (!overdue || lyDoCham);
 
   const apply = async () => {
     setBusy(true);
     try {
-      await api.post(`/admin/don-vi/${unit.id}/fast/${meta.key}`, { nv: needsNv ? nv : undefined, mail_pd: needsMailPd ? mailPd : undefined, ma_phe_duyet: maPd || undefined, ly_do_cham: overdue ? lyDoCham : undefined });
+      await api.post(`/admin/don-vi/${unit.id}/fast/${meta.key}`, { nv: needsNv ? nv : undefined, mail_pd: needsMailPd ? mailPd : undefined, ma_phe_duyet: maPd || undefined, ly_do_cham: overdue ? lyDoCham : undefined, ly_do_tu_choi: needsLyDoTuChoi ? lyDoTuChoi : undefined });
       toast(`Đã áp dụng: ${meta.label}`, "ok");
       onDone();
     } catch (e) {
@@ -108,6 +114,18 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
               {nvList.map((n) => (
                 <option key={n.email} value={n.email}>
                   {n.ten || n.email}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        {needsLyDoTuChoi && (
+          <Field label="Lý do huỷ" required>
+            <Select value={lyDoTuChoi} onChange={(e) => setLyDoTuChoi(e.target.value)}>
+              <option value="">— Chọn lý do —</option>
+              {lyDoTuChoiList.filter((l) => !!l.bat_tat).map((l) => (
+                <option key={l.id} value={l.noi_dung}>
+                  {l.noi_dung}
                 </option>
               ))}
             </Select>

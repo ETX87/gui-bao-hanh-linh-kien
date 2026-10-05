@@ -107,7 +107,7 @@ workload.get("/", async (c) => {
       one(
         `SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
          LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-         WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
+         WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai')
            AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`,
       ).then((r) => {
         counts.admin_cho_phan_loai = r?.cnt ?? 0;

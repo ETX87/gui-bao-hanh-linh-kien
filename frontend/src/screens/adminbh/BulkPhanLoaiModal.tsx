@@ -4,7 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, SectionLabel } from "../../ui/primitives";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV } from "../../lib/constants";
-import { useLyDoTuChoi } from "../../hooks/useSettings";
+import { useLyDoTuChoi, useLyDoCham } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
 
 const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
@@ -21,11 +21,12 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
   const toast = useToast();
   const nvList = useNvList();
   const { items: lyDoTuChoiList } = useLyDoTuChoi();
+  const { items: lyDoChamList } = useLyDoCham();
 
   const [loaiBaoHanh, setLoaiBaoHanh] = useState("trong_bh");
   const [mailPd, setMailPd] = useState("");
   const [maPheDuyet, setMaPheDuyet] = useState("");
-  const [loaiDoiTru, setLoaiDoiTru] = useState("doi_tra");
+  const [loaiDoiTru, setLoaiDoiTru] = useState("theo_de_xuat"); // moi don theo de xuat cua KTV (giong FAST)
   const [huongXuLy, setHuongXuLy] = useState("");
   const [nguoiSuaChua, setNguoiSuaChua] = useState("");
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
@@ -83,7 +84,14 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
           Áp dụng cùng 1 lựa chọn cho toàn bộ {unitIds.length} đơn vị đã chọn. Đơn vị nào đang quá hạn SLA hoặc sai trạng thái sẽ báo lỗi riêng, không chặn các đơn còn lại.
         </p>
         <Field label="Lý do chậm (nếu có đơn quá hạn SLA)">
-          <Input value={lyDoCham} onChange={(e) => setLyDoCham(e.target.value)} placeholder="Bỏ trống nếu không đơn nào quá hạn" />
+          <Select value={lyDoCham} onChange={(e) => setLyDoCham(e.target.value)}>
+            <option value="">— Không có đơn quá hạn —</option>
+            {lyDoChamList.map((l) => (
+              <option key={l.id} value={l.noi_dung}>
+                {l.noi_dung}
+              </option>
+            ))}
+          </Select>
         </Field>
 
         <SectionLabel>Phân loại bảo hành</SectionLabel>
@@ -99,6 +107,7 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
           </Field>
           <Field label="Loại đối trừ" required>
             <Select value={loaiDoiTru} onChange={(e) => setLoaiDoiTru(e.target.value)}>
+              <option value="theo_de_xuat">Theo đề xuất của KTV (từng đơn)</option>
               {Object.entries(LOAI_DOI_TRU_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}

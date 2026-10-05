@@ -74,7 +74,7 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 adminBH.get("/don-cha", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const trangThai = c.req.query("trang_thai_cha") || "cho_xac_nhan_so_luong";
-  const { limit, offset } = parsePage(c);
+  const { limit, offset } = parsePage(c, 20, 1000);
   // them g.nguoi_tao AS ktv - can cho cot "Nguon" cua bang thong nhat (UI, xem AdminUnifiedTable.tsx)
   // hien dung email KTV thay vi chi case_id, khop dung renderAdminUnifiedTable() cua prototype.
   const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
@@ -279,15 +279,27 @@ adminBH.post("/don-vi/phan-loai-hang-loat", async (c) => {
   if (ids.length === 0) return c.json({ error: "NO_IDS" }, 400);
   const errors: Record<string, string> = {};
   let applied = 0;
+  // 05/10/2026 (ra soat Admin BH): loai_doi_tru="theo_de_xuat" -> moi don vi lay dung de xuat cua KTV
+  // (giong nut FAST) thay vi ep 1 gia tri chung; huong tao phieu tra -> tu gop vao phieu "Nhap" dung
+  // KTV + loai doi tru (giong FAST), khong de don nam cho "Tu dong gop".
+  const theoDeXuat = (body.loai_doi_tru as string) === "theo_de_xuat";
   for (const id of ids) {
-    const unit = await c.env.DB.prepare("SELECT id, trang_thai, updated_at FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<UnitRow>();
+    const unit = await c.env.DB.prepare("SELECT id, parent_id, trang_thai, updated_at FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<UnitRow & { parent_id: string }>();
     if (!unit || !["cho_phan_loai", "admin_can_xem_lai"].includes(unit.trang_thai)) {
       errors[id] = "WRONG_STATE";
       continue;
     }
-    const result = await applyPhanLoaiToUnit(c.env.DB, unit, body, user.email);
-    if ("error" in result) errors[id] = result.error;
-    else applied++;
+    const loaiDoiTru = theoDeXuat ? await defaultLoaiDoiTru(c.env.DB, unit.parent_id) : (body.loai_doi_tru as LoaiDoiTru);
+    const result = await applyPhanLoaiToUnit(c.env.DB, unit, { ...body, loai_doi_tru: loaiDoiTru }, user.email);
+    if ("error" in result) {
+      errors[id] = result.error;
+      continue;
+    }
+    applied++;
+    if (body.huong_xu_ly && HUONG_TAO_PHIEU_TRA.includes(body.huong_xu_ly)) {
+      const ktvKey = await ktvKeyOfUnit(c.env.DB, unit.parent_id);
+      await attachToOrCreatePhieuTra(c.env.DB, unit.id, ktvKey, loaiDoiTru, user.email);
+    }
   }
   return c.json({ applied, errors });
 });

@@ -71,7 +71,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
   const t = data.phieu_tra;
 
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
-  const guiDuyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
+  const guiDuyet = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
   const huyGuiDuyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/huy-gui-duyet`); toast("Đã huỷ gửi duyệt.", "ok"); });
   const tachDonVi = (unitId: string) => run(async () => { await api.delete(`/phieu-tra/${traId}/don-vi/${unitId}`); toast("Đã tách khỏi phiếu.", "ok"); });
   const duyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/duyet`); toast("Đã duyệt.", "ok"); });

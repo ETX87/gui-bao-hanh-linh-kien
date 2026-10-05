@@ -67,7 +67,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [boSungFor, setBoSungFor] = useState<string | null>(null);
   const [baoCaoSaiFor, setBaoCaoSaiFor] = useState<string | null>(null);
 
-  const loadDonCha = () => api.get<{ don_cha: DonCha[] }>("/admin/don-cha?limit=100").then((r) => setDonCha(r.don_cha));
+  const loadDonCha = () => api.get<{ don_cha: DonCha[] }>("/admin/don-cha?limit=1000").then((r) => setDonCha(r.don_cha));
   useEffect(() => {
     loadDonCha();
   }, []);

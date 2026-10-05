@@ -4148,3 +4148,54 @@ thoại có thể còn icon cũ trong bộ nhớ đệm cho tới khi cài lại
 - UI (Chế độ test vai trò Admin BH): gõ mã case → 0 lượt gọi API; bấm Kiểm tra → 1 lượt; có link CRM; nút submit tắt cho tới khi tích. Ô linh kiện hiện "Loi loc so 1 PP 5 micron (LK005) 🔥 Top 1"…; tìm "vòi", "voi inox", "inox voi", "5 micron loc", "LK011" đều ra đúng 1 kết quả.
 - Tải lại trang → chỉ 1 lượt gọi `/linh-kien/version` (dùng cache). Thẻ Top linh kiện ở Cài đặt hiển thị đúng.
 - Chưa kiểm được với dvbh thật (link CRM thật, case thật).
+
+## Rà soát 1 ngày làm việc của Admin bảo hành + sửa 8 lỗi rõ ràng (05/10/2026) — v1.012
+
+**(a) Nguyên văn yêu cầu:** *"về vai trò admin bảo hành: => bạn hãy tự vào vai trò 1 nhân viên admin bảo
+hành => triển khai công việc hàng ngày, có trung bình 100-150 đơn bảo hành được gửi về rải rác trong
+ngày, bạn phải xử lý các đơn với nhiều bước, quy tắc riêng, đến khi kết thúc luồng quy trình xử lý các
+linh kiện này => đánh giá tốc độ xử lý, vấn đề vướng mắc, cái gì cải tiến được, cái gì đang chưa hợp lý
+=> cách nào xử lý nhiều đơn, các đơn có trạng thái giống hệt nhau chỉ 1- 2 click là xử lý hoàn loạt như
+=> đổi mới trong bảo hành => click hoàn loạt => các cảnh báo, chỉ dẫn để tiện cho công việc đã có chưa
+=> test chi tiết rồi lập bảng vân đề, giải pháp => tốc độ xử lý trung bình cho từng luồng quy trình =>
+các bước nhập liệu cho từng bước hiện tại => đề xuất => cải tiến sau đề xuất"*
+
+**(b) Đã làm:**
+- Mô phỏng chạy thật 1 ngày trên `wrangler dev` local với D1 riêng: 15 KTV, 26 thùng, 120 đơn cha, 143
+  đơn vị. Case lookup dùng stub tạm (đã revert).
+- Đo click, trường nhập và thời gian máy cho từng bước A–E.
+- Báo cáo đầy đủ ở `du an sua chua bao hanh/Ra-Soat-Ngay-Lam-Viec-Admin-BH_05-10-2026.md`: bảng tốc
+  độ, 17 vấn đề, ước tính trước/sau đề xuất (~65–75 phút/ngày → ~20–25 phút).
+- **Đã sửa ngay 8 lỗi rõ ràng (v1.012):**
+  1. `GET /admin/don-cha` bị trần 100 dòng mà không có nút chuyển trang → nâng lên 1000.
+  2. ⚡ "Từ chối" không hỏi lý do huỷ nên luôn lỗi 400 → `FastActionsModal` thêm ô "Lý do huỷ".
+  3. Phân loại hàng loạt mặc định "Đổi trả", ghi đè đề xuất "Trừ công nợ" của KTV → thêm lựa chọn mặc
+     định "Theo đề xuất của KTV" (`loai_doi_tru='theo_de_xuat'`, backend lấy `defaultLoaiDoiTru` theo
+     từng đơn).
+  4. Hàng loạt nay gộp vào phiếu trả "Nhập" giống FAST (`attachToOrCreatePhieuTra`).
+  5. "Lý do chậm" khi làm hàng loạt đổi từ ô gõ tự do sang ô chọn danh mục.
+  6. Nút "Gửi duyệt" phiếu trả tự lưu mã trước khi gửi (trước đây gõ mã mà chưa "Lưu mã" thì báo thiếu
+     MISA).
+  7. Số workload `admin_cho_phan_loai` bỏ các đơn `cho_bo_sung_tt` (đang là việc của KTV).
+  8. Top linh kiện 30 ngày: định nghĩa "thành công" nay gồm đơn đã tới bước trả hàng
+     (`san_sang_gom_phieu_tra` / có `phieu_tra_id` / `admin_xac_nhan_hoan_tat=1`), trừ `tu_choi` /
+     `chuyen_kho`. Bản cũ (v1.011) chỉ đếm `admin_xac_nhan_hoan_tat=1`, nên bỏ sót toàn bộ đơn Đổi mới /
+     Trừ nợ / Trả lại.
+
+**(c) Vấn đề trong lúc làm:** `wrangler dev` mất static assets sau khi `npm run build` thay thư mục
+`dist` (trang trắng, `/` trả 404). Phải khởi động lại server mới thấy giao diện mới.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend: 0 lỗi.
+- API trên D1 mô phỏng:
+  - hàng loạt với `theo_de_xuat`: 4/4 đơn giữ `tru_cong_no` và được gộp vào đúng phiếu nháp của từng
+    KTV;
+  - FAST `tu_choi_fast` thiếu lý do → 400, có lý do → 200;
+  - tính lại top → 20 linh kiện (trước đó chỉ đếm 16 đơn vị);
+  - workload đếm đúng.
+- UI thật: form ⚡ Từ chối hiện ô "Lý do huỷ" có đủ danh mục.
+
+**Câu hỏi mở / đề xuất chờ người dùng chọn (CHƯA làm):** đề xuất 9–17 trong file báo cáo, gồm lọc /
+tìm / nhóm ở bảng thống nhất, hàng loạt cho tiếp nhận + xác nhận SL + FAST + hoàn tất, cột tên khách /
+tên KTV / badge hết BH, nhập mã phiếu trả dạng bảng. Riêng điểm 15 cần chốt nghiệp vụ: Đổi mới qua FAST
+/ hàng loạt hiện không ghi `xu_ly_xac` — nên hỏi ngay lúc phân loại, hay để trống rồi hỏi sau?
