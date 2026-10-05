@@ -23,13 +23,10 @@ import type { AppUser, DonCha, DonVi, PhieuGui } from "../../lib/types";
 // long cu cua prototype) KHONG port - bang thong nhat + UnitDetailModal la du de xu ly toan bo, click
 // dong de mo chi tiet.
 //
-// Phan trang (05/09/2026): "Thung cho tiep nhan noi bo" va "Don vi can xu ly" (donVi, phan chinh cua
-// bang thong nhat) deu phan trang that (server LIMIT/OFFSET). Rieng "don cha cho xac nhan SL" (donCha)
-// CO CHU DICH lay 1 lan het (gioi han cung 100 dong, khong lo pager rieng) - danh sach nay bi gate lai
-// truoc khi qua duoc buoc nay (Admin phai xac nhan SL moi tach thanh don vi), nen trong thuc te khong
-// bao gio phinh to - va vi AdminUnifiedTable gop ca 2 nguon thanh 1 bang lien tuc, 2 pager rieng cho 2
-// phan se roi UX hon la co ich; pager duy nhat o cuoi bang phan trang dung phan "don vi" (backlog thuc
-// su co the tang lien tuc).
+// Phan trang (05/10/2026, "Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ca 3 nguon
+// deu phan trang server 20/trang - thung cho tiep nhan noi bo, don cha cho xac nhan SL (pager rieng), va
+// don vi can xu ly phan trang THEO DON CHA (?group=1: 20 don cha/trang, moi nhom "xN" la 1 dong thu gon
+// nen bang van toi da 20 dong khi chua so ra).
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const toast = useToast();
@@ -43,10 +40,14 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     loading: loadingPhieuGui,
     reload: reloadPhieuGui,
   } = usePagedApi<PhieuGui>("/admin/phieu-gui", "phieu_gui");
-  const [donCha, setDonCha] = useState<DonCha[]>([]);
-  // pageSize lon (Phat hien 14): AdminUnifiedTable gop don vi theo don cha + thu gon "xN" ngay tren
-  // client - can lay het 1 lo trong 1 lan. Hang doi bi gate nen thuc te khong lon; <Pagination> tu an
-  // vi chi con 1 trang.
+  const {
+    items: donCha,
+    total: donChaTotal,
+    page: donChaPage,
+    pageCount: donChaPageCount,
+    setPage: setDonChaPage,
+    reload: reloadDonCha,
+  } = usePagedApi<DonCha>("/admin/don-cha", "don_cha");
   const {
     items: donVi,
     total: donViTotal,
@@ -55,8 +56,14 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     setPage: setDonViPage,
     loading: loadingDonVi,
     reload: reloadDonVi,
-  } = usePagedApi<DonVi>("/admin/don-vi", "don_vi", 1000);
+    raw: donViRaw,
+  } = usePagedApi<DonVi>("/admin/don-vi?group=1", "don_vi");
+  const donViUnits = (donViRaw.total_don_vi as number) ?? 0;
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkFastOpen, setBulkFastOpen] = useState(false);
+  // Chon hang loat chi trong trang dang xem (doi trang -> bo chon, tranh ap nham don khong nhin thay).
+  useEffect(() => setSelected(new Set()), [donViPage]);
+  const selectedUnits = donVi.filter((u) => selected.has(u.id));
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
   const [donDichVuOpen, setDonDichVuOpen] = useState(false);
@@ -67,14 +74,9 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [boSungFor, setBoSungFor] = useState<string | null>(null);
   const [baoCaoSaiFor, setBaoCaoSaiFor] = useState<string | null>(null);
 
-  const loadDonCha = () => api.get<{ don_cha: DonCha[] }>("/admin/don-cha?limit=1000").then((r) => setDonCha(r.don_cha));
-  useEffect(() => {
-    loadDonCha();
-  }, []);
-
   const afterChange = () => {
     reloadPhieuGui();
-    loadDonCha();
+    reloadDonCha();
     reloadDonVi();
     refresh();
   };
@@ -98,7 +100,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     });
   };
 
-  if ((loadingPhieuGui && phieuGui.length === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0)) return <Spinner />;
+  if ((loadingPhieuGui && phieuGui.length === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0)) return <Spinner />;
 
   return (
     <div className="space-y-6">
@@ -126,12 +128,15 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗂️ Đơn bảo hành cần xử lý ({donCha.length + donViTotal})</h3>
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗂️ Đơn bảo hành cần xử lý ({donChaTotal + donViUnits})</h3>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
               <>
                 <Badge tone="blue">{selected.size} đã chọn</Badge>
                 <Btn onClick={() => setSelected(new Set())}>Bỏ chọn</Btn>
+                <Btn onClick={() => setBulkFastOpen(true)} title="Đổi mới / Trừ công nợ / Sửa chữa... cho cả nhóm, chọn 1 lần">
+                  ⚡ Xử lý nhanh hàng loạt
+                </Btn>
                 <Btn variant="primary" onClick={() => setBulkOpen(true)}>
                   Phân loại hàng loạt
                 </Btn>
@@ -154,7 +159,18 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onOpenBoSung={(pid) => setBoSungFor(pid)}
           onOpenBaoCaoSai={(pid) => setBaoCaoSaiFor(pid)}
         />
-        <Pagination page={donViPage} pageCount={donViPageCount} total={donViTotal} onChange={setDonViPage} />
+        {donChaPageCount > 1 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn chờ xác nhận số lượng ({donChaTotal})</p>
+            <Pagination page={donChaPage} pageCount={donChaPageCount} total={donChaTotal} onChange={setDonChaPage} />
+          </div>
+        )}
+        {donViPageCount > 1 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn vị cần xử lý — {donViTotal} đơn cha / {donViUnits} đơn vị (20 đơn cha mỗi trang)</p>
+            <Pagination page={donViPage} pageCount={donViPageCount} total={donViTotal} onChange={setDonViPage} />
+          </div>
+        )}
       </Card>
 
       {xacNhanSlFor && (
@@ -179,9 +195,22 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
       {bulkOpen && (
         <BulkPhanLoaiModal
           unitIds={Array.from(selected)}
+          units={selectedUnits}
           onClose={() => setBulkOpen(false)}
           onDone={() => {
             setBulkOpen(false);
+            setSelected(new Set());
+            afterChange();
+          }}
+        />
+      )}
+      {bulkFastOpen && (
+        <FastActionsModal
+          units={selectedUnits}
+          isKhachLe={false}
+          onClose={() => setBulkFastOpen(false)}
+          onDone={() => {
+            setBulkFastOpen(false);
             setSelected(new Set());
             afterChange();
           }}

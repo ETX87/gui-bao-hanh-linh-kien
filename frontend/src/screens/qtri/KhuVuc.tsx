@@ -5,6 +5,8 @@ import { useToast } from "../../ui/Toast";
 import { Card, Btn, Badge, Spinner, Field, Input } from "../../ui/primitives";
 import { Modal } from "../../ui/Modal";
 import { SearchableSelect } from "../../ui/SearchableSelect";
+import { Pagination } from "../../ui/Pagination";
+import { useClientPage } from "../../hooks/useClientPage";
 import type { KhuVucQuanSat } from "../../lib/types";
 
 // Man "Quan ly Giam sat khu vuc" (qtri, moi 07/09/2026) - gap that phat hien: qtri gan vai tro
@@ -21,6 +23,7 @@ export function QtriKhuVucScreen() {
     api.get<{ khu_vuc: KhuVucQuanSat[] }>("/khu-vuc").then((r) => setRows(r.khu_vuc));
   };
   useEffect(reload, []);
+  const pg = useClientPage(rows ?? []);
 
   if (rows === null) return <Spinner />;
 
@@ -34,7 +37,7 @@ export function QtriKhuVucScreen() {
         <b>Giám sát</b>) thấy được đúng KTV/đơn bảo hành thuộc khu vực mình, và "tạo hộ đơn" được cho đúng KTV trong khu vực.
       </p>
       <Table
-        rows={rows}
+        rows={pg.pageItems}
         rowKey={(r) => r.ma}
         onRowClick={(r) => setEditing(r)}
         emptyText="Chưa có KTV nào có mã khu vực — chưa có gì để gán."
@@ -54,6 +57,7 @@ export function QtriKhuVucScreen() {
           },
         ]}
       />
+      <Pagination page={pg.page} pageCount={pg.pageCount} total={pg.total} onChange={pg.setPage} />
       {editing && <GanGsModal khuVuc={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}
     </Card>
   );

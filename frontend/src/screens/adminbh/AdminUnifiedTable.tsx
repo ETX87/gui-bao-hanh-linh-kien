@@ -43,6 +43,10 @@ function Ellipsis({ text, title }: { text: ReactNode; title?: string }) {
 export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai }: Props) {
   const { items: linhKienList } = useLinhKien();
   const lkName = (ma: string | null | undefined) => (ma ? lkLabel(linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
+  const phanLoai = (ma: string | null | undefined): ReactNode => {
+    const v = ma ? linhKienList.find((lk) => lk.ma_lk === ma)?.don_vi?.trim() : "";
+    return v ? <Badge tone="gray">{v}</Badge> : <span className="text-[var(--ink-faint)]">—</span>;
+  };
   const { order, hidden, visibleCols, colWidth, reorder, toggleHidden, commitWidth, reset } = useAdminCols();
   const [colSettingsOpen, setColSettingsOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -105,6 +109,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     ),
     khachhang: <Ellipsis text="—" />,
     linhkien: <Ellipsis text={lkName(p.ma_lk)} title={lkName(p.ma_lk)} />,
+    phanloai: phanLoai(p.ma_lk),
     mota: <Ellipsis text={p.mo_ta_loi} title={p.mo_ta_loi || ""} />,
     sla: <SlaBadge since={p.created_at} entityType="phieu_sc" entityId={p.id} clickable />,
     sdt: "—",
@@ -144,6 +149,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
           title={lkName(effLk)}
         />
       ),
+      phanloai: phanLoai(effLk),
       mota: <Ellipsis text={u.mo_ta_loi} title={u.mo_ta_loi || ""} />,
       sla: <SlaBadge since={u.updated_at} entityType="phieu_sc_ct" entityId={u.id} clickable />,
       sdt: u.nguon_tao === "admin_dich_vu" ? u.sdt_khach_hang || "—" : "—",
@@ -281,6 +287,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
               <span className="ml-auto">{f.sla}</span>
             </div>
             <p className="text-sm font-semibold text-[var(--ink)]">{f.linhkien}</p>
+            <div>{f.phanloai}</div>
             {u.mo_ta_loi && <p className="text-sm text-[var(--ink-body)] line-clamp-2">{u.mo_ta_loi}</p>}
             <div className="text-xs text-[var(--ink-soft)]">{f.nguon}</div>
           </div>

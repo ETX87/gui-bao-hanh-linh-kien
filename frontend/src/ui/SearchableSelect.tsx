@@ -85,7 +85,7 @@ export function SearchableSelect({
   }, []);
 
   // Chi muc tim kiem tinh 1 lan theo danh sach (khong tinh lai moi phim go).
-  const index = useMemo(() => options.map((o) => normalizeVi(`${o.label} ${o.value}`)), [options]);
+  const index = useMemo(() => options.map((o) => normalizeVi(`${o.label} ${o.value} ${o.hint ?? ""}`)), [options]);
   const filtered = useMemo(() => {
     // Tach tu: moi tu go vao deu phai co mat, KHONG can dung thu tu ("loc tho" khop "Lõi lọc thô").
     const tokens = normalizeVi(query).split(/\s+/).filter(Boolean);
@@ -179,7 +179,7 @@ export function SearchableSelect({
                 {o.hint ? (
                   <span className="flex items-center gap-2">
                     <span className="truncate flex-1">{o.label}</span>
-                    <span className="shrink-0 text-[11px] font-semibold text-[var(--orange-700)]">{o.hint}</span>
+                    <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)]">{o.hint}</span>
                   </span>
                 ) : (
                   o.label

@@ -9,6 +9,7 @@ import { Table, StopClick, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, isDoiTacKey, doiTacKeyFromName, doiTacNameFromKey } from "../../lib/constants";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
+import { useClientPage } from "../../hooks/useClientPage";
 import type { AppUser, PhieuTra } from "../../lib/types";
 
 interface SanSangUnit {
@@ -50,8 +51,10 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
       if (!m.has(key)) m.set(key, []);
       m.get(key)!.push(u);
     }
-    return m;
+    return [...m.entries()];
   }, [sanSang]);
+  // 20 nhom (KTV x loai doi tru) moi trang - 05/10/2026.
+  const groupPg = useClientPage(groups);
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -125,11 +128,11 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
             </Btn>
           )}
         </div>
-        {groups.size === 0 ? (
+        {groups.length === 0 ? (
           <EmptyState text="Không có đơn vị nào đang chờ gộp." />
         ) : (
           <div className="space-y-3">
-            {[...groups.entries()].map(([key, units]) => {
+            {groupPg.pageItems.map(([key, units]) => {
               const [ktvKey, loai] = key.split("::") as [string, "doi_tra" | "tru_cong_no"];
               return (
                 <div key={key} className="rounded-lg border border-[var(--line)] p-3">
@@ -165,6 +168,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                 </div>
               );
             })}
+            <Pagination page={groupPg.page} pageCount={groupPg.pageCount} total={groupPg.total} onChange={groupPg.setPage} />
           </div>
         )}
       </Card>

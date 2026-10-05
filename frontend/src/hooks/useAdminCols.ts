@@ -6,13 +6,15 @@ import { useEffect, useState } from "react";
 // dang JSON ({order, hidden, widths}) - de neu nguoi dung tung dung ban prototype tren cung trinh
 // duyet, cau hinh cot ho da tuy chinh truoc do tu dong duoc doc lai, khong phai lam lai tu dau.
 
-export type AdminColKey = "trangthai" | "nguon" | "khachhang" | "linhkien" | "mota" | "sla" | "sdt" | "donchacode" | "phieuguicode" | "doitru" | "huongxuly" | "baohanh";
+export type AdminColKey = "trangthai" | "nguon" | "khachhang" | "linhkien" | "phanloai" | "mota" | "sla" | "sdt" | "donchacode" | "phieuguicode" | "doitru" | "huongxuly" | "baohanh";
 
 export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number }> = {
   trangthai: { label: "Trạng thái", width: 150 },
   nguon: { label: "Nguồn", width: 190 },
   khachhang: { label: "Khách hàng", width: 150 },
   linhkien: { label: "Linh kiện", width: 190 },
+  // 05/10/2026: "Phan loai" linh kien lay tu linh-kien-app (cot don_vi da dong bo san).
+  phanloai: { label: "Phân loại LK", width: 130 },
   mota: { label: "Mô tả lỗi", width: 200 },
   sla: { label: "SLA", width: 90 },
   sdt: { label: "SĐT khách hàng", width: 120 },
@@ -23,7 +25,7 @@ export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number 
   baohanh: { label: "Tình trạng BH", width: 120 },
 };
 const ALL_KEYS = Object.keys(ADMIN_COLS_DEF) as AdminColKey[];
-const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "nguon", "khachhang", "linhkien", "mota", "sla"];
+const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "nguon", "khachhang", "linhkien", "phanloai", "mota", "sla"];
 const DEFAULT_HIDDEN: AdminColKey[] = ["sdt", "donchacode", "phieuguicode", "doitru", "huongxuly", "baohanh"];
 const STORAGE_KEY = "admin_unified_cols_v1";
 
@@ -37,8 +39,14 @@ function loadState(): StoredState {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") as Partial<StoredState> | null;
     let order = Array.isArray(raw?.order) ? raw!.order.filter((k): k is AdminColKey => ALL_KEYS.includes(k as AdminColKey)) : DEFAULT_ORDER.slice();
+    // Cot moi them sau nay: chen ngay sau cot dung truoc no trong thu tu mac dinh (khong day xuong cuoi).
+    const defaultFull = DEFAULT_ORDER.concat(DEFAULT_HIDDEN);
     ALL_KEYS.forEach((k) => {
-      if (!order.includes(k)) order.push(k);
+      if (order.includes(k)) return;
+      const prev = defaultFull[defaultFull.indexOf(k) - 1];
+      const at = prev ? order.indexOf(prev) : -1;
+      if (at >= 0) order.splice(at + 1, 0, k);
+      else order.push(k);
     });
     const hidden = Array.isArray(raw?.hidden) ? raw!.hidden.filter((k): k is AdminColKey => ALL_KEYS.includes(k as AdminColKey)) : DEFAULT_HIDDEN.slice();
     const widths = raw?.widths && typeof raw.widths === "object" ? raw.widths : {};

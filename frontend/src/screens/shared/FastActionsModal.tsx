@@ -4,30 +4,40 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select } from "../../ui/primitives";
 import { FAST_ACTION_ICONS } from "../../lib/constants";
+import { isOverdue } from "../../lib/format";
 import { useNvList } from "../../hooks/useNvList";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
-import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
+import { LyDoChamGateField } from "./LyDoChamGateField";
+import { XuLyXacField } from "./XuLyXacField";
+import { ktvChangeLines, confirmKtvChange } from "../../lib/ktvDeXuat";
 import type { DonVi, FastActionMeta } from "../../lib/types";
 
 // Luoi 10 nut "Xu ly nhanh" (FAST) - port dung openFastActionsModal()/completeFastAction() cua
-// prototype. Bam 1-cham voi 6/10 nut, 4 nut con lai (sua_chua_fast/doi_moi_pd/tru_no_pd/sua_chua_pd)
-// mo them 1 form nho hoi field bat buoc (NV/mail phe duyet) truoc khi ap dung - dung cach nguoi dung
-// da chot (khong tu doan). 2 nut "special" (bo_sung_tt/bao_cao_sai) dieu huong sang modal rieng qua
-// onNavigate thay vi tu xu ly tai day.
+// prototype. Bam 1-cham voi cac nut khong can hoi them; nut can NV / mail phe duyet / ly do huy / xu
+// ly xac (Doi moi, 05/10/2026) mo 1 form nho truoc khi ap dung. 2 nut "special" (bo_sung_tt/bao_cao_sai)
+// dieu huong sang modal rieng qua onNavigate.
+//
+// 05/10/2026: dung duoc cho NHIEU don vi cung luc (`units`) - Admin chon 1 lan (NV / mail PD / ly do /
+// xu ly xac / ly do cham) ap cho tat ca, goi POST /admin/don-vi/fast-hang-loat/:key. Che do nhieu don an
+// 2 nut special (gan voi 1 don cha cu the).
 
 export function FastActionsModal({
   unit,
+  units,
   isKhachLe,
   onClose,
   onDone,
   onNavigate,
 }: {
-  unit: DonVi;
+  unit?: DonVi;
+  units?: DonVi[];
   isKhachLe: boolean;
   onClose: () => void;
   onDone: () => void;
-  onNavigate: (special: "bo_sung_tt" | "bao_cao_sai") => void;
+  onNavigate?: (special: "bo_sung_tt" | "bao_cao_sai") => void;
 }) {
+  const list = units ?? (unit ? [unit] : []);
+  const bulk = list.length > 1;
   const [actions, setActions] = useState<FastActionMeta[]>([]);
   const [picked, setPicked] = useState<FastActionMeta | null>(null);
 
@@ -35,20 +45,21 @@ export function FastActionsModal({
     api.get<{ fast_actions: FastActionMeta[] }>("/admin/fast-actions").then((r) => setActions(r.fast_actions));
   }, []);
 
-  const visible = isKhachLe ? actions.filter((a) => a.special !== "bo_sung_tt" && a.special !== "bao_cao_sai") : actions;
+  const visible = isKhachLe || bulk || !onNavigate ? actions.filter((a) => !a.special) : actions;
 
   if (picked) {
     if (picked.special) return null; // khong xay ra - da dieu huong ngay khi bam
-    return <FastActionForm unit={unit} meta={picked} onClose={onClose} onDone={onDone} onBack={() => setPicked(null)} />;
+    return <FastActionForm units={list} meta={picked} onClose={onClose} onDone={onDone} onBack={() => setPicked(null)} />;
   }
 
   return (
-    <Modal title={`⚡ Xử lý nhanh — ${unit.id}`} onClose={onClose} maxWidthClass="max-w-lg">
+    <Modal title={bulk ? `⚡ Xử lý nhanh hàng loạt — ${list.length} đơn vị` : `⚡ Xử lý nhanh — ${list[0]?.id ?? ""}`} onClose={onClose} maxWidthClass="max-w-lg">
+      {bulk && <p className="mb-3 rounded-lg bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-bold px-3 py-2">Áp dụng cùng 1 phương án cho cả {list.length} đơn vị đã chọn.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {visible.map((a) => (
           <button
             key={a.key}
-            onClick={() => (a.special ? onNavigate(a.special) : setPicked(a))}
+            onClick={() => (a.special ? onNavigate?.(a.special) : setPicked(a))}
             className="focus-ring flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] p-4 text-center hover:border-[var(--brand-400)] hover:bg-[var(--accent-soft)] transition-colors"
           >
             <span className="text-2xl">{FAST_ACTION_ICONS[a.key] || "⚡"}</span>
@@ -60,15 +71,18 @@ export function FastActionsModal({
   );
 }
 
-function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; meta: FastActionMeta; onClose: () => void; onDone: () => void; onBack: () => void }) {
+function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi[]; meta: FastActionMeta; onClose: () => void; onDone: () => void; onBack: () => void }) {
   const toast = useToast();
   const nvList = useNvList();
-  const overdue = useSlaGate(unit.updated_at);
+  const bulk = units.length > 1;
+  const overdueCount = units.filter((u) => isOverdue(u.updated_at)).length;
+  const overdue = overdueCount > 0;
   const needsNv = meta.huong && ["sua_chua", "dich_vu_tinh_phi"].includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";
-  // "Từ chối" (khong co ly do huy dat san) phai hoi ly do huy - truoc day form khong hoi nen backend
-  // luon tra 400 REQUIRE_LY_DO_TU_CHOI (ra soat Admin BH 05/10/2026).
+  // "Từ chối" (khong co ly do huy dat san) phai hoi ly do huy (ra soat Admin BH 05/10/2026).
   const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
+  // Doi moi: chon cach xu ly xac 1 lan cho tat ca (05/10/2026).
+  const needsXuLyXac = meta.huong === "doi_moi";
   const { items: lyDoTuChoiList } = useLyDoTuChoi();
 
   const [nv, setNv] = useState("");
@@ -76,16 +90,37 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
   const [maPd, setMaPd] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
+  const [xuLyXac, setXuLyXac] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const needsForm = needsNv || needsMailPd || needsLyDoTuChoi || overdue;
-  const valid = (!needsNv || nv) && (!needsMailPd || mailPd.trim()) && (!needsLyDoTuChoi || lyDoTuChoi) && (!overdue || lyDoCham);
+  const needsForm = needsNv || needsMailPd || needsLyDoTuChoi || needsXuLyXac || overdue;
+  const valid = (!needsNv || nv) && (!needsMailPd || mailPd.trim()) && (!needsLyDoTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac) && (!overdue || lyDoCham);
 
   const apply = async () => {
+    // Nut ep loai doi tru (Tru cong no) ma KTV de xuat khac -> hoi xac nhan truoc.
+    if (meta.loaiDoiTru && !confirmKtvChange(ktvChangeLines(units, meta.loaiDoiTru))) {
+      if (!needsForm) onBack();
+      return;
+    }
     setBusy(true);
+    const payload = {
+      nv: needsNv ? nv : undefined,
+      mail_pd: needsMailPd ? mailPd : undefined,
+      ma_phe_duyet: maPd || undefined,
+      ly_do_cham: overdue ? lyDoCham : undefined,
+      ly_do_tu_choi: needsLyDoTuChoi ? lyDoTuChoi : undefined,
+      xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
+    };
     try {
-      await api.post(`/admin/don-vi/${unit.id}/fast/${meta.key}`, { nv: needsNv ? nv : undefined, mail_pd: needsMailPd ? mailPd : undefined, ma_phe_duyet: maPd || undefined, ly_do_cham: overdue ? lyDoCham : undefined, ly_do_tu_choi: needsLyDoTuChoi ? lyDoTuChoi : undefined });
-      toast(`Đã áp dụng: ${meta.label}`, "ok");
+      if (bulk) {
+        const r = await api.post<{ applied: number; errors: Record<string, string> }>(`/admin/don-vi/fast-hang-loat/${meta.key}`, { ...payload, ids: units.map((u) => u.id) });
+        const errCount = Object.keys(r.errors).length;
+        if (errCount > 0) toast(`${meta.label}: đã áp dụng ${r.applied}/${units.length} — ${errCount} đơn lỗi (đã đổi trạng thái hoặc thiếu thông tin). Mở từng đơn để xử lý riêng.`, "error");
+        else toast(`Đã áp dụng "${meta.label}" cho ${r.applied} đơn vị.`, "ok");
+      } else {
+        await api.post(`/admin/don-vi/${units[0].id}/fast/${meta.key}`, payload);
+        toast(`Đã áp dụng: ${meta.label}`, "ok");
+      }
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -94,8 +129,7 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
     }
   };
 
-  // Neu khong can hoi gi them (khong qua han, khong can NV/mail PD) - ap dung ngay khi mo, khong bat
-  // nguoi dung phai bam them 1 lan "Xac nhan" vo nghia.
+  // Neu khong can hoi gi them - ap dung ngay khi mo, khong bat bam them 1 lan "Xac nhan" vo nghia.
   useEffect(() => {
     if (!needsForm) apply();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,9 +138,11 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
   if (!needsForm) return null;
 
   return (
-    <Modal title={meta.label} onClose={onClose} maxWidthClass="max-w-sm">
+    <Modal title={bulk ? `${meta.label} — ${units.length} đơn vị` : meta.label} onClose={onClose} maxWidthClass="max-w-sm">
       <div className="space-y-4">
         <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        {bulk && overdue && <p className="text-xs text-[var(--ink-soft)]">{overdueCount}/{units.length} đơn đang quá hạn — lý do chậm áp cho các đơn này.</p>}
+        {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} count={units.length} />}
         {needsNv && (
           <Field label="Nhân viên sửa chữa phụ trách" required>
             <Select value={nv} onChange={(e) => setNv(e.target.value)}>
@@ -144,7 +180,7 @@ function FastActionForm({ unit, meta, onClose, onDone, onBack }: { unit: DonVi; 
         <div className="flex justify-end gap-2 pt-2">
           <Btn onClick={onBack}>← Quay lại</Btn>
           <Btn variant="primary" disabled={!valid || busy} onClick={apply}>
-            Áp dụng
+            {bulk ? `Áp dụng cho ${units.length} đơn` : "Áp dụng"}
           </Btn>
         </div>
       </div>

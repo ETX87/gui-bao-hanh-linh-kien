@@ -16,7 +16,8 @@ export function XacNhanHoanTatModal({ unit, onClose, onDone }: { unit: DonVi; on
   const overdue = useSlaGate(unit.updated_at);
   const needsXuLyXac = unit.huong_xu_ly === "doi_moi";
 
-  const [xuLyXac, setXuLyXac] = useState("");
+  // 05/10/2026: neu da chon xu ly xac luc phan loai thi dien san (van doi duoc), khong bat chon lai.
+  const [xuLyXac, setXuLyXac] = useState(unit.xu_ly_xac || "");
   const [lyDoCham, setLyDoCham] = useState("");
   const [lamLai, setLamLai] = useState(false);
   const [lyDoLamLai, setLyDoLamLai] = useState("");

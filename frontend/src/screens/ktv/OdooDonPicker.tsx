@@ -4,6 +4,8 @@ import { api, errorMessage } from "../../lib/api";
 import { Btn, Badge, Spinner } from "../../ui/primitives";
 import { Modal } from "../../ui/Modal";
 import { fmtDate } from "../../lib/format";
+import { Pagination } from "../../ui/Pagination";
+import { useClientPage } from "../../hooks/useClientPage";
 import type { OdooDon } from "../../lib/types";
 
 // Don bao hanh tao tren Odoo dang "cho gui sua" cua 1 KTV (yeu cau 04/10/2026, CHOT "KTV chon don vao
@@ -32,13 +34,14 @@ export function useOdooChoGui(ktvEmail: string | null | undefined, enabled = tru
 
 export function OdooDonList({ don, selected, onToggle, onToggleAll }: { don: OdooDon[]; selected: Set<number>; onToggle: (id: number) => void; onToggleAll: () => void }) {
   const allOn = don.length > 0 && don.every((d) => selected.has(d.odoo_id));
+  const pg = useClientPage(don);
   return (
     <div className="space-y-1.5">
       <label className="flex items-center gap-2 px-1 text-xs font-semibold text-[var(--ink-soft)]">
         <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={allOn} onChange={onToggleAll} />
-        Chọn tất cả ({don.length})
+        Chọn tất cả ({don.length}){selected.size > 0 ? ` — đã chọn ${selected.size}` : ""}
       </label>
-      {don.map((d) => (
+      {pg.pageItems.map((d) => (
         <label
           key={d.odoo_id}
           className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
@@ -59,6 +62,7 @@ export function OdooDonList({ don, selected, onToggle, onToggleAll }: { don: Odo
           </span>
         </label>
       ))}
+      <Pagination page={pg.page} pageCount={pg.pageCount} total={pg.total} onChange={pg.setPage} />
     </div>
   );
 }

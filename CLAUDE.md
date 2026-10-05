@@ -185,8 +185,12 @@ dụng design system App Khiếu nại..." ở cuối file. Tiếp theo (04/10/2
 dvbh về app (cron 15 phút) + đẩy trạng thái gửi sửa ngược về dvbh (v1.008). **Mốc mới nhất
 (05/10/2026, v1.009):** sắp xếp lại menu Admin theo đúng thứ tự quy trình (nhóm "1 · Gửi hàng → 2 · Kho
 → 3 · Xử lý bảo hành → 4 · Trả hàng → Danh mục & quản trị", có mô tả từng mục) + **"🧪 Chế độ test"**
-cho Admin hệ thống (xem thử theo vai trò / xem như gmail người dùng thật, port từ `linh-kien-app`) —
-xem 2 mục cuối file.
+cho Admin hệ thống (xem thử theo vai trò / xem như gmail người dùng thật, port từ `linh-kien-app`).
+Sau đó v1.010–v1.012 (sửa modal giãn, 7 yêu cầu tra cứu case/nhớ nhà xe/top linh kiện, rà soát 1 ngày
+Admin BH). **Mốc mới nhất (05/10/2026, v1.013):** phân trang tối đa 20 dòng/trang cho mọi bảng dài (bảng
+Admin BH phân trang theo đơn cha), cột "Phân loại LK" (từ `don_vi` của linh-kien-app), cảnh báo khi Admin
+chốt khác đề xuất KTV, chọn xử lý xác 1 lần lúc Đổi mới nhanh/hàng loạt + nút "⚡ Xử lý nhanh hàng loạt" —
+xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4197,5 +4201,79 @@ các bước nhập liệu cho từng bước hiện tại => đề xuất => c�
 
 **Câu hỏi mở / đề xuất chờ người dùng chọn (CHƯA làm):** đề xuất 9–17 trong file báo cáo, gồm lọc /
 tìm / nhóm ở bảng thống nhất, hàng loạt cho tiếp nhận + xác nhận SL + FAST + hoàn tất, cột tên khách /
-tên KTV / badge hết BH, nhập mã phiếu trả dạng bảng. Riêng điểm 15 cần chốt nghiệp vụ: Đổi mới qua FAST
-/ hàng loạt hiện không ghi `xu_ly_xac` — nên hỏi ngay lúc phân loại, hay để trống rồi hỏi sau?
+tên KTV / badge hết BH, nhập mã phiếu trả dạng bảng. ~~~~Riêng điểm 15 cần chốt nghiệp vụ: Đổi mới qua FAST
+/ hàng loạt hiện không ghi `xu_ly_xac` — nên hỏi ngay lúc phân loại, hay để trống rồi hỏi sau?~~ **[ĐÃ CHỐT
+05/10/2026: hỏi ngay lúc phân loại, chọn 1 lần cho tất cả — xem mục kế tiếp]**. Điểm 11 (FAST hàng loạt)
+cũng đã làm ở mục kế tiếp.~~ **[ĐÃ CHỐT
+05/10/2026: hỏi ngay lúc phân loại, chọn 1 lần cho tất cả — xem mục kế tiếp]**. Điểm 11 (FAST hàng loạt)
+cũng đã làm ở mục kế tiếp.
+
+## Phân trang 20 dòng + cột Phân loại LK + cảnh báo đổi đề xuất KTV + xử lý xác khi Đổi mới nhanh (05/10/2026) — v1.013
+
+**(a) Nguyên văn yêu cầu:**
+
+> 1. Các danh sách table dài phải phân trang, tối đa 20 dòng /trang
+> 2. Thêm cột phân loại linh kiện dựa theo phân loại từ bên hệ thống linh kiện linh-kien-app
+> 3. Đề xuất của KTV chỉ là đề xuất, còn thao tác Admin bảo hành mới tính là chốt => nên có thể sẽ hiện cảnh báo việc thao tác này sẽ làm thay đổi đề xuất gốc của KTV, bạn có chắc chắn không?
+> 4. Khi cọn đổi mới nhanh, sẽ hiện 1 lựa chọn phương án xử lý với xác => admin chọn 1 lần cho tât cả các đơn xử lý
+
+Mục 4 cũng trả lời câu hỏi mở số 15 của đợt rà soát Admin BH: hỏi xử lý xác ngay lúc phân loại.
+
+**(b) Đã triển khai:**
+
+1. **Phân trang ≤20 dòng/trang.**
+   - Bảng thống nhất Admin BH:
+     - `GET /admin/don-vi?group=1` (`backend/src/routes/adminBH.ts`) phân trang **theo đơn cha**: mỗi trang 20 đơn cha, kèm đủ mọi đơn vị của chúng.
+     - Nhờ vậy nhóm "×N" vẫn gộp đúng. Trước đây phải lấy 1000 dòng một lần.
+     - `total` = số đơn cha, `total_don_vi` = tổng đơn vị.
+   - Đơn cha chờ xác nhận SL: phân trang server 20/trang, có thanh trang riêng (trước đây lấy 1000).
+   - Chọn hàng loạt chỉ trong trang đang xem: đổi trang thì bỏ chọn.
+   - `usePagedApi` trả thêm `raw` (toàn bộ response) để đọc các trường phụ.
+   - Danh sách nhỏ đã tải sẵn thì phân trang trên máy bằng hook mới `hooks/useClientPage.ts`:
+     - nhóm "Đơn vị sẵn sàng gộp phiếu trả" (`AdminPhieuTra`);
+     - danh sách Khu vực (`qtri/KhuVuc`);
+     - danh sách đơn Odoo chờ gửi (`OdooDonList`; "Chọn tất cả" vẫn chọn hết mọi trang, có hiện số đã chọn).
+   - Các bảng còn lại đã phân trang server từ 05/09/2026.
+2. **Cột "Phân loại LK".**
+   - Phát hiện: "Phân loại" bên linh-kien-app chính là cột `don_vi` (bên đó đổi nhãn hiển thị), và đã được đồng bộ sẵn vào `linh_kien_bh.don_vi` (`sync.ts`). Không cần sửa linh-kien-app, không cần migration.
+   - Các giá trị trên production: Khác, Máy, Mạch, Lõi / Vật liệu lọc, Đình tủ, Tủ, Bộ / Cụm, Cánh tủ, Kính tủ (238 dòng rỗng).
+   - Thay đổi:
+     - `GET /linh-kien` bản gọn trả thêm `don_vi`; cache trên máy đổi key thành `lk_cache_v3` để mọi máy tải lại.
+     - Thêm cột `phanloai` vào bảng Admin BH (`useAdminCols`, hiện mặc định ngay sau "Linh kiện"). Cột mới của người đã tuỳ chỉnh cột được chèn đúng vị trí, không bị dồn xuống cuối.
+     - Thẻ mobile hiện badge phân loại.
+     - Màn Danh mục linh kiện có cột "Phân loại"; ô tìm khớp cả phân loại.
+     - Ô chọn linh kiện hiện gợi ý "Phân loại · 🔥 Top N"; `SearchableSelect` tìm được theo hint (gõ "mạch" ra linh kiện loại Mạch). `useLkName` thêm `phanLoaiOf`.
+3. **Cảnh báo đổi đề xuất KTV** (`lib/ktvDeXuat.ts`).
+   - Trước khi gửi, nếu Admin chốt khác đề xuất KTV thì hiện hộp xác nhận: "Thao tác này sẽ làm thay đổi đề xuất gốc của KTV: • … → … Bạn có chắc chắn không?".
+   - Các trường hợp khác đề xuất:
+     - loại đối trừ ≠ `loai_doi_tru_de_xuat`;
+     - linh kiện thực tế ≠ linh kiện KTV khai (chỉ form đơn lẻ).
+   - Áp dụng ở: `PhanLoaiModal`, `BulkPhanLoaiModal` (trừ khi chọn "Theo đề xuất của KTV"; hiện "k/N đơn"), các nút FAST ép đối trừ (Trừ công nợ / Trừ công nợ có PD).
+   - Đơn khách lẻ không có đề xuất nên bỏ qua.
+   - `GET /admin/don-vi/:id` ghép thêm `phieu_gui_id` vào `don_vi`. Thiếu trường này thì mở từ UI chi tiết sẽ coi nhầm là khách lẻ.
+4. **Xử lý xác chọn 1 lần khi Đổi mới.**
+   - `applyPhanLoaiToUnit` bắt buộc `xu_ly_xac` (`tra_doi_tac` / `tieu_huy` / `luu_kho`) khi `huong_xu_ly='doi_moi'` và lưu ngay. Áp dụng cho phân loại đơn lẻ, hàng loạt và FAST.
+   - Xác nhận hoàn tất: không hỏi lại nếu đã có `xu_ly_xac`; `XacNhanHoanTatModal` điền sẵn.
+   - Component mới `XuLyXacField` dùng ở: PhanLoaiModal, BulkPhanLoaiModal (nhãn "áp cho cả N đơn"), form FAST Đổi mới (trong BH / có PD).
+   - **Nút mới "⚡ Xử lý nhanh hàng loạt"** (hiện khi đã chọn dòng):
+     - Mở lưới FAST cho mọi đơn đã chọn; ẩn 2 nút special.
+     - Endpoint mới `POST /admin/don-vi/fast-hang-loat/:key {ids, …}`; logic FAST tách thành `applyFastToUnit` dùng chung.
+     - Admin chọn 1 lần NV / mail PD / lý do huỷ / xử lý xác / lý do chậm cho tất cả; báo số đơn áp dụng được / lỗi.
+     - `FastActionsModal` nhận `units` (nhiều) hoặc `unit` (cũ, vẫn tương thích).
+
+**(c) Vấn đề trong lúc làm:**
+- Heredoc Python dài trong Bash bị lỗi `unexpected EOF` → chuyển sang dùng Edit.
+- CLAUDE.md lẫn kiểu xuống dòng CRLF/LF → khi thay chuỗi phải dùng regex `\r?\n`.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi; build sạch.
+- `wrangler dev` local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), seed thêm 25 đơn cha:
+  - API group: 31 đơn cha → trang 1 có 20, trang 2 có 11, không trùng; `total_don_vi` = 82.
+  - UI 1440px: 21 dòng (1 đơn chờ SL + 20 nhóm); có cột "Phân loại LK"; thanh trang "Trang 1/2".
+  - Chọn nhóm DH-000006 → "⚡ Xử lý nhanh hàng loạt" → "Đổi mới trong BH": form có "Xử lý xác (áp cho cả 2 đơn)" + lý do chậm. Áp dụng xong cả 2 đơn có `xu_ly_xac=tieu_huy` và cùng gộp vào phiếu trả nháp `TR-000001`.
+  - "Trừ công nợ" hàng loạt cho lô 25 đơn KTV đề xuất Đổi trả → hiện cảnh báo "25/25 đơn: … Đổi trả → Trừ công nợ"; bấm huỷ thì đơn giữ nguyên.
+  - Backend:
+    - phân loại / FAST Đổi mới thiếu xử lý xác → 400 `REQUIRE_XU_LY_XAC`; có thì 200 và lưu đúng;
+    - FAST hàng loạt với nút special → 400;
+    - hoàn tất đơn `sua_chua` không cần xử lý xác → 200.
+- Chưa kiểm bằng mắt hộp cảnh báo đổi linh kiện ở form đơn lẻ (dùng chung hàm đã kiểm).

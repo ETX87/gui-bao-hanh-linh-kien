@@ -128,22 +128,34 @@ adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
 // don qua duoc buoc nay - khong can pager rieng o frontend, chi can COUNT/LIMIT day du de an toan.
 adminBH.get("/don-vi", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  // max cao (Phat hien 14): frontend gop don vi theo don cha va thu gon "xN" ngay tren client - can
-  // lay het don vi cua 1 lo (co the >20) trong 1 lan de nhom dung. Hang doi nay bi gate nen thuc te
-  // toi da vai tram dong; sau khi gop chi con vai chuc dong hien thi.
-  const { limit, offset } = parsePage(c, 1000, 2000);
   // them g.nguoi_tao AS ktv - xem comment o GET /don-cha o tren (cung ly do).
   const fromWhere = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
        AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`;
+  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv`;
+
+  // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
+  // trang theo DON CHA (moi trang toi da `limit` don cha + du moi don vi cua chung) - bang thong nhat
+  // van gop "xN" dung tren client ma khong phai lay het 1000 dong nhu truoc. total = so don cha (= so
+  // dong thu gon tren bang), total_don_vi = tong so don vi.
+  if (c.req.query("group") === "1") {
+    const { limit, offset } = parsePage(c, 20, 100);
+    const [{ results: pids }, totalRow] = await Promise.all([
+      c.env.DB.prepare(`SELECT u.parent_id AS pid, MIN(u.updated_at) AS t ${fromWhere} GROUP BY u.parent_id ORDER BY t, u.parent_id LIMIT ? OFFSET ?`).bind(limit, offset).all<{ pid: string }>(),
+      c.env.DB.prepare(`SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units ${fromWhere}`).first<{ cnt: number; units: number }>(),
+    ]);
+    if (pids.length === 0) return c.json({ don_vi: [], total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
+    const ph = pids.map(() => "?").join(",");
+    const { results } = await c.env.DB.prepare(`${selectCols} ${fromWhere} AND u.parent_id IN (${ph}) ORDER BY u.updated_at, u.id`)
+      .bind(...pids.map((r) => r.pid))
+      .all();
+    return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
+  }
+
+  const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv
-       ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`,
-    )
-      .bind(limit, offset)
-      .all(),
+    c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
@@ -164,7 +176,7 @@ adminBH.get("/don-vi/:id", async (c) => {
   // PhanLoaiModal.tsx (frontend) doc duoc gia tri mac dinh (linh kien goc/de xuat doi tru cua KTV) ma
   // KHONG can 1 prop "parent" rieng khi mo tu chinh modal chi tiet nay (dong bo voi cach bang thong
   // nhat AdminUnifiedTable.tsx da co san 2 truong nay qua JOIN cua GET /don-vi).
-  if (p) Object.assign(u, { ma_lk: p.ma_lk, loai_doi_tru_de_xuat: p.loai_doi_tru_de_xuat });
+  if (p) Object.assign(u, { ma_lk: p.ma_lk, loai_doi_tru_de_xuat: p.loai_doi_tru_de_xuat, phieu_gui_id: p.phieu_gui_id });
 
   const [ctLogs, pLogs, ctAnh, pAnh, baoCaoSai] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_sc_ct' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
@@ -200,7 +212,13 @@ interface PhanLoaiBody {
   ly_do_tu_choi?: string;
   ma_lk_thuc_te?: string | null;
   ly_do_cham?: string;
+  // 05/10/2026: "Khi chon doi moi nhanh, se hien 1 lua chon phuong an xu ly voi xac => admin chon 1 lan
+  // cho tat ca cac don xu ly" - huong doi_moi BAT BUOC chon xu ly xac ngay luc phan loai (don le, hang
+  // loat, FAST), khong doi toi luc xac nhan hoan tat moi hoi.
+  xu_ly_xac?: string;
 }
+
+const XU_LY_XAC_VALUES = ["tra_doi_tac", "tieu_huy", "luu_kho"];
 
 interface UnitRow {
   id: string;
@@ -215,6 +233,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
   if (body.loai_bao_hanh === "ngoai_bh" && !body.thong_tin_mail_pd?.trim()) return { error: "REQUIRE_MAIL_PD" };
   if (HUONG_CAN_NV.includes(body.huong_xu_ly) && !body.nguoi_sua_chua) return { error: "REQUIRE_NV" };
   if (body.huong_xu_ly === "tu_choi" && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
+  if (body.huong_xu_ly === "doi_moi" && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return { error: "REQUIRE_XU_LY_XAC" };
   if (isOverdue(unit.updated_at) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
 
   let trangThaiMoi = unit.trang_thai;
@@ -227,7 +246,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     .prepare(
       `UPDATE phieu_sua_chua_bh_ct SET
          loai_bao_hanh = ?, thong_tin_mail_pd = ?, ma_phe_duyet = ?, huong_xu_ly = ?, loai_doi_tru = ?,
-         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ma_lk_thuc_te = COALESCE(?, ma_lk_thuc_te), trang_thai = ?, updated_at = ?
+         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ma_lk_thuc_te = COALESCE(?, ma_lk_thuc_te), xu_ly_xac = ?, trang_thai = ?, updated_at = ?
        WHERE id = ?`,
     )
     .bind(
@@ -239,6 +258,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       HUONG_CAN_NV.includes(body.huong_xu_ly) ? body.nguoi_sua_chua : null,
       body.huong_xu_ly === "tu_choi" ? body.ly_do_tu_choi : null,
       body.ma_lk_thuc_te === undefined ? null : body.ma_lk_thuc_te,
+      body.huong_xu_ly === "doi_moi" ? body.xu_ly_xac : null,
       trangThaiMoi,
       nowVN(),
       unit.id,
@@ -253,6 +273,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     actor,
     `Admin BH phan loai: ${body.loai_bao_hanh} / ${body.huong_xu_ly} / doi_tru=${body.loai_doi_tru}` +
       (body.huong_xu_ly === "tu_choi" ? ` | Ly do huy: ${body.ly_do_tu_choi}` : "") +
+      (body.huong_xu_ly === "doi_moi" ? ` | Xu ly xac: ${body.xu_ly_xac}` : "") +
       (body.ly_do_cham ? ` | Ly do cham: ${body.ly_do_cham}` : ""),
   );
   return { ok: true };
@@ -355,16 +376,16 @@ adminBH.post("/don-vi/:id/xac-nhan-hoan-tat", async (c) => {
   const user = c.get("user");
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
-  const u = await c.env.DB.prepare("SELECT trang_thai, updated_at, huong_xu_ly FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; updated_at: string; huong_xu_ly: string }>();
+  const u = await c.env.DB.prepare("SELECT trang_thai, updated_at, huong_xu_ly, xu_ly_xac FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; updated_at: string; huong_xu_ly: string; xu_ly_xac: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   if (u.trang_thai !== "cho_admin_xac_nhan") return c.json({ error: "WRONG_STATE" }, 400);
 
   const body = await c.req.json<{ ly_do_cham?: string; xu_ly_xac?: string }>().catch(() => ({}) as { ly_do_cham?: string; xu_ly_xac?: string });
 
-  // Huong "doi_moi" BAT BUOC ghi nhan cach xu ly xac linh kien loi truoc khi hoan tat.
-  if (u.huong_xu_ly === "doi_moi") {
-    if (!body.xu_ly_xac || !["tra_doi_tac", "tieu_huy", "luu_kho"].includes(body.xu_ly_xac)) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
-  }
+  // Huong "doi_moi" BAT BUOC co cach xu ly xac truoc khi hoan tat - neu da chon luc phan loai
+  // (05/10/2026) thi khong hoi lai; gui gia tri moi hop le thi ghi de.
+  if (body.xu_ly_xac && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac)) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
+  if (u.huong_xu_ly === "doi_moi" && !u.xu_ly_xac && !body.xu_ly_xac) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
   if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   const now = nowVN();
@@ -481,6 +502,7 @@ interface FastActionBody {
   ma_phe_duyet?: string;
   ly_do_tu_choi?: string;
   ly_do_cham?: string;
+  xu_ly_xac?: string;
 }
 
 // Lay loai_doi_tru mac dinh theo de xuat cua KTV luc gui hang - dung mau da chot 22/08/2026.
@@ -514,35 +536,22 @@ async function ktvKeyOfUnit(db: D1Database, parentId: string): Promise<string> {
   return row?.nguoi_tao ?? KHACH_LE_KEY;
 }
 
-adminBH.post("/don-vi/:id/fast/:key", async (c) => {
-  const user = c.get("user");
-  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const id = c.req.param("id");
-  const key = c.req.param("key");
-  const meta = FAST_ACTIONS.find((a) => a.key === key);
-  if (!meta) return c.json({ error: "UNKNOWN_ACTION" }, 400);
-
-  const unit = await c.env.DB.prepare("SELECT id, parent_id, trang_thai, updated_at FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<UnitRow & { parent_id: string }>();
-  if (!unit) return c.json({ error: "NOT_FOUND" }, 404);
-  if (!["cho_phan_loai", "admin_can_xem_lai"].includes(unit.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
-
-  if (meta.special === "bo_sung_tt" || meta.special === "bao_cao_sai") {
-    return c.json({ redirect: meta.special, parent_id: unit.parent_id });
-  }
-
-  const body = await c.req.json<FastActionBody>().catch(() => ({}) as FastActionBody);
+// Ap 1 nut FAST cho 1 don vi - dung chung cho nut don le va nut hang loat (05/10/2026).
+async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: string, body: FastActionBody, actor: string): Promise<{ error: string } | { ok: true; phieu_tra_id: string | null }> {
+  const unit = await db.prepare("SELECT id, parent_id, trang_thai, updated_at FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(unitId).first<UnitRow & { parent_id: string }>();
+  if (!unit) return { error: "NOT_FOUND" };
+  if (!["cho_phan_loai", "admin_can_xem_lai"].includes(unit.trang_thai)) return { error: "WRONG_STATE" };
   const needsNv = meta.huong && HUONG_CAN_NV.includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";
   const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
+  if (needsNv && !body.nv) return { error: "REQUIRE_NV" };
+  if (needsMailPd && !body.mail_pd?.trim()) return { error: "REQUIRE_MAIL_PD" };
+  if (needsLyDoTuChoi && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
+  if (isOverdue(unit.updated_at) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
 
-  if (needsNv && !body.nv) return c.json({ error: "REQUIRE_NV" }, 400);
-  if (needsMailPd && !body.mail_pd?.trim()) return c.json({ error: "REQUIRE_MAIL_PD" }, 400);
-  if (needsLyDoTuChoi && !body.ly_do_tu_choi) return c.json({ error: "REQUIRE_LY_DO_TU_CHOI" }, 400);
-  if (isOverdue(unit.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
-
-  const loaiDoiTru = meta.loaiDoiTru || (await defaultLoaiDoiTru(c.env.DB, unit.parent_id));
+  const loaiDoiTru = meta.loaiDoiTru || (await defaultLoaiDoiTru(db, unit.parent_id));
   const result = await applyPhanLoaiToUnit(
-    c.env.DB,
+    db,
     unit,
     {
       loai_bao_hanh: meta.loaiBH,
@@ -553,17 +562,57 @@ adminBH.post("/don-vi/:id/fast/:key", async (c) => {
       nguoi_sua_chua: body.nv,
       ly_do_tu_choi: meta.lyDoTuChoi || body.ly_do_tu_choi,
       ly_do_cham: body.ly_do_cham,
+      xu_ly_xac: body.xu_ly_xac,
     },
-    user.email,
+    actor,
   );
-  if ("error" in result) return c.json(result, 400);
+  if ("error" in result) return result;
 
   let phieuTraId: string | null = null;
   if (meta.huong && HUONG_TAO_PHIEU_TRA.includes(meta.huong)) {
-    const ktvKey = await ktvKeyOfUnit(c.env.DB, unit.parent_id);
-    phieuTraId = await attachToOrCreatePhieuTra(c.env.DB, unit.id, ktvKey, loaiDoiTru, user.email);
+    const ktvKey = await ktvKeyOfUnit(db, unit.parent_id);
+    phieuTraId = await attachToOrCreatePhieuTra(db, unit.id, ktvKey, loaiDoiTru, actor);
   }
-  return c.json({ ok: true, phieu_tra_id: phieuTraId });
+  return { ok: true, phieu_tra_id: phieuTraId };
+}
+
+// POST /don-vi/fast-hang-loat/:key { ids, ...FastActionBody } - 1 nut FAST cho nhieu don vi, Admin chon
+// 1 lan (NV / mail PD / ly do huy / xu ly xac / ly do cham) ap cho tat ca.
+adminBH.post("/don-vi/fast-hang-loat/:key", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const meta = FAST_ACTIONS.find((a) => a.key === c.req.param("key"));
+  if (!meta || meta.special) return c.json({ error: "UNKNOWN_ACTION" }, 400);
+  const body = await c.req.json<FastActionBody & { ids?: string[] }>().catch(() => ({}) as FastActionBody & { ids?: string[] });
+  const ids = body.ids || [];
+  if (ids.length === 0) return c.json({ error: "NO_IDS" }, 400);
+  const errors: Record<string, string> = {};
+  let applied = 0;
+  for (const id of ids) {
+    const r = await applyFastToUnit(c.env.DB, meta, id, body, user.email);
+    if ("error" in r) errors[id] = r.error;
+    else applied++;
+  }
+  return c.json({ applied, errors });
+});
+
+adminBH.post("/don-vi/:id/fast/:key", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const meta = FAST_ACTIONS.find((a) => a.key === c.req.param("key"));
+  if (!meta) return c.json({ error: "UNKNOWN_ACTION" }, 400);
+
+  if (meta.special === "bo_sung_tt" || meta.special === "bao_cao_sai") {
+    const unit = await c.env.DB.prepare("SELECT parent_id FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ parent_id: string }>();
+    if (!unit) return c.json({ error: "NOT_FOUND" }, 404);
+    return c.json({ redirect: meta.special, parent_id: unit.parent_id });
+  }
+
+  const body = await c.req.json<FastActionBody>().catch(() => ({}) as FastActionBody);
+  const r = await applyFastToUnit(c.env.DB, meta, id, body, user.email);
+  if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
+  return c.json(r);
 });
 
 export default adminBH;

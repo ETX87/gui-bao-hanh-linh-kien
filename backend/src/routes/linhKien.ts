@@ -35,9 +35,9 @@ linhKien.get("/", async (c) => {
   const binds: unknown[] = [];
   if (chiDuocDung === "1") where += " AND duoc_dung_bao_hanh = 1";
   if (kw) {
-    where += " AND (ten_lk LIKE ? OR ma_lk LIKE ?)";
+    where += " AND (ten_lk LIKE ? OR ma_lk LIKE ? OR don_vi LIKE ?)";
     const like = `%${kw}%`;
-    binds.push(like, like);
+    binds.push(like, like, like);
   }
   if (c.req.query("limit") === undefined) {
     // Kem hang top 30 ngay (05/10/2026 muc 7) - picker xep top truoc, con lai theo ten. Kem "version"
@@ -45,7 +45,7 @@ linhKien.get("/", async (c) => {
     // bo anh_demo/ghi_chu cho goi cache nhe).
     const [{ results }, version] = await Promise.all([
       c.env.DB.prepare(
-        `SELECT l.ma_lk, l.ten_lk, l.so_thang_bao_hanh, l.duoc_dung_bao_hanh, t.hang AS top_hang, t.so_luong AS top_so_luong FROM linh_kien_bh l LEFT JOIN linh_kien_top_bh t ON t.ma_lk = l.ma_lk
+        `SELECT l.ma_lk, l.ten_lk, l.don_vi, l.so_thang_bao_hanh, l.duoc_dung_bao_hanh, t.hang AS top_hang, t.so_luong AS top_so_luong FROM linh_kien_bh l LEFT JOIN linh_kien_top_bh t ON t.ma_lk = l.ma_lk
          WHERE ${where.replace("ma_lk LIKE", "l.ma_lk LIKE")} ORDER BY (t.hang IS NULL), t.hang, l.ten_lk`,
       )
         .bind(...binds)

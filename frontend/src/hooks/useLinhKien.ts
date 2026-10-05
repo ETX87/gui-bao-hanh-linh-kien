@@ -11,7 +11,7 @@ import type { LinhKien } from "../lib/types";
 // Muc 7: server tra kem top_hang (top xu ly thanh cong 30 ngay) va da xep top truoc - giu nguyen thu tu.
 // Dung 1 store chung cho ca trang (nhieu component cung goi useLinhKien chi tao 1 lan goi mang).
 
-const CACHE_KEY = "lk_cache_v2";
+const CACHE_KEY = "lk_cache_v3"; // v3 (05/10/2026): them don_vi = "Phan loai" linh kien tu linh-kien-app
 type Cache = { version: string; items: LinhKien[] };
 
 let store: LinhKien[] | null = null;
@@ -92,7 +92,12 @@ export function lkLabel(ten: string | null | undefined, ma: string | null | unde
 
 /** Option cho SearchableSelect: nhan "Ten (ma)", danh dau top 30 ngay. */
 export function lkOptions(items: LinhKien[]) {
-  return items.filter((lk) => !!lk.duoc_dung_bao_hanh).map((lk) => ({ value: lk.ma_lk, label: lkLabel(lk.ten_lk, lk.ma_lk), hint: lk.top_hang ? `🔥 Top ${lk.top_hang}` : undefined }));
+  return items
+    .filter((lk) => !!lk.duoc_dung_bao_hanh)
+    .map((lk) => {
+      const hint = [lk.don_vi?.trim(), lk.top_hang ? `🔥 Top ${lk.top_hang}` : ""].filter(Boolean).join(" · ");
+      return { value: lk.ma_lk, label: lkLabel(lk.ten_lk, lk.ma_lk), hint: hint || undefined };
+    });
 }
 
 // Tra "Ten (ma)" tu ma - dung o cac bang danh sach. Chua co trong danh muc (vd linh kien Odoo moi) thi
@@ -104,5 +109,11 @@ export function useLkName() {
     const lk = items.find((x) => x.ma_lk === ma);
     return lkLabel(lk?.ten_lk, ma);
   };
-  return { nameOf, loading };
+  // "Phan loai" linh kien (05/10/2026) - chinh la cot don_vi dong bo tu linh-kien-app (ben do doi nhan
+  // hien thi cot nay thanh "Phan loai": Mach / May / Loi - Vat lieu loc / Tu...).
+  const phanLoaiOf = (ma: string | null | undefined): string => {
+    if (!ma) return "";
+    return items.find((x) => x.ma_lk === ma)?.don_vi?.trim() || "";
+  };
+  return { nameOf, phanLoaiOf, loading };
 }

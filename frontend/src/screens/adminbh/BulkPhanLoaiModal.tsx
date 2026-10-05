@@ -6,6 +6,9 @@ import { Btn, Field, Input, Select, SectionLabel } from "../../ui/primitives";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV } from "../../lib/constants";
 import { useLyDoTuChoi, useLyDoCham } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
+import { XuLyXacField } from "../shared/XuLyXacField";
+import { ktvChangeLines, confirmKtvChange } from "../../lib/ktvDeXuat";
+import type { DonVi } from "../../lib/types";
 
 const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
 
@@ -17,7 +20,7 @@ const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
 // dang sai trang thai khi thao tac cham) - hien thi ro so ap dung thanh cong / loi cho tung ID, khong
 // gia dinh tat ca deu thanh cong.
 
-export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: string[]; onClose: () => void; onDone: () => void }) {
+export function BulkPhanLoaiModal({ unitIds, units = [], onClose, onDone }: { unitIds: string[]; units?: DonVi[]; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const nvList = useNvList();
   const { items: lyDoTuChoiList } = useLyDoTuChoi();
@@ -30,14 +33,17 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
   const [huongXuLy, setHuongXuLy] = useState("");
   const [nguoiSuaChua, setNguoiSuaChua] = useState("");
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
+  const [xuLyXac, setXuLyXac] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
 
   const needsNv = HUONG_CAN_NV.includes(huongXuLy);
   const needsTuChoi = huongXuLy === "tu_choi";
-  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi);
+  const needsXuLyXac = huongXuLy === "doi_moi";
+  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac);
 
   const submit = async () => {
+    if (!confirmKtvChange(ktvChangeLines(units, loaiDoiTru === "theo_de_xuat" ? null : loaiDoiTru))) return;
     setBusy(true);
     try {
       const r = await api.post<{ applied: number; errors: Record<string, string> }>("/admin/don-vi/phan-loai-hang-loat", {
@@ -49,6 +55,7 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
         huong_xu_ly: huongXuLy,
         nguoi_sua_chua: needsNv ? nguoiSuaChua : undefined,
         ly_do_tu_choi: needsTuChoi ? lyDoTuChoi : undefined,
+        xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
         ly_do_cham: lyDoCham || undefined,
       });
       const errCount = Object.keys(r.errors).length;
@@ -162,6 +169,7 @@ export function BulkPhanLoaiModal({ unitIds, onClose, onDone }: { unitIds: strin
             </Select>
           </Field>
         )}
+        {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} count={unitIds.length} />}
       </div>
     </Modal>
   );

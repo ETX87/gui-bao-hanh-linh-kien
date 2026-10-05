@@ -15,6 +15,7 @@ export function usePagedApi<T>(path: string, key: string, pageSize = PAGE_SIZE) 
   const [items, setItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [raw, setRaw] = useState<Record<string, unknown>>({}); // ca response (cho truong phu, vd total_don_vi)
 
   const load = useCallback(
     async (p: number) => {
@@ -23,6 +24,7 @@ export function usePagedApi<T>(path: string, key: string, pageSize = PAGE_SIZE) 
       const r = await api.get<Record<string, unknown>>(`${path}${sep}limit=${pageSize}&offset=${p * pageSize}`);
       setItems((r[key] as T[]) || []);
       setTotal((r.total as number) ?? 0);
+      setRaw(r);
       setLoading(false);
     },
     [path, key, pageSize],
@@ -42,5 +44,5 @@ export function usePagedApi<T>(path: string, key: string, pageSize = PAGE_SIZE) 
   };
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  return { items, total, page, pageCount, setPage: changePage, loading, reload: () => load(page) };
+  return { items, total, page, pageCount, setPage: changePage, loading, reload: () => load(page), raw };
 }

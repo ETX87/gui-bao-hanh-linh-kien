@@ -10,6 +10,8 @@ import { useNvList } from "../../hooks/useNvList";
 import { useLinhKien, lkOptions, lkLabel } from "../../hooks/useLinhKien";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
 import { CaseLookupAuto } from "./CaseLookupPreviewCard";
+import { XuLyXacField } from "./XuLyXacField";
+import { ktvChangeLines, confirmKtvChange } from "../../lib/ktvDeXuat";
 import type { DonVi } from "../../lib/types";
 
 const HUONG_OPTIONS = Object.keys(HUONG_XU_LY_LABELS);
@@ -36,13 +38,17 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [nguoiSuaChua, setNguoiSuaChua] = useState(unit.nguoi_sua_chua || "");
   const [lyDoTuChoi, setLyDoTuChoi] = useState(unit.ly_do_tu_choi || "");
   const [maLkThucTe, setMaLkThucTe] = useState(unit.ma_lk_thuc_te || unit.ma_lk || "");
+  const [xuLyXac, setXuLyXac] = useState(unit.xu_ly_xac || "");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
 
   const needsNv = HUONG_CAN_NV.includes(huongXuLy);
   const needsTuChoi = huongXuLy === "tu_choi";
+  const needsXuLyXac = huongXuLy === "doi_moi";
+  const lkName = (ma: string) => lkLabel(linhKien.find((l) => l.ma_lk === ma)?.ten_lk, ma);
 
   const submit = async () => {
+    if (!confirmKtvChange(ktvChangeLines([unit], loaiDoiTru, maLkThucTe, lkName))) return;
     setBusy(true);
     try {
       await api.post(`/admin/don-vi/${unit.id}/phan-loai`, {
@@ -54,6 +60,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         nguoi_sua_chua: needsNv ? nguoiSuaChua : undefined,
         ly_do_tu_choi: needsTuChoi ? lyDoTuChoi : undefined,
         ma_lk_thuc_te: maLkThucTe || null,
+        xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
         ly_do_cham: overdue ? lyDoCham : undefined,
       });
       toast("Đã phân loại đơn vị.", "ok");
@@ -65,7 +72,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     }
   };
 
-  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi) && (!overdue || lyDoCham);
+  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac) && (!overdue || lyDoCham);
 
   return (
     <Modal
@@ -156,6 +163,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
             </Select>
           </Field>
         )}
+        {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} />}
         <Field label="Linh kiện sửa chữa thực tế">
           <SearchableSelect
             options={lkOptions(linhKien)}

@@ -56,6 +56,7 @@ export function LinhKienScreen() {
         columns={[
           { key: "ten", header: "Tên", render: (lk) => <span className="font-semibold text-[var(--ink)] whitespace-normal">{lk.ten_lk}</span> },
           { key: "ma", header: "Mã", render: (lk) => <span className="font-mono text-xs">{lk.ma_lk}</span> },
+          { key: "phanloai", header: "Phân loại", render: (lk) => (lk.don_vi?.trim() ? <Badge tone="gray">{lk.don_vi}</Badge> : <span className="text-[var(--ink-faint)]">—</span>) },
           { key: "nguon", header: "Nguồn", render: (lk) => <Badge tone={lk.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{lk.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
           {
             key: "thang",
