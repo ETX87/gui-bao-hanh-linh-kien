@@ -1,6 +1,18 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
+// Tailwind chi sinh CSS cho ten lop VIET NGUYEN VAN trong ma nguon - truoc day ghep chuoi "md:"+x luc
+// chay nen md:max-w-* khong ton tai, moi modal "nho" bi keo gian het chieu ngang (phat hien 05/10/2026).
+const MD_MAX_W: Record<string, string> = {
+  "max-w-sm": "md:max-w-sm",
+  "max-w-md": "md:max-w-md",
+  "max-w-lg": "md:max-w-lg",
+  "max-w-xl": "md:max-w-xl",
+  "max-w-2xl": "md:max-w-2xl",
+  "max-w-3xl": "md:max-w-3xl",
+  "max-w-4xl": "md:max-w-4xl",
+};
+
 // Modal - 2 kich co (mac dinh vs full man hinh, port dung quyet dinh "modal tram man hinh" da chot
 // 02/09/2026: chi "UI chi tiet" (openDetailUnitModal/openDetailTraModal) moi dung full=true, con lai
 // dung mac dinh). headerActions/footerActions: 2 vung nut co dinh (khong cuon theo noi dung) - port
@@ -52,7 +64,7 @@ export function Modal({
       <div
         // DESIGN_SYSTEM.md §6.8: modal rounded-xl, TRAN MAN HINH tren mobile (moi modal), desktop giu 2 co.
         className={`anim-in bg-[var(--surface)] shadow-2xl flex flex-col w-full h-full rounded-none md:rounded-xl ${
-          full ? "md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : `md:h-auto ${maxWidthClass ? maxWidthClass.split(" ").map((c) => (c.startsWith("md:") ? c : `md:${c}`)).join(" ") : "md:max-w-2xl"} md:max-h-[90vh]`
+          full ? "md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : `md:h-auto ${maxWidthClass ? maxWidthClass.split(" ").map((c) => MD_MAX_W[c] ?? c).join(" ") : "md:max-w-2xl"} md:max-h-[90vh]`
         }`}
       >
         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-[var(--line)] shrink-0">

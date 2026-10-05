@@ -1,5 +1,6 @@
 import { FIELD_CLASS } from "./primitives";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 // O chon co tim kiem (thay <select> thuong khi danh sach dai, vd linh kien ~400 dong that) - tinh
 // nang da ghi nhan la "ton dong thuc can lam" tu vong redesign UI 22/08/2026 (prototype), CHUA tung
@@ -30,6 +31,34 @@ export function SearchableSelect({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialCharRef = useRef<string>("");
+  const popRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  // Danh sach xo xuong render qua portal + position:fixed - neu de "absolute" ben trong modal, vung than
+  // modal (overflow-y-auto) cat mat danh sach (loi 05/10/2026: "danh sach KTV hien ra bi an").
+  const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxH: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const below = window.innerHeight - r.bottom - 8;
+      const above = r.top - 8;
+      const want = 300;
+      if (below >= Math.min(want, 200) || below >= above) {
+        setPos({ left: r.left, width: r.width, top: r.bottom + 4, maxH: Math.max(140, Math.min(want, below - 4)) });
+      } else {
+        setPos({ left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4, maxH: Math.max(140, Math.min(want, above - 4)) });
+      }
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   const selected = options.find((o) => o.value === value);
 
@@ -44,7 +73,9 @@ export function SearchableSelect({
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -94,6 +125,7 @@ export function SearchableSelect({
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={onButtonKeyDown}
@@ -102,8 +134,12 @@ export function SearchableSelect({
         {selected ? selected.label : <span className="text-[var(--ink-faint)]">{placeholder}</span>}
         <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-soft)]">▼</span>
       </button>
-      {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-[var(--line)] bg-white shadow-pop overflow-hidden">
+      {open && pos && createPortal(
+        <div
+          ref={popRef}
+          style={{ position: "fixed", left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH }}
+          className="z-[200] flex flex-col rounded-lg border border-[var(--line)] bg-white shadow-pop overflow-hidden"
+        >
           <input
             ref={inputRef}
             value={query}
@@ -115,7 +151,7 @@ export function SearchableSelect({
             placeholder="Gõ để tìm…"
             className="w-full px-3 py-2.5 text-base lg:py-2 lg:text-sm border-b border-[var(--line)] bg-[var(--field-bg)] focus:bg-white focus:outline-none"
           />
-          <div className="max-h-56 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {allowEmpty && (
               <div
                 onClick={() => pick("")}
@@ -138,7 +174,8 @@ export function SearchableSelect({
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

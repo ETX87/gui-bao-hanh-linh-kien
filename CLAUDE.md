@@ -4089,3 +4089,29 @@ Trang chủ Admin; modal Chế độ test mở đủ 2 phần (8 thẻ vai trò 
 `since 2026-10-04 19:01:04 / after_id 505`; 11/484 đơn còn chưa rõ KTV (đơn về trước case — sẽ được hỏi
 lại ở các lần cron sau). Bài học: deploy lần đầu có cron mới mà không thấy chạy thì kiểm `sync_state`;
 deploy lại là cách khắc phục đã hiệu quả.
+
+## Sửa modal "Tạo phiếu gửi hộ" bị giãn + danh sách KTV bị ẩn + icon viền trắng (05/10/2026) — v1.010
+
+**(a) Nguyên văn:** *"chức năng tạo đơn đang bị lỗi hiện thị, danh sách KTV hiện ra cũng bị ẩn"* (kèm ảnh
+modal "Tạo phiếu gửi hộ cho KTV" kéo dài hết chiều ngang) và *"icon đang bị lỗi có viền trắng"*.
+
+**(b)/(c) Nguyên nhân + đã sửa:**
+1. **Modal nhỏ bị kéo giãn hết màn hình — lỗi chung ~24 modal, không chỉ màn này.** `ui/Modal.tsx` ghép
+   chuỗi `"md:" + maxWidthClass` lúc chạy → Tailwind chỉ sinh CSS cho tên lớp viết nguyên văn trong mã
+   nguồn nên `md:max-w-sm/md/lg` KHÔNG tồn tại → modal rơi về `w-full`. Sửa bằng bảng tra tĩnh `MD_MAX_W`
+   (viết nguyên văn từng lớp). Bài học: **không bao giờ ghép tên lớp Tailwind động**.
+2. **Danh sách xổ xuống bị cắt.** `SearchableSelect` vẽ danh sách `absolute` bên trong thân modal có
+   `overflow-y-auto` → bị cắt mất. Đổi sang render qua portal (`document.body`) + `position:fixed` theo
+   toạ độ nút, tự lật lên trên nếu phía dưới không đủ chỗ, cập nhật khi cuộn/đổi cỡ, `z-[200]` (trên
+   modal `z-[150]` và sheet mobile `z-[160]`); click-ngoài-để-đóng loại trừ cả vùng portal. Áp dụng cho
+   MỌI chỗ dùng `SearchableSelect` (chọn KTV, linh kiện, NV, GS…).
+3. **Icon viền trắng.** Ảnh gốc `logo sua chua 3t.png` có sẵn khung trắng bao ô xanh + 1 vạch xanh đậm
+   mép trên. Xuất lại bộ icon (`icon-192/512`, `icon-maskable-512`, `apple-touch-icon`, `favicon`) bằng
+   `sharp`: cắt sát ô xanh (x 36–816, y 36–838), tô các góc bo/viền chuyển sắc còn sót bằng màu xanh lân
+   cận. Bỏ thêm `ring-1 ring-white/30` trên icon ở Sidebar/TopBar.
+
+**(d) Kiểm thử:** typecheck 0 lỗi, build sạch, xác nhận CSS đã có `.md\:max-w-sm/md/lg`. Chạy `wrangler
+dev` local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), Chế độ test vai trò Admin BH: modal
+rộng 448px (trước: hết chiều ngang), bấm ô chọn → danh sách hiện ngay dưới ô, đủ 6 KTV, ô tìm tự focus,
+chọn KTV xong nút "Tạo phiếu" bật. Xem lại icon mới bằng mắt — hết viền trắng. Lưu ý: PWA đã cài trên điện
+thoại có thể còn icon cũ trong bộ nhớ đệm cho tới khi cài lại.

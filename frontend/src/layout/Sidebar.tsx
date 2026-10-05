@@ -30,7 +30,7 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
       className={`hidden md:flex ${collapsed ? "w-[76px]" : "w-64"} shrink-0 h-screen sticky top-0 flex-col bg-sidebar text-white transition-[width] duration-200`}
     >
       <div className={`flex items-center gap-3 border-b border-white/10 py-4 ${collapsed ? "justify-center px-2" : "px-4"}`}>
-        <img src="/icon-192.png" alt="3T" className="h-10 w-10 shrink-0 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.25)] ring-1 ring-white/30" />
+        <img src="/icon-192.png" alt="3T" className="h-10 w-10 shrink-0 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.25)]" />
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate text-base font-bold leading-tight">Sửa chữa 3T</p>
