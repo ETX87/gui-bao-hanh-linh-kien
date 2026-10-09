@@ -191,8 +191,9 @@ Admin BH). **Mốc mới nhất (05/10/2026, v1.013):** phân trang tối đa 20
 Admin BH phân trang theo đơn cha), cột "Phân loại LK" (từ `don_vi` của linh-kien-app), cảnh báo khi Admin
 chốt khác đề xuất KTV, chọn xử lý xác 1 lần lúc Đổi mới nhanh/hàng loạt + nút "⚡ Xử lý nhanh hàng loạt" —
 xem mục kế cuối file. **Mốc mới nhất (09/10/2026, v1.014):** đơn Odoo chờ gửi sửa có nút "🚫 Không gửi" (đơn
-tạo nhầm trên Odoo) + mục "Đã xác nhận không gửi" để mở lại; trạng thái `khong_gui` được báo về dvbh — xem
-mục cuối file.
+tạo nhầm trên Odoo) + mục "Đã xác nhận không gửi" để mở lại; trạng thái `khong_gui` được báo về dvbh. Cùng
+ngày (v1.015): đổi tên thành "Hủy đơn lỗi" và tách thẻ đơn Odoo thành 3 tab **Chưa gửi / Đã gửi / Hủy bỏ**
+(20 đơn/trang) — xem 2 mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4341,3 +4342,34 @@ remote rồi khôi phục `wrangler.jsonc`, `git diff` sạch); migration 0007 �
   - "Không gửi" → modal → xác nhận → đơn sang mục "Đã xác nhận không gửi", ô chọn không bị tích;
   - "Mở lại" → đơn quay về danh sách.
 - Chưa kiểm được việc gửi thật sang dvbh (local không có Worker dvbh).
+
+## Đơn Odoo: đổi tên "Hủy đơn lỗi" + tách 3 tab Chưa gửi / Đã gửi / Hủy bỏ (09/10/2026) — v1.015
+
+**(a) Nguyên văn yêu cầu:**
+
+> 1. Đổi "Không gửi" => "Hủy đơn lỗi"
+> 2. Tách thành đơn chưa gửi, đơn đã gửi, đơn hủy bỏ để KTV tiện quản lý, danh sách trang là 20 item/1 trang
+
+**(b) Đã triển khai:**
+- Đổi chữ: nút "🗑 Hủy đơn lỗi"; modal "Xác nhận hủy đơn lỗi"; badge "Đã hủy"; thông báo lỗi `ODOO_KHONG_GUI`
+  = "Đơn Odoo này đã bị hủy (đơn lỗi)…". Mã nội bộ vẫn giữ `khong_gui` (API, cột DB, trạng thái gửi dvbh).
+  Nhãn bên dvbh đổi thành "Sửa chữa: KTV hủy đơn lỗi".
+- Thẻ "🧾 Đơn bảo hành Odoo" ở màn Gửi hàng (`TaoPhieu.tsx`) có 3 tab kèm số đếm:
+  - **Chưa gửi**: danh sách chọn để tạo thùng (như cũ), phân trang 20 trên máy.
+  - **Đã gửi**: endpoint mới `GET /api/odoo-don/da-gui` — **phân trang server** 20/trang (danh sách này tăng
+    theo lịch sử). Lọc theo `phieu_gui_bh.nguoi_tao` = KTV. Mỗi dòng: mã đơn, ca, linh kiện, thùng + đơn cha,
+    thời điểm đưa vào thùng, tiến độ. Bấm dòng mở chi tiết phiếu gửi.
+    - Tiến độ (`tienDo()` trong `OdooDonPicker.tsx`): thùng nháp / đã gửi / kho đã nhận đọc thẳng trạng thái
+      phiếu gửi (luôn mới nhất); các giai đoạn sau lấy `odoo_status_sync.last_status` (cron 15 phút) kèm
+      chi tiết "k/N hoàn tất".
+  - **Hủy bỏ**: danh sách đơn đã hủy + "↺ Mở lại" (component `OdooHuyList`, phân trang 20).
+  - `GET /cho-gui` trả thêm `so_da_gui` cho số đếm tab. Thẻ hiện khi bất kỳ tab nào có đơn.
+- Modal "Chọn đơn Odoo" trong chi tiết phiếu giữ dạng danh sách chưa gửi + mục thu gọn "Hủy bỏ (N)".
+
+**(c) Vấn đề trong lúc làm:** thanh tab tràn trên màn 375px → thu nhỏ đệm/cỡ chữ dưới `sm`. Heredoc chứa
+template literal dài vẫn lỗi trong Bash → dùng Write file tạm + node.
+
+**(d) Kiểm thử:** typecheck 0 lỗi, build sạch. `wrangler dev` local (bỏ tạm binding remote rồi khôi phục),
+seed 45 đơn Odoo cho 1 KTV (21 đã hủy): tab Chưa gửi 20/26 "Trang 1/2", Hủy bỏ 20/22 "Trang 1/2", Đã gửi 1
+đơn hiện "Đã nhận lại · 1/2 hoàn tất"; bấm "Mở thùng" mở đúng "Phiếu gửi BH-000107"; `GET /da-gui?limit=1`
+trả đúng `total`. Xem bằng mắt ở 1440px và 375px (sau khi sửa tràn tab).

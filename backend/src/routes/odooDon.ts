@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { computeEmailGs } from "../lib/gs";
 import { runOdooSync } from "../lib/odooSync";
 import { nowVN } from "../lib/vnTime";
+import { parsePage } from "../lib/pagination";
 
 // Don bao hanh tao tren Odoo, keo ve qua dvbh (cron 15 phut - lib/odooSync.ts). KTV thay "don cua
 // minh dang cho gui sua" (Odoo new/repairing, chua dua vao thung nao) qua ma KTV phu trach tren case.
@@ -37,7 +38,12 @@ odooDon.get("/cho-gui", async (c) => {
   const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
   if ("error" in t) return c.json({ error: t.error }, t.status);
   const ktv = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.email).first<{ ma_ktv: string }>();
-  if (!ktv) return c.json({ don: [], khong_gui: [], ktv_email: t.email, chua_khai_bao_ktv: true });
+  if (!ktv) return c.json({ don: [], khong_gui: [], so_da_gui: 0, ktv_email: t.email, chua_khai_bao_ktv: true });
+  const daGui = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?`,
+  )
+    .bind(t.email)
+    .first<{ n: number }>();
   const { results } = await c.env.DB.prepare(
     `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.tinh_trang_loi, o.ghi_chu, o.ngay_tao,
             o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do
@@ -48,7 +54,41 @@ odooDon.get("/cho-gui", async (c) => {
   )
     .bind(ktv.ma_ktv)
     .all<{ khong_gui_boi: string | null }>();
-  return c.json({ don: results.filter((r) => !r.khong_gui_boi), khong_gui: results.filter((r) => !!r.khong_gui_boi), ktv_email: t.email });
+  return c.json({
+    don: results.filter((r) => !r.khong_gui_boi),
+    khong_gui: results.filter((r) => !!r.khong_gui_boi),
+    so_da_gui: daGui?.n ?? 0,
+    ktv_email: t.email,
+  });
+});
+
+// GET /api/odoo-don/da-gui?ktv_email=&limit=&offset= - don Odoo da dua vao thung cua KTV (tab "Đã gửi",
+// 09/10/2026). Phan trang server vi danh sach nay tang theo lich su. Tien do lay tu trang thai phieu gui
+// + lan bao gan nhat ve dvbh (odoo_status_sync, cron 15 phut).
+odooDon.get("/da-gui", async (c) => {
+  const user = c.get("user");
+  const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  const { limit, offset } = parsePage(c);
+  const [rows, cnt] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.ngay_tao,
+              p.id AS don_cha_id, p.phieu_gui_id, p.created_at AS gan_luc, g.trang_thai AS gui_tt,
+              s.last_status, s.last_detail
+       FROM phieu_sua_chua_bh p
+       JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+       JOIN don_bh_odoo o ON o.odoo_id = p.odoo_id
+       LEFT JOIN odoo_status_sync s ON s.odoo_id = p.odoo_id
+       WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?
+       ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`,
+    )
+      .bind(t.email, limit, offset)
+      .all(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?`)
+      .bind(t.email)
+      .first<{ n: number }>(),
+  ]);
+  return c.json({ don: rows.results, total: cnt?.n ?? 0 });
 });
 
 // Don Odoo phai thuoc dung KTV dang thao tac (chinh minh / KTV duoc tao ho qua ktv_email) va chua vao

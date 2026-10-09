@@ -11,7 +11,7 @@ import { TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_LABELS } from "../../lib/con
 import { fmtDateOnly } from "../../lib/format";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PickKtvModal } from "./PickKtvModal";
-import { OdooDonList, useOdooChoGui, useSelection, KhongGuiModal, OdooKhongGuiSection } from "./OdooDonPicker";
+import { OdooDonList, useOdooChoGui, useSelection, KhongGuiModal, OdooHuyList, OdooDaGuiList } from "./OdooDonPicker";
 import type { AppUser, OdooDon, PhieuGui } from "../../lib/types";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
@@ -37,14 +37,19 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   const odoo = useOdooChoGui(null, isSelfKtv);
   const sel = useSelection();
   const [huyOdoo, setHuyOdoo] = useState<OdooDon | null>(null);
+  // 3 muc cho KTV quan ly don Odoo (09/10/2026): Chua gui / Da gui / Huy bo - moi muc 20 don/trang.
+  const [odooTab, setOdooTab] = useState<"chua_gui" | "da_gui" | "huy">("chua_gui");
+  const [daGuiKey, setDaGuiKey] = useState(0);
   const reloadOdoo = () => {
     odoo.reload();
+    setDaGuiKey((k) => k + 1);
     refresh();
   };
   const afterChange = () => {
     reload();
     refresh();
     odoo.reload();
+    setDaGuiKey((k) => k + 1);
   };
   const taoThungTuOdoo = async () => {
     setCreating(true);
@@ -90,23 +95,53 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-4">
-    {isSelfKtv && odoo.don && (odoo.don.length > 0 || odoo.khongGui.length > 0) && (
+    {isSelfKtv && odoo.don && (odoo.don.length > 0 || odoo.khongGui.length > 0 || odoo.soDaGui > 0) && (
       <Card className="p-5">
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🧾 Đơn bảo hành Odoo chờ gửi sửa ({odoo.don.length})</h3>
-            <p className="text-xs text-[var(--ink-soft)]">Chọn các đơn sẽ gửi về kho rồi tạo thùng — mã ca, linh kiện, số lượng được điền sẵn.</p>
-          </div>
-          <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto">
-            Tạo thùng với {sel.selected.size || ""} đơn đã chọn
-          </Btn>
+        <div className="mb-3">
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🧾 Đơn bảo hành Odoo</h3>
+          <p className="text-xs text-[var(--ink-soft)]">Đơn tạo trên Odoo thuộc bạn phụ trách — chọn đơn chưa gửi để tạo thùng, mã ca / linh kiện / số lượng được điền sẵn.</p>
         </div>
-        {odoo.don.length === 0 ? (
-          <p className="text-sm text-[var(--ink-faint)]">Không còn đơn Odoo nào chờ gửi sửa.</p>
-        ) : (
-          <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} onKhongGui={setHuyOdoo} />
+        <div className="mb-3 flex gap-1 rounded-xl bg-[var(--surface-2)] p-1" role="tablist">
+          {(
+            [
+              ["chua_gui", "Chưa gửi", odoo.don.length],
+              ["da_gui", "Đã gửi", odoo.soDaGui],
+              ["huy", "Hủy bỏ", odoo.khongGui.length],
+            ] as const
+          ).map(([k, label, n]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={odooTab === k}
+              onClick={() => setOdooTab(k)}
+              className={`focus-ring min-w-0 flex-1 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition-colors sm:px-3 sm:text-sm ${
+                odooTab === k ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-card" : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              }`}
+            >
+              {label}
+              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[11px] ${odooTab === k ? "bg-[var(--accent-soft)]" : "bg-[var(--line)]"}`}>{n}</span>
+            </button>
+          ))}
+        </div>
+        {odooTab === "chua_gui" && (
+          <>
+            {odoo.don.length === 0 ? (
+              <p className="text-sm text-[var(--ink-faint)]">Không còn đơn Odoo nào chưa gửi.</p>
+            ) : (
+              <>
+                <div className="mb-3 flex justify-end">
+                  <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto">
+                    Tạo thùng với {sel.selected.size || ""} đơn đã chọn
+                  </Btn>
+                </div>
+                <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} onKhongGui={setHuyOdoo} />
+              </>
+            )}
+          </>
         )}
-        <OdooKhongGuiSection items={odoo.khongGui} onChanged={reloadOdoo} />
+        {odooTab === "da_gui" && <OdooDaGuiList reloadKey={daGuiKey} onOpenPhieu={setDetailId} />}
+        {odooTab === "huy" && <OdooHuyList items={odoo.khongGui} onChanged={reloadOdoo} />}
       </Card>
     )}
     {huyOdoo && (
