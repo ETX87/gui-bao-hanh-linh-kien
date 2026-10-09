@@ -51,6 +51,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   NOT_DRAFT: "Chỉ thực hiện được khi phiếu còn ở trạng thái Nháp.",
   MISSING_ODOO_IDS: "Chưa chọn đơn Odoo nào.",
   DA_GAN_THUNG: "Đơn Odoo này đã được đưa vào 1 thùng khác.",
+  ODOO_KHONG_GUI: "Đơn Odoo này đã được xác nhận không gửi bảo hành — mở lại trước nếu cần gửi.",
   KHONG_CON_CHO_GUI: "Đơn Odoo không còn ở trạng thái chờ gửi sửa.",
   EMPTY_PHIEU: "Phiếu chưa có đơn bảo hành nào — thêm ít nhất 1 đơn trước khi xác nhận gửi.",
   HAS_CHILDREN: "Phiếu đang có đơn bên trong, không xoá được.",

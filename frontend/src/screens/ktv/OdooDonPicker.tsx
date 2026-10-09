@@ -1,7 +1,8 @@
 import { lkLabel } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
-import { Btn, Badge, Spinner } from "../../ui/primitives";
+import { Btn, Badge, Spinner, Field, Textarea } from "../../ui/primitives";
+import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { fmtDate } from "../../lib/format";
 import { Pagination } from "../../ui/Pagination";
@@ -16,23 +17,39 @@ export const ODOO_TT_LABELS: Record<string, string> = { new: "Mới", repairing:
 
 export function useOdooChoGui(ktvEmail: string | null | undefined, enabled = true) {
   const [don, setDon] = useState<OdooDon[] | null>(null);
+  const [khongGui, setKhongGui] = useState<OdooDon[]>([]);
   const [error, setError] = useState<string | null>(null);
   const load = () => {
     if (!enabled) return;
     setError(null);
     api
-      .get<{ don: OdooDon[] }>(`/odoo-don/cho-gui${ktvEmail ? `?ktv_email=${encodeURIComponent(ktvEmail)}` : ""}`)
-      .then((r) => setDon(r.don))
+      .get<{ don: OdooDon[]; khong_gui?: OdooDon[] }>(`/odoo-don/cho-gui${ktvEmail ? `?ktv_email=${encodeURIComponent(ktvEmail)}` : ""}`)
+      .then((r) => {
+        setDon(r.don);
+        setKhongGui(r.khong_gui ?? []);
+      })
       .catch((e) => {
         setDon([]);
         setError(errorMessage(e));
       });
   };
   useEffect(load, [ktvEmail, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { don, error, reload: load };
+  return { don, khongGui, error, reload: load };
 }
 
-export function OdooDonList({ don, selected, onToggle, onToggleAll }: { don: OdooDon[]; selected: Set<number>; onToggle: (id: number) => void; onToggleAll: () => void }) {
+export function OdooDonList({
+  don,
+  selected,
+  onToggle,
+  onToggleAll,
+  onKhongGui,
+}: {
+  don: OdooDon[];
+  selected: Set<number>;
+  onToggle: (id: number) => void;
+  onToggleAll: () => void;
+  onKhongGui?: (d: OdooDon) => void;
+}) {
   const allOn = don.length > 0 && don.every((d) => selected.has(d.odoo_id));
   const pg = useClientPage(don);
   return (
@@ -60,6 +77,21 @@ export function OdooDonList({ don, selected, onToggle, onToggleAll }: { don: Odo
             {(d.tinh_trang_loi || d.ghi_chu) && <span className="block text-xs text-[var(--ink-soft)]">{[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ")}</span>}
             {d.ngay_tao && <span className="block text-[11px] text-[var(--ink-faint)]">Tạo trên Odoo {fmtDate(d.ngay_tao)}</span>}
           </span>
+          {onKhongGui && (
+            <Btn
+              size="sm"
+              variant="ghost"
+              className="shrink-0 !text-[var(--red-700)]"
+              title="Đơn tạo nhầm trên Odoo, không cần gửi bảo hành"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onKhongGui(d);
+              }}
+            >
+              🚫 Không gửi
+            </Btn>
+          )}
         </label>
       ))}
       <Pagination page={pg.page} pageCount={pg.pageCount} total={pg.total} onChange={pg.setPage} />
@@ -82,8 +114,9 @@ export function useSelection() {
 
 // Modal "Chon don Odoo" trong chi tiet phieu gui (phieu con nhap) - them thang vao phieu dang mo.
 export function OdooDonPickerModal({ guiId, ktvEmail, onClose, onDone }: { guiId: string; ktvEmail: string; onClose: () => void; onDone: (msg: string) => void }) {
-  const { don, error } = useOdooChoGui(ktvEmail);
+  const { don, khongGui, error, reload } = useOdooChoGui(ktvEmail);
   const sel = useSelection();
+  const [huy, setHuy] = useState<OdooDon | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -123,11 +156,135 @@ export function OdooDonPickerModal({ guiId, ktvEmail, onClose, onDone }: { guiId
         <Spinner />
       ) : error ? (
         <p className="text-sm text-[var(--red-700)]">{error}</p>
-      ) : don.length === 0 ? (
-        <p className="text-sm text-[var(--ink-faint)]">Không có đơn Odoo nào đang chờ gửi sửa.</p>
       ) : (
-        <OdooDonList don={don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(don.map((d) => d.odoo_id))} />
+        <>
+          {don.length === 0 ? (
+            <p className="text-sm text-[var(--ink-faint)]">Không có đơn Odoo nào đang chờ gửi sửa.</p>
+          ) : (
+            <OdooDonList don={don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(don.map((d) => d.odoo_id))} onKhongGui={setHuy} />
+          )}
+          <OdooKhongGuiSection items={khongGui} ktvEmail={ktvEmail} onChanged={reload} />
+        </>
+      )}
+      {huy && (
+        <KhongGuiModal
+          don={huy}
+          ktvEmail={ktvEmail}
+          onClose={() => setHuy(null)}
+          onDone={() => {
+            sel.setSelected((prev) => {
+              const n = new Set(prev);
+              n.delete(huy.odoo_id);
+              return n;
+            });
+            setHuy(null);
+            reload();
+          }}
+        />
       )}
     </Modal>
+  );
+}
+
+// 09/10/2026: "cho phep xac nhan huy don (tao nham tren odoo khong can gui bao hanh - cho phep mo lai de
+// gui neu tat nham)". Danh dau 1 don Odoo "khong gui" -> an khoi danh sach cho gui + so viec, bao trang
+// thai "khong_gui" ve dvbh; mo lai o khu "Da xac nhan khong gui" ngay ben duoi danh sach.
+export function KhongGuiModal({ don, ktvEmail, onClose, onDone }: { don: OdooDon; ktvEmail?: string | null; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [lyDo, setLyDo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const ma = don.ma_don ?? "#" + don.odoo_id;
+  const submit = async () => {
+    setBusy(true);
+    try {
+      await api.post("/odoo-don/" + don.odoo_id + "/khong-gui", { ly_do: lyDo.trim() || undefined, ktv_email: ktvEmail || undefined });
+      toast("Đã xác nhận không gửi đơn " + ma + ".", "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title="Xác nhận không gửi bảo hành"
+      onClose={onClose}
+      maxWidthClass="max-w-md"
+      footerActions={
+        <>
+          <Btn variant="secondary" onClick={onClose}>
+            Quay lại
+          </Btn>
+          <Btn variant="danger" disabled={busy} onClick={submit}>
+            Xác nhận không gửi
+          </Btn>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-[var(--ink-body)]">
+          Đơn <b className="font-mono text-[var(--link)]">{ma}</b> — {lkLabel(don.ten_linh_kien, don.ma_linh_kien) || "—"} sẽ được ẩn khỏi danh sách chờ gửi. Nếu bấm nhầm, mở lại ở mục
+          "Đã xác nhận không gửi" bên dưới danh sách.
+        </p>
+        <Field label="Lý do (không bắt buộc)">
+          <Textarea rows={2} value={lyDo} onChange={(e) => setLyDo(e.target.value)} placeholder="Tạo nhầm trên Odoo, không cần gửi bảo hành" />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
+
+export function OdooKhongGuiSection({ items, ktvEmail, onChanged }: { items: OdooDon[]; ktvEmail?: string | null; onChanged: () => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const pg = useClientPage(items);
+  if (items.length === 0) return null;
+  const moLai = async (d: OdooDon) => {
+    setBusyId(d.odoo_id);
+    try {
+      await api.post("/odoo-don/" + d.odoo_id + "/mo-lai", { ktv_email: ktvEmail || undefined });
+      toast("Đã mở lại đơn " + (d.ma_don ?? "#" + d.odoo_id) + " — đơn quay về danh sách chờ gửi.", "ok");
+      onChanged();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+  return (
+    <div className="mt-3 border-t border-[var(--line)] pt-3">
+      <button
+        type="button"
+        className="focus-ring flex items-center gap-1.5 rounded text-xs font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>{open ? "▾" : "▸"}</span> Đã xác nhận không gửi ({items.length})
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {pg.pageItems.map((d) => (
+            <div key={d.odoo_id} className="flex flex-col gap-2 rounded-lg border border-dashed border-[var(--line-strong)] bg-[var(--surface-2)] px-3 py-2.5 sm:flex-row sm:items-center">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-mono text-xs font-semibold text-[var(--ink-soft)] line-through">{d.ma_don ?? "#" + d.odoo_id}</span>
+                  <span className="font-mono text-xs text-[var(--ink-faint)]">{d.case_id}</span>
+                  <Badge tone="gray">Không gửi</Badge>
+                </div>
+                <div className="text-sm text-[var(--ink-soft)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</div>
+                <div className="text-[11px] text-[var(--ink-faint)]">
+                  {[d.khong_gui_ly_do, d.khong_gui_boi, d.khong_gui_luc ? fmtDate(d.khong_gui_luc) : null].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              <Btn size="sm" variant="secondary" disabled={busyId === d.odoo_id} onClick={() => moLai(d)} className="w-full sm:w-auto">
+                ↺ Mở lại
+              </Btn>
+            </div>
+          ))}
+          <Pagination page={pg.page} pageCount={pg.pageCount} total={pg.total} onChange={pg.setPage} />
+        </div>
+      )}
+    </div>
   );
 }

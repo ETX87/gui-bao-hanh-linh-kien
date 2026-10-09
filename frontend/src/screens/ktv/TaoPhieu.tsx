@@ -11,8 +11,8 @@ import { TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_LABELS } from "../../lib/con
 import { fmtDateOnly } from "../../lib/format";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PickKtvModal } from "./PickKtvModal";
-import { OdooDonList, useOdooChoGui, useSelection } from "./OdooDonPicker";
-import type { AppUser, PhieuGui } from "../../lib/types";
+import { OdooDonList, useOdooChoGui, useSelection, KhongGuiModal, OdooKhongGuiSection } from "./OdooDonPicker";
+import type { AppUser, OdooDon, PhieuGui } from "../../lib/types";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
 // tao phieu nhap moi, mo chi tiet de them don/xac nhan gui. Phan trang that (server LIMIT/OFFSET, xem
@@ -36,6 +36,11 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   // nguoi "tao ho" chon don Odoo trong chi tiet phieu sau khi da chon KTV.
   const odoo = useOdooChoGui(null, isSelfKtv);
   const sel = useSelection();
+  const [huyOdoo, setHuyOdoo] = useState<OdooDon | null>(null);
+  const reloadOdoo = () => {
+    odoo.reload();
+    refresh();
+  };
   const afterChange = () => {
     reload();
     refresh();
@@ -85,7 +90,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-4">
-    {isSelfKtv && odoo.don && odoo.don.length > 0 && (
+    {isSelfKtv && odoo.don && (odoo.don.length > 0 || odoo.khongGui.length > 0) && (
       <Card className="p-5">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -96,8 +101,28 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
             Tạo thùng với {sel.selected.size || ""} đơn đã chọn
           </Btn>
         </div>
-        <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} />
+        {odoo.don.length === 0 ? (
+          <p className="text-sm text-[var(--ink-faint)]">Không còn đơn Odoo nào chờ gửi sửa.</p>
+        ) : (
+          <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} onKhongGui={setHuyOdoo} />
+        )}
+        <OdooKhongGuiSection items={odoo.khongGui} onChanged={reloadOdoo} />
       </Card>
+    )}
+    {huyOdoo && (
+      <KhongGuiModal
+        don={huyOdoo}
+        onClose={() => setHuyOdoo(null)}
+        onDone={() => {
+          sel.setSelected((prev) => {
+            const n = new Set(prev);
+            n.delete(huyOdoo.odoo_id);
+            return n;
+          });
+          setHuyOdoo(null);
+          reloadOdoo();
+        }}
+      />
     )}
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">

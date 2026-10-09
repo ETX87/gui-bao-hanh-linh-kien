@@ -343,12 +343,13 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     `SELECT o.*, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan FROM don_bh_odoo o WHERE o.odoo_id IN (${ids.map(() => "?").join(",")})`,
   )
     .bind(...ids)
-    .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; trang_thai: string | null; tinh_trang_loi: string | null; ghi_chu: string | null; con_hieu_luc: number; ma_ktv: string | null; da_gan: string | null }>();
+    .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; trang_thai: string | null; tinh_trang_loi: string | null; ghi_chu: string | null; con_hieu_luc: number; ma_ktv: string | null; da_gan: string | null; khong_gui_boi: string | null }>();
 
   const loi: { odoo_id: number; error: string }[] = [];
   const ok = rows.filter((r) => {
     let e: string | null = null;
     if (r.da_gan) e = "DA_GAN_THUNG";
+    else if (r.khong_gui_boi) e = "ODOO_KHONG_GUI";
     else if (!r.con_hieu_luc || !["new", "repairing"].includes(r.trang_thai || "")) e = "KHONG_CON_CHO_GUI";
     else if (r.ma_ktv !== ktvRow.ma_ktv) e = "CASE_KTV_MISMATCH";
     else if (!r.case_id) e = "MISSING_CASE_ID";

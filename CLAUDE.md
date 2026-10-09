@@ -190,7 +190,9 @@ Sau đó v1.010–v1.012 (sửa modal giãn, 7 yêu cầu tra cứu case/nhớ n
 Admin BH). **Mốc mới nhất (05/10/2026, v1.013):** phân trang tối đa 20 dòng/trang cho mọi bảng dài (bảng
 Admin BH phân trang theo đơn cha), cột "Phân loại LK" (từ `don_vi` của linh-kien-app), cảnh báo khi Admin
 chốt khác đề xuất KTV, chọn xử lý xác 1 lần lúc Đổi mới nhanh/hàng loạt + nút "⚡ Xử lý nhanh hàng loạt" —
-xem mục cuối file.
+xem mục kế cuối file. **Mốc mới nhất (09/10/2026, v1.014):** đơn Odoo chờ gửi sửa có nút "🚫 Không gửi" (đơn
+tạo nhầm trên Odoo) + mục "Đã xác nhận không gửi" để mở lại; trạng thái `khong_gui` được báo về dvbh — xem
+mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4201,10 +4203,8 @@ các bước nhập liệu cho từng bước hiện tại => đề xuất => c�
 
 **Câu hỏi mở / đề xuất chờ người dùng chọn (CHƯA làm):** đề xuất 9–17 trong file báo cáo, gồm lọc /
 tìm / nhóm ở bảng thống nhất, hàng loạt cho tiếp nhận + xác nhận SL + FAST + hoàn tất, cột tên khách /
-tên KTV / badge hết BH, nhập mã phiếu trả dạng bảng. ~~~~Riêng điểm 15 cần chốt nghiệp vụ: Đổi mới qua FAST
+tên KTV / badge hết BH, nhập mã phiếu trả dạng bảng. ~~Riêng điểm 15 cần chốt nghiệp vụ: Đổi mới qua FAST
 / hàng loạt hiện không ghi `xu_ly_xac` — nên hỏi ngay lúc phân loại, hay để trống rồi hỏi sau?~~ **[ĐÃ CHỐT
-05/10/2026: hỏi ngay lúc phân loại, chọn 1 lần cho tất cả — xem mục kế tiếp]**. Điểm 11 (FAST hàng loạt)
-cũng đã làm ở mục kế tiếp.~~ **[ĐÃ CHỐT
 05/10/2026: hỏi ngay lúc phân loại, chọn 1 lần cho tất cả — xem mục kế tiếp]**. Điểm 11 (FAST hàng loạt)
 cũng đã làm ở mục kế tiếp.
 
@@ -4277,3 +4277,67 @@ Mục 4 cũng trả lời câu hỏi mở số 15 của đợt rà soát Admin B
     - FAST hàng loạt với nút special → 400;
     - hoàn tất đơn `sua_chua` không cần xử lý xác → 200.
 - Chưa kiểm bằng mắt hộp cảnh báo đổi linh kiện ở form đơn lẻ (dùng chung hàm đã kiểm).
+
+## Đơn Odoo chờ gửi: xác nhận "không gửi" + mở lại (09/10/2026) — v1.014
+
+**(a) Nguyên văn yêu cầu:** *"ở danh sách odoo chờ gửi bảo hành, cho phép xác nhận hủy đơn (tạo nhầm trên
+odoo không cần gửi bảo hành - cho phép mở lại để gửi nếu tắt nhầm)"*
+
+**(b) Đã triển khai:**
+- `migrations/0007_odoo_khong_gui.sql`: thêm 3 cột `khong_gui_boi`, `khong_gui_luc`, `khong_gui_ly_do` vào
+  `don_bh_odoo`.
+  - Không cần bảng riêng: upsert của cron đồng bộ chỉ SET các cột dữ liệu Odoo, nên không ghi đè 3 cột này.
+  - Không ghi `logs_bh`: cột `entity_type` có CHECK chỉ cho 4 loại. Người huỷ, thời điểm và lý do nằm ngay
+    trên dòng.
+- `routes/odooDon.ts`:
+  - `POST /api/odoo-don/:id/khong-gui {ly_do?, ktv_email?}`. Lý do trống thì dùng mặc định "Tạo nhầm trên
+    Odoo, không cần gửi bảo hành".
+  - `POST /api/odoo-don/:id/mo-lai {ktv_email?}`: xoá 3 cột.
+  - Quyền dùng chung `resolveKtvTarget`:
+    - KTV thật thao tác đơn của chính mình;
+    - GS (trong khu vực), Admin BH, qtri thao tác hộ qua `ktv_email`;
+    - đơn phải đúng mã KTV (nếu không: `CASE_KTV_MISMATCH`) và chưa vào thùng (nếu không: `DA_GAN_THUNG`).
+  - `GET /cho-gui` trả 2 danh sách:
+    - `don`: đơn chưa huỷ;
+    - `khong_gui`: đơn đã huỷ, vẫn new/repairing, chưa vào thùng.
+  - `GET /sync-status`: `cho_gui` không còn đếm đơn đã huỷ; thêm số `khong_gui`.
+- Đơn "không gửi" bị loại khỏi 3 chỗ:
+  - số việc `ktv_odoo_cho_gui` (`workload.ts`);
+  - bước hỏi lại KTV trong cron;
+  - `POST /phieu-gui/:id/don-tu-odoo` (lỗi mới `ODOO_KHONG_GUI`).
+- Báo về dvbh (`lib/odooSync.ts`, hàm `pushStatuses`):
+  - đơn huỷ → `trang_thai='khong_gui'`, `chi_tiet` = lý do. Chỉ gửi khi chưa báo, lần báo trước bị lỗi, hoặc
+    lý do đã đổi.
+  - đơn mở lại (lần báo trước là `khong_gui`) → `null` để dvbh xoá, cùng nhánh với "gỡ đơn khỏi thùng nháp".
+- Giao diện (`screens/ktv/OdooDonPicker.tsx`):
+  - Mỗi đơn có nút "🚫 Không gửi"; bấm không làm đổi ô chọn của đơn. Nút mở modal xác nhận, ô lý do tuỳ chọn.
+  - Dưới danh sách có mục thu gọn "▸ Đã xác nhận không gửi (N)": mỗi đơn hiện lý do · người · lúc kèm nút
+    "↺ Mở lại", phân trang 20.
+  - Có ở 2 nơi:
+    - thẻ ở màn Gửi hàng (`TaoPhieu.tsx`). Thẻ vẫn hiện khi chỉ còn đơn đã huỷ, để mở lại được;
+    - modal "Chọn đơn Odoo" trong chi tiết phiếu (dùng được khi tạo hộ).
+- dvbh (`../cloudflare smarttrade base`, commit `a1f5f1f`): thêm nhãn `khong_gui` = "Sửa chữa: KTV xác nhận
+  không gửi" trong `LoiLinhKienPanel.tsx`.
+  - **Chưa deploy dvbh** vì repo đó có phiên khác đang làm dở.
+  - Cho tới lần deploy dvbh kế tiếp, badge hiện tạm "Sửa chữa: khong_gui"; dữ liệu vẫn đúng.
+
+**(c) Vấn đề trong lúc làm:** heredoc / `node -e` dài trong Bash lại lỗi `unexpected EOF`. Đã chuyển sang Edit
+và chạy file script đặt trong thư mục TEMP. Không có lỗi logic.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chạy `wrangler dev` local (bỏ tạm binding
+remote rồi khôi phục `wrangler.jsonc`, `git diff` sạch); migration 0007 áp được.
+- API e2e 13/13 đạt:
+  - KTV khác huỷ → 403;
+  - đơn đã vào thùng → 400;
+  - huỷ → đơn chuyển sang `khong_gui`, số việc 3 → 2;
+  - `don-tu-odoo` chặn với `ODOO_KHONG_GUI`;
+  - Admin BH huỷ / mở lại hộ qua `ktv_email`, lý do mặc định đúng;
+  - mở lại → đơn về danh sách chờ gửi.
+- Chạy trực tiếp 2 câu SQL dùng để báo dvbh:
+  - đơn huỷ chưa báo → được chọn để gửi `khong_gui`;
+  - đơn mở lại sau khi đã báo → được chọn để gửi `null`;
+  - đã báo rồi → không gửi lại.
+- UI 1440px + 375px:
+  - "Không gửi" → modal → xác nhận → đơn sang mục "Đã xác nhận không gửi", ô chọn không bị tích;
+  - "Mở lại" → đơn quay về danh sách.
+- Chưa kiểm được việc gửi thật sang dvbh (local không có Worker dvbh).

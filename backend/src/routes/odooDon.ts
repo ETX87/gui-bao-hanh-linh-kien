@@ -4,6 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { computeEmailGs } from "../lib/gs";
 import { runOdooSync } from "../lib/odooSync";
+import { nowVN } from "../lib/vnTime";
 
 // Don bao hanh tao tren Odoo, keo ve qua dvbh (cron 15 phut - lib/odooSync.ts). KTV thay "don cua
 // minh dang cho gui sua" (Odoo new/repairing, chua dua vao thung nao) qua ma KTV phu trach tren case.
@@ -29,22 +30,68 @@ export async function resolveKtvTarget(db: D1Database, user: AppUser, ktvEmailRe
 }
 
 // GET /api/odoo-don/cho-gui?ktv_email= - don Odoo "cho gui sua" cua KTV (chua gan vao don cha nao).
+// Tra kem `khong_gui`: don KTV da xac nhan "khong gui" (tao nham tren Odoo, 09/10/2026) de mo lai neu
+// tat nham.
 odooDon.get("/cho-gui", async (c) => {
   const user = c.get("user");
   const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
   if ("error" in t) return c.json({ error: t.error }, t.status);
   const ktv = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.email).first<{ ma_ktv: string }>();
-  if (!ktv) return c.json({ don: [], ktv_email: t.email, chua_khai_bao_ktv: true });
+  if (!ktv) return c.json({ don: [], khong_gui: [], ktv_email: t.email, chua_khai_bao_ktv: true });
   const { results } = await c.env.DB.prepare(
-    `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.tinh_trang_loi, o.ghi_chu, o.ngay_tao
+    `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.tinh_trang_loi, o.ghi_chu, o.ngay_tao,
+            o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do
      FROM don_bh_odoo o
      WHERE o.ma_ktv = ? AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
        AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)
-     ORDER BY o.ngay_tao DESC LIMIT 300`,
+     ORDER BY o.ngay_tao DESC LIMIT 500`,
   )
     .bind(ktv.ma_ktv)
-    .all();
-  return c.json({ don: results, ktv_email: t.email });
+    .all<{ khong_gui_boi: string | null }>();
+  return c.json({ don: results.filter((r) => !r.khong_gui_boi), khong_gui: results.filter((r) => !!r.khong_gui_boi), ktv_email: t.email });
+});
+
+// Don Odoo phai thuoc dung KTV dang thao tac (chinh minh / KTV duoc tao ho qua ktv_email) va chua vao
+// thung nao.
+async function loadOwnedOdoo(db: D1Database, user: AppUser, odooId: number, ktvEmailReq: string | undefined) {
+  const t = await resolveKtvTarget(db, user, ktvEmailReq);
+  if ("error" in t) return { error: t.error, status: t.status } as const;
+  const row = await db
+    .prepare(
+      `SELECT o.odoo_id, o.ma_ktv, o.khong_gui_boi, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan
+       FROM don_bh_odoo o WHERE o.odoo_id = ?`,
+    )
+    .bind(odooId)
+    .first<{ odoo_id: number; ma_ktv: string | null; khong_gui_boi: string | null; da_gan: string | null }>();
+  if (!row) return { error: "NOT_FOUND", status: 404 } as const;
+  const ktv = await db.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.email).first<{ ma_ktv: string }>();
+  if (!ktv || row.ma_ktv !== ktv.ma_ktv) return { error: "CASE_KTV_MISMATCH", status: 403 } as const;
+  if (row.da_gan) return { error: "DA_GAN_THUNG", status: 400 } as const;
+  return { row } as const;
+}
+
+// POST /api/odoo-don/:id/khong-gui {ly_do?, ktv_email?} - xac nhan don Odoo khong can gui bao hanh.
+odooDon.post("/:id/khong-gui", async (c) => {
+  const user = c.get("user");
+  const body = await c.req.json<{ ly_do?: string; ktv_email?: string }>().catch(() => ({}) as { ly_do?: string; ktv_email?: string });
+  const r = await loadOwnedOdoo(c.env.DB, user, Number(c.req.param("id")), body.ktv_email);
+  if ("error" in r) return c.json({ error: r.error }, r.status);
+  if (r.row.khong_gui_boi) return c.json({ ok: true });
+  const lyDo = (body.ly_do || "").trim().slice(0, 300) || "Tạo nhầm trên Odoo, không cần gửi bảo hành";
+  await c.env.DB.prepare("UPDATE don_bh_odoo SET khong_gui_boi = ?, khong_gui_luc = ?, khong_gui_ly_do = ? WHERE odoo_id = ?")
+    .bind(user.email, nowVN(), lyDo, r.row.odoo_id)
+    .run();
+  return c.json({ ok: true });
+});
+
+// POST /api/odoo-don/:id/mo-lai {ktv_email?} - mo lai don da xac nhan "khong gui" (tat nham).
+odooDon.post("/:id/mo-lai", async (c) => {
+  const user = c.get("user");
+  const body = await c.req.json<{ ktv_email?: string }>().catch(() => ({}) as { ktv_email?: string });
+  const r = await loadOwnedOdoo(c.env.DB, user, Number(c.req.param("id")), body.ktv_email);
+  if ("error" in r) return c.json({ error: r.error }, r.status);
+  await c.env.DB.prepare("UPDATE don_bh_odoo SET khong_gui_boi = NULL, khong_gui_luc = NULL, khong_gui_ly_do = NULL WHERE odoo_id = ?").bind(r.row.odoo_id).run();
+  return c.json({ ok: true });
 });
 
 // GET /api/odoo-don/sync-status - lan dong bo gan nhat + so don da keo ve (Admin BH/qtri).
@@ -56,10 +103,11 @@ odooDon.get("/sync-status", async (c) => {
     c.env.DB.prepare("SELECT value FROM sync_state WHERE key = 'odoo_cursor'").first<{ value: string }>(),
     c.env.DB.prepare(
       `SELECT COUNT(*) AS tong,
-         SUM(CASE WHEN con_hieu_luc = 1 AND trang_thai IN ('new','repairing') THEN 1 ELSE 0 END) AS cho_gui,
+         SUM(CASE WHEN con_hieu_luc = 1 AND trang_thai IN ('new','repairing') AND khong_gui_boi IS NULL THEN 1 ELSE 0 END) AS cho_gui,
+         SUM(CASE WHEN khong_gui_boi IS NOT NULL THEN 1 ELSE 0 END) AS khong_gui,
          SUM(CASE WHEN ma_ktv IS NULL THEN 1 ELSE 0 END) AS chua_ktv
        FROM don_bh_odoo`,
-    ).first<{ tong: number; cho_gui: number | null; chua_ktv: number | null }>(),
+    ).first<{ tong: number; cho_gui: number | null; chua_ktv: number | null; khong_gui: number | null }>(),
   ]);
   return c.json({
     last_run: last ? JSON.parse(last.value) : null,
@@ -67,6 +115,7 @@ odooDon.get("/sync-status", async (c) => {
     tong: counts?.tong ?? 0,
     cho_gui: counts?.cho_gui ?? 0,
     chua_ktv: counts?.chua_ktv ?? 0,
+    khong_gui: counts?.khong_gui ?? 0,
   });
 });
 

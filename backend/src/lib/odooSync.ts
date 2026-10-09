@@ -114,7 +114,7 @@ async function pullOdoo(env: Env): Promise<number> {
 // keo lai. Hoi lai rieng cac don con mo ma chua co ma_ktv (toi da 200/lan).
 async function resolveMissingKtv(env: Env): Promise<number> {
   const { results } = await env.DB.prepare(
-    `SELECT odoo_id FROM don_bh_odoo WHERE ma_ktv IS NULL AND con_hieu_luc = 1 AND trang_thai IN ('new','repairing') LIMIT 200`,
+    `SELECT odoo_id FROM don_bh_odoo WHERE ma_ktv IS NULL AND con_hieu_luc = 1 AND trang_thai IN ('new','repairing') AND khong_gui_boi IS NULL LIMIT 200`,
   ).all<{ odoo_id: number }>();
   if (results.length === 0) return 0;
   const body = await callDvbh<{ rows: OdooRow[] }>(env, `don-bao-hanh-odoo?ids=${results.map((r) => r.odoo_id).join(",")}`);
@@ -194,11 +194,23 @@ export async function computeDerivedStatuses(db: D1Database): Promise<DerivedSta
 // phieu con "nhap", tuc lan gui truoc = cho_gui) -> gui trang_thai = null de dvbh xoa.
 async function pushStatuses(env: Env): Promise<number> {
   const derived = await computeDerivedStatuses(env.DB);
+  // Don go khoi thung nhap, hoac don "khong gui" vua duoc mo lai -> null (dvbh xoa trang thai gui sua).
   const { results: removed } = await env.DB.prepare(
-    `SELECT s.odoo_id FROM odoo_status_sync s WHERE s.last_status = 'cho_gui'
+    `SELECT s.odoo_id FROM odoo_status_sync s LEFT JOIN don_bh_odoo o ON o.odoo_id = s.odoo_id
+     WHERE s.last_status IN ('cho_gui','khong_gui') AND o.khong_gui_boi IS NULL
      AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = s.odoo_id)`,
   ).all<{ odoo_id: number }>();
-  const all: DerivedStatus[] = [...derived, ...removed.map((r) => ({ odoo_id: r.odoo_id, status: null, detail: null, ma_phieu: null }))];
+  // KTV xac nhan "khong gui" (tao nham tren Odoo, 09/10/2026) - chi lay don chua bao / bao loi / doi ly do.
+  const { results: khongGui } = await env.DB.prepare(
+    `SELECT o.odoo_id, o.khong_gui_ly_do FROM don_bh_odoo o LEFT JOIN odoo_status_sync s ON s.odoo_id = o.odoo_id
+     WHERE o.khong_gui_boi IS NOT NULL AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)
+       AND (s.odoo_id IS NULL OR s.last_status IS NOT 'khong_gui' OR s.last_error IS NOT NULL OR s.last_detail IS NOT o.khong_gui_ly_do)`,
+  ).all<{ odoo_id: number; khong_gui_ly_do: string | null }>();
+  const all: DerivedStatus[] = [
+    ...derived,
+    ...removed.map((r) => ({ odoo_id: r.odoo_id, status: null, detail: null, ma_phieu: null })),
+    ...khongGui.map((r) => ({ odoo_id: r.odoo_id, status: "khong_gui", detail: r.khong_gui_ly_do, ma_phieu: null })),
+  ];
   if (all.length === 0) return 0;
 
   const prev = new Map<number, string>();

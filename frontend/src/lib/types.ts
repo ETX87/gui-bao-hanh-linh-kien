@@ -246,4 +246,7 @@ export interface OdooDon {
   tinh_trang_loi: string | null;
   ghi_chu: string | null;
   ngay_tao: string | null;
+  khong_gui_boi?: string | null;
+  khong_gui_luc?: string | null;
+  khong_gui_ly_do?: string | null;
 }
