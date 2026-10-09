@@ -4408,3 +4408,30 @@ dev-login): gán tạm ID cho 4/5 đơn Odoo local → xem trước 18 đơn + "
 xử lý: Đổi mới, Huỷ đơn bảo hành; Lý do: Khong co hang"; nút tải tạo blob xlsx 25 KB; nút có ở cả 2 màn. Đã trả
 lại dữ liệu local. **Chưa deploy production** (chờ người dùng xác nhận; thư mục đang có thay đổi chưa commit của
 phiên khác ở `wrangler.jsonc`/`caseLookupClient.ts` — deploy từ worktree sạch để không kéo theo).
+
+## Tài liệu hướng dẫn có hình ảnh cho vai trò Admin bảo hành (09/10/2026)
+
+**(a) Nguyên văn yêu cầu:** *"Tạo giúp tôi tài liệu hướng dẫn chi tiết cho vai trò Admin sửa chữa, có
+hướng dẫn bằng hình ảnh đầy đủ để gửi cho nhân viên"*
+
+**(b) Đã làm** — thư mục `du an sua chua bao hanh/Huong-dan-Admin-bao-hanh/`:
+- `Huong-dan-Admin-bao-hanh.pdf` (A4, có số trang, ~4.5MB) — bản để gửi nhân viên.
+- `Huong-dan-Admin-bao-hanh.html` + thư mục `anh/` (39 ảnh JPG + logo) — bản nguồn, sửa rồi in lại PDF.
+- 18 mục: vai trò trong quy trình, đăng nhập/Trang chủ/menu, nhận thùng nội bộ, xác nhận SL, bảng đơn
+  cần xử lý (trạng thái, nhóm ×N), chi tiết đơn, phân loại + bảng 7 hướng xử lý, ⚡ 10 nút xử lý
+  nhanh, xử lý hàng loạt, yêu cầu bổ sung / báo cáo sai, SLA 24h (bỏ Chủ nhật) + lý do chậm, xác nhận
+  hoàn tất, phiếu trả (tự động gộp, mã MISA, huỷ gửi duyệt, trả trực tiếp), đơn dịch vụ tính phí, tạo
+  hộ thùng, danh mục linh kiện/tuỳ chỉnh cột/điện thoại, FAQ lỗi hay gặp, tra nhanh 1 ngày làm việc.
+- Ảnh chụp từ hệ thống thật (v1.015) chạy `wrangler dev` local với D1 riêng (`.wrangler/docs-state`),
+  dữ liệu mẫu tạo qua API thật (10 tài khoản, 7 thùng ở đủ các giai đoạn, 2 đơn quá hạn 30h/80h), case
+  lookup dùng stub tạm. Chụp bằng puppeteer-core + Chrome (khung đỏ đánh số trên ảnh). Script chụp nằm
+  ở thư mục tạm của phiên, không lưu trong repo.
+
+**(c) Vấn đề:** ảnh chụp bảng ở khổ 1920px bị chữ nhỏ trong A4 do lề trống → cắt sát vùng nội dung.
+Phát hiện phụ (chưa sửa, không thuộc yêu cầu): nhật ký (`logs_bh`) ghi nội dung tiếng Việt không dấu
+("Xac nhan da gui xe", "SL thuc nhan=1") — hiện nguyên văn trong UI chi tiết đơn; FAST
+`huy_khong_co_hang` dùng lý do "Khong co hang" (không dấu) trong khi danh mục đã đổi sang "Không có hàng".
+
+**(d) Kiểm thử:** PDF render không có ảnh lỗi; xem lại bố cục bản in. Đã khôi phục `wrangler.jsonc`,
+`.claude/launch.json`, `caseLookupClient.ts` (git status chỉ còn thư mục tài liệu). Không đổi code →
+không tăng phiên bản, không deploy.

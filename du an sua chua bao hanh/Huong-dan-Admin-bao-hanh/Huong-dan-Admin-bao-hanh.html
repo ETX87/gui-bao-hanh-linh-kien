@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn sử dụng — Vai trò Admin bảo hành (Sửa chữa 3T)</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 16mm; }
+  :root { --brand:#15803f; --brand-d:#116a34; --brand-50:#ecfdf3; --ink:#0f172a; --body:#334155; --soft:#64748b; --line:#dfe7e2; --red:#dc2626; --amber:#b45309; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", "Plus Jakarta Sans", Arial, sans-serif; color:var(--body); line-height:1.55; font-size:14.5px; background:#fff; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 24px; }
+  h1,h2,h3 { color:var(--ink); line-height:1.3; }
+  h2 { margin: 34px 0 10px; padding: 10px 14px; background: var(--brand-50); border-left: 5px solid var(--brand); border-radius: 8px; font-size: 21px; page-break-after: avoid; }
+  h3 { margin: 22px 0 8px; font-size: 16.5px; color: var(--brand-d); page-break-after: avoid; }
+  p, li { margin: 6px 0; }
+  ol, ul { padding-left: 22px; }
+  figure { margin: 12px 0 18px; text-align:center; page-break-inside: avoid; }
+  figure img { max-width:100%; border:1px solid var(--line); border-radius:10px; box-shadow: 0 2px 10px rgba(15,23,42,.08); }
+  figure.narrow img { max-width: 440px; }
+  figure.mid img { max-width: 620px; }
+  figcaption { font-size: 12.5px; color: var(--soft); margin-top: 6px; font-style: italic; }
+  .two { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .two figure { flex: 1 1 300px; }
+  table { border-collapse: collapse; width:100%; margin: 10px 0 16px; font-size: 13.5px; page-break-inside: avoid; }
+  th, td { border:1px solid var(--line); padding: 7px 9px; text-align:left; vertical-align: top; }
+  th { background:#f4f8f5; color:var(--ink); }
+  .note, .warn, .tip { border-radius: 10px; padding: 10px 14px; margin: 12px 0; page-break-inside: avoid; }
+  .note { background:#eff6ff; border:1px solid #bfdbfe; }
+  .warn { background:#fef2f2; border:1px solid #fecaca; }
+  .tip  { background:var(--brand-50); border:1px solid #bbf7d0; }
+  .note b:first-child, .warn b:first-child, .tip b:first-child { color: var(--ink); }
+  .badge { display:inline-block; padding: 0 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .g { background:#dcfce7; color:#166534; } .y { background:#fef3c7; color:#92400e; } .r { background:#dc2626; color:#fff; }
+  .num { display:inline-block; min-width:22px; height:22px; line-height:22px; border-radius:11px; background:#e11d48; color:#fff; font-weight:700; font-size:12px; text-align:center; padding: 0 5px; }
+  kbd { background:#f1f5f9; border:1px solid #cbd5e1; border-bottom-width:2px; border-radius:5px; padding:0 5px; font-size:12.5px; }
+  .cover { text-align:center; padding: 60px 20px 30px; page-break-after: always; }
+  .cover img { width: 120px; border-radius: 26px; }
+  .cover h1 { font-size: 32px; margin: 18px 0 6px; }
+  .cover .sub { font-size: 18px; color: var(--brand-d); font-weight: 600; }
+  .cover .meta { margin-top: 26px; color: var(--soft); font-size: 13.5px; }
+  .flow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:center; margin: 14px 0; }
+  .flow span { background:#fff; border:1.5px solid var(--brand); color:var(--brand-d); border-radius:8px; padding:5px 10px; font-weight:600; font-size:13px; }
+  .flow span.me { background:var(--brand); color:#fff; }
+  .flow i { color: var(--soft); font-style: normal; }
+  .toc ol { columns: 2; column-gap: 30px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .pb { page-break-before: always; }
+  @media print { .wrap { padding: 0; max-width:none; } h2 { margin-top: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="cover">
+  <img src="anh/logo.png" alt="">
+  <h1>HƯỚNG DẪN SỬ DỤNG</h1>
+  <div class="sub">Hệ thống Sửa chữa bảo hành 3T — Vai trò <u>Admin bảo hành</u></div>
+  <p style="max-width:560px;margin:18px auto 0">Tài liệu dành cho nhân viên Admin bảo hành: tiếp nhận thùng hàng từ Kho, kiểm số lượng, phân loại và chọn hướng xử lý từng linh kiện, duyệt kết quả sửa chữa, gom phiếu trả hàng cho KTV.</p>
+  <div class="meta">Địa chỉ hệ thống: <b>https://suachua.dichvu3t.workers.dev</b><br>Phiên bản hệ thống khi soạn: v1.015 — tháng 10/2026<br>Ảnh minh hoạ chụp từ hệ thống thật với dữ liệu mẫu (tên khách hàng, mã case chỉ để minh hoạ).</div>
+</div>
+
+<div class="toc">
+<h2>Mục lục</h2>
+<ol>
+  <li><a href="#s1">Vai trò của bạn trong quy trình</a></li>
+  <li><a href="#s2">Đăng nhập và màn hình chính</a></li>
+  <li><a href="#s3">Bước 1 — Nhận thùng từ Kho</a></li>
+  <li><a href="#s4">Bước 2 — Xác nhận số lượng thực nhận</a></li>
+  <li><a href="#s5">Bảng "Đơn bảo hành cần xử lý"</a></li>
+  <li><a href="#s6">Xem chi tiết một đơn</a></li>
+  <li><a href="#s7">Bước 3 — Phân loại & chọn hướng xử lý</a></li>
+  <li><a href="#s8">Xử lý nhanh (⚡) — 1 chạm</a></li>
+  <li><a href="#s9">Xử lý hàng loạt nhiều đơn</a></li>
+  <li><a href="#s10">Yêu cầu KTV bổ sung / Ghi nhận báo cáo sai</a></li>
+  <li><a href="#s11">SLA 24h và lý do chậm</a></li>
+  <li><a href="#s12">Bước 4 — Xác nhận hoàn tất sửa chữa</a></li>
+  <li><a href="#s13">Bước 5 — Phiếu trả bảo hành</a></li>
+  <li><a href="#s14">Đơn dịch vụ tính phí (khách lẻ)</a></li>
+  <li><a href="#s15">Tạo hộ thùng cho KTV</a></li>
+  <li><a href="#s16">Danh mục linh kiện, tuỳ chỉnh cột, dùng trên điện thoại</a></li>
+  <li><a href="#s17">Câu hỏi thường gặp & lỗi hay gặp</a></li>
+  <li><a href="#s18">Bảng tra nhanh</a></li>
+</ol>
+</div>
+
+<h2 id="s1" class="pb">1. Vai trò của bạn trong quy trình</h2>
+<p>Linh kiện/máy lỗi đi từ KTV về kho trung tâm, được xử lý, rồi trả lại KTV. Các ô <b>tô xanh đậm</b> là việc của Admin bảo hành:</p>
+<div class="flow">
+  <span>KTV tạo thùng & gửi xe</span><i>→</i><span>Kho tiếp nhận thùng</span><i>→</i>
+  <span class="me">① Nhận thùng nội bộ</span><i>→</i><span class="me">② Xác nhận số lượng</span><i>→</i>
+  <span class="me">③ Phân loại & hướng xử lý</span><i>→</i><span>NV sửa chữa chẩn đoán</span><i>→</i>
+  <span class="me">④ Xác nhận hoàn tất</span><i>→</i><span class="me">⑤ Gom phiếu trả, nhập mã</span><i>→</i>
+  <span>Kế toán duyệt</span><i>→</i><span>Kho đóng gói & gửi</span><i>→</i><span>KTV nhận hàng</span>
+</div>
+<p>Một số khái niệm cần nắm:</p>
+<ul>
+  <li><b>Thùng / phiếu gửi</b> (mã <code>BH-xxxxxx</code>): một lần gửi hàng của KTV, chứa nhiều đơn.</li>
+  <li><b>Đơn cha</b> (mã <code>DH-xxxxxx</code>): một dòng KTV khai — 1 mã case, 1 loại linh kiện, số lượng N.</li>
+  <li><b>Đơn vị</b> (mã <code>DH-xxxxxx-1</code>, <code>-2</code>…): sau khi bạn xác nhận số lượng thực nhận, đơn cha được tách thành N đơn vị. Mỗi đơn vị xử lý riêng (1 cái sửa được, 1 cái phải đổi mới…).</li>
+  <li><b>Phiếu trả</b> (mã <code>TR-xxxxxx</code>): gom các đơn vị đã xong của cùng 1 KTV, cùng 1 loại đối trừ, để gửi trả.</li>
+  <li><b>Loại đối trừ</b>: <i>Đổi trả</i> hoặc <i>Trừ công nợ</i>. KTV đề xuất lúc gửi, <b>Admin là người chốt</b>. Một phiếu trả chỉ chứa 1 loại đối trừ.</li>
+</ul>
+
+<h2 id="s2">2. Đăng nhập và màn hình chính</h2>
+<p>Mở <b>https://suachua.dichvu3t.workers.dev</b>, bấm <b>"Đăng nhập với Google"</b> và chọn đúng gmail công ty đã được cấp quyền Admin bảo hành. Nếu thấy thông báo "chờ duyệt", báo Quản trị hệ thống cấp quyền.</p>
+<figure class="mid"><img src="anh/01-dang-nhap.jpg"><figcaption>Hình 1 — Màn hình đăng nhập</figcaption></figure>
+<p>Sau khi đăng nhập, <b>Trang chủ</b> cho biết ngay bạn còn bao nhiêu việc. Dải nút trong khung xanh chỉ hiện những hàng đợi <b>đang có việc</b>; bấm vào nút nào sẽ đi thẳng tới màn hình xử lý tương ứng.</p>
+<figure><img src="anh/02-trang-chu.jpg"><figcaption>Hình 2 — Trang chủ: <span class="num">1</span> đơn vị chờ phân loại, <span class="num">2</span> thùng chờ nhận nội bộ, <span class="num">3</span> đơn cha chờ xác nhận số lượng, <span class="num">4</span> chờ xác nhận hoàn tất, <span class="num">5</span> đơn vị sẵn sàng gộp phiếu trả</figcaption></figure>
+<p>Menu bên trái mặc định thu gọn (chỉ icon, có số đỏ = số việc). Bấm <kbd>»</kbd> ở đáy menu để mở rộng xem tên đầy đủ, menu xếp đúng theo thứ tự quy trình:</p>
+<figure><img src="anh/03-menu-mo-rong.jpg"><figcaption>Hình 3 — Menu mở rộng: Gửi hàng (tạo hộ) → Xử lý bảo hành → Trả hàng → Danh mục</figcaption></figure>
+<table>
+  <tr><th>Mục menu</th><th>Dùng để</th></tr>
+  <tr><td>📦 Tạo hộ đơn cho KTV</td><td>Tạo thùng gửi hàng thay cho 1 KTV (mục 15)</td></tr>
+  <tr><td>🗂️ Xử lý đơn bảo hành</td><td>Màn hình làm việc chính: nhận thùng, xác nhận số lượng, phân loại (mục 3–11)</td></tr>
+  <tr><td>✔️ Xác nhận hoàn tất</td><td>Duyệt kết quả NV sửa chữa (mục 12)</td></tr>
+  <tr><td>↩️ Phiếu trả bảo hành</td><td>Gom đơn đã xong thành phiếu trả, nhập mã, gửi kế toán (mục 13)</td></tr>
+  <tr><td>🔩 Danh mục linh kiện</td><td>Tra cứu/bổ sung linh kiện dùng trong bảo hành (mục 16)</td></tr>
+</table>
+
+<h2 id="s3" class="pb">3. Bước 1 — Nhận thùng từ Kho (tiếp nhận nội bộ)</h2>
+<p>Kho đã nhận thùng từ nhà xe, sau đó bàn giao cho bạn. Vào <b>Xử lý đơn bảo hành</b>, khối trên cùng <b>"Thùng chờ xác nhận tiếp nhận nội bộ"</b> liệt kê các thùng Kho đã nhận.</p>
+<figure><img src="anh/10-thung-cho-tiep-nhan.jpg"><figcaption>Hình 4 — <span class="num">1</span> Danh sách thùng chờ bạn nhận, <span class="num">2</span> thùng có Kho báo sự cố, <span class="num">3</span> nút xác nhận</figcaption></figure>
+<ol>
+  <li>Kiểm tra thùng thực tế đã nằm trong tay bạn.</li>
+  <li>Nếu thùng có nhãn <span class="badge" style="background:#fee2e2;color:#b91c1c">⚠ Có sự cố</span> — Kho đã ghi chú hư hỏng (móp, ướt…). Đây <b>chỉ là cảnh báo</b>, bạn vẫn nhận và xử lý bình thường, nhưng nên kiểm kỹ hàng bên trong.</li>
+  <li>Bấm <b>"Xác nhận đã nhận"</b>. Các đơn trong thùng sẽ hiện xuống bảng "Đơn bảo hành cần xử lý" bên dưới.</li>
+</ol>
+<div class="note"><b>Lưu ý:</b> chỉ bấm khi hàng đã thật sự về tay bạn. Nếu lỡ bấm nhầm khi hàng chưa về, báo Quản trị hệ thống để đẩy lại (chỉ làm được khi chưa xác nhận số lượng đơn nào trong thùng).</div>
+
+<h2 id="s4">4. Bước 2 — Xác nhận số lượng thực nhận</h2>
+<p>Trong bảng "Đơn bảo hành cần xử lý", các dòng có nhãn <span class="badge y">Chờ xác nhận SL (khai N)</span> là đơn cha cần bạn đếm lại số lượng. Bấm vào dòng (hoặc nút <b>"Xác nhận SL"</b> ở cột Hành động).</p>
+<div class="two">
+  <figure class="narrow"><img src="anh/14-xac-nhan-sl.jpg"><figcaption>Hình 5 — Mặc định số thực nhận = số KTV khai</figcaption></figure>
+  <figure class="narrow"><img src="anh/15-xac-nhan-sl-chenh-lech.jpg"><figcaption>Hình 6 — Nhận thiếu/thừa: bắt buộc ghi lý do chênh lệch</figcaption></figure>
+</div>
+<ol>
+  <li>Đếm số linh kiện thực tế trong thùng của dòng này.</li>
+  <li>Đúng như KTV khai → giữ nguyên số, bấm <b>"Xác nhận &amp; tách đơn vị"</b>.</li>
+  <li>Khác → sửa số, ô <b>"Lý do chênh lệch số lượng"</b> sẽ hiện ra và là bắt buộc.</li>
+</ol>
+<p>Hệ thống tạo N đơn vị <code>DH-xxxxxx-1…N</code>, mỗi đơn vị ở trạng thái <span class="badge y">Chờ phân loại</span>.</p>
+
+<h2 id="s5" class="pb">5. Bảng "Đơn bảo hành cần xử lý"</h2>
+<p>Đây là màn hình bạn dùng nhiều nhất — gộp tất cả đơn cần bạn xử lý (đơn từ KTV và đơn khách lẻ) vào một bảng.</p>
+<figure><img src="anh/11-bang-don-can-xu-ly.jpg"><figcaption>Hình 7 — <span class="num">1</span> Tuỳ chỉnh cột, <span class="num">2</span> đơn cha chờ xác nhận SL, <span class="num">3</span> đơn vị chờ phân loại, <span class="num">4</span> nhóm nhiều đơn vị (×3), <span class="num">5</span> đơn đang chờ KTV bổ sung, <span class="num">6</span> tạo đơn dịch vụ tính phí</figcaption></figure>
+<p>Kéo thanh cuộn ngang sang phải để thấy cột <b>SLA</b> và cột <b>Hành động</b>:</p>
+<figure><img src="anh/12-bang-cot-hanh-dong.jpg"><figcaption>Hình 8 — Cột Hành động: <span class="num">A</span> ⚡ Xử lý nhanh, <span class="num">B</span> Phân loại, <span class="num">C</span> 🐞 Ghi nhận KTV báo cáo sai. Cột SLA hiện số giờ đã chờ.</figcaption></figure>
+<h3>Ý nghĩa các trạng thái trong bảng</h3>
+<table>
+  <tr><th>Trạng thái</th><th>Nghĩa là</th><th>Bạn cần làm</th></tr>
+  <tr><td>Chờ xác nhận SL (khai N)</td><td>Đơn cha chưa đếm số lượng</td><td>Xác nhận SL (mục 4)</td></tr>
+  <tr><td>Chờ phân loại</td><td>Đơn vị chưa có hướng xử lý</td><td>Phân loại hoặc ⚡ (mục 7, 8)</td></tr>
+  <tr><td>Admin cần xem lại</td><td>NV sửa chữa trả lại đơn cho bạn</td><td>Đọc lý do, phân loại lại</td></tr>
+  <tr><td>Chờ KTV bổ sung</td><td>Bạn đã yêu cầu KTV sửa thông tin</td><td>Chờ KTV — đơn vẫn hiện để bạn theo dõi</td></tr>
+</table>
+<h3>Nhóm nhiều đơn vị (×N)</h3>
+<p>Một đơn cha có nhiều đơn vị được gộp thành 1 dòng có nhãn <b>×3</b> và tóm tắt trạng thái ("3 Chờ phân loại"). Bấm vào dòng để mở ra từng đơn vị; tích ô ở dòng nhóm để chọn cả nhóm.</p>
+<figure><img src="anh/13-nhom-x3-mo-rong.jpg"><figcaption>Hình 9 — Nhóm DH-000008 ×3 đã mở rộng thành 3 đơn vị con</figcaption></figure>
+<div class="tip"><b>Mẹo:</b> mỗi trang tối đa 20 đơn cha; dùng nút "Sau ›" ở cuối bảng để sang trang. Ở màn hình máy tính, bảng gọn hơn nếu thu gọn menu trái.</div>
+
+<h2 id="s6">6. Xem chi tiết một đơn</h2>
+<p>Bấm vào bất kỳ dòng đơn vị nào để mở <b>Chi tiết đơn bảo hành</b>:</p>
+<figure><img src="anh/16-chi-tiet-don.jpg"><figcaption>Hình 10 — Chi tiết đơn: thông tin case, bằng chứng từ hệ thống DVBH, mô tả lỗi, nhật ký; nút thao tác cố định ở góc dưới phải</figcaption></figure>
+<ul>
+  <li><b>Bằng chứng case</b>: thông tin khách hàng, sản phẩm, serial, ngày mua, KTV phụ trách — lưu lại tại thời điểm KTV tạo đơn. Bấm <b>"Xem trên CRM ↗"</b> để mở case gốc; bấm <b>"Đồng bộ lại"</b> nếu cần lấy thông tin mới nhất.</li>
+  <li><b>Đối trừ đề xuất</b>: lựa chọn KTV đề xuất lúc gửi (chỉ để tham khảo).</li>
+  <li><b>Nhật ký</b>: toàn bộ lịch sử của đơn vị, đơn cha, thùng và phiếu trả (mới nhất ở trên), kèm người làm và thời gian.</li>
+  <li>Các nút ở thanh dưới (Phân loại, Xử lý nhanh, Yêu cầu bổ sung, Báo cáo sai…) thay đổi theo trạng thái đơn — làm ngay tại đây, không cần quay lại bảng.</li>
+</ul>
+
+<h2 id="s7" class="pb">7. Bước 3 — Phân loại &amp; chọn hướng xử lý</h2>
+<p>Bấm <b>"Phân loại"</b> ở dòng đơn vị (hoặc trong chi tiết đơn).</p>
+<figure class="mid"><img src="anh/18-phan-loai.jpg"><figcaption>Hình 11 — Form phân loại. Phía trên hiện đề xuất của KTV và thông tin case; nếu sản phẩm đã hết hạn bảo hành sẽ có cảnh báo đỏ.</figcaption></figure>
+<h3>Các trường cần chọn</h3>
+<table>
+  <tr><th>Trường</th><th>Giải thích</th></tr>
+  <tr><td>Loại bảo hành *</td><td><b>Trong bảo hành</b> hoặc <b>Ngoài bảo hành</b>. Cảnh báo đỏ "đã hết thời gian bảo hành" chỉ là nhắc nhở — bạn vẫn được chọn "Trong bảo hành" nếu cần.</td></tr>
+  <tr><td>Loại đối trừ *</td><td>Đổi trả / Trừ công nợ. Mặc định theo đề xuất của KTV, bạn được đổi.</td></tr>
+  <tr><td>Hướng xử lý *</td><td>Xem bảng bên dưới.</td></tr>
+  <tr><td>Linh kiện sửa chữa thực tế</td><td>Mặc định = linh kiện KTV khai. Nếu KTV ghi sai mã mà bạn biết đúng linh kiện, đổi trực tiếp tại đây, không cần hỏi lại KTV. Gõ tên hoặc mã để tìm (không cần gõ dấu).</td></tr>
+</table>
+<h3>7 hướng xử lý</h3>
+<table>
+  <tr><th>Hướng xử lý</th><th>Khi nào dùng</th><th>Phải chọn thêm</th><th>Đơn đi tiếp đâu</th></tr>
+  <tr><td><b>Sửa chữa</b></td><td>Giao NV sửa chữa kiểm tra, sửa</td><td>Người sửa chữa</td><td>NV chẩn đoán → bạn xác nhận hoàn tất</td></tr>
+  <tr><td><b>Đổi mới</b></td><td>Đổi linh kiện mới cho KTV</td><td>Xử lý xác linh kiện lỗi</td><td>Thẳng vào hàng chờ gộp phiếu trả</td></tr>
+  <tr><td><b>Trả lại KTV</b></td><td>Trả nguyên trạng về KTV</td><td>—</td><td>Hàng chờ gộp phiếu trả</td></tr>
+  <tr><td><b>Xác nhận linh kiện, trừ công nợ</b></td><td>Xác nhận lỗi, xử lý bằng trừ công nợ</td><td>—</td><td>Hàng chờ gộp phiếu trả</td></tr>
+  <tr><td><b>Dịch vụ tính phí</b></td><td>Sửa có thu phí (thường cho khách lẻ)</td><td>Người sửa chữa</td><td>Như Sửa chữa</td></tr>
+  <tr><td><b>Từ chối / Huỷ</b></td><td>Huỷ đơn, không gửi trả gì</td><td>Lý do huỷ</td><td>Kết thúc</td></tr>
+  <tr><td><b>Chuyển kho</b></td><td>Chuyển cho kho xử lý</td><td>—</td><td>Kết thúc tại bảo hành</td></tr>
+</table>
+<div class="two">
+  <figure class="narrow"><img src="anh/19-phan-loai-sua-chua.jpg"><figcaption>Hình 12 — Chọn "Sửa chữa": bắt buộc chọn NV sửa chữa</figcaption></figure>
+  <figure class="narrow"><img src="anh/20-phan-loai-doi-moi.jpg"><figcaption>Hình 13 — Chọn "Đổi mới": bắt buộc chọn xử lý xác</figcaption></figure>
+</div>
+<p><b>Xử lý xác linh kiện lỗi</b> (khi Đổi mới): <i>Trả xác cho đối tác</i>, <i>Tiêu huỷ</i> hoặc <i>Lưu kho</i>.</p>
+<figure class="mid"><img src="anh/21-phan-loai-ngoai-bh.jpg"><figcaption>Hình 14 — Chọn "Ngoài bảo hành": bắt buộc nhập thông tin mail phê duyệt (mã phê duyệt không bắt buộc)</figcaption></figure>
+<div class="warn"><b>Cảnh báo khi đổi đề xuất của KTV:</b> nếu bạn chọn loại đối trừ khác đề xuất của KTV, hoặc đổi linh kiện thực tế, hệ thống hỏi lại "Thao tác này sẽ làm thay đổi đề xuất gốc của KTV… Bạn có chắc chắn không?". Bấm OK nếu đúng ý bạn — quyết định của Admin là quyết định cuối cùng.</div>
+
+<h2 id="s8" class="pb">8. Xử lý nhanh (⚡) — 1 chạm cho các trường hợp phổ biến</h2>
+<p>Thay vì điền form phân loại, bấm nút <b>⚡</b> ở dòng đơn để mở bảng 10 phương án có sẵn. Hệ thống tự điền loại bảo hành, đối trừ, hướng xử lý — và với các phương án tạo phiếu trả, <b>tự gộp đơn vào phiếu trả "Nhập"</b> của đúng KTV và loại đối trừ (tự tạo phiếu mới nếu chưa có).</p>
+<figure class="mid"><img src="anh/22-xu-ly-nhanh.jpg"><figcaption>Hình 15 — Bảng Xử lý nhanh</figcaption></figure>
+<table>
+  <tr><th>Nút</th><th>Hệ thống tự làm</th><th>Bạn cần nhập</th></tr>
+  <tr><td>Đổi mới trong BH</td><td>Trong BH · Đổi mới · gộp phiếu trả</td><td>Xử lý xác</td></tr>
+  <tr><td>Trừ công nợ</td><td>Trong BH · Xác nhận LK trừ công nợ · đối trừ = Trừ công nợ · gộp phiếu trả</td><td>— (1 chạm)</td></tr>
+  <tr><td>Sửa chữa trong BH</td><td>Trong BH · Sửa chữa</td><td>NV sửa chữa</td></tr>
+  <tr><td>Bổ sung thông tin</td><td>Mở form yêu cầu KTV bổ sung (mục 10)</td><td>Lý do</td></tr>
+  <tr><td>Từ chối</td><td>Từ chối/Huỷ</td><td>Lý do huỷ</td></tr>
+  <tr><td>KTV báo cáo sai thông tin</td><td>Mở form ghi nhận (mục 10)</td><td>Nội dung</td></tr>
+  <tr><td>Huỷ do không có hàng</td><td>Từ chối, lý do "Không có hàng"</td><td>— (1 chạm)</td></tr>
+  <tr><td>Đổi mới có phê duyệt</td><td>Ngoài BH · Đổi mới · gộp phiếu trả</td><td>Mail phê duyệt + xử lý xác</td></tr>
+  <tr><td>Trừ công nợ có phê duyệt</td><td>Ngoài BH · trừ công nợ · gộp phiếu trả</td><td>Mail phê duyệt</td></tr>
+  <tr><td>Sửa chữa có phê duyệt</td><td>Ngoài BH · Sửa chữa</td><td>NV sửa chữa + mail phê duyệt</td></tr>
+</table>
+<div class="two">
+  <figure class="narrow"><img src="anh/23-xu-ly-nhanh-doi-moi.jpg"><figcaption>Hình 16 — Đổi mới trong BH: chỉ hỏi xử lý xác</figcaption></figure>
+  <figure class="narrow"><img src="anh/24-xu-ly-nhanh-qua-han.jpg"><figcaption>Hình 17 — Đơn đã quá hạn SLA: hỏi thêm lý do chậm ngay trong cùng form</figcaption></figure>
+</div>
+
+<h2 id="s9" class="pb">9. Xử lý hàng loạt nhiều đơn giống nhau</h2>
+<p>Khi có nhiều đơn cùng cách xử lý (ví dụ 10 lõi lọc cùng đổi mới), tích ô ở đầu các dòng (tích dòng nhóm ×N = chọn cả nhóm). Thanh thao tác hiện ở đầu bảng:</p>
+<figure><img src="anh/25-chon-hang-loat.jpg"><figcaption>Hình 18 — <span class="num">1</span> số đơn đã chọn, <span class="num">2</span> ⚡ Xử lý nhanh hàng loạt, <span class="num">3</span> Phân loại hàng loạt</figcaption></figure>
+<h3>Cách 1 — ⚡ Xử lý nhanh hàng loạt (khuyên dùng)</h3>
+<ol>
+  <li>Bấm <b>"⚡ Xử lý nhanh hàng loạt"</b> → chọn phương án (ví dụ "Đổi mới trong BH").</li>
+  <li>Chọn 1 lần các thông tin chung (NV / mail phê duyệt / xử lý xác / lý do chậm) — áp cho tất cả.</li>
+  <li>Bấm <b>"Áp dụng cho N đơn"</b>. Hệ thống báo số đơn thành công/lỗi. Các đơn tạo phiếu trả được tự gộp theo từng KTV.</li>
+</ol>
+<div class="two">
+  <figure class="narrow"><img src="anh/27-xu-ly-nhanh-hang-loat.jpg"><figcaption>Hình 19 — Bảng phương án cho nhiều đơn</figcaption></figure>
+  <figure class="narrow"><img src="anh/28-xu-ly-nhanh-hang-loat-form.jpg"><figcaption>Hình 20 — Chọn 1 lần cho cả 5 đơn; lý do chậm chỉ áp cho đơn đang quá hạn</figcaption></figure>
+</div>
+<h3>Cách 2 — Phân loại hàng loạt</h3>
+<p>Giống form phân loại đơn lẻ nhưng áp cho tất cả đơn đã chọn. Ở ô "Loại đối trừ" có lựa chọn <b>"Theo đề xuất của KTV"</b> — mỗi đơn giữ đúng đề xuất của KTV đó (nên dùng khi chọn đơn của nhiều KTV khác nhau). Form hàng loạt không có ô đổi linh kiện thực tế.</p>
+<figure class="mid"><img src="anh/26-phan-loai-hang-loat.jpg"><figcaption>Hình 21 — Phân loại hàng loạt</figcaption></figure>
+
+<h2 id="s10">10. Yêu cầu KTV bổ sung / Ghi nhận KTV báo cáo sai</h2>
+<h3>Yêu cầu bổ sung thông tin</h3>
+<p>Dùng khi thông tin KTV gửi sai/thiếu (sai mã linh kiện, thiếu ảnh, mô tả không rõ…). Bấm <b>"Yêu cầu bổ sung"</b>, chọn lý do và ghi cụ thể cần KTV sửa gì. Đơn chuyển sang <span class="badge" style="background:#ede9fe;color:#6d28d9">Chờ KTV bổ sung</span> nhưng <b>vẫn hiện trong bảng</b> để bạn theo dõi. KTV sửa xong, đơn quay lại "Chờ phân loại".</p>
+<figure class="narrow"><img src="anh/29-yeu-cau-bo-sung.jpg"><figcaption>Hình 22 — Yêu cầu KTV bổ sung thông tin</figcaption></figure>
+<div class="tip"><b>Mẹo:</b> nếu chỉ sai mã linh kiện mà bạn đã biết linh kiện đúng, không cần gửi yêu cầu — đổi luôn ở ô "Linh kiện sửa chữa thực tế" khi phân loại.</div>
+<h3>Ghi nhận KTV báo cáo sai thông tin (🐞)</h3>
+<p>Nút 🐞 dùng để ghi chú nội bộ khi KTV báo cáo sai (phục vụ đánh giá/xử lý vi phạm sau này). Việc ghi nhận <b>không đổi trạng thái đơn</b> và <b>KTV không nhìn thấy</b> nội dung này.</p>
+<figure class="narrow"><img src="anh/30-bao-cao-sai.jpg"><figcaption>Hình 23 — Ghi nhận KTV báo cáo sai thông tin</figcaption></figure>
+
+<h2 id="s11" class="pb">11. SLA 24h và lý do chậm</h2>
+<p>Mỗi bước xử lý có hạn <b>24 giờ</b> kể từ lúc đơn chuyển tới bạn (tính liên tục cả đêm và thứ Bảy, <b>không tính Chủ nhật</b>). Cột SLA hiển thị số giờ đã chờ:</p>
+<table>
+  <tr><th>Hiển thị</th><th>Nghĩa</th></tr>
+  <tr><td><span class="badge g">5h</span></td><td>Còn trong hạn (≤ 24h)</td></tr>
+  <tr><td><span class="badge y">30h</span></td><td>Quá hạn 24–72h</td></tr>
+  <tr><td><span class="badge r">⚠ 80h</span></td><td>Quá hạn nghiêm trọng (&gt; 72h) — ưu tiên xử lý trước</td></tr>
+</table>
+<p>Khi xử lý một đơn đã quá hạn, form sẽ <b>bắt buộc chọn "Lý do chậm"</b> ngay trong cùng thao tác (Hình 17). Nếu chưa xử lý được nhưng muốn ghi nhận lý do trước, <b>bấm trực tiếp vào số giờ quá hạn</b>:</p>
+<div class="two">
+  <figure class="mid"><img src="anh/31-sla-qua-han.jpg"><figcaption>Hình 24 — Bấm vào badge SLA quá hạn</figcaption></figure>
+  <figure class="narrow"><img src="anh/32-ghi-ly-do-cham.jpg"><figcaption>Hình 25 — Ghi lý do chậm (không đổi trạng thái đơn)</figcaption></figure>
+</div>
+
+<h2 id="s12" class="pb">12. Bước 4 — Xác nhận hoàn tất sửa chữa</h2>
+<p>Sau khi NV sửa chữa nộp kết quả chẩn đoán, đơn vào menu <b>"Xác nhận hoàn tất"</b>.</p>
+<figure><img src="anh/40-xac-nhan-hoan-tat.jpg"><figcaption>Hình 26 — Danh sách chờ xác nhận hoàn tất: hướng xử lý, kết quả chẩn đoán, NV phụ trách</figcaption></figure>
+<ol>
+  <li>Bấm vào dòng để xem chi tiết: kết quả chẩn đoán, ảnh NV chụp, nhật ký.</li>
+  <li>Bấm <b>"Xác nhận hoàn tất / Yêu cầu làm lại"</b>.</li>
+  <li><b>Xác nhận hoàn tất</b> → đơn chuyển sang hàng chờ gộp phiếu trả. <b>Yêu cầu làm lại</b> → đơn quay lại NV sửa chữa (ghi rõ lý do).</li>
+</ol>
+<figure><img src="anh/41-chi-tiet-cho-hoan-tat.jpg"><figcaption>Hình 27 — Chi tiết đơn chờ xác nhận; <span class="num">1</span> nút xác nhận</figcaption></figure>
+<figure class="narrow"><img src="anh/42-modal-hoan-tat.jpg"><figcaption>Hình 28 — Chọn Xác nhận hoàn tất hoặc Yêu cầu làm lại</figcaption></figure>
+<div class="note"><b>Đơn "Đổi mới":</b> nếu lúc phân loại chưa chọn xử lý xác, hệ thống sẽ hỏi ở bước này.</div>
+
+<h2 id="s13" class="pb">13. Bước 5 — Phiếu trả bảo hành</h2>
+<p>Vào menu <b>"Phiếu trả bảo hành"</b>.</p>
+<figure><img src="anh/50-phieu-tra.jpg"><figcaption>Hình 29 — <span class="num">1</span> Tự động gộp, <span class="num">2</span> đơn vị sẵn sàng gộp (nhóm theo KTV + loại đối trừ), <span class="num">3</span> tạo phiếu thủ công, <span class="num">4</span> phiếu trả đang Nhập</figcaption></figure>
+<h3>13.1 Gom đơn thành phiếu trả</h3>
+<ul>
+  <li><b>Cách nhanh:</b> bấm <b>"⚡ Tự động gộp phiếu trả cho tất cả nhân viên"</b> — hệ thống gom mọi đơn sẵn sàng theo từng KTV + loại đối trừ, gộp vào phiếu "Nhập" có sẵn hoặc tạo phiếu mới.</li>
+  <li><b>Cách thủ công:</b> tích các đơn trong 1 nhóm → <b>"Tạo phiếu trả với mục đã chọn"</b>. Có thể tách các đơn vị của cùng 1 đơn cha vào phiếu khác nhau.</li>
+</ul>
+<h3>13.2 Nhập mã và gửi kế toán duyệt</h3>
+<p>Bấm vào phiếu trả để mở chi tiết:</p>
+<figure><img src="anh/51-chi-tiet-phieu-tra-nhap.jpg"><figcaption>Hình 30 — Phiếu trả đang Nhập: nhập mã, tách đơn, gửi duyệt</figcaption></figure>
+<ol>
+  <li>Nhập <b>Mã đơn hàng</b>, <b>Mã MISA</b>, mã vận đơn (nếu có).
+    <ul>
+      <li>Phiếu <b>Đổi trả</b>: <b>bắt buộc có mã MISA</b> mới gửi duyệt được.</li>
+      <li>Phiếu <b>Trừ công nợ</b>: mã đơn hàng và mã MISA không bắt buộc.</li>
+    </ul>
+  </li>
+  <li>Muốn bỏ 1 đơn ra khỏi phiếu: bấm <b>"Tách khỏi phiếu"</b> (chỉ làm được khi phiếu còn Nhập).</li>
+  <li>Bấm <b>"Gửi duyệt kế toán"</b> (hệ thống tự lưu mã trước khi gửi).</li>
+</ol>
+<figure><img src="anh/52-chi-tiet-phieu-tra-cho-duyet.jpg"><figcaption>Hình 31 — Phiếu đang chờ Kế toán duyệt</figcaption></figure>
+<ul>
+  <li>Khi phiếu đang <b>Chờ kế toán duyệt</b>, muốn sửa/tách đơn thì bấm <b>"Huỷ gửi duyệt"</b> trước (chỉ khi Kế toán chưa xử lý).</li>
+  <li>Kế toán <b>từ chối</b> → phiếu quay về Nhập kèm lý do; sửa theo lý do rồi gửi lại.</li>
+  <li>Kế toán duyệt xong → Kho đóng gói, gửi hàng → KTV xác nhận đã nhận. Bạn theo dõi trạng thái trong danh sách phiếu trả.</li>
+</ul>
+<h3>13.3 Trả trực tiếp (trường hợp đặc biệt)</h3>
+<p>Trong chi tiết đơn vị đã sẵn sàng gộp có 2 nút tắt: <b>⚡ Trả trực tiếp KTV</b> (tạo phiếu riêng, chuyển thẳng sang chờ KTV nhận) và <b>⚡ Giao trực tiếp Kho</b> (chuyển thẳng sang Kho đóng gói). Hai nút này <b>bỏ qua bước Kế toán duyệt</b> — chỉ dùng khi đã được quản lý đồng ý.</p>
+
+<h2 id="s14" class="pb">14. Đơn dịch vụ tính phí (khách lẻ)</h2>
+<p>Với khách mang hàng tới trực tiếp (không qua KTV), bấm <b>"+ Tạo đơn dịch vụ tính phí"</b> ở đầu bảng Đơn cần xử lý.</p>
+<figure class="mid"><img src="anh/34-don-dich-vu.jpg"><figcaption>Hình 32 — Tạo đơn dịch vụ tính phí</figcaption></figure>
+<ul>
+  <li>Có mã case: nhập mã và bấm <b>Kiểm tra</b> để tự lấy thông tin. Không có mã case: bắt buộc nhập tên khách, SĐT, sản phẩm (địa chỉ không bắt buộc).</li>
+  <li>Chọn linh kiện, số lượng, mô tả lỗi, ảnh (nếu có).</li>
+  <li>Đơn này bỏ qua bước xác nhận số lượng, vào thẳng "Chờ phân loại" — thường chọn hướng <b>Dịch vụ tính phí</b> và giao NV sửa chữa.</li>
+  <li>Việc thu tiền do Kế toán ghi nhận, hệ thống bảo hành không theo dõi.</li>
+</ul>
+
+<h2 id="s15">15. Tạo hộ thùng cho KTV</h2>
+<p>Khi KTV không tự thao tác được, bạn có thể tạo thùng thay. Vào menu <b>"Tạo hộ đơn cho KTV"</b> → <b>"+ Tạo phiếu mới"</b> → chọn KTV (gõ tên hoặc mã để tìm).</p>
+<div class="two">
+  <figure class="mid"><img src="anh/60-tao-ho.jpg"><figcaption>Hình 33 — Danh sách phiếu bạn đã tạo hộ</figcaption></figure>
+  <figure class="narrow"><img src="anh/61-chon-ktv-tao-ho.jpg"><figcaption>Hình 34 — Chọn KTV để tạo hộ</figcaption></figure>
+</div>
+<ul>
+  <li>Sau khi tạo, bạn quản lý toàn bộ thùng như chính KTV đó: nhập thông tin vận chuyển, thêm đơn, xác nhận gửi xe.</li>
+  <li>Mỗi đơn <b>bắt buộc có mã case</b> và bấm <b>"Kiểm tra"</b>. Case phải thuộc đúng KTV của thùng. Nếu case thuộc KTV khác, hệ thống hiện ô tích <i>"Xác nhận tạo đơn bảo hành cho người khác người phụ trách case trên hệ thống"</i> — chỉ tích khi chắc chắn.</li>
+  <li>Thùng trống (chưa có đơn nào) sẽ tự xoá khi đóng; không gửi được thùng rỗng.</li>
+</ul>
+
+<h2 id="s16" class="pb">16. Danh mục linh kiện, tuỳ chỉnh cột, dùng trên điện thoại</h2>
+<h3>Danh mục linh kiện</h3>
+<figure><img src="anh/62-danh-muc-linh-kien.jpg"><figcaption>Hình 35 — Danh mục linh kiện: tìm theo mã, tên, phân loại</figcaption></figure>
+<p>Linh kiện được đồng bộ tự động từ hệ thống Đặt mua linh kiện. Bạn có thể thêm linh kiện nội bộ, sửa số tháng bảo hành, bật/tắt dùng trong bảo hành. Linh kiện xử lý nhiều nhất 30 ngày gần đây được đánh dấu 🔥 Top và xếp lên đầu trong các ô chọn.</p>
+<h3>Tuỳ chỉnh cột bảng</h3>
+<p>Bấm <b>"⚙ Tuỳ chỉnh cột"</b> để bật/tắt cột (SĐT khách, mã đơn cha, loại đối trừ, hướng xử lý…). Có thể <b>kéo tiêu đề cột</b> để đổi vị trí và <b>kéo vạch ranh giới</b> giữa 2 tiêu đề để đổi độ rộng. Cấu hình được nhớ trên máy của bạn.</p>
+<figure class="narrow"><img src="anh/33-tuy-chinh-cot.jpg"><figcaption>Hình 36 — Bật/tắt cột</figcaption></figure>
+<h3>Dùng trên điện thoại</h3>
+<p>Mọi chức năng đều dùng được trên điện thoại: menu chuyển xuống thanh dưới đáy, bảng chuyển thành dạng thẻ. Có thể bấm "📲 Cài đặt" để thêm vào màn hình chính như một ứng dụng.</p>
+<div class="two">
+  <figure class="narrow"><img src="anh/70-mobile-trang-chu.jpg"><figcaption>Hình 37 — Trang chủ trên điện thoại</figcaption></figure>
+  <figure class="narrow"><img src="anh/71-mobile-xu-ly-don.jpg"><figcaption>Hình 38 — Xử lý đơn trên điện thoại</figcaption></figure>
+</div>
+
+<h2 id="s17" class="pb">17. Câu hỏi thường gặp &amp; lỗi hay gặp</h2>
+<table>
+  <tr><th>Tình huống / thông báo</th><th>Cách xử lý</th></tr>
+  <tr><td>"Vui lòng chọn lý do chậm"</td><td>Đơn đã quá 24h — chọn lý do chậm trong form rồi lưu lại.</td></tr>
+  <tr><td>"Thiếu mã MISA" khi gửi duyệt</td><td>Phiếu Đổi trả bắt buộc mã MISA — nhập mã rồi gửi lại.</td></tr>
+  <tr><td>Không tách được đơn khỏi phiếu trả</td><td>Phiếu đang chờ kế toán — bấm "Huỷ gửi duyệt" trước.</td></tr>
+  <tr><td>Không thêm được đơn vào phiếu trả</td><td>Phiếu chỉ chứa 1 loại đối trừ — đơn khác loại phải vào phiếu khác.</td></tr>
+  <tr><td>Phân loại "Sửa chữa" báo thiếu</td><td>Bắt buộc chọn NV sửa chữa.</td></tr>
+  <tr><td>Chọn "Ngoài bảo hành" báo thiếu</td><td>Bắt buộc nhập mail phê duyệt.</td></tr>
+  <tr><td>Chọn "Đổi mới" báo thiếu</td><td>Bắt buộc chọn xử lý xác linh kiện lỗi.</td></tr>
+  <tr><td>Chọn "Từ chối" báo thiếu</td><td>Bắt buộc chọn lý do huỷ.</td></tr>
+  <tr><td>Sản phẩm báo "hết thời gian bảo hành"</td><td>Chỉ là cảnh báo — vẫn được chọn Trong bảo hành nếu có chỉ đạo.</td></tr>
+  <tr><td>"Sai mã sự vụ" khi tạo hộ</td><td>Mã case không tồn tại hoặc thuộc KTV khác — kiểm tra lại mã; nếu cố ý tạo thay, tích ô xác nhận.</td></tr>
+  <tr><td>Đơn biến mất khỏi bảng</td><td>Đã chuyển bước (sang NV, Xác nhận hoàn tất, Phiếu trả…). Đơn chờ KTV bổ sung vẫn hiện trong bảng.</td></tr>
+  <tr><td>Số trên Trang chủ khác số trong bảng</td><td>Tải lại trang (<kbd>F5</kbd>) để cập nhật.</td></tr>
+</table>
+
+<h2 id="s18">18. Bảng tra nhanh — một ngày làm việc</h2>
+<ol>
+  <li>Mở <b>Trang chủ</b>, xem các việc đang chờ.</li>
+  <li><b>Xử lý đơn bảo hành</b>: nhận các thùng Kho đã bàn giao → xác nhận số lượng từng đơn cha.</li>
+  <li>Xử lý đơn quá hạn <span class="badge r">⚠ đỏ</span> trước, rồi đến <span class="badge y">vàng</span>.</li>
+  <li>Các đơn giống nhau: tích chọn → <b>⚡ Xử lý nhanh hàng loạt</b>. Đơn đặc biệt: <b>Phân loại</b> từng cái.</li>
+  <li><b>Xác nhận hoàn tất</b> các đơn NV đã chẩn đoán xong.</li>
+  <li><b>Phiếu trả</b>: tự động gộp → nhập mã đơn hàng/MISA → gửi duyệt kế toán.</li>
+  <li>Kiểm tra phiếu bị kế toán từ chối, sửa và gửi lại.</li>
+</ol>
+<p style="margin-top:30px;color:var(--soft);font-size:12.5px">Có thắc mắc hoặc phát hiện lỗi, liên hệ Quản trị hệ thống. Tài liệu soạn theo phiên bản v1.015 — một số giao diện có thể thay đổi nhẹ ở phiên bản sau.</p>
+
+</div>
+</body>
+</html>
