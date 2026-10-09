@@ -4,6 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Card, Btn, Input } from "../../ui/primitives";
 import type { SettingItem } from "../../lib/types";
 import { refreshLinhKien } from "../../hooks/useLinhKien";
+import { OdooImportExportModal } from "../shared/OdooImportExportModal";
 
 // "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang.
 // Phat hien 15 vong ra soat UX: them SUA (doi ten) + XOA (truoc day chi bat/tat + them, go nham la
@@ -137,8 +138,18 @@ function OdooSyncCard() {
     }
   };
   const lr = st?.last_run;
+  const [importOpen, setImportOpen] = useState(false);
   return (
-    <Card title="🧾 Đồng bộ đơn bảo hành Odoo" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={syncNow}>Đồng bộ ngay</Btn>}>
+    <Card
+      title="🧾 Đồng bộ đơn bảo hành Odoo"
+      actions={
+        <div className="flex gap-2">
+          <Btn size="sm" onClick={() => setImportOpen(true)}>📤 File import Odoo</Btn>
+          <Btn size="sm" variant="primary" disabled={busy} onClick={syncNow}>Đồng bộ ngay</Btn>
+        </div>
+      }
+    >
+      {importOpen && <OdooImportExportModal onClose={() => setImportOpen(false)} />}
       <p className="text-xs text-[var(--ink-soft)] mb-3">Tự động 15 phút/lần: kéo đơn Odoo từ DVBH về và đẩy trạng thái gửi sửa ngược lại DVBH.</p>
       {st && (
         <div className="grid grid-cols-3 gap-3 text-center">

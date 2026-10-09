@@ -4373,3 +4373,38 @@ template literal dài vẫn lỗi trong Bash → dùng Write file tạm + node.
 seed 45 đơn Odoo cho 1 KTV (21 đã hủy): tab Chưa gửi 20/26 "Trang 1/2", Hủy bỏ 20/22 "Trang 1/2", Đã gửi 1
 đơn hiện "Đã nhận lại · 1/2 hoàn tất"; bấm "Mở thùng" mở đúng "Phiếu gửi BH-000107"; `GET /da-gui?limit=1`
 trả đúng `total`. Xem bằng mắt ở 1440px và 375px (sau khi sửa tràn tab).
+
+## Xuất file import kết quả về Odoo (09/10/2026) — chưa deploy
+
+**(a) Yêu cầu (nguyên văn):** "dữ liệu đơn bảo hành tôi cần tải dữ liệu bao gồm ID để có thểm import. đẩy lên hệ
+thống => gửi đồng bộ kết quả sang app-gui-bao-hanh => kết quả có thể tải ra để import ngược lại cho hệ thống
+odoo => bao gồm ID, Trạng thái, ngày hoàn thành, ghi chú" (kèm ảnh tick "Tôi muốn cập nhật dữ liệu (xuất tương
+thích nhập)" trên Odoo).
+
+**(b) Đã chốt với người dùng (09/10/2026):**
+- Nút tải đặt ở **app này** (Admin BH màn Phân loại + thẻ "Đồng bộ đơn bảo hành Odoo" ở Cài đặt qtri).
+- Quy đổi trạng thái gửi sửa → Odoo: Chờ gửi/Đang gửi → Chưa tiếp nhận; Kho đã nhận/Đang xử lý → Đang sửa chữa;
+  Chờ trả/Đang trả → Đã sửa xong; Hoàn tất → Hoàn thành; Từ chối → Từ chối bảo hành; Hủy đơn lỗi (khong_gui) →
+  Hủy đơn bảo hành.
+- Ghi chú = ghi chú đang có trên Odoo + " | [Sửa chữa 3T] <mã phiếu>: <trạng thái> (n/m hoàn tất); Hướng xử lý: …;
+  Lý do: …". Phần "[Sửa chữa 3T]" của lần import trước (đã về lại qua dvbh) được thay, không nối chồng.
+- Ngày hoàn thành: trên Odoo là trường **chỉ đọc** — vẫn để cột (thời điểm trạng thái kết thúc bên app), Odoo
+  không nhận thì chọn "Không nhập" cột đó lúc import.
+
+**Triển khai:**
+- ID = External ID Odoo (`__export__.technical_service_warranty_<id>_<hash>`): auto qs lấy qua
+  `export_data(['id'])` (giống thao tác xuất tương thích nhập) → dvbh `don_bao_hanh_odoo.ma_import_odoo`
+  (dvbh migration 0129, v1.441) → API partner `don-bao-hanh-odoo` → app này `don_bh_odoo.ma_import_odoo`
+  (migration `0008_odoo_ma_import.sql`, `lib/odooSync.ts` upsert giữ giá trị cũ nếu bản tin không có).
+- `lib/odooImportExport.ts` + `GET /api/odoo-don/xuat-import?tu=&den=&chi_can_cap_nhat=1` (Admin BH/qtri): đơn có
+  trạng thái gửi sửa (`odoo_status_sync`) hoặc "khong_gui"; lọc ngày theo thời điểm trạng thái đổi gần nhất;
+  mặc định bỏ đơn Odoo đã đúng trạng thái + ghi chú; đơn chưa có ID đếm riêng (`thieu_id`).
+- Frontend `screens/shared/OdooImportExportModal.tsx` (xem trước + tải) và `lib/xlsx.ts` (ghi xlsx tối giản, không
+  thêm thư viện): sheet 1 "Import Odoo" đúng 4 cột ID / Trạng thái / Ngày hoàn thành / Ghi chú; sheet 2 "Tham khảo".
+
+**(d) Kiểm thử:** typecheck 0 lỗi; file xlsx mở được bằng openpyxl và Excel (COM). Local (`wrangler dev` + vite,
+dev-login): gán tạm ID cho 4/5 đơn Odoo local → xem trước 18 đơn + "5 đơn chưa có ID import"; đơn có phiếu ra
+"Đang sửa chữa → Hoàn thành", ghi chú "gap | [Sửa chữa 3T] DH-000104 / BH-000107: Hoàn tất (1/2 hoàn tất); Hướng
+xử lý: Đổi mới, Huỷ đơn bảo hành; Lý do: Khong co hang"; nút tải tạo blob xlsx 25 KB; nút có ở cả 2 màn. Đã trả
+lại dữ liệu local. **Chưa deploy production** (chờ người dùng xác nhận; thư mục đang có thay đổi chưa commit của
+phiên khác ở `wrangler.jsonc`/`caseLookupClient.ts` — deploy từ worktree sạch để không kéo theo).

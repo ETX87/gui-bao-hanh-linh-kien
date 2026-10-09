@@ -4,6 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { computeEmailGs } from "../lib/gs";
 import { runOdooSync } from "../lib/odooSync";
+import { buildOdooImportRows } from "../lib/odooImportExport";
 import { nowVN } from "../lib/vnTime";
 import { parsePage } from "../lib/pagination";
 
@@ -164,6 +165,23 @@ odooDon.post("/sync-now", async (c) => {
   const user = c.get("user");
   if (!(user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
   return c.json(await runOdooSync(c.env));
+});
+
+// GET /api/odoo-don/xuat-import?tu=YYYY-MM-DD&den=YYYY-MM-DD&chi_can_cap_nhat=1 - du lieu file ket qua
+// gui sua de import NGUOC Odoo (ID, Trang thai, Ngay hoan thanh, Ghi chu) - Admin BH/qtri (09/10/2026).
+// Loc ngay theo thoi diem trang thai gui sua doi gan nhat; chi_can_cap_nhat=1 (mac dinh) bo don ma
+// Odoo da dung trang thai + ghi chu.
+odooDon.get("/xuat-import", async (c) => {
+  const user = c.get("user");
+  if (!(user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
+  const ngay = (v: string | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+  return c.json(
+    await buildOdooImportRows(c.env.DB, {
+      tu: ngay(c.req.query("tu")),
+      den: ngay(c.req.query("den")),
+      chiCanCapNhat: c.req.query("chi_can_cap_nhat") !== "0",
+    }),
+  );
 });
 
 export default odooDon;

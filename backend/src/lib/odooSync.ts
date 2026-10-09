@@ -29,6 +29,7 @@ interface OdooRow {
   con_hieu_luc: number;
   ngay_dong_bo: string | null;
   ky_thuat_vien: string | null;
+  ma_import_odoo?: string | null; // External ID Odoo (dvbh migration 0129)
 }
 
 function partnerUrl(env: Env, path: string) {
@@ -58,13 +59,13 @@ async function setState(db: D1Database, key: string, value: string) {
 function upsertStmt(db: D1Database, r: OdooRow, now: string) {
   return db
     .prepare(
-      `INSERT INTO don_bh_odoo (odoo_id, ma_don, case_id, ma_linh_kien, ten_linh_kien, so_luong, trang_thai, tinh_trang_loi, ghi_chu, ngay_tao, ngay_hoan_thanh, ngay_cap_nhat_odoo, con_hieu_luc, ky_thuat_vien, ma_ktv, ngay_dong_bo, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO don_bh_odoo (odoo_id, ma_don, case_id, ma_linh_kien, ten_linh_kien, so_luong, trang_thai, tinh_trang_loi, ghi_chu, ngay_tao, ngay_hoan_thanh, ngay_cap_nhat_odoo, con_hieu_luc, ky_thuat_vien, ma_ktv, ngay_dong_bo, synced_at, ma_import_odoo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(odoo_id) DO UPDATE SET ma_don = excluded.ma_don, case_id = excluded.case_id, ma_linh_kien = excluded.ma_linh_kien,
          ten_linh_kien = excluded.ten_linh_kien, so_luong = excluded.so_luong, trang_thai = excluded.trang_thai, tinh_trang_loi = excluded.tinh_trang_loi,
          ghi_chu = excluded.ghi_chu, ngay_tao = excluded.ngay_tao, ngay_hoan_thanh = excluded.ngay_hoan_thanh, ngay_cap_nhat_odoo = excluded.ngay_cap_nhat_odoo,
          con_hieu_luc = excluded.con_hieu_luc, ky_thuat_vien = excluded.ky_thuat_vien, ma_ktv = excluded.ma_ktv, ngay_dong_bo = excluded.ngay_dong_bo,
-         synced_at = excluded.synced_at`,
+         synced_at = excluded.synced_at, ma_import_odoo = COALESCE(excluded.ma_import_odoo, don_bh_odoo.ma_import_odoo)`,
     )
     .bind(
       r.odoo_id,
@@ -84,6 +85,7 @@ function upsertStmt(db: D1Database, r: OdooRow, now: string) {
       extractMaKtv(r.ky_thuat_vien),
       r.ngay_dong_bo,
       now,
+      r.ma_import_odoo ?? null,
     );
 }
 
