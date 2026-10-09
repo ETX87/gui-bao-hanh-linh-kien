@@ -4,6 +4,7 @@ import { fmtDate } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Textarea } from "../../ui/primitives";
+import { UserName } from "../../hooks/useUserNames";
 
 interface BaoCaoRow {
   id: number;
@@ -51,7 +52,7 @@ export function BaoCaoSaiModal({ parentId, onClose, onDone }: { parentId: string
           <div key={r.id} className="text-xs bg-[var(--surface-2)] rounded-lg px-3 py-2">
             <p className="whitespace-pre-wrap">{r.noi_dung}</p>
             <p className="mt-1 text-[10px] text-[var(--ink-faint)] font-mono">
-              {r.tac_gia} · {fmtDate(r.thoi_gian)}
+              <UserName email={r.tac_gia} /> · {fmtDate(r.thoi_gian)}
             </p>
           </div>
         ))}

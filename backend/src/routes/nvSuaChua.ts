@@ -5,7 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
-import { KET_QUA_CHAN_DOAN_VALUES, type KetQuaChanDoan } from "../lib/constants";
+import { LBL, KET_QUA_CHAN_DOAN_VALUES, type KetQuaChanDoan } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 
 // Man hinh NV sua chua - "Viec cua toi" + Chan doan. Anh luu dang data URL (base64) truc tiep trong
@@ -69,7 +69,7 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   for (const url of body.anh_loi_thuc_te || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'loi_thuc_te', ?)").bind(id, url));
   if (statements.length) await c.env.DB.batch(statements);
 
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, "NV nop ket qua chan doan: " + body.ket_qua_chan_doan + (body.ly_do_cham ? ` | Ly do cham: ${body.ly_do_cham}` : ""));
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, "NV nộp kết quả chẩn đoán: " + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
   return c.json({ ok: true });
 });
 

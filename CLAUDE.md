@@ -193,7 +193,9 @@ chốt khác đề xuất KTV, chọn xử lý xác 1 lần lúc Đổi mới nh
 xem mục kế cuối file. **Mốc mới nhất (09/10/2026, v1.014):** đơn Odoo chờ gửi sửa có nút "🚫 Không gửi" (đơn
 tạo nhầm trên Odoo) + mục "Đã xác nhận không gửi" để mở lại; trạng thái `khong_gui` được báo về dvbh. Cùng
 ngày (v1.015): đổi tên thành "Hủy đơn lỗi" và tách thẻ đơn Odoo thành 3 tab **Chưa gửi / Đã gửi / Hủy bỏ**
-(20 đơn/trang) — xem 2 mục cuối file.
+(20 đơn/trang) — xem 2 mục cuối file. **Mốc mới nhất (09/10/2026, v1.016):** tên người dùng thay gmail ở mọi nơi, nhắc Kho "chờ bàn
+giao Admin BH", xác nhận SL hàng loạt, nút thao tác lên ngay sau mã ID, bộ lọc 6 tiêu chí + chọn tất cả đang hiển thị ở bảng
+Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4435,3 +4437,59 @@ Phát hiện phụ (chưa sửa, không thuộc yêu cầu): nhật ký (`logs_b
 **(d) Kiểm thử:** PDF render không có ảnh lỗi; xem lại bố cục bản in. Đã khôi phục `wrangler.jsonc`,
 `.claude/launch.json`, `caseLookupClient.ts` (git status chỉ còn thư mục tài liệu). Không đổi code →
 không tăng phiên bản, không deploy.
+
+## Tên thay gmail + nhắc Kho bàn giao + xác nhận SL hàng loạt + nút sau ID + bộ lọc bảng Admin (09/10/2026) — v1.016
+
+**(a) Nguyên văn yêu cầu:**
+
+> có vấn đề gì phát hiện thì xử lý luôn
+
+(sửa 2 phát hiện phụ của đợt làm tài liệu hướng dẫn), rồi:
+
+> 1. Các nơi hiện thị thông tin tên người dùng đề ưu tiên hiện tên, nếu không có tên mới hiện thị theo gmail
+> 2. Vai trò kho thiếu nhắc giai đoạn chờ bàn giao cho Admin sửa chữa
+> 3. Thiếu chức năng xử lý hàng loạt khi Admin bảo hành xác nhận sl linh kiện thực tế, SL thực nhận hiện = sl gửi để giảm tải thời gian phải nhập sl cho admin => đơn nào sai thì mới sửa, còn lại xác nhận 1 nút là duyệt tất cả đơn.
+> 4. Chuyển các button xử lý công việc ưu tiên ở bên trái, sau các mã ID đơn
+> 5. Thêm nút tích chọn tất cả danh sách đang hiện thị + bổ sung thêm các filter để tìm kiếm và lập danh sách cần xử lý: Trạng thái, Người gửi, Linh kiện gửi, linh kiện thực sửa, Loại linh kiện, trạng thái chậm
+
+**(b) Đã triển khai:**
+- **Nhật ký có dấu:** mọi lời gọi `addLog` ở backend (adminBH/kho/partnerKho/phieuTra/nvSuaChua/phieuGui) đổi sang tiếng Việt
+  có dấu; mã enum trong câu log đổi sang nhãn qua bảng `LBL` mới trong `backend/src/lib/constants.ts` (VD "Admin BH phân
+  loại: Trong bảo hành / Đổi mới / Đối trừ: Đổi trả"). FAST `huy_khong_co_hang` ghi "Không có hàng" (khớp danh mục).
+  `migrations/0009_ly_do_tu_choi_co_dau.sql` sửa dữ liệu cũ `phieu_sua_chua_bh_ct.ly_do_tu_choi` (4 giá trị không dấu).
+  Log cũ đã ghi KHÔNG sửa (insert-only, giữ nguyên lịch sử).
+- **1. Tên thay gmail:** `GET /api/users/ten` (mọi người đã đăng nhập) trả bảng email → tên (danh bạ KTV + `users.ten`, tài
+  khoản ưu tiên). Frontend `hooks/useUserNames.tsx`: tải 1 lần/phiên, cache `localStorage` (`user_names_v1`),
+  `<UserName email/>` (rê chuột xem gmail) + `displayName()`. Áp ở: cột Nguồn bảng Admin, thùng chờ tiếp nhận nội bộ,
+  Kho tiếp nhận/bàn giao/gần đây + modal tiếp nhận, KTV nhận ở Đóng gói/Kế toán duyệt/phiếu trả (+ nhóm "sẵn sàng gộp"),
+  NV phụ trách (Xác nhận hoàn tất, UI chi tiết), người thực hiện trong nhật ký, người viết ghi chú/báo cáo sai, người tạo
+  hộ, người hủy đơn Odoo, GS phụ trách khu vực, Tra cứu (Giám sát/View), cột "Tạo cho KTV". Màn quản trị Người dùng/KTV
+  vẫn hiện email vì đó là dữ liệu cần quản lý.
+- **2. Kho nhắc bàn giao:** `GET /kho/phieu-gui?trang_thai=cho_ban_giao` (thùng `da_tiep_nhan` + `admin_tiep_nhan=0`,
+  phân trang, cũ nhất trước) → thẻ "🤝 Chờ bàn giao cho Admin bảo hành" ở màn Kho tiếp nhận (SLA tính từ lúc Kho nhận).
+  Workload mới `kho_cho_ban_giao` → ô/pill "Thùng chờ bàn giao Admin BH" ở Trang chủ Kho.
+- **3. Xác nhận SL hàng loạt:** `POST /admin/don-cha/xac-nhan-so-luong-hang-loat {items:[{id, so_luong_thuc_nhan,
+  ly_do_chenh_lech_sl?}]}` (≤200, từng đơn độc lập, trả `ok/so_don_vi/loi[]`); logic tách đơn vị dùng chung hàm
+  `xacNhanSoLuong()` với route đơn lẻ. UI `BulkXacNhanSoLuongModal` (nút "✔ Xác nhận SL hàng loạt (N)" trên bảng Admin):
+  SL điền sẵn = SL khai, dòng sửa khác thì viền vàng + ô "Lý do lệch" bắt buộc, bỏ tick dòng không muốn xác nhận, nút
+  "Xác nhận N đơn" bị khoá khi còn dòng thiếu lý do; tôn trọng bộ lọc đang áp.
+- **4. Nút sau ID:** bảng thống nhất Admin BH: cột "Hành động" đứng ngay sau ID (cả dòng đơn cha / nhóm ×N / đơn vị); "Yêu
+  cầu bổ sung" rút gọn "Bổ sung" (có tooltip). `ui/Table.tsx` (bảng dùng chung): cột thao tác (cột không header) tự lên
+  ngay sau cột đầu, header "Thao tác". Danh sách thẻ Kho chờ tiếp nhận + thùng chờ Admin nhận nội bộ: nút đứng ngay sau mã.
+- **5. Bộ lọc + chọn tất cả:** `AdminFilterBar` 6 ô: Trạng thái, Người gửi (tên, có "Khách lẻ"), Linh kiện gửi, Linh kiện
+  thực sửa, Loại linh kiện (`linh_kien_bh.don_vi`, có "Chưa phân loại"), Trạng thái chậm (quá hạn / trong hạn SLA 24h bỏ
+  Chủ nhật). Lọc ở server: `locBangThongNhat()` áp CÙNG LÚC cho `GET /admin/don-cha` và `GET /admin/don-vi` (đơn cha tính
+  SLA từ `created_at`, đơn vị từ `updated_at`); lựa chọn lấy từ chính hàng đợi qua `GET /admin/don-vi/loc-options`. Ô "Chọn
+  tất cả N đơn vị đang hiển thị" (thanh công cụ, cả mobile) + ô chọn tất cả ở đầu cột checkbox; đổi bộ lọc/trang thì bỏ chọn.
+
+**(c) Vấn đề trong lúc làm:** `sed -i` chạy trên `routes/*.ts` làm 3 file không liên quan (auth/odooDon/traCuu) đổi kiểu
+xuống dòng → đã `git checkout` trả lại. Heredoc Python dài lại lỗi EOF → dùng file script tạm. Trình duyệt kiểm thử giữ
+service worker cũ sau khi build lại → phải gỡ SW + xoá cache mới thấy giao diện mới.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (bỏ tạm binding remote rồi khôi
+phục `wrangler.jsonc`), migration 0009 áp được. API: `/users/ten` trả đúng tên; lọc `cham=qua_han/dung_han` (30 vs 0 trên
+dữ liệu cũ), `pl=Mạch` chỉ ra LK001, `ktv=__khach_le__` toàn khách lẻ, `tt=cho_phan_loai` cho `don-cha` rỗng; xác nhận SL
+hàng loạt: đơn lệch thiếu lý do báo lỗi riêng, 2 đơn còn lại vẫn qua, gửi lại có lý do → log "SL thực nhận = 3 | Lý do
+lệch: …". UI: modal hàng loạt điền sẵn 3/2/1, sửa 1 dòng → nút khoá + "1 đơn thiếu lý do", nhập lý do + bỏ 1 dòng → "Xác
+nhận 2 đơn" → toast đúng, nút còn "(1)"; lọc "Còn trong hạn" + "Chọn tất cả" → "8 đã chọn"; Kho hiện thẻ bàn giao, nút
+đứng sau mã; Trang chủ có pill bàn giao; bảng KTV tra cứu: cột "Thao tác" sau ID. Dữ liệu test local đã xoá.

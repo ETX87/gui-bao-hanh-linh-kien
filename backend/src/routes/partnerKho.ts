@@ -35,7 +35,7 @@ partnerKho.post("/phieu-gui/:id/tiep-nhan", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_tiep_nhan', nguoi_nhan_kho = ?, thoi_gian_nhan_kho = ?, updated_at = ? WHERE id = ?")
     .bind(actor, now, now, id)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", actor, "Kho xac nhan da nhan (qua khovan)" + (body.ly_do_cham ? " | Ly do cham: " + body.ly_do_cham : ""));
+  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", actor, "Kho xác nhận đã nhận (qua Kho vận)" + (body.ly_do_cham ? " | Lý do chậm: " + body.ly_do_cham : ""));
   return c.json({ ok: true });
 });
 
@@ -66,7 +66,7 @@ partnerKho.post("/phieu-tra/:id/gui", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_gui', ma_van_don = COALESCE(?, ma_van_don), updated_at = ? WHERE id = ?")
     .bind(body.ma_van_don ?? null, nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "da_gui", actor, "Kho gui hang (qua khovan)");
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "da_gui", actor, "Kho gửi hàng (qua Kho vận)");
   return c.json({ ok: true });
 });
 
@@ -85,7 +85,7 @@ partnerKho.post("/phieu-tra/:id/ket-thuc-khong-gui", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ket_thuc_khong_gui', updated_at = ? WHERE id = ?")
     .bind(nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", actor, "Kho xac nhan ket thuc, khong gui hang (qua khovan)" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", actor, "Kho xác nhận kết thúc, không gửi hàng (qua Kho vận)" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
   return c.json({ ok: true });
 });
 
@@ -101,7 +101,7 @@ partnerKho.post("/phieu-tra/:id/kho-xac-nhan-ket-thuc", async (c) => {
   if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
 
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ktv_da_nhan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", actor, "Kho xac nhan thay, du phong (qua khovan)");
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", actor, "Kho xác nhận thay, dự phòng (qua Kho vận)");
   return c.json({ ok: true });
 });
 

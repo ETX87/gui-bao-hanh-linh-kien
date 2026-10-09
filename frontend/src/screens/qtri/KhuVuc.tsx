@@ -8,6 +8,7 @@ import { SearchableSelect } from "../../ui/SearchableSelect";
 import { Pagination } from "../../ui/Pagination";
 import { useClientPage } from "../../hooks/useClientPage";
 import type { KhuVucQuanSat } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // Man "Quan ly Giam sat khu vuc" (qtri, moi 07/09/2026) - gap that phat hien: qtri gan vai tro
 // la_giam_sat cho 1 nhan vien nhung khong co cho nao de gan Khu vuc ho phu trach (khu_vuc_bh.gs_email
@@ -45,7 +46,7 @@ export function QtriKhuVucScreen() {
           { key: "ten", header: "Khu vực", render: (r) => <span className="font-semibold text-[var(--ink)]">{r.ten || r.ma}</span> },
           { key: "ma", header: "Mã", render: (r) => <span className="font-mono text-xs">{r.ma}</span> },
           { key: "so", header: "Số KTV", render: (r) => r.so_ktv },
-          { key: "gs", header: "Giám sát phụ trách", render: (r) => (r.gs_email ? <span className="text-xs">{r.gs_email}</span> : <Badge tone="orange">Chưa gán</Badge>) },
+          { key: "gs", header: "Giám sát phụ trách", render: (r) => (r.gs_email ? <UserName email={r.gs_email} className="text-xs" /> : <Badge tone="orange">Chưa gán</Badge>) },
           {
             key: "act",
             header: "",

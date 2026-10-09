@@ -24,6 +24,7 @@ const EMPTY = {
   ktv_nhan_hang: 0,
   kho_cho_tiep_nhan: 0,
   kho_cho_dong_goi: 0,
+  kho_cho_ban_giao: 0,
   admin_cho_tiep_nhan_noi_bo: 0,
   admin_cho_xac_nhan_sl: 0,
   admin_cho_phan_loai: 0,
@@ -86,6 +87,10 @@ workload.get("/", async (c) => {
       }),
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE trang_thai = 'da_duyet_ke_toan'`).then((r) => {
         counts.kho_cho_dong_goi = r?.cnt ?? 0;
+      }),
+      // Thung Kho da nhan, cho Admin BH nhan ban giao noi bo (nhac Kho mang hang sang).
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0`).then((r) => {
+        counts.kho_cho_ban_giao = r?.cnt ?? 0;
       }),
     );
   }

@@ -6,11 +6,13 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, EmptyState } from "../../ui/primitives";
 import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
+import { fmtDate } from "../../lib/format";
 import { BaoSuCoModal } from "./BaoSuCoModal";
 import { TiepNhanModal } from "./TiepNhanModal";
 import { CameraScanModal } from "./CameraScanModal";
 import { GhiChuLogModal } from "../shared/GhiChuLogModal";
 import type { PhieuGui } from "../../lib/types";
+import { UserName, displayName } from "../../hooks/useUserNames";
 
 // Man "Diem tiep nhan kho" - tiep nhan o muc THUNG (khong mo kiem tung linh kien), port dung
 // khoXacNhanTiepNhan()/submitSuCo(). Quet camera (jsQR that, port lai o "QA vong 2" - da bo o Giai
@@ -23,6 +25,9 @@ export function KhoTiepNhanScreen() {
   const toast = useToast();
   const { refresh } = useWorkload();
   const { items: pending, total: pendingTotal, page, pageCount, setPage, loading, reload: reloadPending } = usePagedApi<PhieuGui>("/kho/phieu-gui?trang_thai=da_gui", "phieu_gui");
+  // 09/10/2026: "Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua" - thung Kho da
+  // nhan nhung Admin BH chua xac nhan tiep nhan noi bo (Kho can mang hang sang/nhac Admin BH).
+  const banGiao = usePagedApi<PhieuGui>("/kho/phieu-gui?trang_thai=cho_ban_giao", "phieu_gui");
   const [recent, setRecent] = useState<PhieuGui[]>([]);
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
@@ -36,6 +41,7 @@ export function KhoTiepNhanScreen() {
 
   const afterChange = () => {
     reloadPending();
+    banGiao.reload();
     loadRecent();
     refresh();
   };
@@ -45,7 +51,7 @@ export function KhoTiepNhanScreen() {
     const code = text.trim();
     const found = pending.find((g) => g.id === code);
     if (found) {
-      toast(`Đã quét đúng phiếu ${found.id} (${found.nguoi_tao}).`, "ok");
+      toast(`Đã quét đúng phiếu ${found.id} (${displayName(found.nguoi_tao)}).`, "ok");
       setTiepNhanFor(found);
     } else if (recent.some((g) => g.id === code)) {
       toast("Phiếu này đã được tiếp nhận rồi.", "error");
@@ -71,20 +77,21 @@ export function KhoTiepNhanScreen() {
               // flex-col tren mobile (Phat hien 5 vong ra soat UX): ban cu la 1 hang flex cung nen
               // nut "Xac nhan tiep nhan" bi day ra ngoai man, Kho khong bam duoc tren dien thoai.
               <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
-                <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
-                  <span className="text-sm text-[var(--ink-body)] truncate">{g.nguoi_tao}</span>
-                  <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
-                  <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
-                </div>
+                {/* 09/10/2026: nut xu ly uu tien dat ngay sau ma ID (ben trai). */}
+                <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
                 <div className="flex flex-wrap gap-2 shrink-0">
-                  <Btn onClick={() => setLogFor(g.id)}>💬</Btn>
-                  <Btn variant="danger" onClick={() => setSuCoFor(g)}>
-                    Báo sự cố
-                  </Btn>
                   <Btn variant="primary" onClick={() => setTiepNhanFor(g)}>
                     Xác nhận tiếp nhận
                   </Btn>
+                  <Btn variant="danger" onClick={() => setSuCoFor(g)}>
+                    Báo sự cố
+                  </Btn>
+                  <Btn onClick={() => setLogFor(g.id)}>💬</Btn>
+                </div>
+                <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
+                  <UserName email={g.nguoi_tao} className="text-sm text-[var(--ink-body)] truncate" />
+                  <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
+                  <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
                 </div>
               </div>
             ))}
@@ -92,6 +99,25 @@ export function KhoTiepNhanScreen() {
         )}
         <Pagination page={page} pageCount={pageCount} total={pendingTotal} onChange={setPage} />
       </Card>
+
+      {banGiao.total > 0 && (
+        <Card className="p-5 border-l-4 border-l-[var(--blue-500)]">
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🤝 Chờ bàn giao cho Admin bảo hành ({banGiao.total})</h3>
+          <p className="text-xs text-[var(--ink-soft)] mt-1 mb-3">Thùng Kho đã nhận nhưng Admin bảo hành chưa xác nhận nhận bàn giao — mang thùng sang và nhắc Admin bảo hành bấm "Xác nhận đã nhận". Số giờ tính từ lúc Kho nhận.</p>
+          <div className="space-y-1.5">
+            {banGiao.items.map((g) => (
+              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
+                <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-body)]" />
+                {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
+                <span className="text-xs text-[var(--ink-soft)]">Kho nhận: {fmtDate(g.thoi_gian_nhan_kho)}</span>
+                <SlaBadge since={g.thoi_gian_nhan_kho} />
+              </div>
+            ))}
+          </div>
+          <Pagination page={banGiao.page} pageCount={banGiao.pageCount} total={banGiao.total} onChange={banGiao.setPage} />
+        </Card>
+      )}
 
       <Card className="p-5">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Đã tiếp nhận gần đây</h3>
@@ -102,7 +128,7 @@ export function KhoTiepNhanScreen() {
             {recent.map((g) => (
               <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
-                <span className="flex-1 min-w-0 truncate text-[var(--ink-soft)]">{g.nguoi_tao}</span>
+                <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-soft)]" />
                 {/* !! bat buoc - D1 tra ve so 0/1 chu khong phai true/false that, "0 && <Badge/>" se render chu "0" ra man hinh */}
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                 {!!g.admin_tiep_nhan && <Badge tone="green">Admin BH đã nhận</Badge>}

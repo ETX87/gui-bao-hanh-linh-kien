@@ -17,6 +17,7 @@ import { XacNhanHoanTatModal } from "./XacNhanHoanTatModal";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import type { AppUser, DonCha, DonVi, LogRow } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 interface DetailResponse {
   don_vi: DonVi;
@@ -118,7 +119,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
           </div>
           {p.xac_nhan_khac_ktv && (
             <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">
-              ⚠ Đơn được tạo thay: case thuộc KTV khác trên hệ thống ({p.ktv_tren_case || "không xác định"}) — {p.xac_nhan_khac_ktv} đã xác nhận khi tạo hộ.
+              ⚠ Đơn được tạo thay: case thuộc KTV khác trên hệ thống ({p.ktv_tren_case || "không xác định"}) — <UserName email={p.xac_nhan_khac_ktv} /> đã xác nhận khi tạo hộ.
             </p>
           )}
           {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} />}
@@ -136,7 +137,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
               <ReadField label="Loại bảo hành" value={u.loai_bao_hanh ? LOAI_BAO_HANH_LABELS[u.loai_bao_hanh] : "—"} />
               <ReadField label="Hướng xử lý" value={u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] : "—"} />
               <ReadField label="Loại đối trừ" value={u.loai_doi_tru ? LOAI_DOI_TRU_LABELS[u.loai_doi_tru] : "—"} />
-              <ReadField label="NV phụ trách" value={u.nguoi_sua_chua} />
+              <ReadField label="NV phụ trách" value={u.nguoi_sua_chua ? <UserName email={u.nguoi_sua_chua} /> : "—"} />
               {u.ket_qua_chan_doan && <ReadField label="Kết quả chẩn đoán" value={KET_QUA_CHAN_DOAN_LABELS[u.ket_qua_chan_doan]} />}
               {u.xu_ly_xac && <ReadField label="Xử lý xác" value={XU_LY_XAC_LABELS[u.xu_ly_xac]} />}
               {u.ly_do_tu_choi && <ReadField label="Lý do huỷ" value={u.ly_do_tu_choi} />}
@@ -166,7 +167,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
                   <div key={b.id} className="text-xs bg-[var(--red-100)] text-[var(--red-700)] rounded-lg px-2.5 py-1.5">
                     <p>{b.noi_dung}</p>
                     <p className="mt-0.5 text-[10px] font-mono opacity-70">
-                      {b.tac_gia} · {fmtDate(b.thoi_gian)}
+                      <UserName email={b.tac_gia} /> · {fmtDate(b.thoi_gian)}
                     </p>
                   </div>
                 ))}

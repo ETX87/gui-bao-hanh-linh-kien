@@ -26,3 +26,15 @@ export const HUONG_TAO_PHIEU_TRA: readonly HuongXuLy[] = ["doi_moi", "tra_lai_kt
 
 // Ma dinh danh "khach le" dung lam khoa nhom trong danh sach tao phieu tra (KHONG phai email that).
 export const KHACH_LE_KEY = "__khach_le__";
+
+// Nhan tieng Viet co dau cho cac gia tri enum - dung khi ghi nhat ky (logs_bh) de UI chi tiet hien
+// cau doc duoc thay vi ma tho (09/10/2026, "co van de gi phat hien thi xu ly luon").
+export const LBL: Record<string, string> = {
+  trong_bh: "Trong bảo hành", ngoai_bh: "Ngoài bảo hành",
+  sua_chua: "Sửa chữa", doi_moi: "Đổi mới", tra_lai_ktv: "Trả lại KTV", xac_nhan_tru_no: "Xác nhận trừ công nợ",
+  dich_vu_tinh_phi: "Dịch vụ tính phí", tu_choi: "Huỷ đơn bảo hành", chuyen_kho: "Chuyển kho",
+  doi_tra: "Đổi trả", tru_cong_no: "Trừ công nợ",
+  tra_doi_tac: "Trả xác cho đối tác", tieu_huy: "Tiêu huỷ", luu_kho: "Đang lưu kho",
+  khong_loi: "Không lỗi", sua_duoc: "Sửa được", de_xuat_doi_moi: "Đề xuất đổi mới", tra_xac: "Trả xác",
+  sai_case: "Sai case", thieu_mota: "Thiếu mô tả", linh_kien_khong_khop: "Linh kiện không khớp", khac: "Khác",
+};

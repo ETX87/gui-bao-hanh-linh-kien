@@ -10,6 +10,7 @@ import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, HUONG_XU_LY_LABELS } 
 import { useLkName } from "../../hooks/useLinhKien";
 import { LogBlock } from "./LogBlock";
 import type { AppUser, DonVi, LogRow, PhieuTra } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 interface DetailResponse {
   phieu_tra: PhieuTra;
@@ -173,9 +174,9 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <ReadField label="KTV nhận" value={t.ktv_nhan} />
+          <ReadField label="KTV nhận" value={<UserName email={t.ktv_nhan} />} />
           <ReadField label="Loại đối trừ" value={LOAI_DOI_TRU_LABELS[t.loai_doi_tru]} />
-          <ReadField label="Người tạo" value={t.nguoi_tao} />
+          <ReadField label="Người tạo" value={<UserName email={t.nguoi_tao} />} />
           <ReadField label="Tạo lúc" value={fmtDate(t.created_at)} />
         </div>
 

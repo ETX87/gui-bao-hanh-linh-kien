@@ -11,6 +11,7 @@ import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, isDoiTa
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
 import { useClientPage } from "../../hooks/useClientPage";
 import type { AppUser, PhieuTra } from "../../lib/types";
+import { UserName, displayName } from "../../hooks/useUserNames";
 
 interface SanSangUnit {
   id: string;
@@ -62,7 +63,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     setBusy(true);
     try {
       await api.post("/phieu-tra", { ktv_key: ktvKey, loai_doi_tru: loai, unit_ids: ids });
-      toast(`Đã tạo phiếu trả cho ${ktvKey === KHACH_LE_KEY ? "Khách lẻ" : isDoiTacKey(ktvKey) ? `đối tác ${doiTacNameFromKey(ktvKey)}` : ktvKey}.`, "ok");
+      toast(`Đã tạo phiếu trả cho ${ktvKey === KHACH_LE_KEY ? "Khách lẻ" : isDoiTacKey(ktvKey) ? `đối tác ${doiTacNameFromKey(ktvKey)}` : displayName(ktvKey)}.`, "ok");
       afterChange();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -109,7 +110,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
         ) : isDoiTacKey(r.ktv_nhan) ? (
           <Badge tone="orange">Đối tác: {doiTacNameFromKey(r.ktv_nhan)}</Badge>
         ) : (
-          r.ktv_nhan
+          <UserName email={r.ktv_nhan} />
         ),
     },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
@@ -138,7 +139,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                 <div key={key} className="rounded-lg border border-[var(--line)] p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">
-                      {ktvKey === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : ktvKey} · <Badge tone="gray">{LOAI_DOI_TRU_LABELS[loai]}</Badge>
+                      {ktvKey === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : isDoiTacKey(ktvKey) ? `Đối tác: ${doiTacNameFromKey(ktvKey)}` : <UserName email={ktvKey} />} · <Badge tone="gray">{LOAI_DOI_TRU_LABELS[loai]}</Badge>
                     </p>
                     <div className="flex items-center gap-2">
                       <Btn

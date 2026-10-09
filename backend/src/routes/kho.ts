@@ -24,6 +24,17 @@ function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }
 // phai lich su day du) - xem renderKhoTiepNhan trong prototype.
 kho.get("/phieu-gui", async (c) => {
   if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  // 09/10/2026 ("Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua"): thung Kho da tiep
+  // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
+  if (c.req.query("trang_thai") === "cho_ban_giao") {
+    const { limit, offset } = parsePage(c);
+    const w = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0";
+    const [{ results }, totalRow] = await Promise.all([
+      c.env.DB.prepare(`SELECT * ${w} ORDER BY thoi_gian_nhan_kho ASC LIMIT ? OFFSET ?`).bind(limit, offset).all(),
+      c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).first<{ cnt: number }>(),
+    ]);
+    return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
+  }
   const trangThai = c.req.query("trang_thai") === "da_tiep_nhan" ? "da_tiep_nhan" : "da_gui";
   if (trangThai === "da_tiep_nhan") {
     const { results } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' ORDER BY updated_at DESC LIMIT 8").all();
@@ -58,7 +69,7 @@ kho.post("/phieu-gui/:id/tiep-nhan", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_tiep_nhan', nguoi_nhan_kho = ?, thoi_gian_nhan_kho = ?, updated_at = ? WHERE id = ?")
     .bind(user.email, now, now, id)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho xac nhan da nhan" + (body.ly_do_cham ? " | Ly do cham: " + body.ly_do_cham : ""));
+  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho xác nhận đã nhận" + (body.ly_do_cham ? " | Lý do chậm: " + body.ly_do_cham : ""));
   return c.json({ ok: true });
 });
 
@@ -94,7 +105,7 @@ kho.post("/phieu-gui/:id/bao-su-co", async (c) => {
   await c.env.DB.prepare("INSERT INTO phieu_gui_bh_ghi_chu (phieu_gui_id, tac_gia, thoi_gian, noi_dung) VALUES (?, ?, ?, ?)")
     .bind(id, user.email, now, `⚠ [Báo sự cố tiếp nhận] ${body.ly_do.trim()}${body.ghi_chu?.trim() ? ": " + body.ghi_chu.trim() : ""}`)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho bao su co tiep nhan: " + body.ly_do.trim() + (body.ly_do_cham ? " | Ly do cham: " + body.ly_do_cham : ""));
+  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho báo sự cố tiếp nhận: " + body.ly_do.trim() + (body.ly_do_cham ? " | Lý do chậm: " + body.ly_do_cham : ""));
   return c.json({ ok: true });
 });
 

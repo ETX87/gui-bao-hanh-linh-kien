@@ -8,6 +8,7 @@ import { TRANG_THAI_UNIT_LABELS, LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS, format
 import { AdminColSettingsModal } from "./AdminColSettingsModal";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, DonVi } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // "Bang thong nhat" Admin BH - port dung renderAdminUnifiedTable() cua prototype: 1 bang GOP ca don
 // cha (dang cho_xac_nhan_so_luong) LAN don vi (dang can xu ly) lam 1, cot tuy bien duoc (bat/tat, keo
@@ -24,6 +25,8 @@ interface Props {
   units: DonVi[];
   selected: Set<string>;
   onToggleSelect: (id: string, checked: boolean) => void;
+  // Chon / bo chon TAT CA don vi dang hien thi (09/10/2026).
+  onToggleAll: (ids: string[], checked: boolean) => void;
   onOpenXacNhanSl: (p: DonCha) => void;
   onOpenDetail: (unitId: string) => void;
   onOpenPhanLoai: (unit: DonVi) => void;
@@ -40,7 +43,7 @@ function Ellipsis({ text, title }: { text: ReactNode; title?: string }) {
   );
 }
 
-export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai }: Props) {
+export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onToggleAll, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai }: Props) {
   const { items: linhKienList } = useLinhKien();
   const lkName = (ma: string | null | undefined) => (ma ? lkLabel(linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
   const phanLoai = (ma: string | null | undefined): ReactNode => {
@@ -73,7 +76,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const newWidth = Math.max(60, Math.round(r.startWidth + delta));
     const idx = visibleCols.indexOf(r.key);
     const cols = tableRef.current.querySelectorAll("colgroup col");
-    const col = cols[idx + 2] as HTMLElement | undefined; // +2: bo qua checkbox + ID
+    const col = cols[idx + 3] as HTMLElement | undefined; // +3: bo qua checkbox + ID + Hanh dong
     if (col) col.style.width = `${newWidth}px`;
     r.current = newWidth;
   };
@@ -101,7 +104,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
       <Ellipsis
         text={
           <>
-            {p.ktv || "—"} <span className="text-[var(--ink-faint)]">· {p.phieu_gui_id}</span>
+            <UserName email={p.ktv} /> <span className="text-[var(--ink-faint)]">· {p.phieu_gui_id}</span>
           </>
         }
         title={`${p.ktv || ""} · ${p.phieu_gui_id}`}
@@ -132,7 +135,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         <Ellipsis
           text={
             <>
-              {u.ktv || "—"} <span className="text-[var(--ink-faint)]">· {u.phieu_gui_id}</span>
+              <UserName email={u.ktv} /> <span className="text-[var(--ink-faint)]">· {u.phieu_gui_id}</span>
             </>
           }
           title={`${u.ktv || ""} · ${u.phieu_gui_id}`}
@@ -218,16 +221,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             </Badge>
           )}
         </td>
-        {visibleCols.map((k) => (
-          <td key={k} className="px-3 py-2.5 align-middle">
-            {f[k]}
-          </td>
-        ))}
         <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
           {isBoSung ? (
-            <span className="text-xs text-[var(--ink-soft)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
+            <span className="block truncate max-w-[230px] text-xs text-[var(--ink-soft)]" title={formatLyDoBoSung(u.ly_do_bo_sung)}>Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
           ) : (
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
               <Btn onClick={() => onOpenFast(u)} title="Các phương án phổ biến có sẵn, tự động điền thông tin">
                 ⚡
               </Btn>
@@ -236,7 +234,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
               </Btn>
               {!isKhachLe && (
                 <>
-                  {u.trang_thai === "cho_phan_loai" && <Btn onClick={() => onOpenBoSung(u.parent_id)}>Yêu cầu bổ sung</Btn>}
+                  {u.trang_thai === "cho_phan_loai" && (
+                    <Btn onClick={() => onOpenBoSung(u.parent_id)} title="Yêu cầu KTV bổ sung thông tin">
+                      Bổ sung
+                    </Btn>
+                  )}
                   <Btn onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
                     🐞
                   </Btn>
@@ -245,6 +247,11 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             </div>
           )}
         </td>
+        {visibleCols.map((k) => (
+          <td key={k} className="px-3 py-2.5 align-middle">
+            {f[k]}
+          </td>
+        ))}
       </tr>
     );
   };
@@ -358,13 +365,31 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
   );
 
   const totalRows = parents.length + units.length;
+  const visibleSelectable = units.filter((u) => u.trang_thai !== "cho_bo_sung_tt").map((u) => u.id);
+  const allVisibleSelected = visibleSelectable.length > 0 && visibleSelectable.every((id) => selected.has(id));
 
   return (
     <div>
-      <div className={`items-center gap-2 mb-2 ${isMobile ? "hidden" : "flex"}`}>
-        <Btn onClick={() => setColSettingsOpen(true)} title="Bật/tắt cột, đổi vị trí, đổi độ rộng">
-          ⚙ Tuỳ chỉnh cột
-        </Btn>
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        {visibleSelectable.length > 0 && (
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="w-4 h-4"
+              checked={allVisibleSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = !allVisibleSelected && visibleSelectable.some((id) => selected.has(id));
+              }}
+              onChange={(e) => onToggleAll(visibleSelectable, e.target.checked)}
+            />
+            Chọn tất cả {visibleSelectable.length} đơn vị đang hiển thị
+          </label>
+        )}
+        {!isMobile && (
+          <Btn onClick={() => setColSettingsOpen(true)} title="Bật/tắt cột, đổi vị trí, đổi độ rộng">
+            ⚙ Tuỳ chỉnh cột
+          </Btn>
+        )}
       </div>
 
       {totalRows === 0 ? (
@@ -376,16 +401,27 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
           <table ref={tableRef} className="text-sm whitespace-nowrap" style={{ tableLayout: "fixed", width: "max-content" }}>
             <colgroup>
               <col style={{ width: 36 }} />
-              <col style={{ width: 110 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 255 }} />
               {visibleCols.map((k) => (
                 <col key={k} style={{ width: colWidth(k) }} />
               ))}
-              <col style={{ width: 230 }} />
             </colgroup>
             <thead>
               <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
-                <th />
+                <th className="px-2">
+                  <input
+                    type="checkbox"
+                    title="Chọn tất cả đơn vị đang hiển thị"
+                    checked={allVisibleSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allVisibleSelected && visibleSelectable.some((id) => selected.has(id));
+                    }}
+                    onChange={(e) => onToggleAll(visibleSelectable, e.target.checked)}
+                  />
+                </th>
                 <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">ID</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">Hành động</th>
                 {visibleCols.map((k) => (
                   <th
                     key={k}
@@ -406,7 +442,6 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     />
                   </th>
                 ))}
-                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -416,16 +451,16 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                   <tr key={p.id} onClick={() => onOpenXacNhanSl(p)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--accent-soft)] transition-colors">
                     <td />
                     <td className="px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)]">{p.id}</td>
-                    {visibleCols.map((k) => (
-                      <td key={k} className="px-3 py-2.5 align-middle">
-                        {f[k]}
-                      </td>
-                    ))}
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <Btn variant="primary" onClick={() => onOpenXacNhanSl(p)}>
                         Xác nhận SL
                       </Btn>
                     </td>
+                    {visibleCols.map((k) => (
+                      <td key={k} className="px-3 py-2.5 align-middle">
+                        {f[k]}
+                      </td>
+                    ))}
                   </tr>
                 );
               })}
@@ -455,14 +490,14 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                             <Badge tone="gray">×{list.length}</Badge>
                           </span>
                         </td>
+                        <td className="px-3 py-2.5">
+                          <span className="text-xs text-[var(--ink-soft)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
+                        </td>
                         {visibleCols.map((k) => (
                           <td key={k} className="px-3 py-2.5 align-middle">
                             {k === "trangthai" ? groupStatusSummary(list) : k === "sla" ? <SlaBadge since={groupWorstSla(list)} /> : k === "donchacode" ? <span className="text-[var(--ink-soft)] font-mono text-xs">{pid}</span> : hf[k]}
                           </td>
                         ))}
-                        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs text-[var(--ink-soft)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
-                        </td>
                       </tr>
                       {isOpen && list.map((u) => renderUnitRow(u, true))}
                     </Fragment>

@@ -53,6 +53,20 @@ users.get("/nv-sua-chua", async (c) => {
   return c.json({ users: results });
 });
 
+// GET /api/users/ten - bang tra cuu email -> ten hien thi (09/10/2026: "Cac noi hien thi thong tin ten
+// nguoi dung deu uu tien hien ten, neu khong co ten moi hien thi theo gmail"). Gop danh ba KTV
+// (ktv_lien_he_bh.ten_hien_thi) + tai khoan (users.ten - uu tien). Frontend tai 1 lan/phien, cache may.
+users.get("/ten", async (c) => {
+  const [ktv, us] = await Promise.all([
+    c.env.DB.prepare("SELECT email_dang_nhap AS email, ten_hien_thi AS ten FROM ktv_lien_he_bh WHERE email_dang_nhap IS NOT NULL AND TRIM(COALESCE(ten_hien_thi,'')) <> ''").all<{ email: string; ten: string }>(),
+    c.env.DB.prepare("SELECT email, ten FROM users WHERE TRIM(COALESCE(ten,'')) <> ''").all<{ email: string; ten: string }>(),
+  ]);
+  const names: Record<string, string> = {};
+  for (const r of ktv.results) names[r.email.toLowerCase()] = r.ten.trim();
+  for (const r of us.results) names[r.email.toLowerCase()] = r.ten.trim();
+  return c.json({ names });
+});
+
 // GET /api/users/giam-sat - danh sach rut gon (email, ten) cac tai khoan la_giam_sat=1, dung cho man
 // "#/qtri/khu-vuc" (picker chon GS phu trach 1 Khu vuc) - cung mau voi GET /nv-sua-chua o tren.
 users.get("/giam-sat", async (c) => {

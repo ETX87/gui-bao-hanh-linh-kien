@@ -9,6 +9,7 @@ import { Pagination } from "../../ui/Pagination";
 import { useClientPage } from "../../hooks/useClientPage";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import type { OdooDon } from "../../lib/types";
+import { displayName, useUserNames } from "../../hooks/useUserNames";
 
 // Don bao hanh tao tren Odoo dang "cho gui sua" cua 1 KTV (yeu cau 04/10/2026, CHOT "KTV chon don vao
 // thung") - danh sach co o chon, dung chung cho the o man "Gui hang bao hanh" va modal "Chon don Odoo"
@@ -242,6 +243,7 @@ export function KhongGuiModal({ don, ktvEmail, onClose, onDone }: { don: OdooDon
 // "Chọn đơn Odoo". 20 don/trang.
 export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; ktvEmail?: string | null; onChanged: () => void }) {
   const toast = useToast();
+  useUserNames(); // ve lai khi bang ten tai xong
   const [busyId, setBusyId] = useState<number | null>(null);
   const pg = useClientPage(items);
   if (items.length === 0) return <p className="text-sm text-[var(--ink-faint)]">Chưa có đơn nào bị hủy.</p>;
@@ -269,7 +271,7 @@ export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; 
             </div>
             <div className="text-sm text-[var(--ink-soft)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</div>
             <div className="text-[11px] text-[var(--ink-faint)]">
-              {[d.khong_gui_ly_do, d.khong_gui_boi, d.khong_gui_luc ? fmtDate(d.khong_gui_luc) : null].filter(Boolean).join(" · ")}
+              {[d.khong_gui_ly_do, d.khong_gui_boi ? displayName(d.khong_gui_boi) : null, d.khong_gui_luc ? fmtDate(d.khong_gui_luc) : null].filter(Boolean).join(" · ")}
             </div>
           </div>
           <Btn size="sm" variant="secondary" disabled={busyId === d.odoo_id} onClick={() => moLai(d)} className="w-full sm:w-auto">

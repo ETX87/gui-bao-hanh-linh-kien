@@ -58,6 +58,11 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
     );
   }
 
+  // 09/10/2026 ("Chuyen cac button xu ly cong viec uu tien o ben trai, sau cac ma ID don"): cot nut
+  // hanh dong (cot khong header) dua len ngay sau cot dau tien (ma ID) tren bang desktop.
+  const [first, ...others] = columns;
+  const ordered = first ? [first, ...others.filter((c) => !c.header), ...others.filter((c) => c.header)] : columns;
+
   return (
     // Phat hien 11 vong ra soat UX: <table class="w-full"> don toan bo khoang du cho cot CUOI -> SLA
     // cach "Mo ta loi" ~600px trong, kho ra 1 dong. Nay them 1 cot dem cuoi (w-full) hut het khoang
@@ -66,9 +71,9 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
       <table className="w-full text-sm whitespace-nowrap">
         <thead>
           <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
-            {columns.map((c) => (
+            {ordered.map((c) => (
               <th key={c.key} className={`text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs ${c.className || ""}`}>
-                {c.header}
+                {c.header || (c === first ? "" : "Thao tác")}
               </th>
             ))}
             <th className="w-full" aria-hidden="true" />
@@ -81,7 +86,7 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={`border-b border-[var(--line)] last:border-0 ${onRowClick ? "cursor-pointer hover:bg-[var(--accent-soft)]" : ""} transition-colors`}
             >
-              {columns.map((c) => (
+              {ordered.map((c) => (
                 <td key={c.key} className={`px-3 py-2 align-middle text-[var(--ink-body)] ${c.className || ""}`}>
                   {c.render(row)}
                 </td>

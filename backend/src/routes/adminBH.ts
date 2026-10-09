@@ -5,8 +5,8 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
-import { isOverdue } from "../lib/sla";
-import { HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
+import { isOverdue, slaCutoffVn } from "../lib/sla";
+import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
@@ -50,7 +50,7 @@ adminBH.post("/phieu-gui/:id/tiep-nhan-noi-bo", async (c) => {
 
   const now = nowVN();
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET admin_tiep_nhan = 1, admin_nguoi_nhan = ?, admin_thoi_gian_nhan = ?, updated_at = ? WHERE id = ?").bind(user.email, now, now, id).run();
-  await addLog(c.env.DB, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", user.email, "Admin bao hanh xac nhan tiep nhan noi bo tu Kho" + (body.ly_do_cham ? " | Ly do cham: " + body.ly_do_cham : ""));
+  await addLog(c.env.DB, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", user.email, "Admin bảo hành xác nhận tiếp nhận nội bộ từ Kho" + (body.ly_do_cham ? " | Lý do chậm: " + body.ly_do_cham : ""));
   return c.json({ ok: true });
 });
 
@@ -65,9 +65,64 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
   if ((daTach?.cnt ?? 0) > 0) return c.json({ error: "ALREADY_SPLIT" }, 400);
 
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET admin_tiep_nhan = 0, admin_nguoi_nhan = NULL, admin_thoi_gian_nhan = NULL, updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", user.email, "Admin BH day lai chua tiep nhan noi bo (xac nhan nham truoc do)");
+  await addLog(c.env.DB, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", user.email, "Admin BH đẩy lại chưa tiếp nhận nội bộ (xác nhận nhầm trước đó)");
   return c.json({ ok: true });
 });
+
+// ---------- Bo loc bang thong nhat (09/10/2026) ----------
+// "bo sung them cac filter de tim kiem va lap danh sach can xu ly: Trang thai, Nguoi gui, Linh kien
+// gui, linh kien thuc sua, Loai linh kien, trang thai cham". Ap dung DONG THOI cho GET /don-cha (don
+// cha cho xac nhan SL) va GET /don-vi (don vi can xu ly) de 2 phan cua bang thong nhat luon khop nhau.
+//   tt   : cho_xac_nhan_so_luong (chi don cha) | cho_phan_loai | admin_can_xem_lai | cho_bo_sung_tt
+//   ktv  : email nguoi gui (g.nguoi_tao) | __khach_le__
+//   lk   : linh kien KTV gui (p.ma_lk)
+//   lk_tt: linh kien thuc sua (COALESCE(u.ma_lk_thuc_te, p.ma_lk); don cha = p.ma_lk)
+//   pl   : phan loai linh kien (linh_kien_bh.don_vi) | __none__
+//   cham : qua_han | dung_han (SLA 24h bo Chu nhat; don cha tinh tu created_at, don vi tu updated_at)
+function locBangThongNhat(c: { req: { query(k: string): string | undefined } }, kind: "parent" | "unit"): { sql: string; binds: unknown[] } {
+  const q = (k: string) => (c.req.query(k) || "").trim();
+  const parts: string[] = [];
+  const binds: unknown[] = [];
+  const tt = q("tt");
+  if (tt) {
+    if (kind === "parent") {
+      if (tt !== "cho_xac_nhan_so_luong") parts.push("1 = 0");
+    } else if (tt === "cho_xac_nhan_so_luong") parts.push("1 = 0");
+    else {
+      parts.push("u.trang_thai = ?");
+      binds.push(tt);
+    }
+  }
+  const ktv = q("ktv");
+  if (ktv === KHACH_LE_KEY) parts.push("p.phieu_gui_id IS NULL");
+  else if (ktv) {
+    parts.push("g.nguoi_tao = ?");
+    binds.push(ktv);
+  }
+  const lk = q("lk");
+  if (lk) {
+    parts.push("p.ma_lk = ?");
+    binds.push(lk);
+  }
+  const effLk = kind === "unit" ? "COALESCE(u.ma_lk_thuc_te, p.ma_lk)" : "p.ma_lk";
+  const lkTt = q("lk_tt");
+  if (lkTt) {
+    parts.push(`${effLk} = ?`);
+    binds.push(lkTt);
+  }
+  const pl = q("pl");
+  if (pl === "__none__") parts.push(`NOT EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${effLk} AND TRIM(COALESCE(l.don_vi,'')) <> '')`);
+  else if (pl) {
+    parts.push(`EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${effLk} AND TRIM(l.don_vi) = ?)`);
+    binds.push(pl);
+  }
+  const cham = q("cham");
+  if (cham === "qua_han" || cham === "dung_han") {
+    parts.push(`${kind === "unit" ? "u.updated_at" : "p.created_at"} ${cham === "qua_han" ? "<" : ">="} ?`);
+    binds.push(slaCutoffVn(24));
+  }
+  return { sql: parts.length ? " AND " + parts.join(" AND ") : "", binds };
+}
 
 // ---------- 2. Don cha cho xac nhan so luong thuc nhan ----------
 
@@ -77,11 +132,12 @@ adminBH.get("/don-cha", async (c) => {
   const { limit, offset } = parsePage(c, 20, 1000);
   // them g.nguoi_tao AS ktv - can cho cot "Nguon" cua bang thong nhat (UI, xem AdminUnifiedTable.tsx)
   // hien dung email KTV thay vi chi case_id, khop dung renderAdminUnifiedTable() cua prototype.
+  const loc = locBangThongNhat(c, "parent");
   const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`;
+     WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai, ...loc.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_cha: results, total: totalRow?.cnt ?? 0 });
 });
@@ -91,34 +147,59 @@ interface XacNhanSoLuongBody {
   ly_do_chenh_lech_sl?: string;
 }
 
-// Tach don vi con - port dung submitSoLuongThucNhan().
-adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
-  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const id = c.req.param("id");
-  const s = await c.env.DB.prepare("SELECT so_luong_khai, trang_thai_cha FROM phieu_sua_chua_bh WHERE id = ?").bind(id).first<{ so_luong_khai: number; trang_thai_cha: string }>();
-  if (!s) return c.json({ error: "NOT_FOUND" }, 404);
-  if (s.trang_thai_cha !== "cho_xac_nhan_so_luong") return c.json({ error: "WRONG_STATE" }, 400);
-
-  const body = await c.req.json<XacNhanSoLuongBody>().catch(() => ({}) as XacNhanSoLuongBody);
+// Tach don vi con - port dung submitSoLuongThucNhan(). Dung chung cho don le + hang loat.
+async function xacNhanSoLuong(db: D1Database, id: string, body: XacNhanSoLuongBody, actor: string): Promise<{ error: string } | { ok: true; so_don_vi: number }> {
+  const s = await db.prepare("SELECT so_luong_khai, trang_thai_cha FROM phieu_sua_chua_bh WHERE id = ?").bind(id).first<{ so_luong_khai: number; trang_thai_cha: string }>();
+  if (!s) return { error: "NOT_FOUND" };
+  if (s.trang_thai_cha !== "cho_xac_nhan_so_luong") return { error: "WRONG_STATE" };
   const sltn = body.so_luong_thuc_nhan ?? 0;
-  if (!Number.isInteger(sltn) || sltn < 1) return c.json({ error: "INVALID_SO_LUONG" }, 400);
+  if (!Number.isInteger(sltn) || sltn < 1) return { error: "INVALID_SO_LUONG" };
   let lyDo = "";
   if (sltn !== s.so_luong_khai) {
-    if (!body.ly_do_chenh_lech_sl?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHENH_LECH" }, 400);
+    if (!body.ly_do_chenh_lech_sl?.trim()) return { error: "REQUIRE_LY_DO_CHENH_LECH" };
     lyDo = body.ly_do_chenh_lech_sl.trim();
   }
-
   const now = nowVN();
-  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET so_luong_thuc_nhan = ?, ly_do_chenh_lech_sl = ?, trang_thai_cha = 'da_tach' WHERE id = ?").bind(sltn, lyDo, id).run();
-  const statements = [];
+  const statements = [db.prepare("UPDATE phieu_sua_chua_bh SET so_luong_thuc_nhan = ?, ly_do_chenh_lech_sl = ?, trang_thai_cha = 'da_tach' WHERE id = ? AND trang_thai_cha = 'cho_xac_nhan_so_luong'").bind(sltn, lyDo, id)];
   for (let i = 1; i <= sltn; i++) {
-    statements.push(
-      c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct (id, parent_id, so_thu_tu, trang_thai, created_at, updated_at) VALUES (?, ?, ?, 'cho_phan_loai', ?, ?)").bind(`${id}-${i}`, id, i, now, now),
-    );
+    statements.push(db.prepare("INSERT INTO phieu_sua_chua_bh_ct (id, parent_id, so_thu_tu, trang_thai, created_at, updated_at) VALUES (?, ?, ?, 'cho_phan_loai', ?, ?)").bind(`${id}-${i}`, id, i, now, now));
   }
-  await c.env.DB.batch(statements);
-  await addLog(c.env.DB, "phieu_sc", id, "cho_xac_nhan_so_luong", "da_tach", c.get("user").email, `SL thuc nhan=${sltn}` + (lyDo ? ` | ly do lech: ${lyDo}` : ""));
-  return c.json({ ok: true, so_don_vi: sltn });
+  await db.batch(statements);
+  await addLog(db, "phieu_sc", id, "cho_xac_nhan_so_luong", "da_tach", actor, `SL thực nhận = ${sltn}` + (lyDo ? ` | Lý do lệch: ${lyDo}` : ""));
+  return { ok: true, so_don_vi: sltn };
+}
+
+adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<XacNhanSoLuongBody>().catch(() => ({}) as XacNhanSoLuongBody);
+  const r = await xacNhanSoLuong(c.env.DB, c.req.param("id"), body, c.get("user").email);
+  if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
+  return c.json(r);
+});
+
+// 09/10/2026: "Thieu chuc nang xu ly hang loat khi Admin bao hanh xac nhan sl linh kien thuc te, SL
+// thuc nhan hien = sl gui... don nao sai thi moi sua, con lai xac nhan 1 nut la duyet tat ca don".
+// Body {items:[{id, so_luong_thuc_nhan, ly_do_chenh_lech_sl?}]} - tung don xu ly doc lap, tra ve so
+// don thanh cong + danh sach loi (don loi khong chan cac don khac).
+adminBH.post("/don-cha/xac-nhan-so-luong-hang-loat", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ items?: (XacNhanSoLuongBody & { id?: string })[] }>().catch(() => ({}) as { items?: (XacNhanSoLuongBody & { id?: string })[] });
+  const items = (body.items || []).filter((x) => x && typeof x.id === "string");
+  if (items.length === 0) return c.json({ error: "EMPTY" }, 400);
+  if (items.length > 200) return c.json({ error: "TOO_MANY" }, 400);
+  const actor = c.get("user").email;
+  let ok = 0;
+  let soDonVi = 0;
+  const loi: { id: string; error: string }[] = [];
+  for (const it of items) {
+    const r = await xacNhanSoLuong(c.env.DB, it.id!, it, actor);
+    if ("error" in r) loi.push({ id: it.id!, error: r.error });
+    else {
+      ok++;
+      soDonVi += r.so_don_vi;
+    }
+  }
+  return c.json({ ok, so_don_vi: soDonVi, loi });
 });
 
 // ---------- 3. Bang thong nhat - don vi can xu ly ----------
@@ -129,10 +210,12 @@ adminBH.post("/don-cha/:id/xac-nhan-so-luong", async (c) => {
 adminBH.get("/don-vi", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   // them g.nguoi_tao AS ktv - xem comment o GET /don-cha o tren (cung ly do).
+  const loc = locBangThongNhat(c, "unit");
   const fromWhere = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
-       AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`;
+       AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
+  const B = loc.binds;
   const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
@@ -142,23 +225,39 @@ adminBH.get("/don-vi", async (c) => {
   if (c.req.query("group") === "1") {
     const { limit, offset } = parsePage(c, 20, 100);
     const [{ results: pids }, totalRow] = await Promise.all([
-      c.env.DB.prepare(`SELECT u.parent_id AS pid, MIN(u.updated_at) AS t ${fromWhere} GROUP BY u.parent_id ORDER BY t, u.parent_id LIMIT ? OFFSET ?`).bind(limit, offset).all<{ pid: string }>(),
-      c.env.DB.prepare(`SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units ${fromWhere}`).first<{ cnt: number; units: number }>(),
+      c.env.DB.prepare(`SELECT u.parent_id AS pid, MIN(u.updated_at) AS t ${fromWhere} GROUP BY u.parent_id ORDER BY t, u.parent_id LIMIT ? OFFSET ?`).bind(...B, limit, offset).all<{ pid: string }>(),
+      c.env.DB.prepare(`SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units ${fromWhere}`).bind(...B).first<{ cnt: number; units: number }>(),
     ]);
     if (pids.length === 0) return c.json({ don_vi: [], total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
     const ph = pids.map(() => "?").join(",");
     const { results } = await c.env.DB.prepare(`${selectCols} ${fromWhere} AND u.parent_id IN (${ph}) ORDER BY u.updated_at, u.id`)
-      .bind(...pids.map((r) => r.pid))
+      .bind(...B, ...pids.map((r) => r.pid))
       .all();
     return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
   }
 
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...B, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...B).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
+});
+
+// GET /don-vi/loc-options - gia tri cho cac o loc cua bang thong nhat: chi lay tu chinh hang doi dang
+// can xu ly (don cha cho SL + don vi), khong liet ke het 6.000 linh kien / 500 KTV.
+adminBH.get("/don-vi/loc-options", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const base = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_sua_chua_bh_ct u ON u.parent_id = p.id
+     WHERE (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)
+       AND (p.trang_thai_cha = 'cho_xac_nhan_so_luong' OR u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt'))`;
+  const [ktv, lk, lkTt, pl] = await Promise.all([
+    c.env.DB.prepare(`SELECT DISTINCT COALESCE(g.nguoi_tao, '${KHACH_LE_KEY}') AS v ${base}`).all<{ v: string }>(),
+    c.env.DB.prepare(`SELECT DISTINCT p.ma_lk AS v ${base} AND p.ma_lk IS NOT NULL`).all<{ v: string }>(),
+    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.ma_lk_thuc_te, p.ma_lk) AS v ${base} AND COALESCE(u.ma_lk_thuc_te, p.ma_lk) IS NOT NULL`).all<{ v: string }>(),
+    c.env.DB.prepare(`SELECT DISTINCT TRIM(COALESCE(l.don_vi,'')) AS v ${base.replace("WHERE", "LEFT JOIN linh_kien_bh l ON l.ma_lk = COALESCE(u.ma_lk_thuc_te, p.ma_lk) WHERE")}`).all<{ v: string }>(),
+  ]);
+  return c.json({ ktv: ktv.results.map((r) => r.v), lk: lk.results.map((r) => r.v), lk_tt: lkTt.results.map((r) => r.v), phan_loai: pl.results.map((r) => r.v) });
 });
 
 // Chi tiet 1 don vi (dung cho modal chi tiet + 4 khoi log rieng biet).
@@ -271,10 +370,10 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     unit.trang_thai,
     trangThaiMoi,
     actor,
-    `Admin BH phan loai: ${body.loai_bao_hanh} / ${body.huong_xu_ly} / doi_tru=${body.loai_doi_tru}` +
-      (body.huong_xu_ly === "tu_choi" ? ` | Ly do huy: ${body.ly_do_tu_choi}` : "") +
-      (body.huong_xu_ly === "doi_moi" ? ` | Xu ly xac: ${body.xu_ly_xac}` : "") +
-      (body.ly_do_cham ? ` | Ly do cham: ${body.ly_do_cham}` : ""),
+    `Admin BH phân loại: ${LBL[body.loai_bao_hanh] || body.loai_bao_hanh} / ${LBL[body.huong_xu_ly] || body.huong_xu_ly} / Đối trừ: ${LBL[body.loai_doi_tru] || body.loai_doi_tru}` +
+      (body.huong_xu_ly === "tu_choi" ? ` | Lý do huỷ: ${body.ly_do_tu_choi}` : "") +
+      (body.huong_xu_ly === "doi_moi" ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
+      (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""),
   );
   return { ok: true };
 }
@@ -340,7 +439,7 @@ adminBH.post("/don-cha/:id/yeu-cau-bo-sung", async (c) => {
   const now = nowVN();
   const statements = children.map((ch) => c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_bo_sung_tt', ly_do_bo_sung = ?, updated_at = ? WHERE id = ?").bind(lyDoBoSung, now, ch.id));
   await c.env.DB.batch(statements);
-  for (const ch of children) await addLog(c.env.DB, "phieu_sc_ct", ch.id, "cho_phan_loai", "cho_bo_sung_tt", user.email, lyDoBoSung);
+  for (const ch of children) await addLog(c.env.DB, "phieu_sc_ct", ch.id, "cho_phan_loai", "cho_bo_sung_tt", user.email, "Admin BH yêu cầu bổ sung: " + (LBL[body.ly_do] || body.ly_do) + (body.ghi_chu?.trim() ? " — " + body.ghi_chu.trim() : ""));
   return c.json({ ok: true, so_don_vi: children.length });
 });
 
@@ -399,7 +498,7 @@ adminBH.post("/don-vi/:id/xac-nhan-hoan-tat", async (c) => {
     "cho_admin_xac_nhan",
     "san_sang_gom_phieu_tra",
     user.email,
-    "Admin BH xac nhan hoan tat" + (body.xu_ly_xac ? ` + xac nhan tra xac: ${body.xu_ly_xac}` : "") + (body.ly_do_cham ? ` | Ly do cham: ${body.ly_do_cham}` : ""),
+    "Admin BH xác nhận hoàn tất" + (body.xu_ly_xac ? ` + xử lý xác: ${LBL[body.xu_ly_xac] || body.xu_ly_xac}` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""),
   );
   return c.json({ ok: true });
 });
@@ -418,7 +517,7 @@ adminBH.post("/don-vi/:id/yeu-cau-lam-lai", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_chan_doan', so_lan_yeu_cau_lam_lai = ?, ly_do_yeu_cau_lam_lai = ?, updated_at = ? WHERE id = ?")
     .bind((u.so_lan_yeu_cau_lam_lai || 0) + 1, body.ly_do.trim(), nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_admin_xac_nhan", "cho_chan_doan", user.email, "Admin BH yeu cau lam lai: " + body.ly_do.trim() + (body.ly_do_cham ? ` | Ly do cham: ${body.ly_do_cham}` : ""));
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_admin_xac_nhan", "cho_chan_doan", user.email, "Admin BH yêu cầu làm lại: " + body.ly_do.trim() + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
   return c.json({ ok: true });
 });
 
@@ -465,7 +564,7 @@ adminBH.post("/don-dich-vu", async (c) => {
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
   }
-  await addLog(c.env.DB, "phieu_sc", id, null, "da_tach", user.email, "Admin BH tao don dich vu tinh phi (khach le)");
+  await addLog(c.env.DB, "phieu_sc", id, null, "da_tach", user.email, "Admin BH tạo đơn dịch vụ tính phí (khách lẻ)");
   return c.json({ id }, 201);
 });
 
@@ -488,7 +587,7 @@ const FAST_ACTIONS: FastActionMeta[] = [
   { key: "bo_sung_tt", label: "Bổ sung thông tin", special: "bo_sung_tt" },
   { key: "tu_choi_fast", label: "Từ chối", huong: "tu_choi", loaiBH: "trong_bh" },
   { key: "bao_cao_sai", label: "KTV báo cáo sai thông tin", special: "bao_cao_sai" },
-  { key: "huy_khong_co_hang", label: "Huỷ do không có hàng", huong: "tu_choi", loaiBH: "trong_bh", lyDoTuChoi: "Khong co hang" },
+  { key: "huy_khong_co_hang", label: "Huỷ do không có hàng", huong: "tu_choi", loaiBH: "trong_bh", lyDoTuChoi: "Không có hàng" },
   { key: "doi_moi_pd", label: "Đổi mới có phê duyệt", huong: "doi_moi", loaiBH: "ngoai_bh" },
   { key: "tru_no_pd", label: "Trừ công nợ có phê duyệt", huong: "xac_nhan_tru_no", loaiBH: "ngoai_bh", loaiDoiTru: "tru_cong_no" },
   { key: "sua_chua_pd", label: "Sửa chữa có phê duyệt", huong: "sua_chua", loaiBH: "ngoai_bh" },
@@ -517,14 +616,14 @@ async function attachToOrCreatePhieuTra(db: D1Database, unitId: string, ktvKey: 
   const existing = await db.prepare("SELECT id FROM phieu_tra_bh WHERE trang_thai = 'nhap' AND ktv_nhan = ? AND loai_doi_tru = ?").bind(ktvKey, loaiDoiTru).first<{ id: string }>();
   if (existing) {
     await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(existing.id, unitId).run();
-    await addLog(db, "phieu_tra", existing.id, "nhap", "nhap", actor, `Gop them don vi ${unitId} vao phieu (tu nut thao tac nhanh)`);
+    await addLog(db, "phieu_tra", existing.id, "nhap", "nhap", actor, `Gộp thêm đơn vị ${unitId} vào phiếu (từ nút thao tác nhanh)`);
     return existing.id;
   }
   const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
   const now = nowVN();
   await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?)").bind(id, ktvKey, actor, loaiDoiTru, now, now).run();
   await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
-  await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tao phieu tra moi (${loaiDoiTru}) tu nut thao tac nhanh`);
+  await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loaiDoiTru] || loaiDoiTru}) từ nút thao tác nhanh`);
   return id;
 }
 

@@ -4,6 +4,7 @@ import { fmtDate } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Btn, Textarea } from "../../ui/primitives";
 import type { GhiChuLog } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // Khu vuc "Ghi chu / phan hoi" dung chung KTV/Kho/Admin BH tren 1 phieu gui - dang nhat ky nhieu dong
 // (port dung "Phan hoi vong 1 muc #5" + "vong 3 muc 3": bao su co cua Kho cung gop vao day).
@@ -42,7 +43,7 @@ export function GhiChuLogPanel({ guiId }: { guiId: string }) {
           <div key={l.id} className={`text-xs rounded-lg px-3 py-2 ${l.noi_dung.startsWith("⚠") ? "bg-[var(--red-100)] text-[var(--red-700)]" : "bg-[var(--surface-2)] text-[var(--ink-body)]"}`}>
             <p className="whitespace-pre-wrap">{l.noi_dung}</p>
             <p className="mt-1 text-[10px] text-[var(--ink-faint)] font-mono">
-              {l.tac_gia} · {fmtDate(l.thoi_gian)}
+              <UserName email={l.tac_gia} /> · {fmtDate(l.thoi_gian)}
             </p>
           </div>
         ))}

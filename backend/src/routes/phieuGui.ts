@@ -133,7 +133,7 @@ phieuGui.post("/", async (c) => {
   )
     .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui || "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tao phieu moi (tao ho cho KTV ${target})` : "Tao phieu moi");
+  await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tạo phiếu mới (tạo hộ cho KTV ${target})` : "Tạo phiếu mới");
 
   // KHONG day khovan ngay luc nay nua (07/09/2026, phan hoi "dang tao ra 1 dong phieu nhap thua") -
   // phieu "nhap" moi tao co the bi bo do/tu dong xoa (xem DELETE /:id va frontend auto-cleanup o
@@ -210,7 +210,7 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_gui', ngay_gui_xe = ?, updated_at = ? WHERE id = ?")
     .bind(body.ngay_gui_xe || nowVN().slice(0, 10), nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_gui", id, "nhap", "da_gui", user.email, "Xac nhan da gui xe");
+  await addLog(c.env.DB, "phieu_gui", id, "nhap", "da_gui", user.email, "Xác nhận đã gửi xe");
 
   const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ten_hien_thi: string | null }>();
   await pushBoxToKhovan(c.env, id, ktvInfo?.ten_hien_thi || g.nguoi_tao, g.nguoi_tao);
@@ -302,7 +302,7 @@ phieuGui.post("/:id/don", async (c) => {
     .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview.ky_thuat_vien ?? null, nowVN())
     .run();
   if (xacNhanKhac) {
-    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xac nhan tao don cho KTV ${g.nguoi_tao} du case thuoc nguoi khac (KTV tren case: ${casePreview.ky_thuat_vien || "khong xac dinh"})`);
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview.ky_thuat_vien || "không xác định"})`);
   }
   // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
   // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai
@@ -379,7 +379,7 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
       .run();
     created.push(id);
   }
-  if (created.length > 0) await addLog(c.env.DB, "phieu_gui", guiId, "nhap", "nhap", user.email, `Them ${created.length} don tu Odoo: ${ok.map((r) => r.ma_don || r.odoo_id).join(", ")}`);
+  if (created.length > 0) await addLog(c.env.DB, "phieu_gui", guiId, "nhap", "nhap", user.email, `Thêm ${created.length} đơn từ Odoo: ${ok.map((r) => r.ma_don || r.odoo_id).join(", ")}`);
   return c.json({ created, loi }, created.length > 0 ? 201 : 400);
 });
 
@@ -485,7 +485,7 @@ phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
   if (body.mo_ta_loi !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET mo_ta_loi = ? WHERE id = ?").bind(body.mo_ta_loi.trim(), u.parent_id).run();
   if (body.ma_lk !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET ma_lk = ? WHERE id = ?").bind(body.ma_lk, u.parent_id).run();
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_phan_loai', updated_at = ? WHERE id = ?").bind(now, id).run();
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, "KTV da bo sung thong tin");
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, "KTV đã bổ sung thông tin");
   return c.json({ ok: true });
 });
 

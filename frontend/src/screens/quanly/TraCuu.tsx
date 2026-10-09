@@ -10,6 +10,7 @@ import { useLkName } from "../../hooks/useLinhKien";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser, DonVi } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // "Tra cuu moi don hang trong pham vi" (Giam sat/View) - THUAN CHI XEM. Phan trang that.
 // Phat hien 12 vong ra soat UX: nhan ?trang_thai= tu man Tong quan (bam 1 o dem) -> loc san + hien
@@ -38,7 +39,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="unit" value={r.trang_thai} /> },
-    { key: "ktv", header: "KTV / Nguồn", render: (r) => (r.ktv && r.ktv !== KHACH_LE_KEY ? r.ktv : <Badge tone="violet">Khách lẻ</Badge>) },
+    { key: "ktv", header: "KTV / Nguồn", render: (r) => (r.ktv && r.ktv !== KHACH_LE_KEY ? <UserName email={r.ktv} /> : <Badge tone="violet">Khách lẻ</Badge>) },
     { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk) },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },

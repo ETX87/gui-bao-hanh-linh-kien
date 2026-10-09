@@ -14,6 +14,7 @@ import { OdooDonPickerModal } from "./OdooDonPicker";
 import { QrCode } from "../../ui/QrCode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, PhieuGui } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -145,7 +146,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
             <div className="flex-1 min-w-0 space-y-3">
               {g.nguoi_tao_ho ? (
                 <p className="text-xs text-[var(--ink-soft)]">
-                  Được tạo hộ bởi <span className="font-semibold text-[var(--ink-body)]">{g.nguoi_tao_ho}</span> cho KTV <span className="font-semibold text-[var(--ink-body)]">{g.nguoi_tao}</span>
+                  Được tạo hộ bởi <UserName email={g.nguoi_tao_ho} className="font-semibold text-[var(--ink-body)]" /> cho KTV <UserName email={g.nguoi_tao} className="font-semibold text-[var(--ink-body)]" />
                 </p>
               ) : (
                 null

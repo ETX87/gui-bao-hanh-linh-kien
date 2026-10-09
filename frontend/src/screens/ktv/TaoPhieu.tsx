@@ -13,6 +13,7 @@ import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PickKtvModal } from "./PickKtvModal";
 import { OdooDonList, useOdooChoGui, useSelection, KhongGuiModal, OdooHuyList, OdooDaGuiList } from "./OdooDonPicker";
 import type { AppUser, OdooDon, PhieuGui } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
 // tao phieu nhap moi, mo chi tiet de them don/xac nhan gui. Phan trang that (server LIMIT/OFFSET, xem
@@ -87,7 +88,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   const cols: Column<PhieuGui>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="gui" value={r.trang_thai} /> },
-    ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <span className="text-xs">{r.nguoi_tao}</span> } as Column<PhieuGui>] : []),
+    ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <UserName email={r.nguoi_tao} className="text-xs" /> } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },
     { key: "hinhthuc", header: "Hình thức gửi", render: (r) => (r.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[r.hinh_thuc_gui] || r.hinh_thuc_gui : "—") },
     { key: "sucos", header: "Sự cố", render: (r) => (r.su_co_tiep_nhan ? <Badge tone="red">⚠ Có</Badge> : "—") },

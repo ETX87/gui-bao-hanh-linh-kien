@@ -10,6 +10,8 @@ import { AdminUnifiedTable } from "./AdminUnifiedTable";
 import { XacNhanSoLuongModal } from "./XacNhanSoLuongModal";
 import { DonDichVuModal } from "./DonDichVuModal";
 import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
+import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
+import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
 import { FastActionsModal } from "../shared/FastActionsModal";
@@ -17,6 +19,7 @@ import { YeuCauBoSungModal } from "../shared/YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
 import { OdooImportExportModal } from "../shared/OdooImportExportModal";
 import type { AppUser, DonCha, DonVi, PhieuGui } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
 // 1) Thung cho xac nhan tiep nhan noi bo tu Kho, 2) Bang thong nhat GOP ca don cha (cho xac nhan SL)
@@ -31,6 +34,10 @@ import type { AppUser, DonCha, DonVi, PhieuGui } from "../../lib/types";
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [odooImportOpen, setOdooImportOpen] = useState(false);
+  const [filter, setFilter] = useState<AdminFilter>(EMPTY_FILTER);
+  const qs = filterQuery(filter);
+  const [optsKey, setOptsKey] = useState(0);
+  const [bulkSlOpen, setBulkSlOpen] = useState(false);
   const toast = useToast();
   const { refresh } = useWorkload();
   const {
@@ -49,7 +56,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     pageCount: donChaPageCount,
     setPage: setDonChaPage,
     reload: reloadDonCha,
-  } = usePagedApi<DonCha>("/admin/don-cha", "don_cha");
+  } = usePagedApi<DonCha>(`/admin/don-cha${qs ? "?" + qs : ""}`, "don_cha");
   const {
     items: donVi,
     total: donViTotal,
@@ -59,12 +66,12 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     loading: loadingDonVi,
     reload: reloadDonVi,
     raw: donViRaw,
-  } = usePagedApi<DonVi>("/admin/don-vi?group=1", "don_vi");
+  } = usePagedApi<DonVi>(`/admin/don-vi?group=1${qs ? "&" + qs : ""}`, "don_vi");
   const donViUnits = (donViRaw.total_don_vi as number) ?? 0;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFastOpen, setBulkFastOpen] = useState(false);
   // Chon hang loat chi trong trang dang xem (doi trang -> bo chon, tranh ap nham don khong nhin thay).
-  useEffect(() => setSelected(new Set()), [donViPage]);
+  useEffect(() => setSelected(new Set()), [donViPage, qs]);
   const selectedUnits = donVi.filter((u) => selected.has(u.id));
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
@@ -80,6 +87,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     reloadPhieuGui();
     reloadDonCha();
     reloadDonVi();
+    setOptsKey((k) => k + 1);
     refresh();
   };
 
@@ -93,6 +101,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     }
   };
 
+  const toggleAll = (ids: string[], checked: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+      return next;
+    });
+
   const toggleSelect = (id: string, checked: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -102,7 +117,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     });
   };
 
-  if ((loadingPhieuGui && phieuGui.length === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0)) return <Spinner />;
+  if ((loadingPhieuGui && phieuGui.length === 0 && phieuGuiTotal === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0 && !qs)) return <Spinner />;
 
   return (
     <div className="space-y-6">
@@ -112,15 +127,15 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           <div className="space-y-2">
             {phieuGui.map((g) => (
               <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
+                <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)} className="shrink-0 self-start sm:self-auto">
+                  Xác nhận đã nhận
+                </Btn>
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
-                  <span className="text-sm text-[var(--ink-body)] truncate">{g.nguoi_tao}</span>
+                  <UserName email={g.nguoi_tao} className="text-sm text-[var(--ink-body)] truncate" />
                   {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                   <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
                 </div>
-                <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)} className="shrink-0">
-                  Xác nhận đã nhận
-                </Btn>
               </div>
             ))}
           </div>
@@ -144,6 +159,11 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
                 </Btn>
               </>
             )}
+            {donChaTotal > 0 && (
+              <Btn variant="primary" onClick={() => setBulkSlOpen(true)} title="SL thực nhận điền sẵn = SL KTV khai, chỉ sửa đơn sai rồi xác nhận 1 lần">
+                ✔ Xác nhận SL hàng loạt ({donChaTotal})
+              </Btn>
+            )}
             <Btn onClick={() => setOdooImportOpen(true)} title="File ID / Trạng thái / Ngày hoàn thành / Ghi chú để import ngược về Odoo">
               📤 File import Odoo
             </Btn>
@@ -152,11 +172,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
             </Btn>
           </div>
         </div>
+        <AdminFilterBar value={filter} onChange={setFilter} reloadKey={optsKey} />
         <AdminUnifiedTable
           parents={donCha}
           units={donVi}
           selected={selected}
           onToggleSelect={toggleSelect}
+          onToggleAll={toggleAll}
           onOpenXacNhanSl={(p) => setXacNhanSlFor(p)}
           onOpenDetail={(id) => setDetailId(id)}
           onOpenPhanLoai={(u) => setPhanLoaiFor(u)}
@@ -184,6 +206,16 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onClose={() => setXacNhanSlFor(null)}
           onDone={() => {
             setXacNhanSlFor(null);
+            afterChange();
+          }}
+        />
+      )}
+      {bulkSlOpen && (
+        <BulkXacNhanSoLuongModal
+          query={qs}
+          onClose={() => setBulkSlOpen(false)}
+          onDone={() => {
+            setBulkSlOpen(false);
             afterChange();
           }}
         />

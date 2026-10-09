@@ -5,6 +5,7 @@ import { Modal } from "../../ui/Modal";
 import { Btn } from "../../ui/primitives";
 import { useSlaGate, LyDoChamGateField } from "../shared/LyDoChamGateField";
 import type { PhieuGui } from "../../lib/types";
+import { UserName } from "../../hooks/useUserNames";
 
 export function TiepNhanModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
@@ -40,7 +41,7 @@ export function TiepNhanModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose
       }
     >
       <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
-      {!overdue && <p className="text-sm text-[var(--ink-soft)]">Xác nhận đã nhận thùng hàng từ KTV <b>{gui.nguoi_tao}</b>?</p>}
+      {!overdue && <p className="text-sm text-[var(--ink-soft)]">Xác nhận đã nhận thùng hàng từ KTV <b><UserName email={gui.nguoi_tao} /></b>?</p>}
     </Modal>
   );
 }

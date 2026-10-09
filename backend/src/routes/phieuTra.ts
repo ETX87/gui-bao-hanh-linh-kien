@@ -6,7 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
-import { KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
+import { LBL, KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 
@@ -32,7 +32,7 @@ async function createPhieuTraForUnits(db: D1Database, ktvKey: string, loai: Loai
   await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?)").bind(id, ktvKey, actor, loai, now, now).run();
   const statements = unitIds.map((uid) => db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, uid));
   await db.batch(statements);
-  await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tao phieu tra moi (${loai}) voi ${unitIds.length} dong`);
+  await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loai] || loai}) với ${unitIds.length} dòng`);
   return id;
 }
 
@@ -101,7 +101,7 @@ phieuTra.post("/tu-dong-gom", async (c) => {
       .first<{ id: string }>();
     if (existing) {
       for (const uid of ids) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(existing.id, uid).run();
-      await addLog(c.env.DB, "phieu_tra", existing.id, "nhap", "nhap", user.email, `Tu dong gop them ${ids.length} don vi: ${ids.join(", ")}`);
+      await addLog(c.env.DB, "phieu_tra", existing.id, "nhap", "nhap", user.email, `Tự động gộp thêm ${ids.length} đơn vị: ${ids.join(", ")}`);
       merged.push(existing.id);
       continue;
     }
@@ -199,7 +199,7 @@ phieuTra.post("/:id/gui-duyet", async (c) => {
   if (t.trang_thai !== "nhap") return c.json({ error: "WRONG_STATE" }, 400);
   if (t.loai_doi_tru !== "tru_cong_no" && !t.ma_misa?.trim()) return c.json({ error: "REQUIRE_MA_MISA" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'cho_ke_toan_duyet', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "nhap", "cho_ke_toan_duyet", user.email, "Gui duyet ke toan");
+  await addLog(c.env.DB, "phieu_tra", id, "nhap", "cho_ke_toan_duyet", user.email, "Gửi duyệt kế toán");
   return c.json({ ok: true });
 });
 
@@ -212,7 +212,7 @@ phieuTra.post("/:id/huy-gui-duyet", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "cho_ke_toan_duyet") return c.json({ error: "WRONG_STATE" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Huy gui duyet ke toan");
+  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Huỷ gửi duyệt kế toán");
   return c.json({ ok: true });
 });
 
@@ -241,7 +241,7 @@ phieuTra.post("/nhanh/:unitId", async (c) => {
     .run();
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
   const nhan = body.mode === "ktv" ? "Tra truc tiep cho KTV" : "Admin giao truc tiep cho Kho";
-  await addLog(c.env.DB, "phieu_tra", id, null, targetState, user.email, `${nhan} — tao nhanh tu don vi ${unitId}`);
+  await addLog(c.env.DB, "phieu_tra", id, null, targetState, user.email, `${nhan} — tạo nhanh từ đơn vị ${unitId}`);
   return c.json({ id }, 201);
 });
 
@@ -264,7 +264,7 @@ phieuTra.post("/:id/duyet", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "cho_ke_toan_duyet") return c.json({ error: "WRONG_STATE" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_duyet_ke_toan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "da_duyet_ke_toan", user.email, "Ke toan duyet");
+  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "da_duyet_ke_toan", user.email, "Kế toán duyệt");
 
   const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.ktv_nhan).first<{ ten_hien_thi: string | null }>();
   const senderLabel = `Kho SC-BH (trả cho KTV ${ktvInfo?.ten_hien_thi || t.ktv_nhan})`;
@@ -283,7 +283,7 @@ phieuTra.post("/:id/tu-choi", async (c) => {
   const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_tu_choi_kt = ?, updated_at = ? WHERE id = ?").bind(body.ly_do.trim(), nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Ke toan tu choi: " + body.ly_do.trim());
+  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Kế toán từ chối: " + body.ly_do.trim());
   return c.json({ ok: true });
 });
 
@@ -318,7 +318,7 @@ phieuTra.post("/:id/gui", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_gui', ma_van_don = COALESCE(?, ma_van_don), updated_at = ? WHERE id = ?")
     .bind(body.ma_van_don ?? null, nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "da_gui", user.email, "Kho gui hang");
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "da_gui", user.email, "Kho gửi hàng");
   return c.json({ ok: true });
 });
 
@@ -338,7 +338,7 @@ phieuTra.post("/:id/ket-thuc-khong-gui", async (c) => {
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ket_thuc_khong_gui', updated_at = ? WHERE id = ?")
     .bind(nowVN(), id)
     .run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", user.email, "Kho xac nhan ket thuc, khong gui hang" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "ket_thuc_khong_gui", user.email, "Kho xác nhận kết thúc, không gửi hàng" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""));
   return c.json({ ok: true });
 });
 
@@ -351,7 +351,7 @@ phieuTra.post("/:id/kho-xac-nhan-ket-thuc", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ktv_da_nhan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", user.email, "Kho xac nhan thay, du phong (KTV bao da nhan qua kenh khac)");
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", user.email, "Kho xác nhận thay, dự phòng (KTV báo đã nhận qua kênh khác)");
   return c.json({ ok: true });
 });
 
@@ -366,7 +366,7 @@ phieuTra.post("/:id/ktv-xac-nhan-nhan", async (c) => {
   if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
   const body = await c.req.json<{ danh_gia?: string }>().catch(() => ({}) as { danh_gia?: string });
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ktv_da_nhan', danh_gia_ktv = ?, updated_at = ? WHERE id = ?").bind(body.danh_gia?.trim() || "", nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", user.email, "KTV xac nhan da nhan hang");
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", user.email, "KTV xác nhận đã nhận hàng");
   return c.json({ ok: true });
 });
 
@@ -380,7 +380,7 @@ phieuTra.post("/:id/khieu-nai", async (c) => {
   const body = await c.req.json<{ ghi_chu?: string }>().catch(() => ({}) as { ghi_chu?: string });
   if (!body.ghi_chu?.trim()) return c.json({ error: "MISSING_GHI_CHU" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'khieu_nai_van_chuyen', khong_nhan_duoc_ghi_chu = ?, updated_at = ? WHERE id = ?").bind(body.ghi_chu.trim(), nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "khieu_nai_van_chuyen", user.email, "KTV mo khieu nai van chuyen: " + body.ghi_chu.trim());
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "khieu_nai_van_chuyen", user.email, "KTV mở khiếu nại vận chuyển: " + body.ghi_chu.trim());
   return c.json({ ok: true });
 });
 
