@@ -57,7 +57,7 @@ export function OdooDonList({
   const allOn = don.length > 0 && don.every((d) => selected.has(d.odoo_id));
   const pg = useClientPage(don);
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <label className="flex items-center gap-2 px-1 text-xs font-semibold text-[var(--ink-soft)]">
         <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={allOn} onChange={onToggleAll} />
         Chọn tất cả ({don.length}){selected.size > 0 ? ` — đã chọn ${selected.size}` : ""}
@@ -65,7 +65,7 @@ export function OdooDonList({
       {pg.pageItems.map((d) => (
         <label
           key={d.odoo_id}
-          className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+          className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-2.5 py-1 transition-colors ${
             selected.has(d.odoo_id) ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--line)] hover:border-[var(--line-strong)]"
           }`}
         >
@@ -76,10 +76,12 @@ export function OdooDonList({
               <span className="font-mono text-xs text-[var(--ink-soft)]">{d.case_id}</span>
               <Badge tone={d.trang_thai === "repairing" ? "blue" : "amber"}>{ODOO_TT_LABELS[d.trang_thai || ""] || d.trang_thai}</Badge>
               <span className="text-xs text-[var(--ink-soft)]">SL {d.so_luong ?? 1}</span>
+              <span className="min-w-0 truncate text-[13px] font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
             </span>
-            <span className="mt-0.5 block text-sm font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
-            {(d.tinh_trang_loi || d.ghi_chu) && <span className="block text-xs text-[var(--ink-soft)]">{[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ")}</span>}
-            {d.ngay_tao && <span className="block text-[11px] text-[var(--ink-faint)]">Tạo trên Odoo {fmtDate(d.ngay_tao)}</span>}
+            <span className="block truncate text-xs text-[var(--ink-soft)]" title={[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ")}>
+              {[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ") || "—"}
+              {d.ngay_tao && <span className="text-[11px] text-[var(--ink-faint)]"> · Tạo trên Odoo {fmtDate(d.ngay_tao)}</span>}
+            </span>
           </span>
           {onKhongGui && (
             <Btn
@@ -152,10 +154,10 @@ export function OdooDonPickerModal({ guiId, ktvEmail, onClose, onDone }: { guiId
         </>
       }
     >
-      <p className="mb-3 text-xs text-[var(--ink-soft)]">
+      <p className="mb-2 text-xs text-[var(--ink-soft)]">
         Đơn bảo hành đã tạo trên Odoo, thuộc KTV <b className="text-[var(--ink-body)]">{ktvEmail}</b>, chưa đưa vào thùng nào. Mã ca, linh kiện, số lượng và mô tả lỗi được điền sẵn.
       </p>
-      {err && <p className="mb-3 rounded-lg bg-[var(--red-100)] px-3 py-2 text-xs font-semibold text-[var(--red-700)]">{err}</p>}
+      {err && <p className="mb-2 rounded-lg bg-[var(--red-100)] px-3 py-2 text-xs font-semibold text-[var(--red-700)]">{err}</p>}
       {don === null ? (
         <Spinner />
       ) : error ? (
@@ -260,17 +262,17 @@ export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; 
     }
   };
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {pg.pageItems.map((d) => (
-        <div key={d.odoo_id} className="flex flex-col gap-2 rounded-lg border border-dashed border-[var(--line-strong)] bg-[var(--surface-2)] px-3 py-2.5 sm:flex-row sm:items-center">
+        <div key={d.odoo_id} className="flex flex-col gap-2 rounded-lg border border-dashed border-[var(--line-strong)] bg-[var(--surface-2)] px-2.5 py-1 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="font-mono text-xs font-semibold text-[var(--ink-soft)] line-through">{d.ma_don ?? "#" + d.odoo_id}</span>
               <span className="font-mono text-xs text-[var(--ink-faint)]">{d.case_id}</span>
               <Badge tone="red">Đã hủy</Badge>
+              <span className="min-w-0 truncate text-[13px] text-[var(--ink-soft)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
             </div>
-            <div className="text-sm text-[var(--ink-soft)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</div>
-            <div className="text-[11px] text-[var(--ink-faint)]">
+            <div className="truncate text-[11px] text-[var(--ink-faint)]">
               {[d.khong_gui_ly_do, d.khong_gui_boi ? displayName(d.khong_gui_boi) : null, d.khong_gui_luc ? fmtDate(d.khong_gui_luc) : null].filter(Boolean).join(" · ")}
             </div>
           </div>
@@ -347,7 +349,7 @@ export function OdooDaGuiList({ ktvEmail, reloadKey, onOpenPhieu }: { ktvEmail?:
   if (pg.loading && pg.items.length === 0) return <Spinner />;
   if (pg.items.length === 0) return <p className="text-sm text-[var(--ink-faint)]">Chưa có đơn Odoo nào được đưa vào thùng.</p>;
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {pg.items.map((d) => {
         const st = TIEN_DO[tienDo(d)] ?? { label: tienDo(d), tone: "gray" as const };
         return (
@@ -355,7 +357,7 @@ export function OdooDaGuiList({ ktvEmail, reloadKey, onOpenPhieu }: { ktvEmail?:
             type="button"
             key={d.odoo_id}
             onClick={() => onOpenPhieu(d.phieu_gui_id)}
-            className="focus-ring flex w-full items-start gap-3 rounded-lg border border-[var(--line)] px-3 py-2.5 text-left transition-colors hover:border-[var(--brand-300)] hover:bg-[var(--accent-soft)]"
+            className="focus-ring flex w-full items-start gap-2.5 rounded-lg border border-[var(--line)] px-2.5 py-1 text-left transition-colors hover:border-[var(--brand-300)] hover:bg-[var(--accent-soft)]"
           >
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -363,9 +365,9 @@ export function OdooDaGuiList({ ktvEmail, reloadKey, onOpenPhieu }: { ktvEmail?:
                 <span className="font-mono text-xs text-[var(--ink-soft)]">{d.case_id}</span>
                 <Badge tone={st.tone}>{st.label}</Badge>
                 {d.last_detail && <span className="text-xs text-[var(--ink-soft)]">{d.last_detail}</span>}
+                <span className="min-w-0 truncate text-[13px] font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
               </span>
-              <span className="mt-0.5 block text-sm font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
-              <span className="block text-[11px] text-[var(--ink-faint)]">
+              <span className="block truncate text-[11px] text-[var(--ink-faint)]">
                 Thùng <b className="font-mono">{d.phieu_gui_id}</b> · đơn {d.don_cha_id}
                 {d.gan_luc ? ` · đưa vào thùng ${fmtDate(d.gan_luc)}` : ""}
               </span>

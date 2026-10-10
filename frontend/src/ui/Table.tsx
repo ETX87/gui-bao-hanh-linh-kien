@@ -68,11 +68,11 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
     // cach "Mo ta loi" ~600px trong, kho ra 1 dong. Nay them 1 cot dem cuoi (w-full) hut het khoang
     // du - cac cot that xit nhau canh trai, ma header/vien van kin ca chieu rong the.
     <div className="overflow-x-auto rounded-xl border border-[var(--line)] scrollbar-thin">
-      <table className="w-full text-sm whitespace-nowrap">
+      <table className="tbl w-full whitespace-nowrap">
         <thead>
           <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
             {ordered.map((c) => (
-              <th key={c.key} className={`text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs ${c.className || ""}`}>
+              <th key={c.key} className={`text-left font-semibold text-[var(--ink-soft)] ${c.className || ""}`}>
                 {c.header || (c === first ? "" : "Thao tác")}
               </th>
             ))}
@@ -87,7 +87,7 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
               className={`border-b border-[var(--line)] last:border-0 ${onRowClick ? "cursor-pointer hover:bg-[var(--accent-soft)]" : ""} transition-colors`}
             >
               {ordered.map((c) => (
-                <td key={c.key} className={`px-3 py-2 align-middle text-[var(--ink-body)] ${c.className || ""}`}>
+                <td key={c.key} className={`text-[var(--ink-body)] ${c.className || ""}`}>
                   {c.render(row)}
                 </td>
               ))}

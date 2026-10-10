@@ -95,14 +95,14 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
     {isSelfKtv && odoo.don && (odoo.don.length > 0 || odoo.khongGui.length > 0 || odoo.soDaGui > 0) && (
-      <Card className="p-5">
-        <div className="mb-3">
-          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🧾 Đơn bảo hành Odoo</h3>
-          <p className="text-xs text-[var(--ink-soft)]">Đơn tạo trên Odoo thuộc bạn phụ trách — chọn đơn chưa gửi để tạo thùng, mã ca / linh kiện / số lượng được điền sẵn.</p>
-        </div>
-        <div className="mb-3 flex gap-1 rounded-xl bg-[var(--surface-2)] p-1" role="tablist">
+      <Card className="p-3">
+        <div className="mb-2 flex flex-col md:flex-row md:items-center gap-2">
+          <h3 className="shrink-0 text-[15px] lg:text-sm font-bold text-[var(--ink)]" title="Đơn tạo trên Odoo thuộc bạn phụ trách — chọn đơn chưa gửi để tạo thùng, mã ca / linh kiện / số lượng được điền sẵn.">
+            🧾 Đơn bảo hành Odoo
+          </h3>
+        <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:w-[380px]" role="tablist">
           {(
             [
               ["chua_gui", "Chưa gửi", odoo.don.length],
@@ -116,7 +116,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
               role="tab"
               aria-selected={odooTab === k}
               onClick={() => setOdooTab(k)}
-              className={`focus-ring min-w-0 flex-1 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition-colors sm:px-3 sm:text-sm ${
+              className={`focus-ring min-w-0 flex-1 whitespace-nowrap rounded-lg px-1.5 py-2 md:py-1 text-[13px] font-semibold transition-colors sm:px-3 ${
                 odooTab === k ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-card" : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
               }`}
             >
@@ -125,17 +125,18 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
             </button>
           ))}
         </div>
+          {odooTab === "chua_gui" && odoo.don.length > 0 && (
+            <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto md:ml-auto">
+              Tạo thùng với {sel.selected.size || ""} đơn đã chọn
+            </Btn>
+          )}
+        </div>
         {odooTab === "chua_gui" && (
           <>
             {odoo.don.length === 0 ? (
               <p className="text-sm text-[var(--ink-faint)]">Không còn đơn Odoo nào chưa gửi.</p>
             ) : (
               <>
-                <div className="mb-3 flex justify-end">
-                  <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto">
-                    Tạo thùng với {sel.selected.size || ""} đơn đã chọn
-                  </Btn>
-                </div>
                 <OdooDonList don={odoo.don} selected={sel.selected} onToggle={sel.toggle} onToggleAll={() => sel.toggleAll(odoo.don!.map((d) => d.odoo_id))} onKhongGui={setHuyOdoo} />
               </>
             )}
@@ -160,8 +161,8 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
         }}
       />
     )}
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : "Phiếu gửi hàng của tôi"} ({total})</h3>
         <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu())}>
           + Tạo phiếu mới

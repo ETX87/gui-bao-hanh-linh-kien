@@ -119,9 +119,9 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   ];
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
+    <div className="space-y-3">
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">Đơn vị sẵn sàng gộp phiếu trả ({sanSang.length})</h3>
           {sanSang.length > 0 && (
             <Btn variant="primary" disabled={busy} onClick={autoGom}>
@@ -132,17 +132,25 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
         {groups.length === 0 ? (
           <EmptyState text="Không có đơn vị nào đang chờ gộp." />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {groupPg.pageItems.map(([key, units]) => {
               const [ktvKey, loai] = key.split("::") as [string, "doi_tra" | "tru_cong_no"];
               return (
-                <div key={key} className="rounded-lg border border-[var(--line)] p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-[var(--ink)]">
+                <div key={key} className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 flex flex-col md:flex-row md:items-center gap-2">
+                  <p className="shrink-0 md:w-64 truncate text-[13px] font-semibold text-[var(--ink)]">
                       {ktvKey === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : isDoiTacKey(ktvKey) ? `Đối tác: ${doiTacNameFromKey(ktvKey)}` : <UserName email={ktvKey} />} · <Badge tone="gray">{LOAI_DOI_TRU_LABELS[loai]}</Badge>
-                    </p>
-                    <div className="flex items-center gap-2">
+                  </p>
+                  <div className="flex-1 min-w-0 flex flex-wrap gap-1">
+                    {units.map((u) => (
+                      <label key={u.id} className="flex items-center gap-1.5 text-xs font-mono bg-[var(--surface-2)] rounded-md px-1.5 py-0.5 cursor-pointer">
+                        <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
+                        {u.id}
+                      </label>
+                    ))}
+                  </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <Btn
+                        size="sm"
                         variant="ghost"
                         disabled={busy || !units.some((u) => selected.has(u.id))}
                         onClick={() => createForDoiTac(loai, units.filter((u) => selected.has(u.id)).map((u) => u.id))}
@@ -150,22 +158,14 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                         Trả cho đối tác…
                       </Btn>
                       <Btn
+                        size="sm"
                         variant="primary"
                         disabled={busy || !units.some((u) => selected.has(u.id))}
                         onClick={() => createFromGroup(ktvKey, loai, units.filter((u) => selected.has(u.id)).map((u) => u.id))}
                       >
-                        Tạo phiếu trả với mục đã chọn
+                        Tạo phiếu trả (mục đã chọn)
                       </Btn>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {units.map((u) => (
-                      <label key={u.id} className="flex items-center gap-1.5 text-xs font-mono bg-[var(--surface-2)] rounded-lg px-2 py-1 cursor-pointer">
-                        <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
-                        {u.id}
-                      </label>
-                    ))}
-                  </div>
                 </div>
               );
             })}
@@ -174,8 +174,8 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
         )}
       </Card>
 
-      <Card className="p-5">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Danh sách phiếu trả ({listTotal})</h3>
+      <Card className="p-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">Danh sách phiếu trả ({listTotal})</h3>
         <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Chưa có phiếu trả nào." />
         <Pagination page={listPage} pageCount={listPageCount} total={listTotal} onChange={setListPage} />
       </Card>

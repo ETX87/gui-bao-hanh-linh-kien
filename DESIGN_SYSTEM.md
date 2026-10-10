@@ -18,6 +18,11 @@ trong màn hình** — luôn dùng token.
 3. **Màu mạnh chỉ dành cho cảnh báo thật** (quá hạn SLA > 72h = đỏ đặc). Không cầu vồng.
 4. **Mỗi trạng thái 1 tone cố định** (xem §2.5) — quét bằng mắt là phân biệt được.
 5. **Bảng → thẻ trên mobile** (< 768px) — không bắt người dùng cuộn ngang trên điện thoại.
+6. **Mật độ desktop (10/10/2026)** — 1 màn 1440×900 phải thấy 20–25 dòng việc. Mọi `<table>` gắn class `tbl`
+   (`styles/tokens.css`): dòng ~30px, chữ 13px, nút/ô chọn trong dòng tự thu về cỡ nhỏ, ô có khối (div/p) bị chặn
+   tối đa 2 dòng. Danh sách không phải bảng: mỗi mục tối đa 2 dòng, `px-2.5 py-1`. Card `p-3`, khoảng cách
+   khối `space-y-3`, tiêu đề card `mb-2`; mô tả phụ đưa vào tooltip hoặc cùng dòng tiêu đề, không chiếm dòng
+   riêng. Thanh lọc gắn class `fbar` (nhãn nằm cạnh ô, 1 hàng trên màn ≥1280px).
 
 ## 2. Màu
 

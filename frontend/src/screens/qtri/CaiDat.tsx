@@ -62,9 +62,9 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
   };
 
   return (
-    <Card className="p-5">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">{title}</h3>
-      <div className="space-y-1.5 mb-3">
+    <Card className="p-3">
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">{title}</h3>
+      <div className="space-y-1.5 mb-2">
         {items.map((it) =>
           editId === it.id ? (
             <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--brand-400)] px-2 py-1.5">
@@ -150,7 +150,7 @@ function OdooSyncCard() {
       }
     >
       {importOpen && <OdooImportExportModal onClose={() => setImportOpen(false)} />}
-      <p className="text-xs text-[var(--ink-soft)] mb-3">Tự động 15 phút/lần: kéo đơn Odoo từ DVBH về và đẩy trạng thái gửi sửa ngược lại DVBH.</p>
+      <p className="text-xs text-[var(--ink-soft)] mb-2">Tự động 15 phút/lần: kéo đơn Odoo từ DVBH về và đẩy trạng thái gửi sửa ngược lại DVBH.</p>
       {st && (
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="rounded-lg bg-[var(--surface-2)] p-2"><div className="text-lg font-bold">{st.tong}</div><div className="text-[11px] text-[var(--ink-soft)]">Đơn đã kéo về</div></div>
@@ -208,7 +208,7 @@ function TopLinhKienCard() {
   };
   return (
     <Card title="🔥 Top linh kiện (30 ngày)" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={tinhNgay}>{busy ? "Đang tính…" : "Tính ngay"}</Btn>}>
-      <p className="text-xs text-[var(--ink-soft)] mb-3">
+      <p className="text-xs text-[var(--ink-soft)] mb-2">
         Mỗi ngày hệ thống tự đếm các linh kiện được xử lý thành công (Admin bảo hành đã xác nhận hoàn tất, không tính đơn từ chối) trong 30 ngày gần nhất, rồi đưa các linh kiện này lên đầu danh sách chọn linh kiện.
       </p>
       <div className="flex flex-wrap items-center gap-2 text-sm">

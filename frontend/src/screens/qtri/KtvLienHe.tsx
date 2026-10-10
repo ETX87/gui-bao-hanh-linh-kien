@@ -44,8 +44,8 @@ export function QtriKtvScreen() {
   if (loading && items.length === 0) return <Spinner />;
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo tên / email / SĐT / mã…" className="sm:!w-60" />
@@ -54,7 +54,7 @@ export function QtriKtvScreen() {
           </Btn>
         </div>
       </div>
-      <p className="text-xs text-[var(--ink-soft)] mb-3">
+      <p className="text-xs text-[var(--ink-soft)] mb-2">
         KTV có trong danh sách này sẽ <b>tự động được duyệt</b> ngay khi đăng nhập lần đầu bằng đúng email đăng nhập bên dưới — không cần chờ Admin hệ thống duyệt tay ở màn "Người dùng".
       </p>
       <Table

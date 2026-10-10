@@ -39,8 +39,8 @@ export function LinhKienScreen() {
   };
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Danh mục linh kiện ({total})</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tìm theo mã/tên…" className="sm:!w-52" />
@@ -54,7 +54,7 @@ export function LinhKienScreen() {
         rowKey={(lk) => lk.ma_lk}
         emptyText={loading ? "Đang tải…" : "Không có linh kiện nào khớp."}
         columns={[
-          { key: "ten", header: "Tên", render: (lk) => <span className="font-semibold text-[var(--ink)] whitespace-normal">{lk.ten_lk}</span> },
+          { key: "ten", header: "Tên", render: (lk) => <span className="block max-w-[460px] truncate font-semibold text-[var(--ink)]" title={lk.ten_lk}>{lk.ten_lk}</span> },
           { key: "ma", header: "Mã", render: (lk) => <span className="font-mono text-xs">{lk.ma_lk}</span> },
           { key: "phanloai", header: "Phân loại", render: (lk) => (lk.don_vi?.trim() ? <Badge tone="gray">{lk.don_vi}</Badge> : <span className="text-[var(--ink-faint)]">—</span>) },
           { key: "nguon", header: "Nguồn", render: (lk) => <Badge tone={lk.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{lk.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
@@ -78,7 +78,7 @@ export function LinhKienScreen() {
             header: "Dùng trong BH",
             render: (lk) => (
               <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-5 h-5" checked={lk.duoc_dung_bao_hanh} onChange={(e) => patch(lk.ma_lk, { duoc_dung_bao_hanh: e.target.checked })} />
+                <input type="checkbox" className="w-4 h-4" checked={lk.duoc_dung_bao_hanh} onChange={(e) => patch(lk.ma_lk, { duoc_dung_bao_hanh: e.target.checked })} />
                 <span className="text-xs text-[var(--ink-soft)]">{lk.duoc_dung_bao_hanh ? "Đang bật" : "Đang tắt"}</span>
               </label>
             ),

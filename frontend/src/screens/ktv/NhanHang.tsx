@@ -31,8 +31,8 @@ export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; in
   ];
 
   return (
-    <Card className="p-5">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📬 Hàng trả đang chờ xác nhận nhận ({total})</h3>
+    <Card className="p-3">
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📬 Hàng trả đang chờ xác nhận nhận ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào đang chờ." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

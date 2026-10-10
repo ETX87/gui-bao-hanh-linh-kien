@@ -43,14 +43,14 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
   ];
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📦 Chờ đóng gói & gửi ({choDongGoiTotal})</h3>
+    <div className="space-y-3">
+      <Card className="p-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📦 Chờ đóng gói & gửi ({choDongGoiTotal})</h3>
         <Table columns={cols} rows={choDongGoi} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ đóng gói." />
         <Pagination page={choDongGoiPage} pageCount={choDongGoiPageCount} total={choDongGoiTotal} onChange={setChoDongGoiPage} />
       </Card>
-      <Card className="p-5">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay, dự phòng)</h3>
+      <Card className="p-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay, dự phòng)</h3>
         <Table columns={cols} rows={daGui} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào đang chờ." />
         <Pagination page={daGuiPage} pageCount={daGuiPageCount} total={daGuiTotal} onChange={setDaGuiPage} />
       </Card>

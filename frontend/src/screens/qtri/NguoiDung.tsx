@@ -114,8 +114,8 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   if (loading && users.length === 0) return <Spinner />;
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">👥 Người dùng ({total})</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo email / tên…" className="sm:!w-56" />
@@ -126,7 +126,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
       </div>
 
       {pendingCount > 0 && (
-        <div className="flex items-center justify-between gap-3 mb-3 rounded-lg border border-[var(--brand-400)] bg-[var(--accent-soft)] px-3 py-2">
+        <div className="flex items-center justify-between gap-3 mb-2 rounded-lg border border-[var(--brand-400)] bg-[var(--accent-soft)] px-3 py-2">
           <span className="text-sm text-[var(--ink-body)]">
             <b>{pendingCount}</b> thay đổi vai trò chưa lưu
           </span>
@@ -194,18 +194,18 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-          <table className="w-full text-sm whitespace-nowrap">
+          <table className="tbl w-full whitespace-nowrap">
             <thead>
               <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
-                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Người dùng</th>
-                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Duyệt</th>
-                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">Khoá</th>
+                <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Người dùng</th>
+                <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Duyệt</th>
+                <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Khoá</th>
                 {ROLE_FLAGS.map((r) => (
-                  <th key={r.flag} className="text-center px-2 py-2.5 text-xs font-semibold text-[var(--ink-soft)]">
+                  <th key={r.flag} className="text-center text-xs font-semibold text-[var(--ink-soft)]">
                     {r.label}
                   </th>
                 ))}
-                <th className="px-3 py-2.5" />
+                <th className="" />
               </tr>
             </thead>
             <tbody>
@@ -213,21 +213,19 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                 const rowDirty = !!pending[u.email] && Object.keys(pending[u.email]).length > 0;
                 return (
                   <tr key={u.email} className={`border-b border-[var(--line)] last:border-0 ${rowDirty ? "bg-[var(--accent-soft)]" : ""}`}>
-                    <td className="px-3 py-2">
-                      <p className="font-medium text-[var(--ink)]">
-                        {u.ten || "—"}
-                        {u.email === currentEmail && <span className="ml-1.5 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
-                      </p>
-                      <p className="text-xs text-[var(--ink-soft)] font-mono">{u.email}</p>
+                    <td className="">
+                      <span className="font-medium text-[var(--ink)]">{u.ten || "—"}</span>
+                      {u.email === currentEmail && <span className="ml-1 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
+                      <span className="ml-1.5 text-xs text-[var(--ink-soft)] font-mono">{u.email}</span>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="">
                       <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs">
                         <option value="Cho duyet">Chờ duyệt</option>
                         <option value="Da duyet">Đã duyệt</option>
                         <option value="Tu choi">Từ chối</option>
                       </Select>
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="text-center">
                       {u.email === currentEmail ? (
                         <Badge tone="gray">—</Badge>
                       ) : (
@@ -235,7 +233,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                       )}
                     </td>
                     {ROLE_FLAGS.map((r) => (
-                      <td key={r.flag} className="px-2 py-2 text-center">
+                      <td key={r.flag} className="text-center">
                         <input
                           type="checkbox"
                           checked={effFlag(u.email, r.flag, u)}
@@ -244,7 +242,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                         />
                       </td>
                     ))}
-                    <td className="px-3 py-2 text-right">
+                    <td className="text-right">
                       {u.email !== currentEmail && (
                         <Btn variant="ghost" onClick={() => xoa(u.email)} className="!text-[var(--red-600)] !px-2">
                           Xoá

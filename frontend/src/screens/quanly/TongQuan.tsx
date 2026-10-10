@@ -44,8 +44,8 @@ export function QuanLyTongQuanScreen() {
   const goto = (st: string) => nav(`/quanly/tra-cuu?trang_thai=${st}`);
 
   return (
-    <div className="space-y-6">
-      <Card className={`p-5 ${quaHan > 0 ? "border-l-4 !border-l-[var(--red-600)]" : ""}`}>
+    <div className="space-y-3">
+      <Card className={`p-3 ${quaHan > 0 ? "border-l-4 !border-l-[var(--red-600)]" : ""}`}>
         <button
           onClick={() => quaHan > 0 && goto("qua_han")}
           disabled={quaHan === 0}
@@ -57,13 +57,13 @@ export function QuanLyTongQuanScreen() {
             </p>
             <p className="text-xs text-[var(--ink-soft)] mt-0.5">Các đơn đang chờ xử lý mà đã trôi quá 24 giờ — {quaHan > 0 ? "bấm để xem danh sách" : "không có"}</p>
           </div>
-          <span className={`font-extrabold text-3xl tabular-nums ${quaHan > 0 ? "text-[var(--red-600)]" : "text-[var(--ink-faint)]"}`}>{quaHan}</span>
+          <span className={`font-extrabold text-3xl md:text-2xl tabular-nums ${quaHan > 0 ? "text-[var(--red-600)]" : "text-[var(--ink-faint)]"}`}>{quaHan}</span>
         </button>
       </Card>
 
-      <Card className="p-5">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-4">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+      <Card className="p-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
           {Object.entries(TRANG_THAI_UNIT_LABELS).map(([key, label]) => (
             <StatCard key={key} label={label} value={counts[key] || 0} tone={UNIT_STATUS[key]?.tone || "gray"} icon={ICON_OF_STATUS[key]} onClick={() => goto(key)} />
           ))}

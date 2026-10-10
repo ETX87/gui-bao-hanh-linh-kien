@@ -50,9 +50,9 @@ export function KtvTraCuuScreen() {
   if (loading && rows.length === 0) return <Spinner />;
 
   return (
-    <Card className="p-5">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">🔍 Tra cứu tiến độ đơn của tôi ({total})</h3>
-      <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, case, mô tả lỗi..." className="mb-3 max-w-sm" />
+    <Card className="p-3">
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">🔍 Tra cứu tiến độ đơn của tôi ({total})</h3>
+      <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, case, mô tả lỗi..." className="mb-2 max-w-sm" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} emptyText="Không tìm thấy đơn nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {boSungFor && <KtvBoSungModal unit={boSungFor} onClose={() => setBoSungFor(null)} onDone={() => { setBoSungFor(null); reload(); }} />}

@@ -48,9 +48,9 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   if (loading && rows.length === 0) return <Spinner />;
 
   return (
-    <Card className="p-5">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">🔍 Tra cứu mọi đơn hàng trong phạm vi ({total})</h3>
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+    <Card className="p-3">
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">🔍 Tra cứu mọi đơn hàng trong phạm vi ({total})</h3>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo mã đơn, KTV, mô tả lỗi..." className="max-w-sm" />
         {stFilter && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1">

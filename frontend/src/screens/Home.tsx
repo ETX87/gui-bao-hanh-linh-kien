@@ -102,18 +102,18 @@ export function HomeScreen({ user }: { user: AppUser }) {
   return (
     <>
       {/* Hero (DESIGN_SYSTEM.md §4) - "Viec cua toi" noi bat nhat trang, chi hien muc co viec. */}
-      <section className="rounded-[14px] bg-hero text-white shadow-brand p-5 md:p-6">
-        <p className="text-sm text-white/80 capitalize">{todayLabel()}</p>
-        <h2 className="mt-1 text-xl md:text-[21px] font-bold">
+      <section className="rounded-[14px] bg-hero text-white shadow-brand p-4 md:px-5 md:py-3">
+        <p className="text-sm md:text-xs text-white/80 capitalize">{todayLabel()}</p>
+        <h2 className="mt-0.5 text-xl md:text-lg font-bold">
           {loading ? "Đang tải việc của bạn…" : total > 0 ? `🔥 Bạn có ${total} việc cần làm` : "✨ Không có việc nào đang chờ bạn"}
         </h2>
         {!loading && myWork.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {pills.map((k) => (
               <button
                 key={k}
                 onClick={() => nav(HASH_OF[k]!)}
-                className="focus-ring inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 ring-1 ring-inset ring-white/25 px-3.5 py-2 text-sm font-semibold transition-colors"
+                className="focus-ring inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 ring-1 ring-inset ring-white/25 px-3.5 py-2 md:px-3 md:py-1 text-sm md:text-[13px] font-semibold transition-colors"
               >
                 <span>{ICON_OF[k]}</span>
                 {LABELS[k]}
@@ -129,11 +129,11 @@ export function HomeScreen({ user }: { user: AppUser }) {
         )}
       </section>
 
-      <Card className="p-4 md:p-5" title="Tổng quan hàng đợi">
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+      <Card className="p-3" title="Tổng quan hàng đợi">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
           {relevantKeys.map((k) =>
             loading ? (
-              <div key={k} className="h-[128px] rounded-[14px] bg-[var(--surface-2)] animate-pulse" />
+              <div key={k} className="h-[96px] rounded-[14px] bg-[var(--surface-2)] animate-pulse" />
             ) : (
               <StatCard key={k} label={LABELS[k]} value={counts[k]} tone={TONE_OF[k]} icon={ICON_OF[k]} onClick={() => nav(HASH_OF[k]!)} />
             ),

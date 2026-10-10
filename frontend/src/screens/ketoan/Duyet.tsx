@@ -29,8 +29,8 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
   ];
 
   return (
-    <Card className="p-5">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">💰 Chờ duyệt ({total})</h3>
+    <Card className="p-3">
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">💰 Chờ duyệt ({total})</h3>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ duyệt." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

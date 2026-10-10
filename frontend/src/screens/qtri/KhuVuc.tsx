@@ -29,11 +29,11 @@ export function QtriKhuVucScreen() {
   if (rows === null) return <Spinner />;
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗺️ Giám sát khu vực ({rows.length})</h3>
       </div>
-      <p className="text-xs text-[var(--ink-soft)] mb-3">
+      <p className="text-xs text-[var(--ink-soft)] mb-2">
         Danh sách Khu vực lấy từ mã khu vực đã có sẵn trên từng KTV (đồng bộ từ hệ Đặt mua linh kiện). Gán "Giám sát phụ trách" cho 1 Khu vực để tài khoản đó (vai trò{" "}
         <b>Giám sát</b>) thấy được đúng KTV/đơn bảo hành thuộc khu vực mình, và "tạo hộ đơn" được cho đúng KTV trong khu vực.
       </p>

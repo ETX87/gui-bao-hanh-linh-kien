@@ -120,33 +120,33 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   if ((loadingPhieuGui && phieuGui.length === 0 && phieuGuiTotal === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0 && !qs)) return <Spinner />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {phieuGuiTotal > 0 && (
-        <Card className="p-5">
-          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">📥 Thùng chờ xác nhận tiếp nhận nội bộ ({phieuGuiTotal})</h3>
-          <div className="space-y-2">
-            {phieuGui.map((g) => (
-              <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
-                <Btn variant="primary" onClick={() => tiepNhanNoiBo(g.id)} className="shrink-0 self-start sm:self-auto">
-                  Xác nhận đã nhận
-                </Btn>
-                <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <UserName email={g.nguoi_tao} className="text-sm text-[var(--ink-body)] truncate" />
-                  {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
+        <Card className="px-3 py-2">
+          <div className="flex flex-col md:flex-row md:items-start gap-2">
+            <h3 className="shrink-0 md:pt-1 text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Thùng chờ tiếp nhận nội bộ ({phieuGuiTotal})</h3>
+            <div className="flex-1 min-w-0 flex flex-col md:flex-row md:flex-wrap gap-1.5 md:max-h-[72px] md:overflow-y-auto scrollbar-thin">
+              {phieuGui.map((g) => (
+                <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2.5 pr-1 py-0.5 flex items-center gap-2 text-[13px]">
+                  <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{g.id}</span>
+                  <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate max-w-[180px]" />
+                  {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Sự cố</Badge>}
                   <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
+                  <Btn variant="primary" size="sm" onClick={() => tiepNhanNoiBo(g.id)} className="ml-auto shrink-0">
+                    Xác nhận đã nhận
+                  </Btn>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           <Pagination page={phieuGuiPage} pageCount={phieuGuiPageCount} total={phieuGuiTotal} onChange={setPhieuGuiPage} />
         </Card>
       )}
 
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗂️ Đơn bảo hành cần xử lý ({donChaTotal + donViUnits})</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {selected.size > 0 && (
               <>
                 <Badge tone="blue">{selected.size} đã chọn</Badge>
@@ -187,13 +187,13 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onOpenBaoCaoSai={(pid) => setBaoCaoSaiFor(pid)}
         />
         {donChaPageCount > 1 && (
-          <div className="mt-3">
+          <div className="mt-2">
             <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn chờ xác nhận số lượng ({donChaTotal})</p>
             <Pagination page={donChaPage} pageCount={donChaPageCount} total={donChaTotal} onChange={setDonChaPage} />
           </div>
         )}
         {donViPageCount > 1 && (
-          <div className="mt-3">
+          <div className="mt-2">
             <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn vị cần xử lý — {donViTotal} đơn cha / {donViUnits} đơn vị (20 đơn cha mỗi trang)</p>
             <Pagination page={donViPage} pageCount={donViPageCount} total={donViTotal} onChange={setDonViPage} />
           </div>

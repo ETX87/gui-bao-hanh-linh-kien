@@ -193,7 +193,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const by: Record<string, number> = {};
     for (const u of list) by[u.trang_thai] = (by[u.trang_thai] || 0) + 1;
     return (
-      <span className="flex flex-wrap gap-1">
+      <span className="flex flex-nowrap gap-1 overflow-hidden" title={Object.entries(by).map(([st, n]) => `${n} ${TRANG_THAI_UNIT_LABELS[st] || st}`).join(", ")}>
         {Object.entries(by).map(([st, n]) => (
           <Badge key={st} tone={UNIT_STATUS[st]?.tone || "gray"} dot={UNIT_STATUS[st]?.dot}>
             {n} {TRANG_THAI_UNIT_LABELS[st] || st}
@@ -210,10 +210,10 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const isBoSung = u.trang_thai === "cho_bo_sung_tt";
     return (
       <tr key={u.id} onClick={() => onOpenDetail(u.id)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--accent-soft)] transition-colors">
-        <td className="px-2" onClick={(e) => e.stopPropagation()}>
+        <td className="" onClick={(e) => e.stopPropagation()}>
           {!isBoSung && <input type="checkbox" checked={selected.has(u.id)} onChange={(e) => onToggleSelect(u.id, e.target.checked)} />}
         </td>
-        <td className={`px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)] ${indented ? "pl-8" : ""}`}>
+        <td className={`font-semibold font-mono text-xs text-[var(--link)] ${indented ? "!pl-8" : ""}`}>
           {u.id}
           {u.trang_thai === "admin_can_xem_lai" && (
             <Badge tone="red" className="ml-1.5">
@@ -221,7 +221,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             </Badge>
           )}
         </td>
-        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+        <td className="" onClick={(e) => e.stopPropagation()}>
           {isBoSung ? (
             <span className="block truncate max-w-[230px] text-xs text-[var(--ink-soft)]" title={formatLyDoBoSung(u.ly_do_bo_sung)}>Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</span>
           ) : (
@@ -248,7 +248,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
           )}
         </td>
         {visibleCols.map((k) => (
-          <td key={k} className="px-3 py-2.5 align-middle">
+          <td key={k} className="align-middle">
             {f[k]}
           </td>
         ))}
@@ -370,6 +370,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
 
   return (
     <div>
+      {isMobile && (
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         {visibleSelectable.length > 0 && (
           <label className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] cursor-pointer select-none">
@@ -385,12 +386,8 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             Chọn tất cả {visibleSelectable.length} đơn vị đang hiển thị
           </label>
         )}
-        {!isMobile && (
-          <Btn onClick={() => setColSettingsOpen(true)} title="Bật/tắt cột, đổi vị trí, đổi độ rộng">
-            ⚙ Tuỳ chỉnh cột
-          </Btn>
-        )}
       </div>
+      )}
 
       {totalRows === 0 ? (
         <p className="text-center py-10 text-sm text-[var(--ink-faint)]">Không có đơn nào cần xử lý ngay lúc này.</p>
@@ -398,7 +395,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         renderMobile()
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--line)] scrollbar-thin">
-          <table ref={tableRef} className="text-sm whitespace-nowrap" style={{ tableLayout: "fixed", width: "max-content" }}>
+          <table ref={tableRef} className="tbl whitespace-nowrap" style={{ tableLayout: "fixed", width: "max-content" }}>
             <colgroup>
               <col style={{ width: 36 }} />
               <col style={{ width: 130 }} />
@@ -409,7 +406,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             </colgroup>
             <thead>
               <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
-                <th className="px-2">
+                <th className="">
                   <input
                     type="checkbox"
                     title="Chọn tất cả đơn vị đang hiển thị"
@@ -420,8 +417,15 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     onChange={(e) => onToggleAll(visibleSelectable, e.target.checked)}
                   />
                 </th>
-                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">ID</th>
-                <th className="text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs">Hành động</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] text-xs">ID</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] text-xs">
+                  <span className="flex items-center justify-between gap-2">
+                    Hành động
+                    <button type="button" onClick={() => setColSettingsOpen(true)} title="Tuỳ chỉnh cột: bật/tắt, đổi vị trí, đổi độ rộng" className="rounded px-1.5 font-semibold text-[var(--ink-soft)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)]">
+                      ⚙ Cột
+                    </button>
+                  </span>
+                </th>
                 {visibleCols.map((k) => (
                   <th
                     key={k}
@@ -432,7 +436,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     onDragEnter={() => setDragOverKey(k)}
                     onDragLeave={() => setDragOverKey((cur) => (cur === k ? null : cur))}
                     onDrop={() => onColDrop(k)}
-                    className={`relative text-left font-semibold text-[var(--ink-soft)] px-3 py-2.5 text-xs cursor-move select-none ${dragOverKey === k ? "bg-[var(--accent-soft)]" : ""}`}
+                    className={`relative text-left font-semibold text-[var(--ink-soft)] text-xs cursor-move select-none ${dragOverKey === k ? "bg-[var(--accent-soft)]" : ""}`}
                   >
                     {ADMIN_COLS_DEF[k].label}
                     <span
@@ -450,14 +454,14 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                 return (
                   <tr key={p.id} onClick={() => onOpenXacNhanSl(p)} className="border-b border-[var(--line)] last:border-0 cursor-pointer hover:bg-[var(--accent-soft)] transition-colors">
                     <td />
-                    <td className="px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)]">{p.id}</td>
-                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <td className="font-semibold font-mono text-xs text-[var(--link)]">{p.id}</td>
+                    <td className="" onClick={(e) => e.stopPropagation()}>
                       <Btn variant="primary" onClick={() => onOpenXacNhanSl(p)}>
                         Xác nhận SL
                       </Btn>
                     </td>
                     {visibleCols.map((k) => (
-                      <td key={k} className="px-3 py-2.5 align-middle">
+                      <td key={k} className="align-middle">
                         {f[k]}
                       </td>
                     ))}
@@ -473,7 +477,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                   return (
                     <Fragment key={`g-${pid}`}>
                       <tr onClick={() => toggleExpand(pid)} className="border-b border-[var(--line)] cursor-pointer bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] transition-colors">
-                        <td className="px-2" onClick={(e) => e.stopPropagation()}>
+                        <td className="" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={groupAllSelected(list)}
@@ -483,18 +487,18 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                             onChange={(e) => toggleGroup(list, e.target.checked)}
                           />
                         </td>
-                        <td className="px-3 py-2.5 font-semibold font-mono text-xs text-[var(--link)]">
+                        <td className="font-semibold font-mono text-xs text-[var(--link)]">
                           <span className="inline-flex items-center gap-1.5">
                             <span className="text-[var(--ink-faint)]">{isOpen ? "▾" : "▸"}</span>
                             {pid}
                             <Badge tone="gray">×{list.length}</Badge>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="">
                           <span className="text-xs text-[var(--ink-soft)]">{isOpen ? "Bấm để thu gọn" : "Bấm để mở từng đơn vị"}</span>
                         </td>
                         {visibleCols.map((k) => (
-                          <td key={k} className="px-3 py-2.5 align-middle">
+                          <td key={k} className="align-middle">
                             {k === "trangthai" ? groupStatusSummary(list) : k === "sla" ? <SlaBadge since={groupWorstSla(list)} /> : k === "donchacode" ? <span className="text-[var(--ink-soft)] font-mono text-xs">{pid}</span> : hf[k]}
                           </td>
                         ))}

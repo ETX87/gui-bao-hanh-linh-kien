@@ -16,8 +16,8 @@ export function Shell({ user, children }: { user: AppUser; children: ReactNode }
       <div className="flex-1 min-w-0 flex flex-col">
         <TestModeBanner />
         <TopBar user={user} />
-        <main className="flex-1 min-w-0 px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
-          <div className={`mx-auto space-y-4 transition-[max-width] duration-150 ${collapsed ? "max-w-[1440px]" : "max-w-6xl"}`}>{children}</div>
+        <main className="flex-1 min-w-0 px-3 md:px-4 py-3 pb-24 md:pb-4">
+          <div className={`mx-auto space-y-3 transition-[max-width] duration-150 ${collapsed ? "max-w-[1600px]" : "max-w-[1440px]"}`}>{children}</div>
         </main>
       </div>
       <BottomNav user={user} />

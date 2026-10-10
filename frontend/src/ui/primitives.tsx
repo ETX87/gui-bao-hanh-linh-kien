@@ -8,7 +8,7 @@ export function Card({ children, className = "", title, actions }: { children: R
   return (
     <div className={`bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-card ${className}`}>
       {(title || actions) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           {title && <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">{title}</h3>}
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
@@ -31,7 +31,7 @@ const BTN_VARIANTS: Record<BtnVariant, string> = {
 type BtnSize = "sm" | "md" | "touch";
 const BTN_SIZES: Record<BtnSize, string> = {
   sm: "px-2.5 py-1 text-xs",
-  md: "px-3.5 py-2 text-sm",
+  md: "px-3 py-1.5 text-sm",
   touch: "px-5 py-3 text-base lg:px-3.5 lg:py-2 lg:text-sm",
 };
 export function Btn({ variant = "secondary", size = "md", className = "", ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: BtnSize }) {
@@ -146,18 +146,18 @@ export function StatCard({ label, value, tone = "gray", icon, onClick }: { label
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={`focus-ring relative h-full w-full overflow-hidden rounded-[14px] border border-white/70 bg-gradient-to-br p-4 text-left shadow-card ${t.card} ${
+      className={`focus-ring relative h-full w-full overflow-hidden rounded-[14px] border border-white/70 bg-gradient-to-br p-4 md:p-3 text-left shadow-card ${t.card} ${
         onClick ? "transition hover:-translate-y-0.5 hover:shadow-pop" : "cursor-default"
       } ${active ? "" : "opacity-75"}`}
     >
       {icon && (
         <>
-          <span className={`flex h-10 w-10 lg:h-[38px] lg:w-[38px] items-center justify-center rounded-full text-white text-lg shadow-[0_2px_8px_rgba(0,0,0,0.15)] ${t.icon}`}>{icon}</span>
+          <span className={`flex h-10 w-10 md:h-8 md:w-8 items-center justify-center rounded-full text-white text-lg md:text-base shadow-[0_2px_8px_rgba(0,0,0,0.15)] ${t.icon}`}>{icon}</span>
           <span className={`pointer-events-none absolute -bottom-2 -right-1 text-[48px] leading-none opacity-[0.12] grayscale`}>{icon}</span>
         </>
       )}
-      <p className={`${icon ? "mt-3" : ""} text-sm lg:text-xs font-semibold leading-tight text-[var(--ink-body)]`}>{label}</p>
-      <p className={`mt-1 text-[28px] font-extrabold leading-none ${t.value}`}>{value}</p>
+      <p className={`${icon ? "mt-3 md:mt-2" : ""} text-sm lg:text-xs font-semibold leading-tight text-[var(--ink-body)]`}>{label}</p>
+      <p className={`mt-1 text-[28px] md:text-[24px] font-extrabold leading-none ${t.value}`}>{value}</p>
     </button>
   );
 }

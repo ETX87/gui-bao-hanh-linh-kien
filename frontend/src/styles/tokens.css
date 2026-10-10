@@ -156,3 +156,46 @@ input[type="radio"] {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
+
+/* 10/10/2026 - Bang du lieu gon ("toi da 2 dong, 1 man hien 20-25 dong"): moi bang du lieu gan class
+   .tbl. Dong chuan 1 dong ~30px; o co noi dung khoi (div/p) bi chan toi da 2 dong. Nut/o chon trong
+   dong thu nho ve co "sm" (selector .tbl td button > 1 utility class nen khong can !important). */
+.tbl {
+  font-size: 13px;
+  line-height: 20px;
+}
+.tbl th {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.tbl td {
+  padding: 4px 10px;
+  vertical-align: middle;
+}
+.tbl td > div,
+.tbl td > p {
+  max-height: 40px;
+  overflow: hidden;
+}
+.tbl td button {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  border-radius: 6px;
+}
+.tbl td select,
+.tbl td input:not([type="checkbox"]):not([type="radio"]) {
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 18px;
+}
+/* Thanh loc gon (desktop) - o chon cao ~28px thay vi ~34px. */
+@media (min-width: 768px) {
+  .fbar select,
+  .fbar button {
+    padding-top: 3px;
+    padding-bottom: 3px;
+    font-size: 13px;
+  }
+}

@@ -38,7 +38,7 @@ export function TopBar({ user }: { user: AppUser }) {
         onClick={() => setTestOpen(true)}
         title="Test theo vai trò hoặc xem như 1 người dùng thật"
         className={`focus-ring shrink-0 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors ${
-          onDark ? "text-white/90 hover:bg-white/10" : "border border-[var(--line-strong)] text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)]"
+          onDark ? "text-white/90 hover:bg-white/10" : "!py-1 !text-xs border border-[var(--line-strong)] text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)]"
         }`}
       >
         🧪 <span className={onDark ? "sr-only" : ""}>Chế độ test</span>
@@ -60,19 +60,19 @@ export function TopBar({ user }: { user: AppUser }) {
         </button>
       </header>
 
-      <header className="hidden md:flex sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[var(--line)] px-6 py-2.5 items-center gap-3">
-        <span className="w-9 h-9 rounded-full bg-[var(--accent-soft)] text-[var(--accent-ink)] font-bold flex items-center justify-center shrink-0 ring-1 ring-[var(--brand-200)]">
+      <header className="hidden md:flex sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[var(--line)] px-4 h-10 items-center gap-2.5">
+        <span className="w-6 h-6 rounded-full bg-[var(--accent-soft)] text-[var(--accent-ink)] text-xs font-bold flex items-center justify-center shrink-0 ring-1 ring-[var(--brand-200)]">
           {initial}
         </span>
-        <div className="min-w-0" title={`${roles.join(", ")} · ${user.email}`}>
-          <p className="text-sm text-[var(--ink)] font-semibold truncate">Xin chào, {user.ten || user.email}</p>
-          <p className="text-xs text-[var(--ink-soft)] truncate">{roles.join(" · ") || "Chưa gán vai trò"}</p>
-        </div>
+        <p className="min-w-0 truncate text-sm" title={`${roles.join(", ")} · ${user.email}`}>
+          <span className="font-semibold text-[var(--ink)]">Xin chào, {user.ten || user.email}</span>
+          <span className="text-xs text-[var(--ink-soft)]"> · {roles.join(" · ") || "Chưa gán vai trò"}</span>
+        </p>
         <div className="ml-auto" />
         {testBtn(false)}
         <button
           onClick={logout}
-          className="focus-ring shrink-0 rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-sm font-semibold text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] hover:border-[var(--brand-300)] transition-colors"
+          className="focus-ring shrink-0 rounded-lg border border-[var(--line-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-body)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)] hover:border-[var(--brand-300)] transition-colors"
         >
           Đăng xuất
         </button>

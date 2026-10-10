@@ -63,33 +63,33 @@ export function KhoTiepNhanScreen() {
   if (loading && pending.length === 0) return <Spinner />;
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
+    <div className="space-y-3">
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
         </div>
         {pending.length === 0 ? (
           <EmptyState text="Không có thùng nào chờ tiếp nhận." />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {pending.map((g) => (
               // flex-col tren mobile (Phat hien 5 vong ra soat UX): ban cu la 1 hang flex cung nen
               // nut "Xac nhan tiep nhan" bi day ra ngoai man, Kho khong bam duoc tren dien thoai.
-              <div key={g.id} className="rounded-lg border border-[var(--line)] px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
+              <div key={g.id} className="rounded-lg border border-[var(--line)] px-2.5 py-1 flex flex-col sm:flex-row sm:items-center gap-2 text-[13px]">
                 {/* 09/10/2026: nut xu ly uu tien dat ngay sau ma ID (ben trai). */}
                 <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <Btn variant="primary" onClick={() => setTiepNhanFor(g)}>
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  <Btn size="sm" variant="primary" onClick={() => setTiepNhanFor(g)}>
                     Xác nhận tiếp nhận
                   </Btn>
-                  <Btn variant="danger" onClick={() => setSuCoFor(g)}>
+                  <Btn size="sm" variant="danger" onClick={() => setSuCoFor(g)}>
                     Báo sự cố
                   </Btn>
-                  <Btn onClick={() => setLogFor(g.id)}>💬</Btn>
+                  <Btn size="sm" onClick={() => setLogFor(g.id)}>💬</Btn>
                 </div>
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
-                  <UserName email={g.nguoi_tao} className="text-sm text-[var(--ink-body)] truncate" />
+                  <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate" />
                   <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
                   <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
                 </div>
@@ -101,12 +101,14 @@ export function KhoTiepNhanScreen() {
       </Card>
 
       {banGiao.total > 0 && (
-        <Card className="p-5 border-l-4 border-l-[var(--blue-500)]">
-          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🤝 Chờ bàn giao cho Admin bảo hành ({banGiao.total})</h3>
-          <p className="text-xs text-[var(--ink-soft)] mt-1 mb-3">Thùng Kho đã nhận nhưng Admin bảo hành chưa xác nhận nhận bàn giao — mang thùng sang và nhắc Admin bảo hành bấm "Xác nhận đã nhận". Số giờ tính từ lúc Kho nhận.</p>
-          <div className="space-y-1.5">
+        <Card className="p-3 border-l-4 border-l-[var(--blue-500)]">
+          <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2 truncate">
+            🤝 Chờ bàn giao cho Admin bảo hành ({banGiao.total})
+            <span className="ml-2 hidden md:inline text-xs font-normal text-[var(--ink-soft)]">Kho đã nhận, Admin BH chưa bấm "Xác nhận đã nhận" — mang thùng sang và nhắc. Giờ tính từ lúc Kho nhận.</span>
+          </h3>
+          <div className="space-y-1">
             {banGiao.items.map((g) => (
-              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
+              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
                 <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-body)]" />
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
@@ -119,14 +121,14 @@ export function KhoTiepNhanScreen() {
         </Card>
       )}
 
-      <Card className="p-5">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-3">Đã tiếp nhận gần đây</h3>
+      <Card className="p-3">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">Đã tiếp nhận gần đây</h3>
         {recent.length === 0 ? (
           <EmptyState text="Chưa tiếp nhận thùng nào." />
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-0.5">
             {recent.map((g) => (
-              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-sm hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
+              <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-2.5 py-1 text-[13px] hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
                 <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-soft)]" />
                 {/* !! bat buoc - D1 tra ve so 0/1 chu khong phai true/false that, "0 && <Badge/>" se render chu "0" ra man hinh */}

@@ -195,7 +195,8 @@ tạo nhầm trên Odoo) + mục "Đã xác nhận không gửi" để mở lạ
 ngày (v1.015): đổi tên thành "Hủy đơn lỗi" và tách thẻ đơn Odoo thành 3 tab **Chưa gửi / Đã gửi / Hủy bỏ**
 (20 đơn/trang) — xem 2 mục cuối file. **Mốc mới nhất (09/10/2026, v1.016):** tên người dùng thay gmail ở mọi nơi, nhắc Kho "chờ bàn
 giao Admin BH", xác nhận SL hàng loạt, nút thao tác lên ngay sau mã ID, bộ lọc 6 tiêu chí + chọn tất cả đang hiển thị ở bảng
-Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file.
+Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.017):** giao diện web gọn lại —
+bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4493,3 +4494,60 @@ hàng loạt: đơn lệch thiếu lý do báo lỗi riêng, 2 đơn còn lại 
 lệch: …". UI: modal hàng loạt điền sẵn 3/2/1, sửa 1 dòng → nút khoá + "1 đơn thiếu lý do", nhập lý do + bỏ 1 dòng → "Xác
 nhận 2 đơn" → toast đúng, nút còn "(1)"; lọc "Còn trong hạn" + "Chọn tất cả" → "8 đã chọn"; Kho hiện thẻ bàn giao, nút
 đứng sau mã; Trang chủ có pill bàn giao; bảng KTV tra cứu: cột "Thao tác" sau ID. Dữ liệu test local đã xoá.
+
+## Giao diện web gọn: bảng ≤2 dòng, 20–25 dòng/màn hình (10/10/2026) — v1.017
+
+**(a) Nguyên văn yêu cầu:** *"giao diện hiện tại bản web chiếm quá nhiều diện tích => phân tích giao diện từng
+màn hình => các table danh sách nguyên tắc hiện tối đa chiều cao = 2 dòng, 1 trang màn hình người dùng nên hiện
+20-25 dòng cần xử lý. Các vị trí trống bên trên thu gọn lại, phong cách tinh gọn nhưng vẫn đầy đủ"*
+
+**Đo trước khi sửa** (`wrangler dev` local, 1440×900, đo bằng `getBoundingClientRect`):
+- Bảng Admin BH: dòng cao 41–65px, bảng bắt đầu ở y=445 → chỉ thấy ~7 dòng. Nguyên nhân: ô `py-2.5`, nút cỡ
+  `md`, cột "Trạng thái" của nhóm ×N xuống 2 dòng chip, phía trên có thẻ thùng chờ, thanh lọc 2 hàng có nhãn
+  nằm trên ô, và 1 hàng riêng chỉ để "Chọn tất cả / Tuỳ chỉnh cột".
+- Danh mục linh kiện: dòng cao tới 117px, vì tên `whitespace-normal` bị cột đệm `w-full` ép xuống nhiều dòng.
+- Người dùng: dòng 54px (tên và email nằm 2 dòng). Các bảng khác: dòng 36–42px, bảng bắt đầu ở y=134–180.
+
+**(b) Đã làm:**
+- Khung trang: TopBar desktop chỉ còn 1 dòng cao 40px (lời chào và vai trò cùng 1 dòng, nút nhỏ). `main`
+  `py-3 px-4`, `space-y-3`. Độ rộng tối đa 1600px khi sidebar thu gọn (1440px khi mở). Card `p-5` → `p-3`, tiêu
+  đề `mb-2`. Nút `md` còn `py-1.5`.
+- Bảng: class `.tbl` mới (`styles/tokens.css`) gắn cho `ui/Table`, `AdminUnifiedTable`, `NguoiDung`. Cách chỉnh:
+  - ô `4px 10px`, chữ 13px, header 12px;
+  - nút và ô chọn trong dòng tự thu nhỏ;
+  - `td > div/p` tối đa 40px (2 dòng).
+- Bảng Admin BH:
+  - chip trạng thái của nhóm nằm 1 dòng, rê chuột để xem đủ;
+  - nút "⚙ Cột" dời vào tiêu đề cột "Hành động"; hàng "Chọn tất cả" chỉ còn trên mobile (desktop dùng ô chọn
+    ở tiêu đề);
+  - `!pl-8` cho đơn vị thụt lề, vì `.tbl td` ghi đè `pl-8`.
+- Thanh lọc Admin BH (`fbar`): nhãn ngắn nằm cạnh ô, 6 ô trên 1 hàng từ 1280px. Mobile: 2 cột, nhãn nằm trên ô.
+- Thùng chờ tiếp nhận nội bộ (Admin BH): đổi thành 1 dải chip cùng dòng với tiêu đề (tối đa ~2 hàng, cuộn).
+- Phiếu trả: mỗi nhóm "sẵn sàng gộp" thành 1 hàng (tên · đối trừ | mã đơn vị | nút nhỏ).
+- Kho tiếp nhận:
+  - các dòng `py-1`, nút nhỏ;
+  - mô tả của mục "Chờ bàn giao" nằm cùng dòng tiêu đề, ẩn trên mobile.
+- Đơn Odoo (KTV): mỗi đơn tối đa 2 dòng. Tiêu đề, tab và nút "Tạo thùng" chung 1 hàng; mô tả đưa vào tooltip.
+- Danh mục linh kiện: tên 1 dòng (cắt, rê chuột để xem đủ). Người dùng: tên · email 1 dòng.
+- Trang chủ: hero gọn hơn, KPI `p-3`, 5 cột. Tổng quan Giám sát: 5 cột.
+- `DESIGN_SYSTEM.md` thêm nguyên tắc 6 "Mật độ desktop".
+
+**(c) Vấn đề trong lúc làm:**
+- Một lần thay khối JSX bằng script để thừa `)}` → Vite báo lỗi. Đã sửa ngay.
+- Selector `.tbl td` (độ ưu tiên 0,1,1) ghi đè utility `pl-8`, nên đơn vị trong nhóm mất thụt lề → dùng `!pl-8`.
+- Mobile không đổi hành vi (bảng vẫn thành thẻ), trừ nút `md` thấp hơn 4px.
+
+**(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Đo lại ở 1440×900:
+
+| Màn | Dòng (px) | Bảng bắt đầu ở y | Số dòng thấy được |
+|---|---|---|---|
+| Admin BH (đang có 1 thùng chờ) | 29–32 | 216 | ~20 |
+| Phiếu trả | 29–31 | 209 | ~21 |
+| Tra cứu KTV / Giám sát | 29–31 | 135 | ~23 |
+| KTV, danh mục linh kiện | 32 | 107 | ~23 |
+| Người dùng | 35 | 107 | ~21 |
+| Kế toán / Kho / NV / Nhận hàng | 29–30 | 94 | ~25–26 |
+
+Đã thử bấm "⚙ Cột": mở được cài đặt cột. Đã xem ảnh màn hình desktop (Admin BH, Trang chủ, Phiếu trả) và mobile
+375px (Admin BH, Kho tiếp nhận). `wrangler.jsonc` đã khôi phục.
+

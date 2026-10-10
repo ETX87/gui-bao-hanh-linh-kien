@@ -62,12 +62,12 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
     .sort((a, b) => a.label.localeCompare(b.label, "vi"));
   const lkOpts = (arr: string[]) => arr.map((m) => ({ value: m, label: lkText(m) })).sort((a, b) => a.label.localeCompare(b.label, "vi"));
 
-  const cell = "flex flex-col gap-1 min-w-0";
-  const lab = "text-[11px] font-semibold text-[var(--ink-soft)]";
+  const cell = "flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0";
+  const lab = "shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap";
 
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 mb-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
+    <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5">
         <div className={cell}>
           <span className={lab}>Trạng thái</span>
           <Select value={value.tt} onChange={(e) => set("tt", e.target.value)}>
@@ -84,15 +84,15 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
           <SearchableSelect options={ktvOptions} value={value.ktv} onChange={(v) => set("ktv", v)} placeholder="Tất cả" />
         </div>
         <div className={cell}>
-          <span className={lab}>Linh kiện gửi</span>
+          <span className={lab}>LK gửi</span>
           <SearchableSelect options={lkOpts(opts.lk)} value={value.lk} onChange={(v) => set("lk", v)} placeholder="Tất cả" />
         </div>
         <div className={cell}>
-          <span className={lab}>Linh kiện thực sửa</span>
+          <span className={lab}>LK thực sửa</span>
           <SearchableSelect options={lkOpts(opts.lk_tt)} value={value.lk_tt} onChange={(v) => set("lk_tt", v)} placeholder="Tất cả" />
         </div>
         <div className={cell}>
-          <span className={lab}>Loại linh kiện</span>
+          <span className={lab}>Loại LK</span>
           <Select value={value.pl} onChange={(e) => set("pl", e.target.value)}>
             <option value="">Tất cả</option>
             {opts.phan_loai
@@ -107,7 +107,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
           </Select>
         </div>
         <div className={cell}>
-          <span className={lab}>Trạng thái chậm</span>
+          <span className={lab}>SLA</span>
           <Select value={value.cham} onChange={(e) => set("cham", e.target.value)}>
             <option value="">Tất cả</option>
             <option value="qua_han">🔴 Quá hạn SLA 24h</option>
@@ -116,7 +116,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
         </div>
       </div>
       {active > 0 && (
-        <div className="mt-2.5 flex items-center gap-2">
+        <div className="mt-1.5 flex items-center gap-2">
           <span className="text-xs font-semibold text-[var(--accent-ink)]">Đang lọc theo {active} điều kiện</span>
           <Btn onClick={() => onChange(EMPTY_FILTER)}>✕ Xoá bộ lọc</Btn>
         </div>
