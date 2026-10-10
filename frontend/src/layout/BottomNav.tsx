@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useRoute } from "../router/Router";
-import { routesForUser } from "./routes";
+import { routesForUser, countOf, totalOf, groupRoutes } from "./routes";
 import { useWorkload } from "../hooks/useWorkload";
 import type { AppUser } from "../lib/types";
 
@@ -18,13 +18,23 @@ export function BottomNav({ user }: { user: AppUser }) {
   const { path, nav } = useRoute();
   const { counts } = useWorkload();
   const items = routesForUser(user);
-  const totalCount = Object.values(counts).reduce((s, n) => s + n, 0);
+  const totalCount = totalOf(items, counts);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const needsMore = items.length > MAX_TABS;
   const primary = needsMore ? items.slice(0, MAX_TABS - 1) : items;
   const overflow = needsMore ? items.slice(MAX_TABS - 1) : [];
   const overflowActive = overflow.some((it) => it.hash === path);
+  const overflowCount = totalOf(overflow, counts);
+
+  // Huy hieu so (10/10/2026 - truoc day chi Trang chu co 1 cham do): moi tab hien so viec cua man do,
+  // Trang chu = tong, "Thêm" = tong cac muc an trong sheet.
+  const badge = (n: number) =>
+    n > 0 ? (
+      <span className="absolute -top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--red-600)] ring-2 ring-white text-white text-[10px] font-bold flex items-center justify-center">
+        {n > 99 ? "99+" : n}
+      </span>
+    ) : null;
 
   // DESIGN_SYSTEM.md §4: nen trang mo + "vien nang" accent-soft sau icon cho muc dang chon.
   const tabClass = (active: boolean) =>
@@ -33,12 +43,12 @@ export function BottomNav({ user }: { user: AppUser }) {
 
   const renderItem = (it: (typeof items)[number]) => {
     const active = path === it.hash;
-    const showDot = it.hash === "/home" && totalCount > 0;
+    const n = it.hash === "/home" ? totalCount : countOf(it, counts);
     const content = (
       <>
         <span className={capsule(active)}>
           {it.icon}
-          {showDot && <span className="absolute top-0 right-2.5 w-2.5 h-2.5 rounded-full bg-[var(--red-500)] ring-2 ring-white" />}
+          {badge(n)}
         </span>
         <span className="max-w-full truncate">{it.short || it.label}</span>
       </>
@@ -68,9 +78,7 @@ export function BottomNav({ user }: { user: AppUser }) {
           <button onClick={() => setMoreOpen(true)} className={tabClass(overflowActive)}>
             <span className={capsule(overflowActive)}>
               ☰
-              {overflow.some((it) => it.workloadKey && counts[it.workloadKey] > 0) && (
-                <span className="absolute top-0 right-2.5 w-2.5 h-2.5 rounded-full bg-[var(--red-500)] ring-2 ring-white" />
-              )}
+              {badge(overflowCount)}
             </span>
             <span className="max-w-full truncate">Thêm</span>
           </button>
@@ -91,9 +99,17 @@ export function BottomNav({ user }: { user: AppUser }) {
                 </button>
               </div>
               <div className="p-2">
-                {overflow.map((it) => {
+                {groupRoutes(overflow, counts).map((g) => ({ ...g, total: totalOf(items.filter((x) => (x.group || "") === g.label), counts) })).map((g) => (
+                <div key={g.label} className="mb-1">
+                {g.label && (
+                  <p className="flex items-center px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+                    <span className="flex-1">{g.label}</span>
+                    {g.total > 0 && <span className="normal-case tracking-normal font-bold text-[var(--red-600)]">{g.total} việc</span>}
+                  </p>
+                )}
+                {g.items.map((it) => {
                   const active = path === it.hash;
-                  const count = it.workloadKey ? counts[it.workloadKey] : 0;
+                  const count = countOf(it, counts);
                   const cls = `w-full flex items-center gap-3 px-3 py-3.5 rounded-lg text-base font-medium ${
                     active ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-body)] hover:bg-[var(--surface-2)]"
                   }`;
@@ -125,6 +141,8 @@ export function BottomNav({ user }: { user: AppUser }) {
                     </button>
                   );
                 })}
+                </div>
+                ))}
               </div>
             </div>
           </div>,

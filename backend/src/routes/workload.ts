@@ -45,14 +45,19 @@ workload.get("/", async (c) => {
   const jobs: Promise<void>[] = [];
 
   // ---- KTV (hoac qtri) ----
-  if (isRealKtv || user.la_qtri) {
-    // "Phieu gui hang cua toi" con nhap - khop GET /api/phieu-gui (loc theo nguoi_tao voi KTV that,
-    // theo nguoi_tao_ho voi qtri/GS/AdminBH khong phai KTV that).
+  // "Phieu gui hang cua toi" con nhap - khop GET /api/phieu-gui (loc theo nguoi_tao voi KTV that,
+  // theo nguoi_tao_ho voi qtri/GS/AdminBH khong phai KTV that - muc menu "Tao ho don cho KTV").
+  if (isRealKtv || user.la_qtri || user.la_giam_sat || user.la_admin_bh) {
     const col = isRealKtv ? "nguoi_tao" : "nguoi_tao_ho";
     jobs.push(
       one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ? AND trang_thai = 'nhap'`, user.email).then((r) => {
         counts.ktv_phieu_nhap = r?.cnt ?? 0;
       }),
+    );
+  }
+
+  if (isRealKtv || user.la_qtri) {
+    jobs.push(
       // Don bao hanh Odoo cua chinh KTV dang cho gui sua (chua dua vao thung) - khop GET /api/odoo-don/cho-gui.
       one(
         `SELECT COUNT(*) as cnt FROM don_bh_odoo o JOIN ktv_lien_he_bh k ON k.ma_ktv = o.ma_ktv

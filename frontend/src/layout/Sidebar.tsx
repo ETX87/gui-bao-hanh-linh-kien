@@ -1,5 +1,5 @@
 import { useRoute } from "../router/Router";
-import { routesForUser, type RouteItem } from "./routes";
+import { routesForUser, groupRoutes, countOf, countBreakdown, totalOf, GROUP_SHORT } from "./routes";
 import { useWorkload } from "../hooks/useWorkload";
 import { APP_VERSION } from "../lib/version";
 import type { AppUser } from "../lib/types";
@@ -9,21 +9,12 @@ import type { AppUser } from "../lib/types";
 // Giu nguyen 2 quyet dinh da chot: mac dinh THU GON (03/09/2026) - thu gon thi huy hieu so viec chuyen
 // thanh cham do o goc icon; phien ban hien goc duoi-trai (05/09/2026). State collapsed nam o Shell.
 
-function groupItems(items: RouteItem[]) {
-  const groups: { label: string; items: RouteItem[] }[] = [];
-  for (const it of items) {
-    const label = it.group || "";
-    const g = groups.find((x) => x.label === label);
-    if (g) g.items.push(it);
-    else groups.push({ label, items: [it] });
-  }
-  return groups;
-}
-
 export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapsed: boolean; onToggle: () => void }) {
   const { path, nav } = useRoute();
   const { counts } = useWorkload();
-  const groups = groupItems(routesForUser(user));
+  const items = routesForUser(user);
+  const groups = groupRoutes(items, counts);
+  const grandTotal = totalOf(items, counts);
 
   return (
     <aside
@@ -42,11 +33,27 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-3">
         {groups.map((g) => (
           <div key={g.label} className="space-y-0.5">
-            {!collapsed && g.label && <p className="px-3 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/55">{g.label}</p>}
-            {collapsed && g.label && <div className="mx-2 my-1.5 border-t border-white/15" title={g.label} />}
+            {!collapsed && g.label && (
+              <p className="flex items-center gap-2 px-3 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/55">
+                <span className="truncate">{g.label}</span>
+                {g.total > 0 && (
+                  <span className="ml-auto shrink-0 rounded-full bg-white/[0.18] px-1.5 text-[10.5px] font-bold normal-case tracking-normal text-white" title={`${g.label}: ${g.total} việc cần xử lý`}>
+                    {g.total > 999 ? "999+" : g.total} việc
+                  </span>
+                )}
+              </p>
+            )}
+            {collapsed && g.label && (
+              <div className="mx-0.5 mt-2 mb-1 border-t border-white/15 pt-1 text-center leading-tight" title={`${g.label}${g.total > 0 ? ` · ${g.total} việc cần xử lý` : ""}`}>
+                <span className="block truncate text-[9px] font-semibold uppercase tracking-wide text-white/55">{GROUP_SHORT[g.label] ?? g.label}</span>
+                {g.total > 0 && <span className="inline-block rounded-full bg-white/[0.18] px-1 text-[9px] font-bold text-white">{g.total > 99 ? "99+" : g.total} việc</span>}
+              </div>
+            )}
             {g.items.map((it) => {
               const active = path === it.hash;
-              const count = it.workloadKey ? counts[it.workloadKey] : 0;
+              // Trang chu = tong moi viec cua nguoi dung; muc khac = so viec cua man do.
+              const count = it.hash === "/home" ? grandTotal : countOf(it, counts);
+              const breakdown = it.hash === "/home" ? "" : countBreakdown(it, counts);
               // Thu gon: icon + nhan ngan BEN DUOI (05/10/2026 - truoc day chi con icon, 16+ emoji khong nhan
               // khien khong biet muc nao dung de lam gi). Mo rong: nhan + mo ta 1 dong.
               const cls = `focus-ring relative w-full flex rounded-lg text-[13.5px] font-medium transition-colors ${
@@ -68,7 +75,12 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
                   {!collapsed && (
                     <span className="min-w-0 flex-1 text-left">
                       <span className="block truncate">{it.label}</span>
-                      {it.desc && <span className="block truncate text-[11px] font-normal text-white/60">{it.desc}</span>}
+                      {/* Co viec: dong phu hien chi tiet tung hang doi (VD "2 thùng chờ nhận nội bộ · 5 đơn chờ phân loại") thay cho mo ta. */}
+                      {breakdown ? (
+                        <span className="block truncate text-[11px] font-semibold text-[#FDE68A]">{breakdown}</span>
+                      ) : (
+                        it.desc && <span className="block truncate text-[11px] font-normal text-white/60">{it.desc}</span>
+                      )}
                     </span>
                   )}
                   {!collapsed && count > 0 && (
@@ -78,7 +90,8 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
                   )}
                 </>
               );
-              const title = `${g.label ? g.label + " › " : ""}${it.label}${it.desc ? " — " + it.desc : ""}${count > 0 ? ` (${count} việc cần làm)` : ""}`;
+              const title = `${g.label ? g.label + " › " : ""}${it.label}${it.desc ? " — " + it.desc : ""}${count > 0 ? `
+${breakdown || count + " việc cần làm"}` : ""}`;
               return it.href ? (
                 <a key={it.hash} href={it.href} title={title} className={cls}>
                   {body}

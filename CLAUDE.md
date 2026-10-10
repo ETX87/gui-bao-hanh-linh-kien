@@ -196,7 +196,8 @@ ngày (v1.015): đổi tên thành "Hủy đơn lỗi" và tách thẻ đơn Odo
 (20 đơn/trang) — xem 2 mục cuối file. **Mốc mới nhất (09/10/2026, v1.016):** tên người dùng thay gmail ở mọi nơi, nhắc Kho "chờ bàn
 giao Admin BH", xác nhận SL hàng loạt, nút thao tác lên ngay sau mã ID, bộ lọc 6 tiêu chí + chọn tất cả đang hiển thị ở bảng
 Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.017):** giao diện web gọn lại —
-bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file.
+bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.018):** menu chia nhóm
+theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4550,4 +4551,40 @@ màn hình => các table danh sách nguyên tắc hiện tối đa chiều cao =
 
 Đã thử bấm "⚙ Cột": mở được cài đặt cột. Đã xem ảnh màn hình desktop (Admin BH, Trang chủ, Phiếu trả) và mobile
 375px (Admin BH, Kho tiếp nhận). `wrangler.jsonc` đã khôi phục.
+
+## Menu theo vai trò, đếm số việc từng vai trò (10/10/2026) — v1.018
+
+**(a) Nguyên văn yêu cầu:** *"thiết kế lại menu cho tôi, với mỗi vai trò, sẽ đếm số đơn còn cần vai trò đó xử lý"*
+
+**(b) Đã làm:**
+- `frontend/src/layout/routes.ts` viết lại:
+  - Nhóm menu đổi từ "giai đoạn quy trình" (quyết định 05/10/2026) sang **vai trò**: Giám sát · Theo dõi → Kỹ thuật viên → Kho → Admin bảo hành → NV sửa chữa → Kế toán → Quản trị hệ thống → Liên kết. Bên trong nhóm vẫn theo thứ tự quy trình.
+  - `workloadKey` (1 số) đổi thành `countKeys` (nhiều số cộng lại). Trước đây huy hiệu thiếu:
+    - "Xử lý đơn bảo hành" chỉ đếm đơn chờ phân loại, nay cộng thêm thùng chờ nhận nội bộ và đơn chờ xác nhận SL;
+    - "Tiếp nhận thùng" cộng thêm thùng chờ bàn giao Admin;
+    - "Gửi hàng" cộng thêm đơn Odoo chờ gửi;
+    - "Tiến độ đơn của tôi" nay có số (đơn cần bổ sung);
+    - "Tạo hộ đơn cho KTV" nay có số (thùng nháp đang tạo hộ).
+  - Hàm dùng chung: `countOf`, `totalOf` (không cộng trùng 1 hàng đợi), `groupRoutes`, `countBreakdown`, kèm nhãn `COUNT_LABEL` và `GROUP_SHORT`.
+  - "Tạo hộ" của Giám sát (không phải Admin/qtri) nằm trong nhóm Giám sát. Của Admin BH/qtri thì nằm trong nhóm Admin bảo hành.
+- Sidebar:
+  - Tiêu đề nhóm có pill "N việc".
+  - Khi có việc, dòng phụ của mục hiện chi tiết (VD "1 thùng chờ nhận nội bộ · 1 đơn chờ xác nhận SL · 77 đơn chờ phân loại") thay cho mô tả.
+  - Trang chủ hiện tổng số việc.
+  - Bản thu gọn: đường kẻ nhóm có tên vai trò viết tắt + "N việc".
+- BottomNav:
+  - Mỗi tab có số việc. Trang chủ hiện tổng; "Thêm" hiện tổng các mục trong sheet.
+  - Sheet chia nhóm theo vai trò. Tổng của nhóm tính cả mục đang nằm ở thanh dưới.
+- Backend `workload.ts`: `ktv_phieu_nhap` (thùng nháp tạo hộ, theo `nguoi_tao_ho`) nay đếm cả cho Giám sát và Admin BH. Trước đây chỉ đếm cho KTV/qtri.
+
+**(c) Vấn đề:**
+- Bản thu gọn ban đầu chỉ có con số trên đường kẻ, không hiểu là của nhóm nào → thêm tên vai trò viết tắt.
+- Trong sheet mobile, tổng nhóm ban đầu chỉ tính các mục nằm trong sheet → đã sửa để tính đủ vai trò.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi, build sạch.
+- Chạy `wrangler dev` local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), tài khoản đa vai trò.
+- Desktop: tổng 91 = KTV 3 + Kho 4 + Admin 81 + NV 1 + Kế toán 2. Đã xem cả bản mở rộng lẫn bản thu gọn.
+- Mobile 375px: các tab có số, "Thêm" 90, sheet chia nhóm đúng.
+- Chế độ test theo vai trò Giám sát / Kho / Admin BH / Kế toán: `/api/workload` chỉ trả số của vai trò đó.
 
