@@ -44,29 +44,44 @@ export function CaseSnapshotPanel({ caseId, canSync }: { caseId: string; canSync
   };
 
   if (loading) return null;
-  if (!data) return <p className="text-xs text-[var(--ink-faint)]">Chưa có bằng chứng case nào được lưu.</p>;
+  const rows: [string, string | null | undefined][] = data
+    ? [
+        ["Khách hàng", data.khach_hang],
+        ["Sản phẩm", data.san_pham_bao_hanh],
+        ["Serial", data.seri_san_pham],
+        ["Ngày mua", data.ngay_mua],
+        ["Hãng", data.hang],
+        ["KTV trên case", data.ky_thuat_vien],
+      ]
+    : [];
 
+  // Gon (10/10/2026): tieu de 1 dong + luoi nhan/gia tri chi hien truong co du lieu.
   return (
-    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5 space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">📎 Bằng chứng case (đồng bộ lúc {syncedAt || "—"})</p>
-        <div className="flex items-center gap-2">
-          <CrmLink url={data.link_crm} />
+    <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">📎 Thông tin case</p>
+        <span className="text-[11px] text-[var(--ink-faint)] truncate">{data ? `đồng bộ lúc ${syncedAt || "—"}` : "chưa lưu bằng chứng"}</span>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {data && <CrmLink url={data.link_crm} />}
           {canSync && (
-            <Btn onClick={sync} disabled={syncing}>
-              {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ lại"}
+            <Btn size="sm" onClick={sync} disabled={syncing}>
+              {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ"}
             </Btn>
           )}
         </div>
       </div>
-      <div className="text-xs text-[var(--ink-body)] grid grid-cols-2 gap-x-3 gap-y-0.5">
-        {data.khach_hang && <span>Khách hàng: {data.khach_hang}</span>}
-        {data.san_pham_bao_hanh && <span>Sản phẩm: {data.san_pham_bao_hanh}</span>}
-        {data.seri_san_pham && <span>Serial: {data.seri_san_pham}</span>}
-        {data.ngay_mua && <span>Ngày mua: {data.ngay_mua}</span>}
-        {data.hang && <span>Hãng: {data.hang}</span>}
-        {data.ky_thuat_vien && <span>Kỹ thuật viên (case): {data.ky_thuat_vien}</span>}
-      </div>
-    </div>
+      {data && (
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-[13px]">
+          {rows
+            .filter(([, v]) => !!v)
+            .map(([k, v]) => (
+              <div key={k} className="min-w-0">
+                <dt className="text-[11px] text-[var(--ink-faint)]">{k}</dt>
+                <dd className="truncate text-[var(--ink)]" title={v ?? ""}>{v}</dd>
+              </div>
+            ))}
+        </dl>
+      )}
+    </section>
   );
 }

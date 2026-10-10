@@ -3,10 +3,10 @@ import { StatusBadge } from "../../ui/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { Modal } from "../../ui/Modal";
-import { Btn, Badge, ReadField, Spinner } from "../../ui/primitives";
+import { Btn, Badge, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, KET_QUA_CHAN_DOAN_LABELS, XU_LY_XAC_LABELS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
-import { LogBlock } from "./LogBlock";
+import { LogTimeline } from "./LogTimeline";
 import { useLkName } from "../../hooks/useLinhKien";
 import { CaseSnapshotPanel } from "./CaseSnapshotPanel";
 import { PhanLoaiModal } from "./PhanLoaiModal";
@@ -25,18 +25,46 @@ interface DetailResponse {
   logs: { don_vi: LogRow[]; don_cha: LogRow[]; phieu_gui: LogRow[]; phieu_tra: LogRow[] };
   anh: { don_vi: { id: number; loai: string; anh_url: string }[]; don_cha: { id: number; anh_url: string }[] };
   bao_cao_sai_thong_tin: unknown[];
+  // 10/10/2026: cac don vi cung don cha (lo xN).
+  anh_em?: { id: string; so_thu_tu: number; trang_thai: string }[];
 }
 
 type SubModal = "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | "tra-ktv" | "tra-kho" | "chan-doan" | null;
 
-// "UI chi tiet" don vi bao hanh - port dung openDetailUnitModal() cua prototype: 4 khoi log rieng
-// biet, anh, bao cao sai (chi giam sat), va DAY DU nut thao tac o footer theo dung vai tro dang dang
-// nhap + trang thai hien tai cua don (unitActionButtonsHtml()) - dong bo 1-doi-1 voi dieu kien da dung
-// o PhanLoai.tsx/ViecCuaToi.tsx de bang va modal chi tiet khong bao gio lech nhau.
+// "UI chi tiet" don vi bao hanh. Nut thao tac o footer theo dung vai tro dang dang nhap + trang thai
+// hien tai cua don (dong bo 1-doi-1 voi dieu kien o PhanLoai.tsx/ViecCuaToi.tsx).
+//
+// Thiet ke lai 10/10/2026 (phan hoi "UI chi tiet xem don bao hanh dang trong va thua qua nhieu vung"):
+// truoc day modal tran kin man hinh, truong xep luoi 4 cot cach nhau hang tram px, 4 hop nhat ky rieng
+// de trong, phan duoi trang trong. Nay modal cao theo noi dung (rong toi da max-w-6xl), 2 cot: trai =
+// khoi tom tat (linh kien, loi, chip case/KTV/phieu) + khoi "Xu ly" chi hien truong co gia tri + case +
+// don vi cung lo + anh; phai = nhat ky gop 1 dong thoi gian co tab loc theo nguon (LogTimeline).
+
+function Kv({ k, v, wide }: { k: string; v: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? "col-span-full" : ""}`}>
+      <dt className="text-[11px] text-[var(--ink-faint)]">{k}</dt>
+      <dd className="text-[13px] text-[var(--ink)] break-words">{v}</dd>
+    </div>
+  );
+}
+
+function Chip({ icon, children, title }: { icon: string; children: React.ReactNode; title?: string }) {
+  return (
+    <span title={title} className="inline-flex max-w-full items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs text-[var(--ink-body)] ring-1 ring-[var(--line)]">
+      <span>{icon}</span>
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+function SectionTitle({ children, tone = "accent" }: { children: React.ReactNode; tone?: "accent" | "red" }) {
+  return <p className={`text-xs font-bold uppercase tracking-wide mb-1.5 ${tone === "red" ? "text-[var(--red-700)]" : "text-[var(--accent-ink)]"}`}>{children}</p>;
+}
 
 export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const [data, setData] = useState<DetailResponse | null>(null);
-  const { nameOf: lkName } = useLkName();
+  const { nameOf: lkName, phanLoaiOf } = useLkName();
   const [sub, setSub] = useState<SubModal>(null);
 
   const load = () => api.get<DetailResponse>(`/admin/don-vi/${unitId}`).then(setData);
@@ -53,16 +81,17 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
   if (!data) {
     return (
-      <Modal title="Chi tiết đơn bảo hành" onClose={onClose} full>
+      <Modal title="Chi tiết đơn bảo hành" onClose={onClose} maxWidthClass="max-w-6xl">
         <Spinner />
       </Modal>
     );
   }
 
-  const { don_vi: u, don_cha: p, logs, anh, bao_cao_sai_thong_tin } = data;
+  const { don_vi: u, don_cha: p, logs, anh, bao_cao_sai_thong_tin, anh_em = [] } = data;
   const isKhachLe = !p.phieu_gui_id;
   const effLk = u.ma_lk_thuc_te || p.ma_lk;
   const daDoiLk = !!(u.ma_lk_thuc_te && u.ma_lk_thuc_te !== p.ma_lk);
+  const phanLoai = phanLoaiOf(effLk);
 
   const buttons: { label: string; onClick: () => void; variant?: "primary" | "success" | "danger" }[] = [];
   if (user.la_admin_bh) {
@@ -86,12 +115,15 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
     buttons.push({ label: "🔧 Chẩn đoán", onClick: () => setSub("chan-doan"), variant: "primary" });
   }
 
+  const daPhanLoai = !!(u.loai_bao_hanh || u.huong_xu_ly);
+  const soAnh = anh.don_cha.length + anh.don_vi.length;
+
   return (
     <>
       <Modal
-        title={`Chi tiết đơn bảo hành ${u.id}`}
+        title={u.id}
         onClose={onClose}
-        full
+        maxWidthClass="max-w-6xl"
         headerActions={
           <div className="flex items-center gap-2">
             <StatusBadge kind="unit" value={u.trang_thai} />
@@ -110,77 +142,180 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
           ) : undefined
         }
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <ReadField label="Mã case" value={p.case_id} />
-            <ReadField label="Linh kiện" value={daDoiLk ? <>{lkName(effLk)} <Badge tone="blue" className="ml-1">Đã đổi LK</Badge></> : lkName(effLk)} />
-            <ReadField label="Nguồn" value={isKhachLe ? <Badge tone="violet">Khách lẻ</Badge> : p.nguon_tao === "admin_dich_vu" ? "Đơn dịch vụ" : "KTV gửi hàng"} />
-            <ReadField label="Đối trừ đề xuất" value={p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—"} />
-          </div>
-          {p.xac_nhan_khac_ktv && (
-            <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">
-              ⚠ Đơn được tạo thay: case thuộc KTV khác trên hệ thống ({p.ktv_tren_case || "không xác định"}) — <UserName email={p.xac_nhan_khac_ktv} /> đã xác nhận khi tạo hộ.
-            </p>
-          )}
-          {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} />}
-          <ReadField label="Mô tả lỗi" value={p.mo_ta_loi} />
-          {isKhachLe && (
-            <div className="grid grid-cols-3 gap-4">
-              <ReadField label="Khách hàng" value={p.ten_khach_hang} />
-              <ReadField label="SĐT" value={p.sdt_khach_hang} />
-              <ReadField label="Sản phẩm BH" value={p.san_pham_bh} />
-            </div>
-          )}
-
-          {(u.loai_bao_hanh || u.huong_xu_ly) && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-[var(--line)] pt-4">
-              <ReadField label="Loại bảo hành" value={u.loai_bao_hanh ? LOAI_BAO_HANH_LABELS[u.loai_bao_hanh] : "—"} />
-              <ReadField label="Hướng xử lý" value={u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] : "—"} />
-              <ReadField label="Loại đối trừ" value={u.loai_doi_tru ? LOAI_DOI_TRU_LABELS[u.loai_doi_tru] : "—"} />
-              <ReadField label="NV phụ trách" value={u.nguoi_sua_chua ? <UserName email={u.nguoi_sua_chua} /> : "—"} />
-              {u.ket_qua_chan_doan && <ReadField label="Kết quả chẩn đoán" value={KET_QUA_CHAN_DOAN_LABELS[u.ket_qua_chan_doan]} />}
-              {u.xu_ly_xac && <ReadField label="Xử lý xác" value={XU_LY_XAC_LABELS[u.xu_ly_xac]} />}
-              {u.ly_do_tu_choi && <ReadField label="Lý do huỷ" value={u.ly_do_tu_choi} />}
-              {u.phieu_tra_id && <ReadField label="Thuộc phiếu trả" value={u.phieu_tra_id} />}
-            </div>
-          )}
-
-          {(anh.don_vi.length > 0 || anh.don_cha.length > 0) && (
-            <div className="border-t border-[var(--line)] pt-4">
-              <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Ảnh</p>
-              <div className="flex flex-wrap gap-2">
-                {anh.don_cha.map((a) => (
-                  <img key={`p${a.id}`} src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)]" title="Ảnh lỗi lúc gửi hàng" />
-                ))}
-                {anh.don_vi.map((a) => (
-                  <img key={`u${a.id}`} src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)]" title={a.loai} />
-                ))}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-3 min-w-0">
+            {/* Tom tat */}
+            <section className="rounded-xl bg-[var(--surface-2)] px-3.5 py-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="text-[15px] font-bold text-[var(--ink)] leading-snug">🔩 {lkName(effLk)}</p>
+                {phanLoai && <Badge tone="gray">{phanLoai}</Badge>}
+                {daDoiLk && (
+                  <span title={`KTV gửi: ${lkName(p.ma_lk)}`}>
+                    <Badge tone="blue">Đã đổi LK</Badge>
+                  </span>
+                )}
               </div>
-            </div>
-          )}
-
-          {bao_cao_sai_thong_tin.length > 0 && (
-            <div className="border-t border-[var(--line)] pt-4">
-              <p className="text-xs font-bold text-[var(--red-700)] uppercase tracking-wide mb-2">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</p>
-              <div className="space-y-1.5">
-                {(bao_cao_sai_thong_tin as { id: number; tac_gia: string; thoi_gian: string; noi_dung: string }[]).map((b) => (
-                  <div key={b.id} className="text-xs bg-[var(--red-100)] text-[var(--red-700)] rounded-lg px-2.5 py-1.5">
-                    <p>{b.noi_dung}</p>
-                    <p className="mt-0.5 text-[10px] font-mono opacity-70">
-                      <UserName email={b.tac_gia} /> · {fmtDate(b.thoi_gian)}
-                    </p>
-                  </div>
-                ))}
+              {daDoiLk && <p className="text-xs text-[var(--ink-soft)]">KTV gửi: {lkName(p.ma_lk)}</p>}
+              <p className="text-[13.5px] text-[var(--ink-body)] whitespace-pre-line">
+                <span className="text-[var(--ink-faint)]">Mô tả lỗi: </span>
+                {p.mo_ta_loi || "—"}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {p.case_id && (
+                  <Chip icon="📋" title="Mã case">
+                    {p.case_id}
+                  </Chip>
+                )}
+                {isKhachLe ? (
+                  <Chip icon="🧑" title="Khách lẻ">
+                    {p.ten_khach_hang || "Khách lẻ"}
+                    {p.sdt_khach_hang ? ` · ${p.sdt_khach_hang}` : ""}
+                  </Chip>
+                ) : (
+                  p.ktv && (
+                    <Chip icon="👷" title="KTV gửi hàng">
+                      <UserName email={p.ktv} />
+                    </Chip>
+                  )
+                )}
+                {isKhachLe && p.san_pham_bh && (
+                  <Chip icon="📦" title="Sản phẩm bảo hành">
+                    {p.san_pham_bh}
+                  </Chip>
+                )}
+                {p.phieu_gui_id && (
+                  <Chip icon="🚚" title="Phiếu gửi">
+                    {p.phieu_gui_id}
+                  </Chip>
+                )}
+                {u.phieu_tra_id && (
+                  <Chip icon="↩️" title="Phiếu trả">
+                    {u.phieu_tra_id}
+                  </Chip>
+                )}
+                <Chip icon="🔢" title="Số lượng của đơn cha">
+                  SL khai {p.so_luong_khai}
+                  {p.so_luong_thuc_nhan != null && p.so_luong_thuc_nhan !== p.so_luong_khai ? ` · thực nhận ${p.so_luong_thuc_nhan}` : ""}
+                </Chip>
+                {p.nguon_tao === "admin_dich_vu" && <Badge tone="violet">Đơn dịch vụ</Badge>}
+                {p.odoo_id ? <Badge tone="blue">Odoo</Badge> : null}
               </div>
-            </div>
-          )}
+              {p.ly_do_chenh_lech_sl && <p className="text-xs text-[var(--amber-800)]">Lý do lệch SL: {p.ly_do_chenh_lech_sl}</p>}
+              {isKhachLe && p.dia_chi_khach_hang && <p className="text-xs text-[var(--ink-soft)]">Địa chỉ: {p.dia_chi_khach_hang}</p>}
+            </section>
 
-          <div className="grid md:grid-cols-2 gap-x-6 gap-y-5 border-t border-[var(--line)] pt-4">
-            <LogBlock title="📦 Nhật ký đơn vị bảo hành này" logs={logs.don_vi} />
-            <LogBlock title="🗂️ Nhật ký đơn cha" logs={logs.don_cha} />
-            <LogBlock title="🚚 Nhật ký phiếu gửi" logs={logs.phieu_gui} />
-            <LogBlock title="↩️ Nhật ký phiếu trả" logs={logs.phieu_tra} />
+            {p.xac_nhan_khac_ktv && (
+              <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">
+                ⚠ Đơn được tạo thay: case thuộc KTV khác trên hệ thống ({p.ktv_tren_case || "không xác định"}) — <UserName email={p.xac_nhan_khac_ktv} /> đã xác nhận khi tạo hộ.
+              </p>
+            )}
+
+            {/* Xu ly - chi hien truong co gia tri */}
+            <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
+              <SectionTitle>🛠 Xử lý</SectionTitle>
+              {daPhanLoai ? (
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
+                  {u.loai_bao_hanh && <Kv k="Loại bảo hành" v={LOAI_BAO_HANH_LABELS[u.loai_bao_hanh] ?? u.loai_bao_hanh} />}
+                  {u.huong_xu_ly && <Kv k="Hướng xử lý" v={HUONG_XU_LY_LABELS[u.huong_xu_ly] ?? u.huong_xu_ly} />}
+                  {(u.loai_doi_tru || p.loai_doi_tru_de_xuat) && (
+                    <Kv
+                      k="Loại đối trừ"
+                      v={
+                        <>
+                          {u.loai_doi_tru ? LOAI_DOI_TRU_LABELS[u.loai_doi_tru] : "—"}
+                          {p.loai_doi_tru_de_xuat && u.loai_doi_tru !== p.loai_doi_tru_de_xuat && (
+                            <span className="text-[11px] text-[var(--ink-faint)]"> (KTV đề xuất: {LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat]})</span>
+                          )}
+                        </>
+                      }
+                    />
+                  )}
+                  {u.nguoi_sua_chua && <Kv k="NV phụ trách" v={<UserName email={u.nguoi_sua_chua} />} />}
+                  {u.ket_qua_chan_doan && <Kv k="Kết quả chẩn đoán" v={KET_QUA_CHAN_DOAN_LABELS[u.ket_qua_chan_doan] ?? u.ket_qua_chan_doan} />}
+                  {u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />}
+                  {u.thong_tin_mail_pd && <Kv k="Mail phê duyệt" v={u.thong_tin_mail_pd} />}
+                  {u.ma_phe_duyet && <Kv k="Mã phê duyệt" v={u.ma_phe_duyet} />}
+                  {u.ly_do_tu_choi && <Kv k="Lý do huỷ" v={u.ly_do_tu_choi} wide />}
+                </dl>
+              ) : (
+                <p className="text-[13px] text-[var(--ink-soft)]">
+                  Chưa phân loại
+                  {p.loai_doi_tru_de_xuat ? ` · KTV đề xuất đối trừ: ${LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat]}` : ""}
+                  {buttons.length > 0 ? " — dùng các nút bên dưới để xử lý." : "."}
+                </p>
+              )}
+            </section>
+
+            {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} />}
+
+            {anh_em.length > 1 && (
+              <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
+                <SectionTitle>
+                  🗂️ Cùng đơn {p.id} · {anh_em.length} đơn vị
+                </SectionTitle>
+                <div className="flex flex-wrap gap-1.5">
+                  {anh_em.map((x) => (
+                    <span
+                      key={x.id}
+                      title={x.id}
+                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs ring-1 ${x.id === u.id ? "bg-[var(--accent-soft)] ring-[var(--brand-300)] font-bold text-[var(--accent-ink)]" : "ring-[var(--line)] text-[var(--ink-soft)]"}`}
+                    >
+                      <span className="font-mono">#{x.so_thu_tu}</span>
+                      <span>{TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}</span>
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {soAnh > 0 && (
+              <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
+                <SectionTitle>🖼 Ảnh ({soAnh})</SectionTitle>
+                <div className="flex flex-wrap gap-2">
+                  {anh.don_cha.map((a) => (
+                    <a key={`p${a.id}`} href={a.anh_url} target="_blank" rel="noreferrer">
+                      <img src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)] hover:opacity-85" title="Ảnh lỗi lúc gửi hàng" />
+                    </a>
+                  ))}
+                  {anh.don_vi.map((a) => (
+                    <a key={`u${a.id}`} href={a.anh_url} target="_blank" rel="noreferrer">
+                      <img src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)] hover:opacity-85" title={a.loai} />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {bao_cao_sai_thong_tin.length > 0 && (
+              <section className="rounded-xl border border-[var(--red-100)] px-3 py-2.5">
+                <SectionTitle tone="red">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</SectionTitle>
+                <div className="space-y-1.5">
+                  {(bao_cao_sai_thong_tin as { id: number; tac_gia: string; thoi_gian: string; noi_dung: string }[]).map((b) => (
+                    <div key={b.id} className="text-xs bg-[var(--red-100)] text-[var(--red-700)] rounded-lg px-2.5 py-1.5">
+                      <p>{b.noi_dung}</p>
+                      <p className="mt-0.5 text-[10px] font-mono opacity-70">
+                        <UserName email={b.tac_gia} /> · {fmtDate(b.thoi_gian)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
+
+          {/* Nhat ky gop: cot phai (desktop), xuong duoi (mobile) */}
+          <aside className="min-w-0 lg:border-l lg:border-[var(--line)] lg:pl-4 flex flex-col">
+            <SectionTitle>🕘 Nhật ký</SectionTitle>
+            <LogTimeline
+              className="lg:max-h-[62vh]"
+              sources={[
+                { key: "dv", label: "Đơn vị", icon: "📦", logs: logs.don_vi },
+                { key: "dc", label: "Đơn cha", icon: "🗂️", logs: logs.don_cha },
+                { key: "pg", label: "Phiếu gửi", icon: "🚚", logs: logs.phieu_gui },
+                { key: "pt", label: "Phiếu trả", icon: "↩️", logs: logs.phieu_tra },
+              ]}
+            />
+          </aside>
         </div>
       </Modal>
 

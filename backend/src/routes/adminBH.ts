@@ -290,9 +290,18 @@ adminBH.get("/don-vi/:id", async (c) => {
   const uFull = u as { phieu_tra_id: string | null };
   if (uFull.phieu_tra_id) traLogs = (await c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_tra' AND entity_id = ? ORDER BY thoi_gian DESC").bind(uFull.phieu_tra_id).all()).results;
 
+  // 10/10/2026 (thiet ke lai UI chi tiet): KTV so huu thung + cac don vi cung don cha (lo xN) de hien
+  // "don vi k/N" va trang thai cac don vi con lai ngay trong chi tiet.
+  const [guiRow, anhEm] = await Promise.all([
+    p?.phieu_gui_id ? c.env.DB.prepare("SELECT nguoi_tao, trang_thai FROM phieu_gui_bh WHERE id = ?").bind(p.phieu_gui_id).first<{ nguoi_tao: string; trang_thai: string }>() : Promise.resolve(null),
+    c.env.DB.prepare("SELECT id, so_thu_tu, trang_thai FROM phieu_sua_chua_bh_ct WHERE parent_id = ? ORDER BY so_thu_tu").bind(uRow.parent_id).all(),
+  ]);
+  if (p && guiRow) Object.assign(p, { ktv: guiRow.nguoi_tao, phieu_gui_trang_thai: guiRow.trang_thai });
+
   return c.json({
     don_vi: u,
     don_cha: p,
+    anh_em: anhEm.results,
     logs: { don_vi: ctLogs.results, don_cha: pLogs.results, phieu_gui: guiLogs, phieu_tra: traLogs },
     anh: { don_vi: ctAnh.results, don_cha: pAnh.results },
     bao_cao_sai_thong_tin: baoCaoSai.results,

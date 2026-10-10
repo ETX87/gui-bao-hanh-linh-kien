@@ -197,7 +197,8 @@ ngày (v1.015): đổi tên thành "Hủy đơn lỗi" và tách thẻ đơn Odo
 giao Admin BH", xác nhận SL hàng loạt, nút thao tác lên ngay sau mã ID, bộ lọc 6 tiêu chí + chọn tất cả đang hiển thị ở bảng
 Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.017):** giao diện web gọn lại —
 bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.018):** menu chia nhóm
-theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file.
+theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.019):** thiết kế lại UI chi
+tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4587,4 +4588,38 @@ màn hình => các table danh sách nguyên tắc hiện tối đa chiều cao =
 - Desktop: tổng 91 = KTV 3 + Kho 4 + Admin 81 + NV 1 + Kế toán 2. Đã xem cả bản mở rộng lẫn bản thu gọn.
 - Mobile 375px: các tab có số, "Thêm" 90, sheet chia nhóm đúng.
 - Chế độ test theo vai trò Giám sát / Kho / Admin BH / Kế toán: `/api/workload` chỉ trả số của vai trò đó.
+
+## Thiết kế lại UI chi tiết đơn bảo hành (10/10/2026) — v1.019
+
+**(a) Nguyên văn yêu cầu:** *"tôi cần thiết kế lại giao diện UI chi tiết xem đơn bảo hành, nó đang trống và thừa quá nhiều vùng"*
+
+**(b) Đã làm** (`screens/shared/UnitDetailModal.tsx` viết lại, `LogTimeline.tsx` mới):
+- Modal bỏ `full`, giờ cao theo nội dung, rộng tối đa `max-w-6xl` (thêm `max-w-5xl/6xl` vào `MD_MAX_W` của `ui/Modal.tsx`).
+  - **Ghi đè quyết định P8 (08/09/2026: "giữ modal full đồng nhất")** cho riêng màn này, theo yêu cầu mới.
+  - `PhieuTraDetailModal` chưa đổi.
+- Bố cục 2 cột (từ `lg`); mobile tự xếp thành 1 cột.
+  - **Trái:**
+    - Khối tóm tắt: linh kiện thực tế + phân loại + "Đã đổi LK" (kèm LK KTV gửi), mô tả lỗi, chip case / KTV (hoặc khách lẻ + SĐT) / phiếu gửi / phiếu trả / SL khai (+ thực nhận nếu lệch), badge Đơn dịch vụ / Odoo.
+    - Khối "🛠 Xử lý": chỉ hiện trường có giá trị. Có thêm mail/mã phê duyệt (trước không hiện). Đối trừ ghi kèm "KTV đề xuất" nếu Admin chốt khác. Chưa phân loại thì chỉ 1 dòng.
+    - Thông tin case (`CaseSnapshotPanel` gọn lại: 1 dòng tiêu đề + lưới chỉ trường có dữ liệu).
+    - **Mới:** "Cùng đơn … · N đơn vị" — chip #k + trạng thái từng đơn vị trong lô ×N.
+    - Ảnh: bấm để mở ảnh lớn.
+    - Báo cáo sai.
+  - **Phải:** "🕘 Nhật ký" gộp 4 nguồn thành 1 dòng thời gian (mới nhất trên), mỗi dòng có icon nguồn. Tab lọc: Tất cả / Đơn vị / Đơn cha / Phiếu gửi / Phiếu trả — chỉ hiện nguồn có dữ liệu. Vẫn tách xem riêng được từng nguồn như quyết định 02/09/2026.
+- Tiêu đề modal chỉ còn mã đơn (trên mobile tiêu đề dài bị badge đẩy cắt cụt).
+- Backend `GET /admin/don-vi/:id` trả thêm:
+  - `don_cha.ktv` + `phieu_gui_trang_thai`;
+  - `anh_em` (id, so_thu_tu, trang_thai các đơn vị cùng đơn cha).
+
+**(c) Vấn đề:**
+- Hàng tab nhật ký tràn ngang ở cột 360px → đổi sang xuống dòng.
+- Đơn chưa có nhật ký thì không hiện tab "Tất cả · 0".
+- `Badge` không có tone `slate` → dùng `gray`.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi, build sạch.
+- `wrangler dev` local (bỏ tạm binding remote rồi khôi phục), 1440×900:
+  - đơn DH-000006-4 (đã chẩn đoán, lô 7 đơn vị): modal 1152×575 (trước: kín 1392×852);
+  - đơn khách lẻ chưa phân loại: modal 371px.
+- Mobile 375px: 1 cột, nút thao tác dính đáy.
 

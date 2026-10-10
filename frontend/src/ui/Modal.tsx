@@ -11,6 +11,8 @@ const MD_MAX_W: Record<string, string> = {
   "max-w-2xl": "md:max-w-2xl",
   "max-w-3xl": "md:max-w-3xl",
   "max-w-4xl": "md:max-w-4xl",
+  "max-w-5xl": "md:max-w-5xl",
+  "max-w-6xl": "md:max-w-6xl",
 };
 
 // Modal - 2 kich co (mac dinh vs full man hinh, port dung quyet dinh "modal tram man hinh" da chot
