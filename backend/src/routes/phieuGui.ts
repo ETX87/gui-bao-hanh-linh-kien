@@ -239,7 +239,18 @@ phieuGui.get("/:id", async (c) => {
     ]);
     goiY = { ma_xe: mx.results.map((r) => r.v), dvvc: dv.results.map((r) => r.v) };
   }
-  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu, goi_y: goiY });
+  // 10/10/2026 (thiet ke lai UI chi tiet): nhat ky phieu gui + tien do tung don cha (dem don vi theo
+  // trang thai) de KTV/Kho/Admin thay ngay don nao dang o buoc nao ma khong phai mo tung don.
+  const [{ results: logs }, { results: tienDo }] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_gui' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
+    c.env.DB.prepare(
+      `SELECT u.parent_id, u.trang_thai, COUNT(*) AS n FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE p.phieu_gui_id = ? GROUP BY u.parent_id, u.trang_thai`,
+    )
+      .bind(id)
+      .all(),
+  ]);
+  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu, goi_y: goiY, logs, tien_do: tienDo });
 });
 
 interface AddDonBody {

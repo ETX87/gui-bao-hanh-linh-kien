@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 // Tailwind chi sinh CSS cho ten lop VIET NGUYEN VAN trong ma nguon - truoc day ghep chuoi "md:"+x luc
@@ -14,6 +14,9 @@ const MD_MAX_W: Record<string, string> = {
   "max-w-5xl": "md:max-w-5xl",
   "max-w-6xl": "md:max-w-6xl",
 };
+
+// So modal dang mo (khoa cuon trang chi go khi modal CUOI CUNG dong).
+let openCount = 0;
 
 // Modal - 2 kich co (mac dinh vs full man hinh, port dung quyet dinh "modal tram man hinh" da chot
 // 02/09/2026: chi "UI chi tiet" (openDetailUnitModal/openDetailTraModal) moi dung full=true, con lai
@@ -39,15 +42,22 @@ export function Modal({
   footerActions?: React.ReactNode;
   maxWidthClass?: string;
 }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    // Modal chong nhau (VD chi tiet phieu tra -> mo chi tiet don ben trong): Esc chi dong modal TREN CUNG.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const all = document.querySelectorAll("[data-modal-overlay]");
+      if (all.length && all[all.length - 1] !== overlayRef.current) return;
+      onClose();
     };
     document.addEventListener("keydown", onKey);
+    openCount += 1;
     document.body.classList.add("modal-open-lock");
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("modal-open-lock");
+      openCount -= 1;
+      if (openCount <= 0) document.body.classList.remove("modal-open-lock");
     };
   }, [onClose]);
 
@@ -55,6 +65,8 @@ export function Modal({
 
   return createPortal(
     <div
+      ref={overlayRef}
+      data-modal-overlay=""
       className="fixed inset-0 z-[150] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-0 md:p-4"
       onMouseDown={(e) => {
         mouseDownOnOverlay = e.target === e.currentTarget;

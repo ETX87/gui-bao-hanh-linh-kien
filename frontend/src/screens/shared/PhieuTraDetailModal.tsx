@@ -5,10 +5,12 @@ import { fmtDate } from "../../lib/format";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Textarea, ReadField, Badge, Spinner } from "../../ui/primitives";
-import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
+import { Btn, Field, Input, Textarea, Badge, Spinner } from "../../ui/primitives";
+import { LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
 import { useLkName } from "../../hooks/useLinhKien";
-import { LogBlock } from "./LogBlock";
+import { LogTimeline } from "./LogTimeline";
+import { UnitDetailModal } from "./UnitDetailModal";
+import { DetailGrid, SummaryBox, Section, KvGrid, Kv, Chip, Banner, Thumbs, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
 import type { AppUser, DonVi, LogRow, PhieuTra } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 
@@ -19,9 +21,15 @@ interface DetailResponse {
   logs: LogRow[];
 }
 
-// "UI chi tiet" phieu tra bao hanh - port dung openDetailTraModal(). Nut thao tac theo dung vai tro +
-// trang thai (Admin BH sua ma/gui duyet/huy gui duyet/tach don vi, Ke toan duyet/tu choi, Kho dong
-// goi/gui/xac nhan ket thuc du phong, KTV xac nhan nhan/khieu nai).
+// "UI chi tiet" phieu tra bao hanh. Nut thao tac theo dung vai tro + trang thai (Admin BH sua ma/gui
+// duyet/huy gui duyet/tach don vi, Ke toan duyet/tu choi, Kho dong goi/gui/xac nhan ket thuc du phong,
+// KTV xac nhan nhan/khieu nai).
+//
+// Thiet ke lai 10/10/2026 ("xu ly lai toan bo cac giao dien UI chi tiet"): bo modal kin man hinh, cung
+// khuon 2 cot voi UI chi tiet don bao hanh (ui/DetailParts.tsx) - trai: tom tat (KTV nhan, loai doi tru,
+// so don vi), canh bao (ke toan tu choi / khieu nai / danh gia), ma chung tu, danh sach don vi gon (bam
+// de mo chi tiet don); phai: nhat ky + anh dong goi. Kho o buoc "cho dong goi" nhap duoc Ma van don
+// (truoc day o nay chi hien luc "nhap" nen Kho bam "Gui hang" khong nhap duoc van don).
 
 export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
@@ -36,6 +44,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
   const [showTuChoi, setShowTuChoi] = useState(false);
   const [showKhieuNai, setShowKhieuNai] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [openUnit, setOpenUnit] = useState<string | null>(null);
 
   const load = () =>
     api.get<DetailResponse>(`/phieu-tra/${traId}`).then((r) => {
@@ -64,12 +73,17 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
 
   if (!data) {
     return (
-      <Modal title="Chi tiết phiếu trả" onClose={onClose} full>
+      <Modal title="Chi tiết phiếu trả" onClose={onClose} maxWidthClass={DETAIL_MAX_W}>
         <Spinner />
       </Modal>
     );
   }
   const t = data.phieu_tra;
+  const isNhap = t.trang_thai === "nhap";
+  const khoChoGui = user.la_kho && t.trang_thai === "da_duyet_ke_toan";
+  const batBuocMa = t.loai_doi_tru !== "tru_cong_no";
+  // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
+  const canOpenUnit = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view;
 
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
   const guiDuyet = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
@@ -88,160 +102,218 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
   const ktvXacNhanNhan = () => run(async () => { await api.post(`/phieu-tra/${traId}/ktv-xac-nhan-nhan`, { danh_gia: danhGia }); toast("Đã xác nhận nhận hàng.", "ok"); });
   const guiKhieuNai = () => run(async () => { await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: khieuNai }); toast("Đã gửi khiếu nại.", "ok"); setShowKhieuNai(false); });
 
+  const ktvNhanDuocXacNhan = (user.la_ktv_dvbh || user.la_ve_tinh) && t.ktv_nhan === user.email && t.trang_thai === "da_gui";
+  const coMa = !!(t.ma_don_hang || t.ma_misa || t.ma_van_don);
+
   return (
-    <Modal
-      title={`Phiếu trả bảo hành ${t.id}`}
-      onClose={onClose}
-      full
-      headerActions={<StatusBadge kind="tra" value={t.trang_thai} />}
-      footerActions={
-        <>
-          {user.la_admin_bh && t.trang_thai === "nhap" && (
-            <Btn variant="primary" disabled={busy} onClick={guiDuyet}>
-              Gửi duyệt kế toán
-            </Btn>
-          )}
-          {user.la_admin_bh && t.trang_thai === "cho_ke_toan_duyet" && (
-            <Btn variant="danger" disabled={busy} onClick={huyGuiDuyet}>
-              Huỷ gửi duyệt
-            </Btn>
-          )}
-          {user.la_ke_toan && t.trang_thai === "cho_ke_toan_duyet" && !showTuChoi && (
+    <>
+      <Modal
+        title={t.id}
+        onClose={onClose}
+        maxWidthClass={DETAIL_MAX_W}
+        headerActions={<StatusBadge kind="tra" value={t.trang_thai} />}
+        footerActions={
+          <>
+            {user.la_admin_bh && isNhap && (
+              <Btn variant="primary" disabled={busy} onClick={guiDuyet}>
+                Gửi duyệt kế toán
+              </Btn>
+            )}
+            {user.la_admin_bh && t.trang_thai === "cho_ke_toan_duyet" && (
+              <Btn variant="danger" disabled={busy} onClick={huyGuiDuyet}>
+                Huỷ gửi duyệt
+              </Btn>
+            )}
+            {user.la_ke_toan && t.trang_thai === "cho_ke_toan_duyet" && !showTuChoi && (
+              <>
+                <Btn variant="danger" onClick={() => setShowTuChoi(true)}>
+                  Từ chối
+                </Btn>
+                <Btn variant="success" disabled={busy} onClick={duyet}>
+                  Duyệt
+                </Btn>
+              </>
+            )}
+            {khoChoGui && (
+              <>
+                <label className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-white text-[var(--ink-body)] border border-[var(--line)] hover:bg-[var(--surface-2)] cursor-pointer">
+                  📦 Đóng gói (ảnh tuỳ chọn)
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => dongGoi(e.target.files)} />
+                </label>
+                <Btn variant="primary" disabled={busy} onClick={gui}>
+                  Gửi hàng
+                </Btn>
+              </>
+            )}
+            {user.la_kho && t.trang_thai === "da_gui" && (
+              <Btn variant="secondary" disabled={busy} onClick={khoXacNhanKetThuc}>
+                Kho xác nhận kết thúc (dự phòng)
+              </Btn>
+            )}
+            {ktvNhanDuocXacNhan && !showKhieuNai && (
+              <>
+                <Btn variant="danger" onClick={() => setShowKhieuNai(true)}>
+                  Khiếu nại vận chuyển
+                </Btn>
+                <Btn variant="success" disabled={busy} onClick={ktvXacNhanNhan}>
+                  Xác nhận đã nhận
+                </Btn>
+              </>
+            )}
+          </>
+        }
+      >
+        <DetailGrid
+          side={
             <>
-              <Btn variant="danger" onClick={() => setShowTuChoi(true)}>
-                Từ chối
-              </Btn>
-              <Btn variant="success" disabled={busy} onClick={duyet}>
-                Duyệt
-              </Btn>
+              <div>
+                <SectionTitle className="mb-1.5">🕘 Nhật ký</SectionTitle>
+                <LogTimeline className="lg:max-h-[52vh]" sources={[{ key: "pt", label: "Phiếu trả", icon: "↩️", logs: data.logs }]} />
+              </div>
+              {data.anh.length > 0 && (
+                <div>
+                  <SectionTitle className="mb-1.5">🖼 Ảnh đóng gói ({data.anh.length})</SectionTitle>
+                  <Thumbs urls={data.anh.map((a) => ({ key: String(a.id), url: a.anh_url, title: "Ảnh biên bản đóng gói" }))} />
+                </div>
+              )}
             </>
-          )}
-          {user.la_kho && t.trang_thai === "da_duyet_ke_toan" && (
-            <>
-              <label className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-white text-[var(--ink-body)] border border-[var(--line)] hover:bg-[var(--surface-2)] cursor-pointer">
-                📦 Đóng gói (ảnh tuỳ chọn)
-                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => dongGoi(e.target.files)} />
-              </label>
-              <Btn variant="primary" disabled={busy} onClick={gui}>
-                Gửi hàng
-              </Btn>
-            </>
-          )}
-          {user.la_kho && t.trang_thai === "da_gui" && (
-            <Btn variant="secondary" disabled={busy} onClick={khoXacNhanKetThuc}>
-              Kho xác nhận kết thúc (dự phòng)
-            </Btn>
-          )}
-          {(user.la_ktv_dvbh || user.la_ve_tinh) && t.ktv_nhan === user.email && t.trang_thai === "da_gui" && !showKhieuNai && (
-            <>
-              <Btn variant="danger" onClick={() => setShowKhieuNai(true)}>
-                Khiếu nại vận chuyển
-              </Btn>
-              <Btn variant="success" disabled={busy} onClick={ktvXacNhanNhan}>
-                Xác nhận đã nhận
-              </Btn>
-            </>
-          )}
-        </>
-      }
-    >
-      <div className="space-y-6">
-        {showTuChoi && (
-          <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
-            <Field label="Lý do từ chối" required>
-              <Textarea rows={2} value={lyDoTuChoi} onChange={(e) => setLyDoTuChoi(e.target.value)} />
-            </Field>
-            <div className="flex justify-end gap-2">
-              <Btn onClick={() => setShowTuChoi(false)}>Huỷ</Btn>
-              <Btn variant="danger" disabled={!lyDoTuChoi.trim() || busy} onClick={tuChoi}>
-                Xác nhận từ chối
-              </Btn>
+          }
+        >
+          {showTuChoi && (
+            <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
+              <Field label="Lý do từ chối" required>
+                <Textarea rows={2} value={lyDoTuChoi} onChange={(e) => setLyDoTuChoi(e.target.value)} autoFocus />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Btn onClick={() => setShowTuChoi(false)}>Huỷ</Btn>
+                <Btn variant="danger" disabled={!lyDoTuChoi.trim() || busy} onClick={tuChoi}>
+                  Xác nhận từ chối
+                </Btn>
+              </div>
             </div>
-          </div>
-        )}
-        {showKhieuNai && (
-          <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
-            <Field label="Nội dung khiếu nại" required>
-              <Textarea rows={2} value={khieuNai} onChange={(e) => setKhieuNai(e.target.value)} placeholder="Mô tả sự cố không nhận được hàng..." />
-            </Field>
-            <div className="flex justify-end gap-2">
-              <Btn onClick={() => setShowKhieuNai(false)}>Huỷ</Btn>
-              <Btn variant="danger" disabled={!khieuNai.trim() || busy} onClick={guiKhieuNai}>
-                Gửi khiếu nại
-              </Btn>
+          )}
+          {showKhieuNai && (
+            <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
+              <Field label="Nội dung khiếu nại" required>
+                <Textarea rows={2} value={khieuNai} onChange={(e) => setKhieuNai(e.target.value)} placeholder="Mô tả sự cố không nhận được hàng..." autoFocus />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Btn onClick={() => setShowKhieuNai(false)}>Huỷ</Btn>
+                <Btn variant="danger" disabled={!khieuNai.trim() || busy} onClick={guiKhieuNai}>
+                  Gửi khiếu nại
+                </Btn>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <ReadField label="KTV nhận" value={<UserName email={t.ktv_nhan} />} />
-          <ReadField label="Loại đối trừ" value={LOAI_DOI_TRU_LABELS[t.loai_doi_tru]} />
-          <ReadField label="Người tạo" value={<UserName email={t.nguoi_tao} />} />
-          <ReadField label="Tạo lúc" value={fmtDate(t.created_at)} />
-        </div>
-
-        {t.trang_thai === "nhap" ? (
-          <div className="grid grid-cols-3 gap-3 border-t border-[var(--line)] pt-4">
-            <Field label={`Mã đơn hàng${t.loai_doi_tru === "tru_cong_no" ? "" : " *"}`}>
-              <Input value={maDonHang} onChange={(e) => setMaDonHang(e.target.value)} />
-            </Field>
-            <Field label={`Mã MISA${t.loai_doi_tru === "tru_cong_no" ? "" : " *"}`}>
-              <Input value={maMisa} onChange={(e) => setMaMisa(e.target.value)} />
-            </Field>
-            <Field label="Mã vận đơn">
-              <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
-            </Field>
-            <div className="col-span-3">
-              <Btn onClick={saveCodes} disabled={busy}>
-                Lưu mã
-              </Btn>
+          <SummaryBox>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-[15px] font-bold text-[var(--ink)]">
+                👷 Trả cho <UserName email={t.ktv_nhan} />
+              </p>
+              <Badge tone={t.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[t.loai_doi_tru]}</Badge>
             </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-4 border-t border-[var(--line)] pt-4">
-            <ReadField label="Mã đơn hàng" value={t.ma_don_hang} />
-            <ReadField label="Mã MISA" value={t.ma_misa} />
-            <ReadField label="Mã vận đơn" value={t.ma_van_don} />
-          </div>
-        )}
-        {t.ly_do_tu_choi_kt && <ReadField label="Lý do Kế toán từ chối lần trước" value={t.ly_do_tu_choi_kt} />}
-        {t.danh_gia_ktv && <ReadField label="Đánh giá của KTV" value={t.danh_gia_ktv} />}
-        {t.khong_nhan_duoc_ghi_chu && <ReadField label="Nội dung khiếu nại" value={t.khong_nhan_duoc_ghi_chu} />}
+            <div className="flex flex-wrap gap-1.5">
+              <Chip icon="📦" title="Số đơn vị trong phiếu">
+                {data.don_vi.length} đơn vị
+              </Chip>
+              <Chip icon="✍️" title="Người tạo">
+                <UserName email={t.nguoi_tao} />
+              </Chip>
+              <Chip icon="🕒" title="Tạo lúc">
+                {fmtDate(t.created_at)}
+              </Chip>
+            </div>
+          </SummaryBox>
 
-        {data.anh.length > 0 && (
-          <div className="border-t border-[var(--line)] pt-4">
-            <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Ảnh biên bản đóng gói</p>
-            <div className="flex flex-wrap gap-2">
-              {data.anh.map((a) => (
-                <img key={a.id} src={a.anh_url} className="w-20 h-20 object-cover rounded-lg border border-[var(--line)]" />
+          {t.ly_do_tu_choi_kt && <Banner tone="amber">Kế toán từ chối lần trước: {t.ly_do_tu_choi_kt}</Banner>}
+          {t.khong_nhan_duoc_ghi_chu && <Banner tone="red">⚠ Khiếu nại vận chuyển: {t.khong_nhan_duoc_ghi_chu}</Banner>}
+          {t.danh_gia_ktv && <Banner tone="blue">Đánh giá của KTV: {t.danh_gia_ktv}</Banner>}
+          {ktvNhanDuocXacNhan && (
+            <Field label="Đánh giá khi nhận hàng (tuỳ chọn)">
+              <Input value={danhGia} onChange={(e) => setDanhGia(e.target.value)} placeholder="VD: Hàng nhận đủ, đóng gói tốt" />
+            </Field>
+          )}
+
+          <Section
+            title="🧾 Mã chứng từ"
+            right={
+              isNhap && user.la_admin_bh ? (
+                <Btn size="sm" onClick={saveCodes} disabled={busy}>
+                  Lưu mã
+                </Btn>
+              ) : undefined
+            }
+          >
+            {isNhap && user.la_admin_bh ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Field label={`Mã đơn hàng${batBuocMa ? " *" : ""}`}>
+                  <Input value={maDonHang} onChange={(e) => setMaDonHang(e.target.value)} />
+                </Field>
+                <Field label={`Mã MISA${batBuocMa ? " *" : ""}`}>
+                  <Input value={maMisa} onChange={(e) => setMaMisa(e.target.value)} />
+                </Field>
+                <Field label="Mã vận đơn">
+                  <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                </Field>
+              </div>
+            ) : (
+              <>
+                {coMa || !khoChoGui ? (
+                  <KvGrid>
+                    <Kv k="Mã đơn hàng" v={t.ma_don_hang || "—"} />
+                    <Kv k="Mã MISA" v={t.ma_misa || "—"} />
+                    {!khoChoGui && <Kv k="Mã vận đơn" v={t.ma_van_don || "—"} />}
+                  </KvGrid>
+                ) : null}
+                {khoChoGui && (
+                  <div className="mt-2 max-w-xs">
+                    <Field label="Mã vận đơn (Kho nhập khi gửi)">
+                      <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                    </Field>
+                  </div>
+                )}
+              </>
+            )}
+          </Section>
+
+          <Section title={`📦 Đơn vị trong phiếu (${data.don_vi.length})`}>
+            <div className="divide-y divide-[var(--line)] -mx-1">
+              {data.don_vi.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={canOpenUnit ? () => setOpenUnit(u.id) : undefined}
+                  className={`flex flex-wrap md:flex-nowrap items-center gap-x-3 gap-y-0.5 px-1 py-1.5 text-[13px] ${canOpenUnit ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
+                >
+                  <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{u.id}</span>
+                  <span className="min-w-0 md:max-w-[38%] truncate text-[var(--ink)]" title={nameOf(u.ma_lk_thuc_te || u.ma_lk)}>
+                    {nameOf(u.ma_lk_thuc_te || u.ma_lk)}
+                  </span>
+                  {u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
+                  <span className="basis-full md:basis-auto min-w-0 flex-1 truncate text-xs text-[var(--ink-soft)]" title={u.mo_ta_loi || ""}>
+                    {u.mo_ta_loi}
+                  </span>
+                  {user.la_admin_bh && isNhap && (
+                    <Btn
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        tachDonVi(u.id);
+                      }}
+                      disabled={busy}
+                      className="ml-auto shrink-0 !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+                    >
+                      Tách khỏi phiếu
+                    </Btn>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
-        )}
-
-        <div className="border-t border-[var(--line)] pt-4">
-          <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide mb-2">Đơn vị trong phiếu ({data.don_vi.length})</p>
-          <div className="space-y-1.5">
-            {data.don_vi.map((u) => (
-              <div key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
-                <span className="font-mono text-xs font-semibold text-[var(--link)]">{u.id}</span>
-                <span className="text-[var(--ink)]">{nameOf(u.ma_lk_thuc_te || u.ma_lk)}</span>
-                {u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
-                {user.la_admin_bh && t.trang_thai === "nhap" && (
-                  <Btn variant="danger" onClick={() => tachDonVi(u.id)} disabled={busy} className="ml-auto">
-                    Tách khỏi phiếu
-                  </Btn>
-                )}
-                {u.mo_ta_loi && <span className="w-full text-xs text-[var(--ink-soft)] truncate">{u.mo_ta_loi}</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="border-t border-[var(--line)] pt-4">
-          <LogBlock title="↩️ Nhật ký phiếu trả" logs={data.logs} />
-        </div>
-      </div>
-    </Modal>
+          </Section>
+        </DetailGrid>
+      </Modal>
+      {openUnit && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
+    </>
   );
 }

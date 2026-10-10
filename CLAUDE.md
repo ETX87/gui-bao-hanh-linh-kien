@@ -198,7 +198,8 @@ giao Admin BH", xác nhận SL hàng loạt, nút thao tác lên ngay sau mã ID
 Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.017):** giao diện web gọn lại —
 bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.018):** menu chia nhóm
 theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.019):** thiết kế lại UI chi
-tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file.
+tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
+UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4622,4 +4623,42 @@ màn hình => các table danh sách nguyên tắc hiện tối đa chiều cao =
   - đơn DH-000006-4 (đã chẩn đoán, lô 7 đơn vị): modal 1152×575 (trước: kín 1392×852);
   - đơn khách lẻ chưa phân loại: modal 371px.
 - Mobile 375px: 1 cột, nút thao tác dính đáy.
+
+## Đồng bộ toàn bộ UI chi tiết theo 1 khuôn (10/10/2026) — v1.020
+
+**(a) Nguyên văn yêu cầu:** *"tôi cần xử lý lại toàn bộ các giao diện UI chi tiết hiện tại"* (sau khi làm lại UI chi tiết đơn bảo hành ở v1.019).
+
+**(b) Đã làm:**
+- `frontend/src/ui/DetailParts.tsx` (mới): khối dùng chung cho mọi UI chi tiết.
+  - Các khối: `DetailGrid` (2 cột: trái thông tin / phải nhật ký, mobile 1 cột), `SummaryBox`, `Section` (tiêu đề + nút bên phải), `KvGrid` / `Kv`, `Chip`, `Banner`, `Thumbs`, `SectionTitle`, `DETAIL_MAX_W` = `max-w-6xl`.
+  - `UnitDetailModal` chuyển sang dùng các khối này.
+- **Chi tiết phiếu trả** (`PhieuTraDetailModal`) viết lại, bỏ modal kín màn hình.
+  - Tóm tắt: "Trả cho <KTV>" + loại đối trừ + chip số đơn vị / người tạo / thời gian.
+  - Banner: Kế toán từ chối lần trước, khiếu nại, đánh giá KTV.
+  - "Mã chứng từ": Admin nhập khi phiếu còn nháp, có nút "Lưu mã" trên tiêu đề khối.
+  - Danh sách đơn vị gọn 1 hàng/đơn vị. Admin, qtri, Giám sát, View bấm vào để mở chi tiết đơn, chồng lên trên.
+  - Cột phải: nhật ký (`LogTimeline`) + ảnh đóng gói.
+  - **2 lỗi cũ đã sửa:**
+    - Kho ở bước "chờ đóng gói" không có ô nhập mã vận đơn (ô chỉ hiện lúc nháp), nên bấm "Gửi hàng" luôn không có vận đơn. Nay có ô "Mã vận đơn (Kho nhập khi gửi)".
+    - KTV xác nhận nhận hàng có biến `danhGia` nhưng không có ô nhập. Nay có ô "Đánh giá khi nhận hàng".
+- **Chi tiết phiếu gửi** (`PhieuGuiDetailModal`) viết lại, bỏ modal kín màn hình.
+  - Tóm tắt: KTV + chip số đơn / tạo lúc / ngày gửi xe / Kho nhận + SLA. Banner "tạo hộ", banner sự cố tiếp nhận.
+  - "Vận chuyển": nút "Lưu nháp" trên tiêu đề khối, ngày gửi xe nằm chung lưới.
+  - Danh sách đơn gọn, **mới:** badge tiến độ từng đơn (đếm đơn vị theo trạng thái). Người có quyền bấm vào để mở chi tiết đơn vị #1.
+  - Cột phải: QR nhỏ + trao đổi (`GhiChuLogPanel`) + **mới:** nhật ký phiếu gửi.
+  - Backend `GET /phieu-gui/:id` trả thêm `logs` (entity `phieu_gui`) và `tien_do` (parent_id, trang_thai, n).
+- `ui/Modal.tsx`:
+  - Esc chỉ đóng modal trên cùng (thuộc tính `data-modal-overlay`). Trước đây mở chi tiết đơn từ trong phiếu trả rồi bấm Esc là đóng cả 2.
+  - Khoá cuộn trang dùng bộ đếm số modal đang mở: đóng modal con không gỡ khoá khi modal cha còn mở.
+- Xoá `screens/shared/LogBlock.tsx` (không còn ai dùng).
+
+**(c) Vấn đề:** ảnh chụp khung xem trước bị cắt / phóng sai → kiểm tra bố cục bằng đo `getBoundingClientRect`.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi. Chạy `wrangler dev` local (bỏ tạm binding remote rồi khôi phục).
+- 1440×900:
+  - phiếu trả TR-000001: modal 1152×491, 2 cột (trái 728px, phải 360px);
+  - bấm đơn vị → mở DH-000006-1 chồng lên; Esc chỉ đóng chi tiết đơn, phiếu trả còn mở, trang vẫn khoá cuộn;
+  - phiếu gửi BH-000003: modal 1152×558, 2 cột.
+- Mobile 375px: không phần tử nào tràn ngang.
 

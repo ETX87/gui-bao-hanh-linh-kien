@@ -2,30 +2,49 @@ import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
+import { fmtDate } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select, Badge, ReadField, Spinner } from "../../ui/primitives";
+import { Btn, Field, Input, Select, Badge, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
-import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_GUI_LABELS, HINH_THUC_GUI_OPTIONS } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, HINH_THUC_GUI_OPTIONS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
+import { LogTimeline } from "../shared/LogTimeline";
+import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { AddDonModal } from "./AddDonModal";
 import { AddDonMobileSheet } from "./AddDonMobileSheet";
 import { OdooDonPickerModal } from "./OdooDonPicker";
 import { QrCode } from "../../ui/QrCode";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import type { DonCha, PhieuGui } from "../../lib/types";
+import { useAuth } from "../../auth/AuthContext";
+import { DetailGrid, SummaryBox, Section, KvGrid, Kv, Chip, Banner, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
+import type { DonCha, LogRow, PhieuGui } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
-// Chi tiet phieu gui - port dung renderPhieuGuiDetail(): sua header (khi con "nhap"), them/xoa don,
-// xac nhan gui xe, xoa phieu (khi con "nhap" va rong), ghi chu/phan hoi. QR dan thung (da bo o Giai
-// doan 4, nay port lai theo yeu cau "QA vong 2") - dung QrCode/lib/qr.ts, ma hoa dung g.id.
+interface DetailResponse {
+  phieu_gui: PhieuGui;
+  don_cha: DonCha[];
+  goi_y?: { ma_xe: string[]; dvvc: string[] };
+  logs?: LogRow[];
+  tien_do?: { parent_id: string; trang_thai: string; n: number }[];
+}
+
+// Chi tiet phieu gui: sua thong tin van chuyen (khi con "nhap"), them/xoa don, xac nhan gui xe, xoa
+// phieu (khi con "nhap" va rong), trao doi, QR dan thung (ma hoa g.id).
+//
+// Thiet ke lai 10/10/2026 ("xu ly lai toan bo cac giao dien UI chi tiet"): bo modal kin man hinh, cung
+// khuon 2 cot voi UI chi tiet don bao hanh (ui/DetailParts.tsx) - trai: tom tat (KTV, so don, ngay gui,
+// kho nhan), van chuyen, danh sach don gon kem TIEN DO tung don (dem don vi theo trang thai - moi);
+// phai: QR + trao doi + nhat ky phieu gui (moi - truoc day man nay khong co nhat ky).
 
 export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: string; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
   const isMobile = useIsMobile();
-  const [data, setData] = useState<{ phieu_gui: PhieuGui; don_cha: DonCha[]; goi_y?: { ma_xe: string[]; dvvc: string[] } } | null>(null);
+  const auth = useAuth();
+  const user = auth.status === "authenticated" ? auth.user : null;
+  const [data, setData] = useState<DetailResponse | null>(null);
   const { items: lkItems } = useLinhKien();
   const lkName = (ma: string | null) => (ma ? lkLabel(lkItems.find((l) => l.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
   const [hinhThuc, setHinhThuc] = useState("");
@@ -35,10 +54,11 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   const [ngayGuiXe, setNgayGuiXe] = useState("");
   const [addDonOpen, setAddDonOpen] = useState(false);
   const [odooOpen, setOdooOpen] = useState(false);
+  const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = () =>
-    api.get<{ phieu_gui: PhieuGui; don_cha: DonCha[]; goi_y?: { ma_xe: string[]; dvvc: string[] } }>(`/phieu-gui/${guiId}`).then((r) => {
+    api.get<DetailResponse>(`/phieu-gui/${guiId}`).then((r) => {
       setData(r);
       setHinhThuc(r.phieu_gui.hinh_thuc_gui || "xe_noi_bo");
       setMaXe(r.phieu_gui.ma_xe_hoac_tai_xe || "");
@@ -70,13 +90,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
     }
   };
 
-  // Dong modal ma phieu con "nhap" VA chua co don nao ben trong -> tu dong xoa luon (best-effort,
-  // khong bao loi neu that bai) - port dung nguyen van yeu cau 07/09/2026 "nếu không ấn lưu và tối
-  // thiểu 1 linh kiện bên trong phiếu thì không tạo ra phiếu nháp": truoc day bam "+ Tạo phiếu mới"
-  // la INSERT ngay 1 dong phieu_gui_bh, dong modal ma chua them don nao de lai 1 phieu nhap rong vinh
-  // vien trong danh sach ("đống phiếu nháp thừa"). Dieu kien nay TRUNG KHOP dieu kien nut "Xoá phiếu"
-  // thu cong da co san (chi hien khi don_cha.length===0) - day chi la ban tu dong hoa cua dung hanh
-  // dong do, khong mo rong quyen gi moi.
+  // Dong modal ma phieu con "nhap" VA chua co don nao -> tu dong xoa luon (yeu cau 07/09/2026 "không
+  // tạo ra phiếu nháp thừa"), trung dieu kien nut "Xoá phiếu" thu cong.
   const handleClose = () => {
     if (data && data.phieu_gui.trang_thai === "nhap" && data.don_cha.length === 0) {
       api
@@ -92,21 +107,22 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
 
   if (!data) {
     return (
-      <Modal title="Chi tiết phiếu gửi" onClose={handleClose} full>
+      <Modal title="Chi tiết phiếu gửi" onClose={handleClose} maxWidthClass={DETAIL_MAX_W}>
         <Spinner />
       </Modal>
     );
   }
   const g = data.phieu_gui;
   const isNhap = g.trang_thai === "nhap";
+  const canOpenUnit = !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
+  const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
 
-  const saveHeader = () => run(async () => { await api.patch(`/phieu-gui/${g.id}`, { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon }); toast("Đã lưu.", "ok"); }, false);
-  // Phat hien 9 vong ra soat UX: truoc day "Xac nhan da gui xe" CHI POST ngay_gui_xe - neu KTV sua
-  // 4 truong van chuyen roi bam thang nut nay (khong bam nut xam "Luu thong tin" truoc) thi 4 sua
-  // do BI MAT. Nay nut xac nhan tu PATCH header trước rồi mới POST - khong con bay mat du lieu.
+  const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon };
+  const saveHeader = () => run(async () => { await api.patch(`/phieu-gui/${g.id}`, header); toast("Đã lưu.", "ok"); }, false);
+  // "Xac nhan da gui xe" tu PATCH thong tin van chuyen truoc roi moi POST (Phat hien 9 ra soat UX).
   const xacNhanGui = () =>
     run(async () => {
-      await api.patch(`/phieu-gui/${g.id}`, { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon });
+      await api.patch(`/phieu-gui/${g.id}`, header);
       await api.post(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe });
       toast("Đã lưu thông tin & xác nhận gửi xe.", "ok");
     });
@@ -121,9 +137,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   return (
     <>
       <Modal
-        title={`Phiếu gửi ${g.id}`}
+        title={g.id}
         onClose={handleClose}
-        full
+        maxWidthClass={DETAIL_MAX_W}
         headerActions={<StatusBadge kind="gui" value={g.trang_thai} />}
         footerActions={
           isNhap ? (
@@ -140,40 +156,93 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
           ) : undefined
         }
       >
-        <div className="space-y-6">
-          {/* QR dat cot phai canh thong tin van chuyen (truoc day dung 1 hang rieng, ben trai trong) */}
-          <div className="flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex-1 min-w-0 space-y-3">
-              {g.nguoi_tao_ho ? (
-                <p className="text-xs text-[var(--ink-soft)]">
-                  Được tạo hộ bởi <UserName email={g.nguoi_tao_ho} className="font-semibold text-[var(--ink-body)]" /> cho KTV <UserName email={g.nguoi_tao} className="font-semibold text-[var(--ink-body)]" />
-                </p>
-              ) : (
-                null
+        <DetailGrid
+          side={
+            <>
+              <div className="flex items-center gap-3 rounded-xl border border-[var(--line)] p-2.5">
+                <QrCode text={g.id} sizePx={84} />
+                <p className="text-xs text-[var(--ink-soft)]">Mã QR dán lên thùng — Kho quét để tiếp nhận nhanh.</p>
+              </div>
+              <GhiChuLogPanel guiId={g.id} />
+              <div>
+                <SectionTitle className="mb-1.5">🕘 Nhật ký phiếu gửi</SectionTitle>
+                <LogTimeline className="lg:max-h-[40vh]" sources={[{ key: "pg", label: "Phiếu gửi", icon: "🚚", logs: data.logs ?? [] }]} />
+              </div>
+            </>
+          }
+        >
+          {g.nguoi_tao_ho && (
+            <Banner tone="blue">
+              Được tạo hộ bởi <UserName email={g.nguoi_tao_ho} /> cho KTV <UserName email={g.nguoi_tao} />
+            </Banner>
+          )}
+
+          <SummaryBox>
+            <p className="text-[15px] font-bold text-[var(--ink)]">
+              👷 <UserName email={g.nguoi_tao} />
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <Chip icon="📦" title="Số đơn trong phiếu">
+                {data.don_cha.length} đơn
+              </Chip>
+              <Chip icon="🕒" title="Tạo lúc">
+                Tạo {fmtDate(g.created_at)}
+              </Chip>
+              {g.ngay_gui_xe && !isNhap && (
+                <Chip icon="🚚" title="Ngày gửi xe">
+                  Gửi xe {g.ngay_gui_xe}
+                </Chip>
               )}
+              {g.thoi_gian_nhan_kho && (
+                <Chip icon="📥" title="Kho tiếp nhận lúc">
+                  Kho nhận {fmtDate(g.thoi_gian_nhan_kho)}
+                </Chip>
+              )}
+              {g.thoi_gian_nhan_kho && <SlaBadge since={g.thoi_gian_nhan_kho} />}
+            </div>
+          </SummaryBox>
+
+          {!!g.su_co_tiep_nhan && (
+            <Banner tone="red">
+              ⚠ Kho báo sự cố tiếp nhận: {g.su_co_ly_do} {g.su_co_ghi_chu && `— ${g.su_co_ghi_chu}`}
+            </Banner>
+          )}
+
+          <Section
+            title="🚚 Vận chuyển"
+            right={
+              isNhap ? (
+                <Btn size="sm" onClick={saveHeader} disabled={busy}>
+                  Lưu nháp
+                </Btn>
+              ) : undefined
+            }
+          >
             {isNhap ? (
-              // Grid 1 cot tren mobile (< sm), 2 cot tu ~640px, 4 cot tu 768px - sua 07/09/2026 (phan
-              // hoi "giao diện tạo phiếu... trên mobile khó nhập liệu, thông tin bị quá ngắn và chồng
-              // chéo đè lên nhau"): truoc day luon co san 2 cot ngay ca tren dien thoai hep nhat, va
-              // "Ngày gửi xe" + nut "Lưu thông tin" nam chung 1 hang flex khong co chieu rong co dinh -
-              // 2 phan tu tranh cho nhau tren man hinh hep, de vo dong/de len nhau. Nay moi truong 1 o
-              // luoi rieng, "Lưu thông tin" thanh 1 nut rong het chieu rong o cua no tren mobile.
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                <Field label="Hình thức gửi">
-                  <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
-                    {HINH_THUC_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Mã xe / Tài xế">
-                  <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
-                </Field>
-                <Field label="Đơn vị vận chuyển">
-                  <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
-                </Field>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  <Field label="Hình thức gửi">
+                    <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
+                      {HINH_THUC_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Mã xe / Tài xế">
+                    <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
+                  </Field>
+                  <Field label="Đơn vị vận chuyển">
+                    <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
+                  </Field>
+                  <Field label="Mã vận đơn">
+                    <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                  </Field>
+                  <Field label="Ngày gửi xe">
+                    <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
+                  </Field>
+                </div>
                 {/* Goi y go nhanh tu cac lan gui truoc cua KTV (05/10/2026 muc 4). */}
                 <datalist id="goiy-ma-xe">
                   {(data.goi_y?.ma_xe ?? []).map((v) => (
@@ -185,91 +254,88 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
                     <option key={v} value={v} />
                   ))}
                 </datalist>
-                <Field label="Mã vận đơn">
-                  <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
-                </Field>
-                <div className="sm:col-span-2 xl:col-span-4 flex flex-wrap items-end gap-3 border-t border-[var(--line)] pt-3">
-                  <Field label="Ngày gửi xe">
-                    <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} className="!w-44" />
-                  </Field>
-                  <p className="text-xs text-[var(--ink-soft)] pb-2">
-                    Bấm <b>“Xác nhận đã gửi xe”</b> ở dưới sẽ tự lưu toàn bộ thông tin vận chuyển ở trên.
-                    <button onClick={saveHeader} disabled={busy} className="focus-ring ml-2 text-[var(--accent-ink)] underline underline-offset-2 hover:text-[var(--accent)]">
-                      Lưu nháp bây giờ
-                    </button>
-                  </p>
-                </div>
-              </div>
+                <p className="mt-1.5 text-[11px] text-[var(--ink-faint)]">Bấm “Xác nhận đã gửi xe” sẽ tự lưu toàn bộ thông tin vận chuyển.</p>
+              </>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <ReadField label="Hình thức gửi" value={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui} />
-                <ReadField label="Mã xe / Tài xế" value={g.ma_xe_hoac_tai_xe} />
-                <ReadField label="Đơn vị vận chuyển" value={g.don_vi_van_chuyen} />
-                <ReadField label="Ngày gửi xe" value={g.ngay_gui_xe} />
-              </div>
+              <KvGrid>
+                <Kv k="Hình thức gửi" v={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui || "—"} />
+                <Kv k="Mã xe / Tài xế" v={g.ma_xe_hoac_tai_xe || "—"} />
+                <Kv k="Đơn vị vận chuyển" v={g.don_vi_van_chuyen || "—"} />
+                {g.ma_van_don && <Kv k="Mã vận đơn" v={g.ma_van_don} />}
+                <Kv k="Ngày gửi xe" v={g.ngay_gui_xe || "—"} />
+              </KvGrid>
             )}
-            </div>
-            <div className="shrink-0 flex justify-center md:block">
-              <QrCode text={g.id} sizePx={100} />
-            </div>
-          </div>
-          {!!g.su_co_tiep_nhan && (
-            <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">
-              ⚠ Kho báo sự cố tiếp nhận: {g.su_co_ly_do} {g.su_co_ghi_chu && `— ${g.su_co_ghi_chu}`}
-            </p>
-          )}
-          {g.thoi_gian_nhan_kho && (
-            <div className="flex items-center gap-2 text-xs text-[var(--ink-soft)]">
-              Kho tiếp nhận lúc {g.thoi_gian_nhan_kho} · <SlaBadge since={g.thoi_gian_nhan_kho} />
-            </div>
-          )}
+          </Section>
 
-          <div className="border-t border-[var(--line)] pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide">Đơn bảo hành trong phiếu ({data.don_cha.length})</p>
-              {isNhap && (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Btn variant="secondary" onClick={() => setOdooOpen(true)}>
+          <Section
+            title={`📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
+            right={
+              isNhap ? (
+                <>
+                  <Btn size="sm" onClick={() => setOdooOpen(true)}>
                     🧾 Chọn đơn Odoo
                   </Btn>
-                  <Btn variant="primary" onClick={() => setAddDonOpen(true)}>
+                  <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
                     + Thêm đơn
                   </Btn>
-                </div>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              {data.don_cha.length === 0 && <p className="text-xs text-[var(--ink-faint)]">Chưa có đơn nào — bấm "+ Thêm đơn" trước khi xác nhận gửi.</p>}
-              {data.don_cha.map((d) => (
-                // flex-wrap thay vi ep 1 hang cung (sua 07/09/2026, cung ly do voi grid header o
-                // tren) - tren man hinh hep, id/SL/badge/nut "Xoá" tu xuong hang thay vi bop chet mo
-                // ta loi con vai px, va mo ta loi luon xuong dong rieng (khong chia se hang voi cac
-                // the khac) de khong con bi cham/de len nhau.
-                <div key={d.id} className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
-                    {d.case_id && <span className="font-mono text-xs text-[var(--ink-soft)]">{d.case_id}</span>}
-                    <span className="text-xs text-[var(--ink-soft)]">SL: {d.so_luong_khai}</span>
-                    {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
-                    {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
-                    {isNhap && (
-                      <Btn variant="ghost" size="sm" onClick={() => xoaDon(d.id)} disabled={busy} className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]">
-                        ✕ Xoá
-                      </Btn>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-[var(--ink)] truncate">🔩 {lkName(d.ma_lk)}</p>
-                  <p className="truncate text-[var(--ink-body)]">{d.mo_ta_loi}</p>
-                  {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-4">
-            <GhiChuLogPanel guiId={g.id} />
-          </div>
-        </div>
+                </>
+              ) : undefined
+            }
+          >
+            {data.don_cha.length === 0 ? (
+              <p className="text-[13px] text-[var(--ink-faint)]">Chưa có đơn nào — bấm “+ Thêm đơn” hoặc “Chọn đơn Odoo” trước khi xác nhận gửi.</p>
+            ) : (
+              <div className="divide-y divide-[var(--line)] -mx-1">
+                {data.don_cha.map((d) => {
+                  const td = tienDoOf(d.id);
+                  const clickable = canOpenUnit && td.length > 0;
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={clickable ? () => setOpenUnit(`${d.id}-1`) : undefined}
+                      className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
+                      title={clickable ? "Mở chi tiết đơn" : undefined}
+                    >
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
+                        <span className="min-w-0 max-w-full truncate font-medium text-[var(--ink)]" title={lkName(d.ma_lk)}>
+                          {lkName(d.ma_lk)}
+                        </span>
+                        <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
+                        {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
+                        {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
+                        {td.map((x) => (
+                          <Badge key={x.trang_thai} tone="gray" className="!font-medium">
+                            {x.n} {TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+                          </Badge>
+                        ))}
+                        {isNhap && (
+                          <Btn
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              xoaDon(d.id);
+                            }}
+                            disabled={busy}
+                            className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+                          >
+                            ✕ Xoá
+                          </Btn>
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-[var(--ink-soft)]" title={d.mo_ta_loi || ""}>
+                        {d.case_id && <span className="font-mono">{d.case_id} · </span>}
+                        {d.mo_ta_loi}
+                      </p>
+                      {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+        </DetailGrid>
       </Modal>
       {odooOpen && (
         <OdooDonPickerModal
@@ -290,6 +356,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         ) : (
           <AddDonModal guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
         ))}
+      {openUnit && user && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
     </>
   );
 }

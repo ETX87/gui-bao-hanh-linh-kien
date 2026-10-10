@@ -18,6 +18,7 @@ import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import type { AppUser, DonCha, DonVi, LogRow } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
+import { Kv, Chip, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
 
 interface DetailResponse {
   don_vi: DonVi;
@@ -40,28 +41,6 @@ type SubModal = "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | 
 // khoi tom tat (linh kien, loi, chip case/KTV/phieu) + khoi "Xu ly" chi hien truong co gia tri + case +
 // don vi cung lo + anh; phai = nhat ky gop 1 dong thoi gian co tab loc theo nguon (LogTimeline).
 
-function Kv({ k, v, wide }: { k: string; v: React.ReactNode; wide?: boolean }) {
-  return (
-    <div className={`min-w-0 ${wide ? "col-span-full" : ""}`}>
-      <dt className="text-[11px] text-[var(--ink-faint)]">{k}</dt>
-      <dd className="text-[13px] text-[var(--ink)] break-words">{v}</dd>
-    </div>
-  );
-}
-
-function Chip({ icon, children, title }: { icon: string; children: React.ReactNode; title?: string }) {
-  return (
-    <span title={title} className="inline-flex max-w-full items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs text-[var(--ink-body)] ring-1 ring-[var(--line)]">
-      <span>{icon}</span>
-      <span className="truncate">{children}</span>
-    </span>
-  );
-}
-
-function SectionTitle({ children, tone = "accent" }: { children: React.ReactNode; tone?: "accent" | "red" }) {
-  return <p className={`text-xs font-bold uppercase tracking-wide mb-1.5 ${tone === "red" ? "text-[var(--red-700)]" : "text-[var(--accent-ink)]"}`}>{children}</p>;
-}
-
 export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const [data, setData] = useState<DetailResponse | null>(null);
   const { nameOf: lkName, phanLoaiOf } = useLkName();
@@ -81,7 +60,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
   if (!data) {
     return (
-      <Modal title="Chi tiết đơn bảo hành" onClose={onClose} maxWidthClass="max-w-6xl">
+      <Modal title="Chi tiết đơn bảo hành" onClose={onClose} maxWidthClass={DETAIL_MAX_W}>
         <Spinner />
       </Modal>
     );
@@ -123,7 +102,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
       <Modal
         title={u.id}
         onClose={onClose}
-        maxWidthClass="max-w-6xl"
+        maxWidthClass={DETAIL_MAX_W}
         headerActions={
           <div className="flex items-center gap-2">
             <StatusBadge kind="unit" value={u.trang_thai} />
@@ -212,7 +191,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
             {/* Xu ly - chi hien truong co gia tri */}
             <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
-              <SectionTitle>🛠 Xử lý</SectionTitle>
+              <SectionTitle className="mb-1.5">🛠 Xử lý</SectionTitle>
               {daPhanLoai ? (
                 <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
                   {u.loai_bao_hanh && <Kv k="Loại bảo hành" v={LOAI_BAO_HANH_LABELS[u.loai_bao_hanh] ?? u.loai_bao_hanh} />}
@@ -250,7 +229,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
             {anh_em.length > 1 && (
               <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
-                <SectionTitle>
+                <SectionTitle className="mb-1.5">
                   🗂️ Cùng đơn {p.id} · {anh_em.length} đơn vị
                 </SectionTitle>
                 <div className="flex flex-wrap gap-1.5">
@@ -270,7 +249,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
             {soAnh > 0 && (
               <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
-                <SectionTitle>🖼 Ảnh ({soAnh})</SectionTitle>
+                <SectionTitle className="mb-1.5">🖼 Ảnh ({soAnh})</SectionTitle>
                 <div className="flex flex-wrap gap-2">
                   {anh.don_cha.map((a) => (
                     <a key={`p${a.id}`} href={a.anh_url} target="_blank" rel="noreferrer">
@@ -288,7 +267,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
             {bao_cao_sai_thong_tin.length > 0 && (
               <section className="rounded-xl border border-[var(--red-100)] px-3 py-2.5">
-                <SectionTitle tone="red">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</SectionTitle>
+                <SectionTitle tone="red" className="mb-1.5">🐞 Ghi nhận nội bộ — KTV báo cáo sai thông tin</SectionTitle>
                 <div className="space-y-1.5">
                   {(bao_cao_sai_thong_tin as { id: number; tac_gia: string; thoi_gian: string; noi_dung: string }[]).map((b) => (
                     <div key={b.id} className="text-xs bg-[var(--red-100)] text-[var(--red-700)] rounded-lg px-2.5 py-1.5">
@@ -305,7 +284,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged }: { unitId: 
 
           {/* Nhat ky gop: cot phai (desktop), xuong duoi (mobile) */}
           <aside className="min-w-0 lg:border-l lg:border-[var(--line)] lg:pl-4 flex flex-col">
-            <SectionTitle>🕘 Nhật ký</SectionTitle>
+            <SectionTitle className="mb-1.5">🕘 Nhật ký</SectionTitle>
             <LogTimeline
               className="lg:max-h-[62vh]"
               sources={[
