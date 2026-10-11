@@ -20,6 +20,7 @@ import khuVucRoutes from "./routes/khuVuc";
 import partnerKhoRoutes from "./routes/partnerKho";
 import workloadRoutes from "./routes/workload";
 import odooDonRoutes from "./routes/odooDon";
+import mienRoutes from "./routes/mien";
 import { runOdooSync } from "./lib/odooSync";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
@@ -47,6 +48,7 @@ app.route("/api/khu-vuc", khuVucRoutes);
 app.route("/api/partner/kho-action", partnerKhoRoutes);
 app.route("/api/workload", workloadRoutes);
 app.route("/api/odoo-don", odooDonRoutes);
+app.route("/api/mien", mienRoutes);
 
 app.onError((err, c) => {
   console.error(err);

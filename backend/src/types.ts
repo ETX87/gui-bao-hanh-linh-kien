@@ -22,6 +22,8 @@ export interface AppUser {
   la_view: boolean;
   // Admin he thong (= "qtri" cua prototype) - CRUD nguoi dung/vai tro, Cai dat, luon full quyen.
   la_qtri: boolean;
+  // 11/10/2026: mien cua nguoi xu ly - "MB" | "MN" | "ALL" (ca 2) | null (chua gan = thay tat ca).
+  mien: "MB" | "MN" | "ALL" | null;
 }
 
 export interface Env {

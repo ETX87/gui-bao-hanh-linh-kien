@@ -9,6 +9,7 @@ import { isOverdue } from "../lib/sla";
 import { LBL, KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
+import { mienScope, syncPhieuTraMien } from "../lib/mien";
 
 // Phieu tra bao hanh - Admin BH tao/gop, Ke toan duyet, Kho dong goi/gui/ket thuc, KTV xac nhan
 // nhan/khieu nai. State machine: nhap -> cho_ke_toan_duyet -> da_duyet_ke_toan -> da_gui ->
@@ -33,6 +34,7 @@ async function createPhieuTraForUnits(db: D1Database, ktvKey: string, loai: Loai
   const statements = unitIds.map((uid) => db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, uid));
   await db.batch(statements);
   await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loai] || loai}) với ${unitIds.length} dòng`);
+  await syncPhieuTraMien(db, id);
   return id;
 }
 
@@ -47,14 +49,15 @@ function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: bo
 // GET /api/phieu-tra/san-sang?ktv=<email|__khach_le__> - don vi san sang gom, nhom theo loai doi tru.
 phieuTra.get("/san-sang", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const ms = mienScope(c.get("user"), "p");
   const { results } = await c.env.DB.prepare(
-    `SELECT u.id, u.loai_doi_tru, u.parent_id, COALESCE(g.nguoi_tao, ?) as ktv_key
+    `SELECT u.id, u.loai_doi_tru, u.parent_id, p.mien, COALESCE(g.nguoi_tao, ?) as ktv_key
      FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL`,
+     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${ms.sql}`,
   )
-    .bind(KHACH_LE_KEY)
+    .bind(KHACH_LE_KEY, ...ms.binds)
     .all();
   return c.json({ don_vi: results });
 });
@@ -73,14 +76,15 @@ phieuTra.post("/", async (c) => {
 phieuTra.post("/tu-dong-gom", async (c) => {
   const user = c.get("user");
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const ms = mienScope(user, "p");
   const { results } = await c.env.DB.prepare(
     `SELECT u.id, u.loai_doi_tru, COALESCE(g.nguoi_tao, ?) as ktv_key
      FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL`,
+     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${ms.sql}`,
   )
-    .bind(KHACH_LE_KEY)
+    .bind(KHACH_LE_KEY, ...ms.binds)
     .all<{ id: string; loai_doi_tru: LoaiDoiTru; ktv_key: string }>();
 
   const groups = new Map<string, string[]>();
@@ -102,6 +106,7 @@ phieuTra.post("/tu-dong-gom", async (c) => {
     if (existing) {
       for (const uid of ids) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(existing.id, uid).run();
       await addLog(c.env.DB, "phieu_tra", existing.id, "nhap", "nhap", user.email, `Tự động gộp thêm ${ids.length} đơn vị: ${ids.join(", ")}`);
+      await syncPhieuTraMien(c.env.DB, existing.id);
       merged.push(existing.id);
       continue;
     }
@@ -123,6 +128,11 @@ phieuTra.get("/", async (c) => {
     binds.push(user.email);
   } else if (!(user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_qtri || user.la_view)) {
     return c.json({ error: "FORBIDDEN" }, 403);
+  } else {
+    // 11/10/2026: nguoi xu ly gan 1 mien chi thay phieu tra mien minh + chua khai bao.
+    const ms = mienScope(user, "phieu_tra_bh");
+    where += ms.sql;
+    binds.push(...ms.binds);
   }
   if (ktv) {
     where += " AND ktv_nhan = ?";
@@ -240,6 +250,7 @@ phieuTra.post("/nhanh/:unitId", async (c) => {
     .bind(id, ktvKey, user.email, targetState, u.loai_doi_tru, madh, misa, now, now)
     .run();
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
+  await syncPhieuTraMien(c.env.DB, id);
   const nhan = body.mode === "ktv" ? "Tra truc tiep cho KTV" : "Admin giao truc tiep cho Kho";
   await addLog(c.env.DB, "phieu_tra", id, null, targetState, user.email, `${nhan} — tạo nhanh từ đơn vị ${unitId}`);
   return c.json({ id }, 201);

@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { MienBadge } from "../../ui/MienBadge";
 import { StatusBadge, UNIT_STATUS } from "../../ui/StatusBadge";
 import { Badge, Btn } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
@@ -110,6 +111,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         title={`${p.ktv || ""} · ${p.phieu_gui_id}`}
       />
     ),
+    mien: <MienBadge mien={p.mien} short />,
     khachhang: <Ellipsis text="—" />,
     linhkien: <Ellipsis text={lkName(p.ma_lk)} title={lkName(p.ma_lk)} />,
     phanloai: phanLoai(p.ma_lk),
@@ -141,6 +143,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
           title={`${u.ktv || ""} · ${u.phieu_gui_id}`}
         />
       ),
+      mien: <MienBadge mien={u.mien} short />,
       khachhang: <Ellipsis text={u.nguon_tao === "admin_dich_vu" ? u.ten_khach_hang || "—" : "—"} />,
       linhkien: (
         <Ellipsis
@@ -294,7 +297,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
               <span className="ml-auto">{f.sla}</span>
             </div>
             <p className="text-sm font-semibold text-[var(--ink)]">{f.linhkien}</p>
-            <div>{f.phanloai}</div>
+            <div className="flex flex-wrap gap-1">{f.phanloai}{f.mien}</div>
             {u.mo_ta_loi && <p className="text-sm text-[var(--ink-body)] line-clamp-2">{u.mo_ta_loi}</p>}
             <div className="text-xs text-[var(--ink-soft)]">{f.nguon}</div>
           </div>

@@ -35,7 +35,7 @@ users.get("/", async (c) => {
     binds.push(`%${kw}%`, `%${kw}%`);
   }
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, ${ROLE_FLAGS.join(", ")}, created_at FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM users WHERE ${where}`).bind(...binds).first<{ cnt: number }>(),
@@ -80,6 +80,7 @@ interface PatchBody {
   value?: boolean;
   bi_khoa?: boolean;
   trang_thai_duyet?: "Cho duyet" | "Da duyet" | "Tu choi";
+  mien?: "MB" | "MN" | "ALL" | null;
 }
 
 // PATCH /api/users/:email - sua 1 co vai tro (body {flag, value}), hoac bi_khoa/trang_thai_duyet.
@@ -103,6 +104,11 @@ users.patch("/:email", async (c) => {
   }
   if (body.bi_khoa !== undefined) {
     await c.env.DB.prepare("UPDATE users SET bi_khoa = ?, updated_at = ? WHERE email = ?").bind(body.bi_khoa ? 1 : 0, nowVN(), targetEmail).run();
+  }
+  // 11/10/2026: mien phu trach cua nguoi xu ly (MB / MN / ALL = ca 2 / null = chua gan, thay tat ca).
+  if (body.mien !== undefined) {
+    if (body.mien !== null && !["MB", "MN", "ALL"].includes(body.mien)) return c.json({ error: "INVALID_MIEN" }, 400);
+    await c.env.DB.prepare("UPDATE users SET mien = ?, updated_at = ? WHERE email = ?").bind(body.mien, nowVN(), targetEmail).run();
   }
   if (body.trang_thai_duyet !== undefined) {
     await c.env.DB.prepare("UPDATE users SET trang_thai_duyet = ?, updated_at = ? WHERE email = ?").bind(body.trang_thai_duyet, nowVN(), targetEmail).run();

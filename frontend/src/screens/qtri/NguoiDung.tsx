@@ -8,6 +8,7 @@ import { Pagination } from "../../ui/Pagination";
 import { Modal } from "../../ui/Modal";
 import { Field, Input } from "../../ui/primitives";
 import type { AppUser } from "../../lib/types";
+import { MIEN_USER_OPTIONS } from "../../lib/mien";
 
 const ROLE_FLAGS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ktv_dvbh", label: "KTV" },
@@ -87,6 +88,14 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   const setTrangThai = async (email: string, v: string) => {
     try {
       await api.patch(`/users/${encodeURIComponent(email)}`, { trang_thai_duyet: v });
+      reload();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+  const setMien = async (email: string, v: string) => {
+    try {
+      await api.patch(`/users/${encodeURIComponent(email)}`, { mien: v || null });
       reload();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -173,6 +182,13 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                     <input type="checkbox" className="w-5 h-5" disabled={u.email === currentEmail} checked={u.bi_khoa} onChange={(e) => toggleKhoa(u.email, e.target.checked)} />
                     Khoá tài khoản
                   </label>
+                  <Select value={u.mien || ""} onChange={(e) => setMien(u.email, e.target.value)} className="col-span-2">
+                    {MIEN_USER_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        Miền: {o.label}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {ROLE_FLAGS.map((r) => (
@@ -199,6 +215,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
               <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
                 <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Người dùng</th>
                 <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Duyệt</th>
+                <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Miền</th>
                 <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Khoá</th>
                 {ROLE_FLAGS.map((r) => (
                   <th key={r.flag} className="text-center text-xs font-semibold text-[var(--ink-soft)]">
@@ -223,6 +240,15 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                         <option value="Cho duyet">Chờ duyệt</option>
                         <option value="Da duyet">Đã duyệt</option>
                         <option value="Tu choi">Từ chối</option>
+                      </Select>
+                    </td>
+                    <td className="">
+                      <Select value={u.mien || ""} onChange={(e) => setMien(u.email, e.target.value)} className="!py-1 !text-xs" title="Miền phụ trách (Kho / Admin BH / NV / Kế toán)">
+                        {MIEN_USER_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
                       </Select>
                     </td>
                     <td className="text-center">

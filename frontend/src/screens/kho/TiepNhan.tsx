@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DoiMienBadge } from "../../ui/MienBadge";
 import { api } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { useWorkload } from "../../hooks/useWorkload";
@@ -79,6 +80,7 @@ export function KhoTiepNhanScreen() {
               <div key={g.id} className="rounded-lg border border-[var(--line)] px-2.5 py-1 flex flex-col sm:flex-row sm:items-center gap-2 text-[13px]">
                 {/* 09/10/2026: nut xu ly uu tien dat ngay sau ma ID (ben trai). */}
                 <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
+                <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={reloadPending} short />
                 <div className="flex flex-wrap gap-1.5 shrink-0">
                   <Btn size="sm" variant="primary" onClick={() => setTiepNhanFor(g)}>
                     Xác nhận tiếp nhận
@@ -110,6 +112,7 @@ export function KhoTiepNhanScreen() {
             {banGiao.items.map((g) => (
               <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={banGiao.reload} short />
                 <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-body)]" />
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                 <span className="text-xs text-[var(--ink-soft)]">Kho nhận: {fmtDate(g.thoi_gian_nhan_kho)}</span>
@@ -130,6 +133,7 @@ export function KhoTiepNhanScreen() {
             {recent.map((g) => (
               <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg px-2.5 py-1 text-[13px] hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
+                <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={loadRecent} short />
                 <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-soft)]" />
                 {/* !! bat buoc - D1 tra ve so 0/1 chu khong phai true/false that, "0 && <Badge/>" se render chu "0" ra man hinh */}
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}

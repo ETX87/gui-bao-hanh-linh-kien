@@ -16,7 +16,12 @@ export interface AppUser {
   la_giam_sat: boolean;
   la_view: boolean;
   la_qtri: boolean;
+  // 11/10/2026: mien phu trach cua nguoi xu ly - MB / MN / ALL (ca 2) / null (chua gan = thay tat ca).
+  mien?: "MB" | "MN" | "ALL" | null;
 }
+
+// Mien cua don: MB / MN / null = "Khu vuc chua khai bao".
+export type Mien = "MB" | "MN";
 
 export interface PhieuGui {
   id: string;
@@ -39,6 +44,7 @@ export interface PhieuGui {
   admin_tiep_nhan: boolean;
   admin_nguoi_nhan: string | null;
   admin_thoi_gian_nhan: string | null;
+  mien?: Mien | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +77,7 @@ export interface DonCha {
   email_gs: string | null;
   xac_nhan_khac_ktv?: string | null; // 05/10/2026 muc 9: email nguoi xac nhan tao don du case thuoc KTV khac
   ktv_tren_case?: string | null;
+  mien?: Mien | null;
   created_at: string;
   // Cot join them (tu GET /admin/don-cha) - email KTV tao phieu gui chua don nay (null neu don dich
   // vu khach le, khong thuoc phieu gui nao).
@@ -110,6 +117,7 @@ export interface DonVi {
   loai_doi_tru_de_xuat?: string | null;
   ktv?: string | null;
   ngay_gui_xe?: string | null;
+  mien?: Mien | null;
 }
 
 export interface PhieuTra {
@@ -124,6 +132,7 @@ export interface PhieuTra {
   ly_do_tu_choi_kt: string | null;
   danh_gia_ktv: string | null;
   khong_nhan_duoc_ghi_chu: string | null;
+  mien?: Mien | null;
   created_at: string;
   updated_at: string;
 }
@@ -212,6 +221,7 @@ export interface KtvLienHe {
   ktv_cap1_phu_trach: string | null;
   nguon_du_lieu: "dong_bo" | "noi_bo";
   dong_bo_luc: string;
+  mien_gan?: Mien | null; // 11/10/2026: mien gan tam (uu tien hon mien suy tu khu_vuc_ma)
 }
 
 // Khu vuc "quan sat duoc" tu ktv_lien_he_bh.khu_vuc_ma (GROUP BY, xem routes/khuVuc.ts) - ten/

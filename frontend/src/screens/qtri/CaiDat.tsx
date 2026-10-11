@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { MienBadge } from "../../ui/MienBadge";
+import type { TuKhoa } from "../../lib/mien";
+import type { Mien } from "../../lib/types";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Card, Btn, Input } from "../../ui/primitives";
@@ -226,9 +229,110 @@ function TopLinhKienCard() {
   );
 }
 
+// 11/10/2026: chia 2 mien - tu khoa nhan dien mien tu ma khu vuc KTV + xem truoc + ap dung lai.
+function MienCard() {
+  const toast = useToast();
+  const [tk, setTk] = useState<TuKhoa[]>([]);
+  const [kv, setKv] = useState<{ khu_vuc: { ma: string | null; so_ktv: number; so_gan_tam: number; mien: Mien | null }[]; phieu_gui_chua_khai_bao: number } | null>(null);
+  const [inp, setInp] = useState<Record<Mien, string>>({ MB: "", MN: "" });
+  const [busy, setBusy] = useState(false);
+  const load = () => {
+    api.get<{ tu_khoa: TuKhoa[] }>("/mien/tu-khoa").then((r) => setTk(r.tu_khoa)).catch(() => undefined);
+    api.get<NonNullable<typeof kv>>("/mien/khu-vuc").then(setKv).catch(() => undefined);
+  };
+  useEffect(load, []);
+  const them = async (m: Mien) => {
+    if (!inp[m].trim()) return;
+    try {
+      await api.post("/mien/tu-khoa", { mien: m, tu_khoa: inp[m] });
+      setInp({ ...inp, [m]: "" });
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+  const xoa = async (id: number) => {
+    try {
+      await api.delete(`/mien/tu-khoa/${id}`);
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
+  const apDungLai = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ so_thung: number; con_lai: number }>("/mien/ap-dung-lai");
+      toast(`Đã gán miền cho ${r.so_thung} thùng. Còn ${r.con_lai} thùng chưa xác định được miền.`, "ok");
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const chuaKb = (kv?.khu_vuc || []).filter((r) => !r.mien);
+  return (
+    <Card
+      className="md:col-span-2"
+      title="🗺 Chia miền (Bắc / Nam)"
+      actions={
+        <Btn size="sm" disabled={busy || !kv?.phieu_gui_chua_khai_bao} onClick={apDungLai} title="Gán lại miền cho các thùng đang 'Chưa khai báo' theo từ khoá + miền gán tạm của KTV">
+          Áp dụng lại cho {kv?.phieu_gui_chua_khai_bao ?? 0} thùng chưa khai báo
+        </Btn>
+      }
+    >
+      <p className="text-xs text-[var(--ink-soft)] mb-2">
+        Đơn được gán miền theo mã khu vực của KTV tạo thùng: mã chứa từ khoá của đúng 1 miền → miền đó; không xác định được → <b>Chưa khai báo</b> (Kho, Admin BH, NV, Kế toán cả 2 miền đều thấy). Người xử lý gán miền phụ trách ở màn Người dùng.
+      </p>
+      <div className="grid md:grid-cols-3 gap-3">
+        {(["MB", "MN"] as Mien[]).map((m) => (
+          <div key={m} className="rounded-lg border border-[var(--line)] p-2">
+            <p className="text-sm font-semibold mb-1.5">
+              <MienBadge mien={m} /> — từ khoá
+            </p>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {tk
+                .filter((x) => x.mien === m)
+                .map((x) => (
+                  <span key={x.id} className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-mono">
+                    {x.tu_khoa}
+                    <button className="text-[var(--red-600)]" title="Xoá" onClick={() => xoa(x.id)}>
+                      ✕
+                    </button>
+                  </span>
+                ))}
+            </div>
+            <div className="flex gap-1.5">
+              <Input value={inp[m]} onChange={(e) => setInp({ ...inp, [m]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && them(m)} placeholder="VD: PTDV" />
+              <Btn size="sm" onClick={() => them(m)}>
+                Thêm
+              </Btn>
+            </div>
+          </div>
+        ))}
+        <div className="rounded-lg border border-[var(--line)] p-2 max-h-56 overflow-y-auto">
+          <p className="text-sm font-semibold mb-1.5">Khu vực → miền</p>
+          {(kv?.khu_vuc || []).map((r) => (
+            <div key={r.ma ?? "__null"} className="flex items-center justify-between gap-2 text-xs py-0.5">
+              <span className="font-mono">{r.ma || "(không có mã)"}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-[var(--ink-faint)]">{r.so_ktv} KTV{r.so_gan_tam ? ` · ${r.so_gan_tam} gán tạm` : ""}</span>
+                <MienBadge mien={r.mien} short />
+              </span>
+            </div>
+          ))}
+          {chuaKb.length > 0 && <p className="mt-1 text-[11px] text-[var(--amber-700)]">{chuaKb.length} mã khu vực chưa thuộc miền nào.</p>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function QtriCaiDatScreen() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
+      <MienCard />
       <SettingListCard title="⏱ Lý do chậm" path="/settings/ly-do-cham" />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />

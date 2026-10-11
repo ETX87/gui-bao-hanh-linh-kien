@@ -37,6 +37,7 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body ?? {}),
+  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body ?? {}),
   delete: <T>(path: string) => request<T>("DELETE", path),
 };
 
@@ -48,6 +49,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INVALID_ROLE: "Vai trò test không hợp lệ.",
   TAI_KHOAN_KHONG_HOAT_DONG: "Tài khoản này đang bị khoá hoặc chưa được duyệt.",
   NOT_FOUND: "Không tìm thấy dữ liệu.",
+  INVALID_MIEN: "Miền không hợp lệ.",
+  DOI_THEO_PHIEU_GUI: "Đơn này thuộc 1 thùng gửi — đổi miền ở thùng (phiếu gửi) để áp cho cả thùng.",
   NOT_DRAFT: "Chỉ thực hiện được khi phiếu còn ở trạng thái Nháp.",
   MISSING_ODOO_IDS: "Chưa chọn đơn Odoo nào.",
   DA_GAN_THUNG: "Đơn Odoo này đã được đưa vào 1 thùng khác.",

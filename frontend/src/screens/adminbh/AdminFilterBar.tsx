@@ -18,8 +18,9 @@ export interface AdminFilter {
   lk_tt: string;
   pl: string;
   cham: string;
+  mien: string;
 }
-export const EMPTY_FILTER: AdminFilter = { tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "" };
+export const EMPTY_FILTER: AdminFilter = { tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "", mien: "" };
 
 export function filterQuery(f: AdminFilter): string {
   return (Object.keys(f) as (keyof AdminFilter)[])
@@ -67,7 +68,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
 
   return (
     <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5">
         <div className={cell}>
           <span className={lab}>Trạng thái</span>
           <Select value={value.tt} onChange={(e) => set("tt", e.target.value)}>
@@ -112,6 +113,15 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
             <option value="">Tất cả</option>
             <option value="qua_han">🔴 Quá hạn SLA 24h</option>
             <option value="dung_han">🟢 Còn trong hạn</option>
+          </Select>
+        </div>
+        <div className={cell}>
+          <span className={lab}>Miền</span>
+          <Select value={value.mien} onChange={(e) => set("mien", e.target.value)}>
+            <option value="">Tất cả</option>
+            <option value="MB">Miền Bắc</option>
+            <option value="MN">Miền Nam</option>
+            <option value="__none__">Chưa khai báo</option>
           </Select>
         </div>
       </div>

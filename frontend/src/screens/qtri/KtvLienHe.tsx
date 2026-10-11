@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { MienBadge } from "../../ui/MienBadge";
+import { detectMien, type TuKhoa } from "../../lib/mien";
 import { Table, StopClick } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
@@ -29,6 +31,13 @@ export function QtriKtvScreen() {
   const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>(`/ktv-lien-he${q ? `?q=${encodeURIComponent(q)}` : ""}`, "ktv");
   const [editing, setEditing] = useState<KtvLienHe | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [tuKhoa, setTuKhoa] = useState<TuKhoa[]>([]);
+  useEffect(() => {
+    api
+      .get<{ tu_khoa: TuKhoa[] }>("/mien/tu-khoa")
+      .then((r) => setTuKhoa(r.tu_khoa))
+      .catch(() => undefined);
+  }, []);
 
   const xoa = async (maKtv: string) => {
     if (!confirm(`Xoá KTV "${maKtv}" khỏi danh bạ? (Tài khoản đăng nhập đã có sẵn của họ không bị xoá — chỉ mất khả năng tự động duyệt lần đăng nhập kế tiếp.)`)) return;
@@ -68,6 +77,19 @@ export function QtriKtvScreen() {
           { key: "sdt", header: "SĐT", render: (k) => k.sdt || "—" },
           { key: "vt", header: "Vai trò", render: (k) => k.vai_tro_ktv || "—" },
           { key: "kv", header: "Khu vực", render: (k) => k.khu_vuc_ma || "—" },
+          {
+            key: "mien",
+            header: "Miền",
+            render: (k) =>
+              k.mien_gan ? (
+                <span className="inline-flex items-center gap-1" title="Miền gán tạm (ưu tiên hơn miền suy từ khu vực)">
+                  <MienBadge mien={k.mien_gan} short />
+                  <span className="text-[10px] text-[var(--amber-700)]">tạm</span>
+                </span>
+              ) : (
+                <MienBadge mien={detectMien(k.khu_vuc_ma, tuKhoa)} short />
+              ),
+          },
           { key: "nguon", header: "Nguồn", render: (k) => <Badge tone={k.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{k.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
           {
             key: "act",
@@ -97,6 +119,7 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
   const [gmail, setGmail] = useState(existing?.gmail || "");
   const [vaiTro, setVaiTro] = useState<string>(existing?.vai_tro_ktv || "KTV");
   const [khuVuc, setKhuVuc] = useState(existing?.khu_vuc_ma || "");
+  const [mienGan, setMienGan] = useState<string>(existing?.mien_gan || "");
   const [busy, setBusy] = useState(false);
 
   const valid = ten.trim() && email.trim();
@@ -107,6 +130,7 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
       const body = { ten_hien_thi: ten.trim(), email_dang_nhap: email.trim(), sdt: sdt.trim(), gmail: gmail.trim(), vai_tro_ktv: vaiTro, khu_vuc_ma: khuVuc.trim() };
       if (existing) {
         await api.patch(`/ktv-lien-he/${encodeURIComponent(existing.ma_ktv)}`, body);
+        if (mienGan !== (existing.mien_gan || "")) await api.put(`/mien/ktv/${encodeURIComponent(existing.ma_ktv)}`, { mien_gan: mienGan || null });
         toast("Đã cập nhật.", "ok");
       } else {
         await api.post("/ktv-lien-he", body);
@@ -159,6 +183,15 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
         <Field label="Mã khu vực (nếu có)">
           <Input value={khuVuc} onChange={(e) => setKhuVuc(e.target.value)} />
         </Field>
+        {existing && (
+          <Field label="Miền gán tạm" hint="Ưu tiên hơn miền suy từ mã khu vực. Để trống = theo khu vực.">
+            <Select value={mienGan} onChange={(e) => setMienGan(e.target.value)}>
+              <option value="">Theo khu vực</option>
+              <option value="MB">Miền Bắc</option>
+              <option value="MN">Miền Nam</option>
+            </Select>
+          </Field>
+        )}
       </div>
     </Modal>
   );

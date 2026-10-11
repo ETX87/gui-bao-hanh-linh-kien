@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
+import { mienScope } from "../lib/mien";
 
 // GET /api/workload - dem "viec can lam" cho tung nhom vai tro trong 1 request duy nhat.
 //
@@ -42,6 +43,10 @@ workload.get("/", async (c) => {
   const one = (sql: string, ...binds: unknown[]) => db.prepare(sql).bind(...binds).first<{ cnt: number }>();
 
   const isRealKtv = user.la_ktv_dvbh || user.la_ve_tinh;
+  // 11/10/2026: hang doi Kho / Admin BH / Ke toan chi dem don mien minh + chua khai bao.
+  const mg = mienScope(user, "g");
+  const mp = mienScope(user, "p");
+  const mt = mienScope(user, "t");
   const jobs: Promise<void>[] = [];
 
   // ---- KTV (hoac qtri) ----
@@ -87,14 +92,14 @@ workload.get("/", async (c) => {
   // ---- Kho (hoac qtri) ----
   if (user.la_kho || user.la_qtri) {
     jobs.push(
-      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_gui'${mg.sql}`, ...mg.binds).then((r) => {
         counts.kho_cho_tiep_nhan = r?.cnt ?? 0;
       }),
-      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE trang_thai = 'da_duyet_ke_toan'`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'da_duyet_ke_toan'${mt.sql}`, ...mt.binds).then((r) => {
         counts.kho_cho_dong_goi = r?.cnt ?? 0;
       }),
       // Thung Kho da nhan, cho Admin BH nhan ban giao noi bo (nhac Kho mang hang sang).
-      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0${mg.sql}`, ...mg.binds).then((r) => {
         counts.kho_cho_ban_giao = r?.cnt ?? 0;
       }),
     );
@@ -103,13 +108,14 @@ workload.get("/", async (c) => {
   // ---- Admin bao hanh (hoac qtri) ----
   if (user.la_admin_bh || user.la_qtri) {
     jobs.push(
-      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0${mg.sql}`, ...mg.binds).then((r) => {
         counts.admin_cho_tiep_nhan_noi_bo = r?.cnt ?? 0;
       }),
       // don cha cho xac nhan SL - khop GET /admin/don-cha
       one(
         `SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-         WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`,
+         WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${mp.sql}`,
+        ...mp.binds,
       ).then((r) => {
         counts.admin_cho_xac_nhan_sl = r?.cnt ?? 0;
       }),
@@ -118,14 +124,15 @@ workload.get("/", async (c) => {
         `SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
          LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
          WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai')
-           AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)`,
+           AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${mp.sql}`,
+        ...mp.binds,
       ).then((r) => {
         counts.admin_cho_phan_loai = r?.cnt ?? 0;
       }),
-      one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan'`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${mp.sql}`, ...mp.binds).then((r) => {
         counts.admin_cho_xac_nhan_hoan_tat = r?.cnt ?? 0;
       }),
-      one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'san_sang_gom_phieu_tra' AND phieu_tra_id IS NULL`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${mp.sql}`, ...mp.binds).then((r) => {
         counts.admin_san_sang_gom = r?.cnt ?? 0;
       }),
     );
@@ -143,7 +150,7 @@ workload.get("/", async (c) => {
   // ---- Ke toan (hoac qtri) ----
   if (user.la_ke_toan || user.la_qtri) {
     jobs.push(
-      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE trang_thai = 'cho_ke_toan_duyet'`).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'cho_ke_toan_duyet'${mt.sql}`, ...mt.binds).then((r) => {
         counts.ketoan_cho_duyet = r?.cnt ?? 0;
       }),
     );

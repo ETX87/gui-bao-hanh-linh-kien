@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
@@ -113,6 +114,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
           <UserName email={r.ktv_nhan} />
         ),
     },
+    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },

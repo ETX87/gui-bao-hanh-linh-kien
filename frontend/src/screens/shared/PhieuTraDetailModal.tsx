@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DoiMienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
@@ -212,6 +213,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 👷 Trả cho <UserName email={t.ktv_nhan} />
               </p>
               <Badge tone={t.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[t.loai_doi_tru]}</Badge>
+              <DoiMienBadge kind="phieu-tra" id={t.id} mien={t.mien} ktvEmail={t.ktv_nhan} onDone={load} />
             </div>
             <div className="flex flex-wrap gap-1.5">
               <Chip icon="📦" title="Số đơn vị trong phiếu">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MienBadge } from "../../ui/MienBadge";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Badge, Spinner } from "../../ui/primitives";
@@ -37,6 +38,7 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "ktv", header: "KTV nhận", render: (r) => (r.ktv_nhan === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : <UserName email={r.ktv_nhan} />) },
+    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "vandon", header: "Mã vận đơn", render: (r) => r.ma_van_don || "—" },

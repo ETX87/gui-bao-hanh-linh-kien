@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Env } from "../types";
+import type { Env, AppUser } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
@@ -8,6 +8,7 @@ import { addLog } from "../lib/logs";
 import { isOverdue, slaCutoffVn } from "../lib/sla";
 import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
+import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
 // xac nhan so luong (tach don vi con), phan loai (don le + hang loat), yeu cau bo sung, bao cao sai,
@@ -30,10 +31,11 @@ function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: bo
 adminBH.get("/phieu-gui", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
-  const fromWhere = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0";
+  const ms = mienScope(c.get("user"), "phieu_gui_bh");
+  const fromWhere = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" + ms.sql;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
@@ -79,10 +81,22 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 //   lk_tt: linh kien thuc sua (COALESCE(u.ma_lk_thuc_te, p.ma_lk); don cha = p.ma_lk)
 //   pl   : phan loai linh kien (linh_kien_bh.don_vi) | __none__
 //   cham : qua_han | dung_han (SLA 24h bo Chu nhat; don cha tinh tu created_at, don vi tu updated_at)
-function locBangThongNhat(c: { req: { query(k: string): string | undefined } }, kind: "parent" | "unit"): { sql: string; binds: unknown[] } {
+//   mien : MB | MN | __none__ (chua khai bao) - loc them; ngoai ra luon gioi han theo mien cua nguoi xem.
+function locBangThongNhat(c: { req: { query(k: string): string | undefined }; get(k: "user"): AppUser }, kind: "parent" | "unit"): { sql: string; binds: unknown[] } {
   const q = (k: string) => (c.req.query(k) || "").trim();
   const parts: string[] = [];
   const binds: unknown[] = [];
+  const ms = mienScope(c.get("user"), "p");
+  if (ms.sql) {
+    parts.push(ms.sql.replace(/^ AND /, ""));
+    binds.push(...ms.binds);
+  }
+  const mien = q("mien");
+  if (mien === "__none__") parts.push("p.mien IS NULL");
+  else if (mien === "MB" || mien === "MN") {
+    parts.push("p.mien = ?");
+    binds.push(mien);
+  }
   const tt = q("tt");
   if (tt) {
     if (kind === "parent") {
@@ -216,7 +230,7 @@ adminBH.get("/don-vi", async (c) => {
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
        AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const B = loc.binds;
-  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, g.nguoi_tao AS ktv`;
+  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, g.nguoi_tao AS ktv`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
   // trang theo DON CHA (moi trang toi da `limit` don cha + du moi don vi cua chung) - bang thong nhat
@@ -248,8 +262,10 @@ adminBH.get("/don-vi", async (c) => {
 // can xu ly (don cha cho SL + don vi), khong liet ke het 6.000 linh kien / 500 KTV.
 adminBH.get("/don-vi/loc-options", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const ms = mienScope(c.get("user"), "p");
+  const mienSql = ms.binds.length ? ` AND (p.mien = '${ms.binds[0]}' OR p.mien IS NULL)` : "";
   const base = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_sua_chua_bh_ct u ON u.parent_id = p.id
-     WHERE (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)
+     WHERE (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${mienSql}
        AND (p.trang_thai_cha = 'cho_xac_nhan_so_luong' OR u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt'))`;
   const [ktv, lk, lkTt, pl] = await Promise.all([
     c.env.DB.prepare(`SELECT DISTINCT COALESCE(g.nguoi_tao, '${KHACH_LE_KEY}') AS v ${base}`).all<{ v: string }>(),
@@ -513,9 +529,11 @@ adminBH.post("/don-cha/:id/bao-cao-sai", async (c) => {
 adminBH.get("/xac-nhan", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
+  const ms = mienScope(c.get("user"), "p");
+  const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms.sql}`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan' ORDER BY updated_at LIMIT ? OFFSET ?").bind(limit, offset).all(),
-    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_admin_xac_nhan'").first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT u.*, p.mien ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fw}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
@@ -599,10 +617,10 @@ adminBH.post("/don-dich-vu", async (c) => {
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
   const now = nowVN();
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, so_luong_thuc_nhan, nguon_tao, ten_khach_hang, sdt_khach_hang, dia_chi_khach_hang, san_pham_bh, trang_thai_cha, created_at)
-     VALUES (?, NULL, ?, ?, ?, ?, ?, 'admin_dich_vu', ?, ?, ?, ?, 'da_tach', ?)`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, so_luong_thuc_nhan, nguon_tao, ten_khach_hang, sdt_khach_hang, dia_chi_khach_hang, san_pham_bh, trang_thai_cha, created_at, mien)
+     VALUES (?, NULL, ?, ?, ?, ?, ?, 'admin_dich_vu', ?, ?, ?, ?, 'da_tach', ?, ?)`,
   )
-    .bind(id, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, soLuong, body.ten_khach_hang?.trim() || "", body.sdt_khach_hang?.trim() || "", body.dia_chi_khach_hang?.trim() || "", body.san_pham_bh?.trim() || "", now)
+    .bind(id, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, soLuong, body.ten_khach_hang?.trim() || "", body.sdt_khach_hang?.trim() || "", body.dia_chi_khach_hang?.trim() || "", body.san_pham_bh?.trim() || "", now, mienOfStaff(user))
     .run();
   const statements = [];
   for (let i = 1; i <= soLuong; i++) {
@@ -666,6 +684,7 @@ async function attachToOrCreatePhieuTra(db: D1Database, unitId: string, ktvKey: 
   if (existing) {
     await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(existing.id, unitId).run();
     await addLog(db, "phieu_tra", existing.id, "nhap", "nhap", actor, `Gộp thêm đơn vị ${unitId} vào phiếu (từ nút thao tác nhanh)`);
+    await syncPhieuTraMien(db, existing.id);
     return existing.id;
   }
   const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
@@ -673,6 +692,7 @@ async function attachToOrCreatePhieuTra(db: D1Database, unitId: string, ktvKey: 
   await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?)").bind(id, ktvKey, actor, loaiDoiTru, now, now).run();
   await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
   await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loaiDoiTru] || loaiDoiTru}) từ nút thao tác nhanh`);
+  await syncPhieuTraMien(db, id);
   return id;
 }
 

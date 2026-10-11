@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 // dang JSON ({order, hidden, widths}) - de neu nguoi dung tung dung ban prototype tren cung trinh
 // duyet, cau hinh cot ho da tuy chinh truoc do tu dong duoc doc lai, khong phai lam lai tu dau.
 
-export type AdminColKey = "trangthai" | "nguon" | "khachhang" | "linhkien" | "phanloai" | "mota" | "sla" | "sdt" | "donchacode" | "phieuguicode" | "doitru" | "huongxuly" | "baohanh";
+export type AdminColKey = "trangthai" | "nguon" | "mien" | "khachhang" | "linhkien" | "phanloai" | "mota" | "sla" | "sdt" | "donchacode" | "phieuguicode" | "doitru" | "huongxuly" | "baohanh";
 
 export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number }> = {
   trangthai: { label: "Trạng thái", width: 150 },
   nguon: { label: "Nguồn", width: 190 },
+  // 11/10/2026: mien cua don (MB / MN / chua khai bao).
+  mien: { label: "Miền", width: 80 },
   khachhang: { label: "Khách hàng", width: 150 },
   linhkien: { label: "Linh kiện", width: 190 },
   // 05/10/2026: "Phan loai" linh kien lay tu linh-kien-app (cot don_vi da dong bo san).
@@ -25,7 +27,7 @@ export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number 
   baohanh: { label: "Tình trạng BH", width: 120 },
 };
 const ALL_KEYS = Object.keys(ADMIN_COLS_DEF) as AdminColKey[];
-const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "nguon", "khachhang", "linhkien", "phanloai", "mota", "sla"];
+const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "nguon", "mien", "khachhang", "linhkien", "phanloai", "mota", "sla"];
 const DEFAULT_HIDDEN: AdminColKey[] = ["sdt", "donchacode", "phieuguicode", "doitru", "huongxuly", "baohanh"];
 const STORAGE_KEY = "admin_unified_cols_v1";
 

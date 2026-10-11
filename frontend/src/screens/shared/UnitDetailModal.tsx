@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { DoiMienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
@@ -358,6 +359,11 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                 {phanLoai && <Badge tone="gray">{phanLoai}</Badge>}
                 {daDoiLk && <Badge tone="blue">Đã đổi LK</Badge>}
                 {p.nguon_tao === "admin_dich_vu" && <Badge tone="violet">Đơn dịch vụ</Badge>}
+                {p.phieu_gui_id ? (
+                  <DoiMienBadge kind="phieu-gui" id={p.phieu_gui_id} mien={p.mien} ktvEmail={p.ktv} onDone={load} />
+                ) : (
+                  <DoiMienBadge kind="don-cha" id={p.id} mien={p.mien} onDone={load} />
+                )}
               </div>
               {daDoiLk && <p className="text-xs text-[var(--ink-soft)]">KTV gửi: {lkName(p.ma_lk)}</p>}
               <p className="text-[13.5px] text-[var(--ink-body)] whitespace-pre-line">

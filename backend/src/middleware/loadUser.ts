@@ -20,10 +20,11 @@ interface UserRow {
   la_giam_sat: number;
   la_view: number;
   la_qtri: number;
+  mien: "MB" | "MN" | "ALL" | null;
 }
 
 const USER_COLUMNS =
-  "email, ten, trang_thai_duyet, bi_khoa, la_ktv_dvbh, la_ve_tinh, la_kho, la_admin_bh, la_nv_sua_chua, la_ke_toan, la_giam_sat, la_view, la_qtri";
+  "email, ten, trang_thai_duyet, bi_khoa, la_ktv_dvbh, la_ve_tinh, la_kho, la_admin_bh, la_nv_sua_chua, la_ke_toan, la_giam_sat, la_view, la_qtri, mien";
 
 export async function loadUser(c: Context<{ Bindings: Env }>, next: Next) {
   const email = c.get("email");
@@ -99,6 +100,7 @@ function toAppUser(row: UserRow): AppUser {
     la_giam_sat: !!row.la_giam_sat,
     la_view: !!row.la_view,
     la_qtri: !!row.la_qtri,
+    mien: row.mien ?? null,
   };
 }
 
@@ -125,5 +127,6 @@ export async function loadTargetUser(db: D1Database, email: string): Promise<App
     la_giam_sat: false,
     la_view: false,
     la_qtri: false,
+    mien: null,
   };
 }

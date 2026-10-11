@@ -8,6 +8,7 @@ import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { computeEmailGs } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
+import { mienOfKtv } from "../lib/mien";
 import { lookupCase } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
@@ -128,10 +129,10 @@ phieuGui.post("/", async (c) => {
   const id = await nextSequentialId(c.env.DB, "phieu_gui_bh", "BH");
   const now = nowVN();
   await c.env.DB.prepare(
-    `INSERT INTO phieu_gui_bh (id, nguoi_tao, nguoi_tao_ho, ngay_tao, ngay_gui_xe, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, trang_thai, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nhap', ?, ?)`,
+    `INSERT INTO phieu_gui_bh (id, nguoi_tao, nguoi_tao_ho, ngay_tao, ngay_gui_xe, hinh_thuc_gui, ma_xe_hoac_tai_xe, don_vi_van_chuyen, trang_thai, created_at, updated_at, mien)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nhap', ?, ?, ?)`,
   )
-    .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui || "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now)
+    .bind(id, target, nguoiTaoHo, now.slice(0, 10), now.slice(0, 10), last?.hinh_thuc_gui || "xe_noi_bo", last?.ma_xe_hoac_tai_xe ?? "", last?.don_vi_van_chuyen ?? "", now, now, await mienOfKtv(c.env.DB, target))
     .run();
   await addLog(c.env.DB, "phieu_gui", id, null, "nhap", user.email, nguoiTaoHo ? `Tạo phiếu mới (tạo hộ cho KTV ${target})` : "Tạo phiếu mới");
 
@@ -307,10 +308,10 @@ phieuGui.post("/:id/don", async (c) => {
   // dung user.email se luon tra ve NULL - da sua tan goc, khong chi vá luc them "tao ho".
   const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?)`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at, mien)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?))`,
   )
-    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview.ky_thuat_vien ?? null, nowVN())
+    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview.ky_thuat_vien ?? null, nowVN(), guiId)
     .run();
   if (xacNhanKhac) {
     await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview.ky_thuat_vien || "không xác định"})`);
@@ -383,10 +384,10 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     const soLuong = Math.max(1, Math.round(Number(r.so_luong) || 1));
     const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
     await c.env.DB.prepare(
-      `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, ghi_chu, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, odoo_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'doi_tra', 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?)`,
+      `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, ghi_chu, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, odoo_id, created_at, mien)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'doi_tra', 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?))`,
     )
-      .bind(id, guiId, r.case_id, r.ma_linh_kien || null, moTa, r.ma_don ? `Đơn Odoo ${r.ma_don}` : null, soLuong, emailGs, r.odoo_id, now)
+      .bind(id, guiId, r.case_id, r.ma_linh_kien || null, moTa, r.ma_don ? `Đơn Odoo ${r.ma_don}` : null, soLuong, emailGs, r.odoo_id, now, guiId)
       .run();
     created.push(id);
   }

@@ -1,4 +1,5 @@
 import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
+import { DoiMienBadge } from "../../ui/MienBadge";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
@@ -200,6 +201,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                 </Chip>
               )}
               {g.thoi_gian_nhan_kho && <SlaBadge since={g.thoi_gian_nhan_kho} />}
+              <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={load} />
             </div>
           </SummaryBox>
 

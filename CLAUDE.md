@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4743,4 +4743,73 @@ Quy trình đã làm: lập kế hoạch 6 vùng → demo giao diện (widget) �
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (khôi phục `wrangler.jsonc` sau), 1440×900, phiếu nháp BH-000001: dropdown có đủ 4 hình thức; đo vị trí nhãn — Hình thức gửi và Ngày gửi xe cùng hàng (top 240), 3 ô còn lại cùng hàng dưới (top 304); chọn Giao trực tiếp → còn Hình thức gửi, Ngày giao (hàng 1), Người giao hàng (hàng 2).
+
+## Chia 2 miền Bắc / Nam + "Khu vực chưa khai báo" (11/10/2026) — v1.025
+
+**(a) Nguyên văn yêu cầu:** *"tôi cần chia hệ thống thành 2 miền (miền Bắc và miền Nam và khu vực chưa khai báo) MB = các khu vực có chứa ký tự MB, miền Nam bao gồm các khu vực có chứa ký tự MN) có thể bổ sung thêm, ngoài ra các khu vực hoặc KTB chưa xác định được khu vực sẽ ở khu vực chưa khai báo (khu vực này KHO, Admin sữa chữa, NV sửa chữa, KT 2 miền sẽ đều nhìn thấy) => khu vực này sẽ phân chia vai trò quản lý đơn hàng của 2 khu vực cho các vai trò trên hệ thống. Khi 1 đơn hàng được tạo ra, sẽ dựa vào người tạo để phân khu vực MB hoặc MN => nếu ko xác định được sẽ ở "Khu vực chưa khai báo". Khu vực này có thể chọn lại cho đúng khu vực nếu bị chọn sai."*
+
+Đã chốt qua AskUserQuestion:
+- Mỗi người xử lý được gán "MB / MN / Cả 2". Chưa gán thì thấy tất cả.
+- "Có thể bổ sung thêm" = thêm từ khoá nhận diện cho từng miền ở Cài đặt. Vẫn chỉ có 2 miền.
+- Người được đổi miền 1 đơn: *"KT, Admin sửa chữa, Kho, Admin hệ thống"*.
+- Đơn dịch vụ khách lẻ lấy miền của Admin tạo đơn. Admin "Cả 2" hoặc chưa gán → chưa khai báo.
+
+Gửi thêm giữa lượt: *"Khi 1 đơn hàng chưa xác định khu vực bị chuyển khu vực => sẽ hỏi người chuyển là tài khoản của KTV đó có chuyển sang khu vực đó luôn không => nếu đồng ý thì chuyển khu vực của KTV đó tạm thời sang "MB" hoặc "MN" chung. admin có thể setup sau nếu cần"*.
+
+**(b) Đã làm:**
+- `migrations/0010_mien.sql`:
+  - `users.mien` (MB / MN / ALL / NULL); cột `mien` (MB / MN / NULL) + index trên `phieu_gui_bh`, `phieu_sua_chua_bh`, `phieu_tra_bh`.
+  - `ktv_lien_he_bh.mien_gan`: miền gán tạm của KTV, ưu tiên hơn miền suy từ `khu_vuc_ma`. Để cột riêng để không mất mã khu vực gốc (Giám sát dùng) và không bị đồng bộ linh-kien-app ghi đè.
+  - Bảng `mien_tu_khoa_bh` (seed MB→"MB", MN→"MN").
+  - Gán miền cho dữ liệu cũ theo khu vực của KTV tạo thùng.
+- `backend/src/lib/mien.ts`:
+  - `detectMien`: mã khu vực chứa từ khoá của **đúng 1** miền thì lấy miền đó, khớp cả 2 hoặc không khớp → NULL.
+  - Các hàm `mienOfKtv` (`mien_gan` thắng), `mienOfStaff`, `mienScope`, `mienAllowed`, `syncPhieuTraMien`.
+  - Lọc: người gán MB/MN (không phải qtri) thấy `mien = của mình OR mien IS NULL`. ALL/NULL/qtri thấy hết. Chế độ test "xem như vai trò" giữ miền của chính Admin.
+- **Gán miền lúc tạo:**
+  - phiếu gửi theo KTV sở hữu thùng (cả khi tạo hộ);
+  - đơn cha (thường + từ Odoo) copy từ phiếu gửi;
+  - đơn dịch vụ theo Admin tạo;
+  - phiếu trả lấy miền của đơn vị bên trong — mọi đường tạo/gộp (tạo tay, tự động gộp, FAST/hàng loạt, trả nhanh).
+- **Lọc hàng đợi theo miền:**
+  - Kho: tiếp nhận / chờ bàn giao / gần đây.
+  - Admin BH: thùng nhận nội bộ, bảng thống nhất + bộ lọc + loc-options, xác nhận hoàn tất, sẵn sàng gộp, tự động gộp.
+  - Danh sách phiếu trả (Kho / Kế toán / Admin).
+  - Toàn bộ số việc (`workload.ts`).
+  - Không lọc: NV (hàng đợi theo người được giao), KTV, Giám sát, View.
+- **API mới `routes/mien.ts` (`/api/mien`):**
+  - Từ khoá: GET / POST / DELETE `/tu-khoa`.
+  - `GET /khu-vuc`: xem trước mã khu vực → miền.
+  - Đổi miền (Kho / Admin BH / Kế toán / qtri, có ghi nhật ký): `POST /phieu-gui/:id` (áp cho cả thùng + đơn cha + đồng bộ phiếu trả), `/don-cha/:id` (chỉ đơn khách lẻ — đơn thuộc thùng phải đổi ở thùng), `/phieu-tra/:id`.
+  - `chuyen_ktv:true` (chỉ khi đơn đang chưa khai báo): ghi `mien_gan` cho KTV và chuyển luôn các thùng chưa khai báo khác của KTV đó.
+  - `PUT /ktv/:ma_ktv` (miền gán tạm).
+  - `POST /ap-dung-lai`: gán lại cho các thùng còn chưa khai báo.
+- `users.ts`: GET trả `mien`, PATCH nhận `mien`.
+- **Giao diện:**
+  - `ui/MienBadge.tsx`: badge MB xanh / MN cam / Chưa KB vàng. `DoiMienBadge` bấm để đổi, có ô tích "Chuyển luôn tài khoản KTV … sang miền …" khi đơn đang chưa khai báo.
+  - Badge đặt ở UI chi tiết đơn / phiếu gửi / phiếu trả và danh sách Kho tiếp nhận.
+  - Cột "Miền" (mặc định hiện) + bộ lọc "Miền" ở bảng Admin BH. Cột Miền ở Đóng gói / Duyệt kế toán / Phiếu trả.
+  - Ô chọn miền ở màn Người dùng.
+  - Cột Miền (+ "tạm") và ô "Miền gán tạm" ở Danh sách KTV.
+  - Thẻ "🗺 Chia miền" ở Cài đặt: từ khoá MB/MN thêm/xoá, bảng khu vực → miền, nút "Áp dụng lại cho N thùng chưa khai báo".
+
+**(c) Vấn đề:**
+- Heredoc Python trong Bash làm hỏng `'\\'` → chuyển sang file script.
+- `useAuth()` trả union theo `status` → lấy `user` khi `authenticated`.
+- Dữ liệu production (đã xem trước): 590 KTV không có mã khu vực + các mã như `PTDV` (133 KTV) sẽ rơi vào "Chưa khai báo" cho tới khi Admin thêm từ khoá hoặc gán tạm.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi.
+- Local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`): migration 0010 áp OK, dữ liệu cũ tự gán 4 thùng MB / 14 chưa khai báo.
+- API (Chế độ test vai trò, tài khoản đặt miền MN):
+  - đổi 1 thùng sang MB → Admin MN còn 76/78 đơn vị, lọc `mien=MB` ra đúng 2;
+  - đổi thùng chưa khai báo của KTV A sang MN + chuyển KTV → `mien_gan=MN` + 4 thùng khác chuyển theo;
+  - tạo thùng hộ cho KTV A → MN, cho KTV khu vực MB1 → MB;
+  - Kho MN không thấy thùng MB;
+  - View đổi miền → 403.
+- UI:
+  - bảng Admin có cột + bộ lọc Miền;
+  - đổi miền đơn khách lẻ từ UI chi tiết → toast + badge cập nhật;
+  - modal đổi miền thùng chưa khai báo hiện ô "Chuyển luôn tài khoản KTV";
+  - 7 màn (Cài đặt, Người dùng, KTV, Kho tiếp nhận / đóng gói, Kế toán, Phiếu trả) render đúng, mọi request 200.
 

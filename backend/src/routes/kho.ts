@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { parsePage } from "../lib/pagination";
+import { mienScope } from "../lib/mien";
 
 // Man hinh Kho: "Diem tiep nhan kho" - tiep nhan o muc THUNG hang (khong mo kiem tung linh kien).
 // Port dung khoXacNhanTiepNhan()/submitSuCo() cua prototype.
@@ -24,26 +25,28 @@ function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }
 // phai lich su day du) - xem renderKhoTiepNhan trong prototype.
 kho.get("/phieu-gui", async (c) => {
   if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  // 11/10/2026: chi thung cua mien minh + "chua khai bao" (Kho gan 1 mien).
+  const ms = mienScope(c.get("user"), "phieu_gui_bh");
   // 09/10/2026 ("Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua"): thung Kho da tiep
   // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
   if (c.req.query("trang_thai") === "cho_ban_giao") {
     const { limit, offset } = parsePage(c);
-    const w = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0";
+    const w = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" + ms.sql;
     const [{ results }, totalRow] = await Promise.all([
-      c.env.DB.prepare(`SELECT * ${w} ORDER BY thoi_gian_nhan_kho ASC LIMIT ? OFFSET ?`).bind(limit, offset).all(),
-      c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).first<{ cnt: number }>(),
+      c.env.DB.prepare(`SELECT * ${w} ORDER BY thoi_gian_nhan_kho ASC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+      c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).bind(...ms.binds).first<{ cnt: number }>(),
     ]);
     return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
   }
   const trangThai = c.req.query("trang_thai") === "da_tiep_nhan" ? "da_tiep_nhan" : "da_gui";
   if (trangThai === "da_tiep_nhan") {
-    const { results } = await c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' ORDER BY updated_at DESC LIMIT 8").all();
+    const { results } = await c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan'${ms.sql} ORDER BY updated_at DESC LIMIT 8`).bind(...ms.binds).all();
     return c.json({ phieu_gui: results, total: results.length });
   }
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_gui' ORDER BY updated_at DESC LIMIT ? OFFSET ?").bind(limit, offset).all(),
-    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'").first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql} ORDER BY updated_at DESC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
