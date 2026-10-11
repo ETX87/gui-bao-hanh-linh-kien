@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4714,4 +4714,20 @@ Quy trình đã làm: lập kế hoạch 6 vùng → demo giao diện (widget) �
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (bỏ tạm binding remote rồi khôi phục), 1440×900: chi tiết đơn DH-000104-1 = 1368×855 (95%×95%); mở "Mở phiếu trả" chồng lên cũng 1368×855.
+
+## Sidebar gọn: chỉ tên + số việc (11/10/2026) — v1.023
+
+**(a) Nguyên văn yêu cầu:** *"các menu ở sidebar trái rút gọn diện tích hiện thị lại, chỉ cần tên và số lượng đơn cần xử lý theo từng vai trò (x1)"*
+
+**(b) Đã làm** (`frontend/src/layout/Sidebar.tsx`):
+- Bỏ icon và dòng phụ (mô tả / chi tiết hàng đợi) ở mọi mục; mỗi mục 1 dòng: **tên + số việc** (huy hiệu đỏ). Chi tiết hàng đợi + mô tả vẫn có trong tooltip khi rê chuột.
+- Tiêu đề nhóm vai trò: tên + tổng số (bỏ chữ "việc").
+- Thu gọn (mặc định): tên ngắn (tối đa 2 dòng) + số đỏ ở góc phải; nhóm hiện 1 dòng "KTV 3".
+- Mở rộng: rộng `w-56` (trước `w-64`); khối logo thấp lại.
+- Ghi đè 1 phần quyết định 05/10/2026 (thu gọn hiện icon + nhãn ngắn) và v1.018 (dòng phụ chi tiết hàng đợi dưới tên mục).
+- BottomNav mobile không đổi.
+
+**(c) Vấn đề:** pane trình duyệt bị ẩn nên CSS transition không chạy, đo bề rộng sidebar luôn ra 76px dù lớp đã là `w-56` → kiểm bằng lớp CSS + chiều cao dòng.
+
+**(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (khôi phục `wrangler.jsonc` sau), 1440×900, tài khoản đủ 9 vai trò (19 mục): thu gọn — dòng 55px → 34–36px, tổng chiều cao menu 1302px → 900px; mở rộng — dòng 32px, 1 dòng tên + số (VD "Gửi hàng bảo hành 1").
 
