@@ -349,7 +349,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_440px]">
           <div className="space-y-3 min-w-0">
             {/* Tom tat san pham & loi */}
             <SummaryBox>
@@ -580,7 +580,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
           <aside className="min-w-0 lg:border-l lg:border-[var(--line)] lg:pl-4 flex flex-col">
             <SectionTitle className="mb-1.5">🕘 Nhật ký & trao đổi</SectionTitle>
             <LogTimeline
-              className="lg:max-h-[62vh]"
+              className="lg:max-h-[calc(95vh-260px)]"
               alwaysTabs={co_the_trao_doi ? ["td"] : []}
               sources={[
                 { key: "td", label: "Trao đổi", icon: "💬", logs: chatLogs },

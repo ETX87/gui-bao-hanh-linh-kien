@@ -15,6 +15,9 @@ const MD_MAX_W: Record<string, string> = {
   "max-w-6xl": "md:max-w-6xl",
 };
 
+// "detail-95" (11/10/2026, yeu cau "giao dien UI keo dien tich full man hinh chiem 95% dien tich man hinh"):
+// moi UI chi tiet (don / phieu gui / phieu tra) chiem 95% rong + 95% cao man hinh desktop.
+
 // So modal dang mo (khoa cuon trang chi go khi modal CUOI CUNG dong).
 let openCount = 0;
 
@@ -78,7 +81,7 @@ export function Modal({
       <div
         // DESIGN_SYSTEM.md §6.8: modal rounded-xl, TRAN MAN HINH tren mobile (moi modal), desktop giu 2 co.
         className={`anim-in bg-[var(--surface)] shadow-2xl flex flex-col w-full h-full rounded-none md:rounded-xl ${
-          full ? "md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : `md:h-auto ${maxWidthClass ? maxWidthClass.split(" ").map((c) => MD_MAX_W[c] ?? c).join(" ") : "md:max-w-2xl"} md:max-h-[90vh]`
+          full ? "md:w-[calc(100%-48px)] md:h-[calc(100%-48px)]" : maxWidthClass === "detail-95" ? "md:w-[95vw] md:h-[95vh]" : `md:h-auto ${maxWidthClass ? maxWidthClass.split(" ").map((c) => MD_MAX_W[c] ?? c).join(" ") : "md:max-w-2xl"} md:max-h-[90vh]`
         }`}
       >
         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-[var(--line)] shrink-0">

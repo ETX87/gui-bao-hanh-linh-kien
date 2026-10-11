@@ -5,11 +5,11 @@ import { useState, type ReactNode } from "react";
 // chi tiet"): modal cao theo noi dung (max-w-6xl), 2 cot `DetailGrid` (trai thong tin, phai nhat ky /
 // trao doi), khoi tom tat nen xam nhat, cac khoi phu vien mong, nhan/gia tri gon chi hien khi co du lieu.
 
-export const DETAIL_MAX_W = "max-w-6xl";
+export const DETAIL_MAX_W = "detail-95"; // 95% x 95% man hinh desktop (xem ui/Modal.tsx)
 
 export function DetailGrid({ children, side }: { children: ReactNode; side: ReactNode }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_440px]">
       <div className="space-y-3 min-w-0">{children}</div>
       <aside className="min-w-0 space-y-4 lg:border-l lg:border-[var(--line)] lg:pl-4">{side}</aside>
     </div>

@@ -200,7 +200,8 @@ bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (b�
 theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.019):** thiết kế lại UI chi
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
-"tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file.
+"tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
+cao màn hình desktop.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4703,4 +4704,14 @@ Quy trình đã làm: lập kế hoạch 6 vùng → demo giao diện (widget) �
 - "Mở phiếu trả" → 2 lớp modal, dòng đơn vị trong phiếu trả không bấm được (nested); Esc chỉ đóng phiếu trả.
 - Gửi trao đổi → tab "Trao đổi · 1".
 - 375px: không phần tử nào tràn ngang, tiến trình rút gọn "Bước 8/8 · KTV nhận".
+
+## UI chi tiết chiếm 95% màn hình (11/10/2026) — v1.022
+
+**(a) Nguyên văn yêu cầu:** *"giao diện UI kéo diện tích full màn hình chiếm 95% diện tích màn hình"*
+
+**(b) Đã làm:** `ui/Modal.tsx` thêm cỡ `"detail-95"` (`md:w-[95vw] md:h-[95vh]`); `DETAIL_MAX_W` (`ui/DetailParts.tsx`) đổi từ `max-w-6xl` sang `detail-95` → áp cho cả 3 UI chi tiết: đơn bảo hành, phiếu gửi, phiếu trả. **Ghi đè** quyết định v1.019/v1.020 ("modal cao theo nội dung, rộng tối đa max-w-6xl") theo yêu cầu mới. Cột phải (nhật ký) rộng 440px từ màn ≥1280px (dưới đó 360px); nhật ký đơn bảo hành cao tối đa `95vh − 260px` để tận dụng chiều cao mới. Mobile không đổi (vẫn tràn màn hình). Modal nhỏ (form, xác nhận) giữ nguyên kích cỡ cũ.
+
+**(c) Vấn đề:** không có.
+
+**(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (bỏ tạm binding remote rồi khôi phục), 1440×900: chi tiết đơn DH-000104-1 = 1368×855 (95%×95%); mở "Mở phiếu trả" chồng lên cũng 1368×855.
 
