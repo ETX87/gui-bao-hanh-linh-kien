@@ -118,6 +118,8 @@ export const HINH_THUC_GUI_OPTIONS = [
   { value: "xe_noi_bo", label: "Xe nội bộ" },
   { value: "nha_xe", label: "Nhà xe / vận chuyển" },
   { value: "buu_dien", label: "Bưu điện / chuyển phát" },
+  // 11/10/2026: KTV/khach tu mang hang den giao tan noi - khong co don vi van chuyen / ma van don.
+  { value: "giao_truc_tiep", label: "Giao trực tiếp" },
 ];
 export const HINH_THUC_GUI_LABELS: Record<string, string> = Object.fromEntries(HINH_THUC_GUI_OPTIONS.map((o) => [o.value, o.label]));
 

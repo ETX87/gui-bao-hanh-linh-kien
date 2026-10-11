@@ -17,7 +17,7 @@ import { OdooDonPickerModal } from "./OdooDonPicker";
 import { QrCode } from "../../ui/QrCode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { useAuth } from "../../auth/AuthContext";
-import { DetailGrid, SummaryBox, Section, KvGrid, Kv, Chip, Banner, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
+import { DetailGrid, SummaryBox, Section, Kv, Chip, Banner, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
 import type { DonCha, LogRow, PhieuGui } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 
@@ -117,7 +117,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
   const canOpenUnit = !nested && !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
 
-  const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon };
+  const giaoTrucTiep = hinhThuc === "giao_truc_tiep";
+  const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: giaoTrucTiep ? "" : dvvc, ma_van_don: giaoTrucTiep ? "" : maVanDon };
   const saveHeader = () => run(async () => { await api.patch(`/phieu-gui/${g.id}`, header); toast("Đã lưu.", "ok"); }, false);
   // "Xac nhan da gui xe" tu PATCH thong tin van chuyen truoc roi moi POST (Phat hien 9 ra soat UX).
   const xacNhanGui = () =>
@@ -220,28 +221,43 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
           >
             {isNhap ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                  <Field label="Hình thức gửi">
-                    <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
-                      {HINH_THUC_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Mã xe / Tài xế">
-                    <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
-                  </Field>
-                  <Field label="Đơn vị vận chuyển">
-                    <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
-                  </Field>
-                  <Field label="Mã vận đơn">
-                    <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
-                  </Field>
-                  <Field label="Ngày gửi xe">
-                    <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
-                  </Field>
+                {/* 11/10/2026: hang 1 = Hinh thuc gui + Ngay gui lien nhau; hang 2 = 3 thong tin con lai. */}
+                <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                  <div className="sm:col-span-3">
+                    <Field label="Hình thức gửi">
+                      <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
+                        {HINH_THUC_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Field label={hinhThuc === "giao_truc_tiep" ? "Ngày giao" : "Ngày gửi xe"}>
+                      <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className={hinhThuc === "giao_truc_tiep" ? "sm:col-span-6" : "sm:col-span-2"}>
+                    <Field label={hinhThuc === "giao_truc_tiep" ? "Người giao hàng" : "Mã xe / Tài xế"}>
+                      <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" placeholder={hinhThuc === "giao_truc_tiep" ? "Tên người mang hàng đến" : undefined} />
+                    </Field>
+                  </div>
+                  {hinhThuc !== "giao_truc_tiep" && (
+                    <>
+                      <div className="sm:col-span-2">
+                        <Field label="Đơn vị vận chuyển">
+                          <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
+                        </Field>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Field label="Mã vận đơn">
+                          <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                        </Field>
+                      </div>
+                    </>
+                  )}
                 </div>
                 {/* Goi y go nhanh tu cac lan gui truoc cua KTV (05/10/2026 muc 4). */}
                 <datalist id="goiy-ma-xe">
@@ -257,13 +273,27 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                 <p className="mt-1.5 text-[11px] text-[var(--ink-faint)]">Bấm “Xác nhận đã gửi xe” sẽ tự lưu toàn bộ thông tin vận chuyển.</p>
               </>
             ) : (
-              <KvGrid>
-                <Kv k="Hình thức gửi" v={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui || "—"} />
-                <Kv k="Mã xe / Tài xế" v={g.ma_xe_hoac_tai_xe || "—"} />
-                <Kv k="Đơn vị vận chuyển" v={g.don_vi_van_chuyen || "—"} />
-                {g.ma_van_don && <Kv k="Mã vận đơn" v={g.ma_van_don} />}
-                <Kv k="Ngày gửi xe" v={g.ngay_gui_xe || "—"} />
-              </KvGrid>
+              <dl className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-1.5">
+                <div className="sm:col-span-3">
+                  <Kv k="Hình thức gửi" v={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui || "—"} />
+                </div>
+                <div className="sm:col-span-3">
+                  <Kv k={g.hinh_thuc_gui === "giao_truc_tiep" ? "Ngày giao" : "Ngày gửi xe"} v={g.ngay_gui_xe || "—"} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Kv k={g.hinh_thuc_gui === "giao_truc_tiep" ? "Người giao hàng" : "Mã xe / Tài xế"} v={g.ma_xe_hoac_tai_xe || "—"} />
+                </div>
+                {g.hinh_thuc_gui !== "giao_truc_tiep" && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Kv k="Đơn vị vận chuyển" v={g.don_vi_van_chuyen || "—"} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Kv k="Mã vận đơn" v={g.ma_van_don || "—"} />
+                    </div>
+                  </>
+                )}
+              </dl>
             )}
           </Section>
 

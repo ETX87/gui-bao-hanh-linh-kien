@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4730,4 +4730,17 @@ Quy trình đã làm: lập kế hoạch 6 vùng → demo giao diện (widget) �
 **(c) Vấn đề:** pane trình duyệt bị ẩn nên CSS transition không chạy, đo bề rộng sidebar luôn ra 76px dù lớp đã là `w-56` → kiểm bằng lớp CSS + chiều cao dòng.
 
 **(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (khôi phục `wrangler.jsonc` sau), 1440×900, tài khoản đủ 9 vai trò (19 mục): thu gọn — dòng 55px → 34–36px, tổng chiều cao menu 1302px → 900px; mở rộng — dòng 32px, 1 dòng tên + số (VD "Gửi hàng bảo hành 1").
+
+## Hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển (11/10/2026) — v1.024
+
+**(a) Nguyên văn yêu cầu:** *"Hình thứ vận chuyển thêm hình thức \"Giao trực tiếp\""*, rồi (gửi giữa lượt) *"hình thức gửi và và ngày gửi liền nhau, 3 thông tin khác phía sau"*.
+
+**(b) Đã làm:**
+- `HINH_THUC_GUI_OPTIONS` (`frontend/src/lib/constants.ts`) thêm `giao_truc_tiep` = "Giao trực tiếp". Backend không kiểm tra giá trị nên không cần sửa; nhớ nhà xe (`ktv_nha_xe_bh`) lưu luôn lựa chọn này.
+- Khối "Vận chuyển" của chi tiết phiếu gửi (`PhieuGuiDetailModal.tsx`, cả lúc sửa lẫn lúc chỉ xem): hàng 1 = **Hình thức gửi + Ngày gửi** liền nhau; hàng 2 = **Mã xe / Tài xế · Đơn vị vận chuyển · Mã vận đơn** (lưới 6 cột: 3+3 rồi 2+2+2; mobile 1 cột).
+- Chọn "Giao trực tiếp": ẩn Đơn vị vận chuyển + Mã vận đơn (lưu rỗng, không giữ giá trị cũ), "Mã xe / Tài xế" đổi nhãn "Người giao hàng", "Ngày gửi xe" đổi "Ngày giao".
+
+**(c) Vấn đề:** không có.
+
+**(d) Kiểm thử:** typecheck 0 lỗi. `wrangler dev` local (khôi phục `wrangler.jsonc` sau), 1440×900, phiếu nháp BH-000001: dropdown có đủ 4 hình thức; đo vị trí nhãn — Hình thức gửi và Ngày gửi xe cùng hàng (top 240), 3 ô còn lại cùng hàng dưới (top 304); chọn Giao trực tiếp → còn Hình thức gửi, Ngày giao (hàng 1), Người giao hàng (hàng 2).
 
