@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV).
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng".
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4813,3 +4813,35 @@ Gửi thêm giữa lượt: *"Khi 1 đơn hàng chưa xác định khu vực b�
   - modal đổi miền thùng chưa khai báo hiện ô "Chuyển luôn tài khoản KTV";
   - 7 màn (Cài đặt, Người dùng, KTV, Kho tiếp nhận / đóng gói, Kế toán, Phiếu trả) render đúng, mọi request 200.
 
+## Danh mục linh kiện: tải / import tháng BH + phân loại / phân loại đồng bộ ngược về linh-kien-app (11/10/2026) — v1.026
+
+**(a) Nguyên văn yêu cầu:** *"danh sách linh kiện cho phép tải, và cho import tháng bảo hành, phân loại thủ công, phân loại cho phép đồng bộ ngược về danh sách linh kiện app"*, gửi thêm giữa lượt: *"chỉ đồng bộ ngược về với thông tin có thay đổi"* và *"ẩn menu sidebar Liên kết mua hàng"*.
+
+**(b) Đã làm:**
+- **Tải danh sách** (`LinhKienScreen.tsx`, nút "⬇ Tải danh sách"): xlsx toàn bộ danh mục (Mã, Tên, Phân loại, Tháng BH, Dùng trong BH, Nguồn), dùng lại `lib/xlsx.ts`. `GET /linh-kien` bản gọn trả thêm `nguon_du_lieu`.
+- **Import** (nút "⬆ Import", Admin BH / qtri):
+  - File đọc ngay trên máy bằng `lib/xlsxRead.ts` mới (xlsx giải nén bằng `DecompressionStream` của trình duyệt + `DOMParser`, không thêm thư viện; hỗ trợ sharedStrings / inlineStr / số; lấy sheet đầu theo `workbook.xml`; cũng đọc .csv `,` `;` tab). `.xls` cũ báo lưu lại dạng .xlsx.
+  - Tự tìm dòng tiêu đề trong 10 dòng đầu (cột "Mã linh kiện" bắt buộc + "Tháng BH" và/hoặc "Phân loại", so khớp không dấu). Ô trống = giữ nguyên giá trị cũ.
+  - `POST /linh-kien/import {rows}` (≤10.000): chỉ ghi dòng có giá trị khác thật; trả số đổi tháng / đổi phân loại, mã không có trong danh mục, tháng ngoài 0–240.
+- **Phân loại thủ công:** cột "Phân loại" thành ô nhập có gợi ý (`GET /linh-kien/phan-loai` = các phân loại đang dùng + số dòng chờ đẩy). Sửa được cả dòng **đồng bộ** (trước đây dòng đồng bộ chỉ sửa được tháng BH / dùng trong BH — ghi đè 1 phần quyết định Giai đoạn 3).
+- **Đồng bộ ngược phân loại về linh-kien-app — chỉ thông tin có thay đổi:**
+  - `migrations/0011_linh_kien_phan_loai_day.sql`: cột `linh_kien_bh.don_vi_cho_day`. Chỉ bật khi phân loại của dòng `dong_bo` thực sự đổi (PATCH / import so sánh với giá trị cũ).
+  - `lib/linhKienPush.ts` `pushPhanLoaiPending`: gửi các dòng đang chờ (≤500/lần) qua Service Binding mới `LINHKIEN_SERVICE` → `linhkien` (`wrangler.jsonc`) tới `POST /api/suachua-partner/phan-loai` (route mới bên linh-kien-app, v1.317), xác thực bằng chính secret đồng bộ đang dùng chung (`LINHKIEN_SYNC_API_KEY` = bên kia `SUACHUA_SYNC_API_KEY`) — không cần tạo secret mới. Bên linh-kien-app cũng chỉ UPDATE dòng có giá trị khác.
+  - Gửi ngay sau khi sửa (`waitUntil`); lỗi thì cron 15 phút gửi lại; xoá cờ chỉ khi giá trị chưa bị sửa tiếp trong lúc gửi. Màn danh mục có thanh "⏳ N phân loại chưa đồng bộ" + "Gửi lại ngay" (`POST /linh-kien/phan-loai/day-lai`), dòng chờ có ⏳.
+  - `routes/sync.ts`: khi linh-kien-app đẩy danh mục sang, dòng đang chờ đẩy **giữ nguyên phân loại vừa sửa** (không bị ghi đè bằng giá trị cũ).
+- Ẩn mục "Mua hàng" (nhóm Liên kết) khỏi sidebar / bottom nav (`routes.ts` `show: () => false`).
+
+**(c) Vấn đề:**
+- Heredoc Python dài trong Bash lại lỗi EOF → dùng file script.
+- Route mới bên linh-kien-app không đặt dưới `/api/partner` (nhánh đó bắt buộc `X-API-Key` của bảng `partner_api_keys`) → `/api/suachua-partner`.
+- Bản đầu route bên linh-kien-app trả `cap_nhat` = số dòng gửi, không phải số dòng đổi thật → sửa đếm theo `meta.changes`.
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend cả 2 repo 0 lỗi.
+- Local suachua (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), migration 0011 áp OK:
+  - PATCH phân loại dòng đồng bộ → cờ chờ = 1; PATCH cùng giá trị / import dòng không đổi → không bật cờ;
+  - import 4 dòng: 1 đổi tháng, mã không tồn tại + tháng 999 được báo riêng;
+  - đồng bộ xuôi từ linh-kien-app: dòng đang chờ giữ phân loại vừa sửa, dòng khác nhận giá trị mới.
+- Trình đọc file: xlsx do `buildXlsx` tạo (không nén), xlsx do openpyxl tạo (deflate, có dòng tiêu đề phụ), csv `;` — đều đọc đúng.
+- End-to-end 2 Worker local (linh-kien-app `wrangler dev` D1 local nối qua service binding): sai key → 401; "Gửi lại ngay" đẩy 2 dòng, D1 linh-kien-app nhận đúng "Mạch"/"Bộ / Cụm", cờ về 0; PATCH tiếp tự đẩy ngay (cờ = 0 sau 1,5s).
+- UI: nút Tải / Import / Thêm, thanh chờ đồng bộ, 20 ô phân loại có gợi ý, modal Import đúng; sidebar không còn "Mua hàng".

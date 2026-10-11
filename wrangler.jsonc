@@ -62,6 +62,12 @@
 			"binding": "KHOVAN_PUSH_SERVICE",
 			"service": "khovan",
 			"remote": true
+		},
+		{
+			// 2026-10-11: day "Phan loai" linh kien sua tay nguoc ve linh-kien-app (lib/linhKienPush.ts).
+			"binding": "LINHKIEN_SERVICE",
+			"service": "linhkien",
+			"remote": true
 		}
 	],
 	"vars": {

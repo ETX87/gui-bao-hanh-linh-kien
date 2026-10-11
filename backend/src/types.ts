@@ -45,6 +45,8 @@ export interface Env {
   // Xac thuc du lieu day (push) tu linh-kien-app - KTV/Khu vuc/danh muc linh kien (Giai doan 5, xem
   // CLAUDE.md muc "Chot 5 cau hoi mo..."). Key RIENG, khong dung chung CASE_LOOKUP_API_KEY.
   LINHKIEN_SYNC_API_KEY?: string;
+  // 2026-10-11: chieu NGUOC sang linh-kien-app (day Phan loai sua tay, lib/linhKienPush.ts).
+  LINHKIEN_SERVICE?: Fetcher;
   // Them 2026-09-07: chieu GHI sang khovan (he Quan ly hang ve kho) - bao truoc thung
   // hang "cho xu ly" ngay luc tao (xem lib/khovanPushClient.ts). Dung khuon
   // external_systems + header X-Api-Key san co cua khovan.

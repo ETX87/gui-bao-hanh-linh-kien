@@ -80,7 +80,7 @@ const CATALOG: CatalogItem[] = [
   { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", short: "Cài đặt", icon: "⚙️", group: G.qtri, desc: "Lý do chậm/huỷ, đồng bộ Odoo", show: (u) => u.la_qtri },
 
   // Lien ket ra ngoai sang he "Dat mua linh kien" (05/09/2026) - luon hien cho moi nguoi.
-  { hash: "/mua-hang", label: "Mua hàng", short: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/", group: G.link, desc: "Mở hệ Đặt mua linh kiện", show: () => true },
+  { hash: "/mua-hang", label: "Mua hàng", short: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/", group: G.link, desc: "Mở hệ Đặt mua linh kiện", show: () => false }, // 11/10/2026: ẩn theo yêu cầu "ẩn menu sidebar Liên kết mua hàng"
 ];
 
 export function routesForUser(u: AppUser): RouteItem[] {

@@ -161,6 +161,7 @@ export interface LinhKien {
   ngay_cap_nhat: string;
   top_hang?: number | null; // hang top xu ly thanh cong 30 ngay (05/10/2026 muc 7)
   top_so_luong?: number | null;
+  don_vi_cho_day?: number; // 1 = Phan loai sua tay chua day duoc sang linh-kien-app (2026-10-11)
 }
 
 export interface SettingItem {

@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { parsePage } from "../lib/pagination";
 import { bumpLinhKienVersion, getLinhKienVersion } from "../lib/linhKienVersion";
 import { computeTopLinhKien, getLkTopGio } from "../lib/topLinhKien";
+import { countPhanLoaiPending, pushPhanLoaiPending } from "../lib/linhKienPush";
 
 // Danh muc linh kien - HYBRID dong bo (nguon_du_lieu='dong_bo', Giai doan 5 se nhan qua
 // /api/sync/linh-kien) + tu tao them noi bo (nguon_du_lieu='noi_bo', CRUD day du o day). Admin BH
@@ -45,7 +46,7 @@ linhKien.get("/", async (c) => {
     // bo anh_demo/ghi_chu cho goi cache nhe).
     const [{ results }, version] = await Promise.all([
       c.env.DB.prepare(
-        `SELECT l.ma_lk, l.ten_lk, l.don_vi, l.so_thang_bao_hanh, l.duoc_dung_bao_hanh, t.hang AS top_hang, t.so_luong AS top_so_luong FROM linh_kien_bh l LEFT JOIN linh_kien_top_bh t ON t.ma_lk = l.ma_lk
+        `SELECT l.ma_lk, l.ten_lk, l.don_vi, l.nguon_du_lieu, l.so_thang_bao_hanh, l.duoc_dung_bao_hanh, t.hang AS top_hang, t.so_luong AS top_so_luong FROM linh_kien_bh l LEFT JOIN linh_kien_top_bh t ON t.ma_lk = l.ma_lk
          WHERE ${where.replace("ma_lk LIKE", "l.ma_lk LIKE")} ORDER BY (t.hang IS NULL), t.hang, l.ten_lk`,
       )
         .bind(...binds)
@@ -136,10 +137,17 @@ linhKien.patch("/:ma", async (c) => {
   const body = await c.req.json<PatchBody>().catch(() => ({}) as PatchBody);
 
   if (row.nguon_du_lieu === "dong_bo") {
-    // Dong dong bo: CHI sua duoc 2 cot rieng cua bao hanh.
+    // Dong dong bo: sua duoc 2 cot rieng cua bao hanh + Phan loai (don_vi, 2026-10-11 - sua tay o day
+    // roi DAY NGUOC ve linh-kien-app, xem lib/linhKienPush.ts). Ten/anh/ghi chu van theo linh-kien-app.
     await c.env.DB.prepare("UPDATE linh_kien_bh SET so_thang_bao_hanh = COALESCE(?, so_thang_bao_hanh), duoc_dung_bao_hanh = COALESCE(?, duoc_dung_bao_hanh), nguoi_cap_nhat = ?, ngay_cap_nhat = ? WHERE ma_lk = ?")
       .bind(body.so_thang_bao_hanh ?? null, body.duoc_dung_bao_hanh === undefined ? null : body.duoc_dung_bao_hanh ? 1 : 0, user.email, nowVN(), ma)
       .run();
+    if (body.don_vi !== undefined) {
+      const r = await c.env.DB.prepare("UPDATE linh_kien_bh SET don_vi = ?, don_vi_cho_day = 1 WHERE ma_lk = ? AND COALESCE(don_vi, '') <> ?")
+        .bind(body.don_vi.trim() || null, ma, body.don_vi.trim())
+        .run();
+      if (r.meta.changes) c.executionCtx.waitUntil(pushPhanLoaiPending(c.env).then(() => undefined));
+    }
   } else {
     await c.env.DB.prepare(
       `UPDATE linh_kien_bh SET
@@ -165,6 +173,75 @@ linhKien.patch("/:ma", async (c) => {
   }
   await bumpLinhKienVersion(c.env.DB);
   return c.json({ ok: true });
+});
+
+// GET /linh-kien/phan-loai - danh sach Phan loai dang dung (goi y cho o nhap) + so dong cho day nguoc.
+linhKien.get("/phan-loai", async (c) => {
+  const [{ results }, cho] = await Promise.all([
+    c.env.DB.prepare("SELECT TRIM(don_vi) AS v, COUNT(*) AS n FROM linh_kien_bh WHERE TRIM(COALESCE(don_vi, '')) <> '' GROUP BY TRIM(don_vi) ORDER BY n DESC").all<{ v: string; n: number }>(),
+    countPhanLoaiPending(c.env.DB),
+  ]);
+  return c.json({ phan_loai: results, cho_day: cho });
+});
+
+// POST /linh-kien/phan-loai/day-lai - gui lai ngay cac Phan loai chua day duoc sang linh-kien-app.
+linhKien.post("/phan-loai/day-lai", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const r = await pushPhanLoaiPending(c.env);
+  return c.json({ ...r, con_lai: await countPhanLoaiPending(c.env.DB) });
+});
+
+// POST /linh-kien/import - { rows: [{ ma_lk, so_thang_bao_hanh?, don_vi? }] } (toi da 10.000 dong). File
+// do client tu doc (xlsx/csv) - server chi nhan JSON. Khop theo ma_lk; o trong = bo qua cot do (KHONG
+// xoa gia tri cu). Phan loai cua dong dong bo doi -> danh dau cho day nguoc ve linh-kien-app.
+linhKien.post("/import", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ rows?: { ma_lk?: string; so_thang_bao_hanh?: number | null; don_vi?: string | null }[] }>().catch(() => ({}) as { rows?: undefined });
+  if (!Array.isArray(body.rows) || body.rows.length > 10000) return c.json({ error: "INVALID_BODY" }, 400);
+  const rows = body.rows
+    .map((r) => ({
+      ma: String(r.ma_lk ?? "").trim(),
+      thang: r.so_thang_bao_hanh === null || r.so_thang_bao_hanh === undefined || Number.isNaN(Number(r.so_thang_bao_hanh)) ? null : Math.round(Number(r.so_thang_bao_hanh)),
+      pl: r.don_vi === null || r.don_vi === undefined ? null : String(r.don_vi).trim(),
+    }))
+    .filter((r) => r.ma && (r.thang !== null || r.pl));
+  const loiThang = rows.filter((r) => r.thang !== null && (r.thang < 0 || r.thang > 240)).map((r) => r.ma);
+  const hop = rows.filter((r) => !loiThang.includes(r.ma));
+  // Doc hien trang theo lo (json_each) de dem dung so dong thuc su thay doi.
+  const cur = new Map<string, { thang: number | null; pl: string; nguon: string }>();
+  for (let i = 0; i < hop.length; i += 500) {
+    const { results } = await c.env.DB.prepare("SELECT ma_lk, so_thang_bao_hanh, COALESCE(TRIM(don_vi), '') AS pl, nguon_du_lieu FROM linh_kien_bh WHERE ma_lk IN (SELECT value FROM json_each(?))")
+      .bind(JSON.stringify(hop.slice(i, i + 500).map((r) => r.ma)))
+      .all<{ ma_lk: string; so_thang_bao_hanh: number | null; pl: string; nguon_du_lieu: string }>();
+    for (const r of results) cur.set(r.ma_lk, { thang: r.so_thang_bao_hanh, pl: r.pl, nguon: r.nguon_du_lieu });
+  }
+  const now = nowVN();
+  const stmts: D1PreparedStatement[] = [];
+  let doiThang = 0;
+  let doiPl = 0;
+  const khongThay: string[] = [];
+  for (const r of hop) {
+    const c0 = cur.get(r.ma);
+    if (!c0) {
+      khongThay.push(r.ma);
+      continue;
+    }
+    if (r.thang !== null && r.thang !== c0.thang) {
+      doiThang++;
+      stmts.push(c.env.DB.prepare("UPDATE linh_kien_bh SET so_thang_bao_hanh = ?, nguoi_cap_nhat = ?, ngay_cap_nhat = ? WHERE ma_lk = ?").bind(r.thang, user.email, now, r.ma));
+    }
+    if (r.pl && r.pl !== c0.pl) {
+      doiPl++;
+      stmts.push(
+        c.env.DB.prepare("UPDATE linh_kien_bh SET don_vi = ?, don_vi_cho_day = ?, nguoi_cap_nhat = ?, ngay_cap_nhat = ? WHERE ma_lk = ?").bind(r.pl, c0.nguon === "dong_bo" ? 1 : 0, user.email, now, r.ma),
+      );
+    }
+  }
+  for (let i = 0; i < stmts.length; i += 100) await c.env.DB.batch(stmts.slice(i, i + 100));
+  if (stmts.length) await bumpLinhKienVersion(c.env.DB);
+  if (doiPl) c.executionCtx.waitUntil(pushPhanLoaiPending(c.env).then(() => undefined));
+  return c.json({ tong: body.rows.length, doi_thang: doiThang, doi_phan_loai: doiPl, khong_thay: khongThay, loi_thang: loiThang });
 });
 
 export default linhKien;

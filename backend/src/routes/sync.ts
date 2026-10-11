@@ -131,7 +131,7 @@ sync.post("/linh-kien", async (c) => {
         `INSERT INTO linh_kien_bh (ma_lk, ten_lk, don_vi, ghi_chu, anh_demo, nguon_du_lieu, ma_lk_nguon, dong_bo_luc, ngay_cap_nhat)
          VALUES (?, ?, ?, ?, ?, 'dong_bo', ?, ?, ?)
          ON CONFLICT(ma_lk) DO UPDATE SET
-           ten_lk = excluded.ten_lk, don_vi = excluded.don_vi, ghi_chu = excluded.ghi_chu,
+           ten_lk = excluded.ten_lk, don_vi = CASE WHEN linh_kien_bh.don_vi_cho_day = 1 THEN linh_kien_bh.don_vi ELSE excluded.don_vi END, ghi_chu = excluded.ghi_chu,
            anh_demo = excluded.anh_demo, ma_lk_nguon = excluded.ma_lk_nguon, dong_bo_luc = excluded.dong_bo_luc, ngay_cap_nhat = excluded.ngay_cap_nhat`,
       ).bind(row.ma_linh_kien, row.ten_linh_kien, row.don_vi ?? null, row.ghi_chu ?? null, row.anh_demo ?? null, row.ma_linh_kien, now, now),
     );
