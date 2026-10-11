@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { fmtDate } from "../../lib/format";
 import type { LogRow } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
@@ -15,8 +15,9 @@ export interface LogSource {
   logs: LogRow[];
 }
 
-export function LogTimeline({ sources, className = "" }: { sources: LogSource[]; className?: string }) {
-  const present = sources.filter((s) => s.logs.length > 0);
+export function LogTimeline({ sources, className = "", footer, alwaysTabs = [] }: { sources: LogSource[]; className?: string; footer?: (tab: string) => ReactNode; alwaysTabs?: string[] }) {
+  // alwaysTabs: nguon luon co tab ke ca khi rong (VD "Trao doi" de bat dau viet).
+  const present = sources.filter((s) => s.logs.length > 0 || alwaysTabs.includes(s.key));
   const [tab, setTab] = useState<string>("all");
   const all = present.flatMap((s) => s.logs.map((l) => ({ ...l, _src: s })));
   const shown = (tab === "all" ? all : all.filter((l) => l._src.key === tab)).sort((a, b) => (b.thoi_gian > a.thoi_gian ? 1 : b.thoi_gian < a.thoi_gian ? -1 : b.id - a.id));
@@ -26,7 +27,7 @@ export function LogTimeline({ sources, className = "" }: { sources: LogSource[];
 
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
-      {all.length > 0 && (
+      {present.length > 0 && (
       <div className="flex flex-wrap items-center gap-1.5 pb-2">
         <button className={tabCls(tab === "all")} onClick={() => setTab("all")}>
           Tất cả · {all.length}
@@ -39,7 +40,7 @@ export function LogTimeline({ sources, className = "" }: { sources: LogSource[];
       </div>
       )}
       {shown.length === 0 ? (
-        <p className="text-xs text-[var(--ink-faint)] py-2">Chưa có nhật ký.</p>
+        <p className="text-xs text-[var(--ink-faint)] py-2">{tab === "all" ? "Chưa có nhật ký." : "Chưa có mục nào."}</p>
       ) : (
         <ol className="relative flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin">
           {shown.map((l) => (
@@ -54,6 +55,7 @@ export function LogTimeline({ sources, className = "" }: { sources: LogSource[];
           ))}
         </ol>
       )}
+      {footer?.(tab)}
     </div>
   );
 }

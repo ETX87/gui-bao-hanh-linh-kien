@@ -298,6 +298,42 @@ adminBH.get("/don-vi/:id", async (c) => {
   ]);
   if (p && guiRow) Object.assign(p, { ktv: guiRow.nguoi_tao, phieu_gui_trang_thai: guiRow.trang_thai });
 
+  // 11/10/2026 - UI chi tiet "tat ca trong mot": tom tat chung tu lien ket (xem nhanh tai cho, khong goi
+  // them API khi bam), thong tin KTV (danh ba), don Odoo + lan bao dvbh, trao doi cua phieu gui.
+  const pFull = p as { phieu_gui_id: string | null; odoo_id: number | null; email_gs: string | null } | null;
+  const canGhiChu = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_nv_sua_chua;
+  const [phieuGui, phieuTra, odoo, ktvInfo, ghiChu] = await Promise.all([
+    pFull?.phieu_gui_id
+      ? c.env.DB.prepare(
+          `SELECT g.id, g.nguoi_tao, g.nguoi_tao_ho, g.trang_thai, g.ngay_gui_xe, g.hinh_thuc_gui, g.ma_xe_hoac_tai_xe, g.don_vi_van_chuyen,
+                  g.ma_van_don, g.su_co_tiep_nhan, g.su_co_ly_do, g.nguoi_nhan_kho, g.thoi_gian_nhan_kho, g.admin_tiep_nhan,
+                  g.admin_nguoi_nhan, g.admin_thoi_gian_nhan, g.created_at,
+                  (SELECT COUNT(*) FROM phieu_sua_chua_bh x WHERE x.phieu_gui_id = g.id) AS so_don,
+                  (SELECT MIN(l.thoi_gian) FROM logs_bh l WHERE l.entity_type = 'phieu_gui' AND l.entity_id = g.id AND l.den_trang_thai = 'da_gui') AS thoi_gian_gui
+           FROM phieu_gui_bh g WHERE g.id = ?`,
+        ).bind(pFull.phieu_gui_id).first()
+      : Promise.resolve(null),
+    uFull.phieu_tra_id
+      ? c.env.DB.prepare(
+          `SELECT t.id, t.ktv_nhan, t.trang_thai, t.loai_doi_tru, t.ma_don_hang, t.ma_misa, t.ma_van_don, t.created_at, t.updated_at,
+                  (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct x WHERE x.phieu_tra_id = t.id) AS so_don_vi
+           FROM phieu_tra_bh t WHERE t.id = ?`,
+        ).bind(uFull.phieu_tra_id).first()
+      : Promise.resolve(null),
+    pFull?.odoo_id
+      ? c.env.DB.prepare(
+          `SELECT o.odoo_id, o.ma_don, o.trang_thai, o.tinh_trang_loi, o.ngay_tao, o.ten_linh_kien, s.last_status, s.last_sent_at, s.last_error
+           FROM don_bh_odoo o LEFT JOIN odoo_status_sync s ON s.odoo_id = o.odoo_id WHERE o.odoo_id = ?`,
+        ).bind(pFull.odoo_id).first()
+      : Promise.resolve(null),
+    guiRow
+      ? c.env.DB.prepare("SELECT ma_ktv, ten_hien_thi, sdt, khu_vuc_ma, vai_tro_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ? LIMIT 1").bind(guiRow.nguoi_tao).first()
+      : Promise.resolve(null),
+    pFull?.phieu_gui_id && canGhiChu
+      ? c.env.DB.prepare("SELECT * FROM phieu_gui_bh_ghi_chu WHERE phieu_gui_id = ? ORDER BY thoi_gian DESC").bind(pFull.phieu_gui_id).all()
+      : Promise.resolve({ results: [] }),
+  ]);
+
   return c.json({
     don_vi: u,
     don_cha: p,
@@ -305,6 +341,10 @@ adminBH.get("/don-vi/:id", async (c) => {
     logs: { don_vi: ctLogs.results, don_cha: pLogs.results, phieu_gui: guiLogs, phieu_tra: traLogs },
     anh: { don_vi: ctAnh.results, don_cha: pAnh.results },
     bao_cao_sai_thong_tin: baoCaoSai.results,
+    lien_ket: { phieu_gui: phieuGui, phieu_tra: phieuTra, odoo },
+    ktv_info: ktvInfo ? { ...ktvInfo, email_gs: pFull?.email_gs ?? null } : pFull?.email_gs ? { email_gs: pFull.email_gs } : null,
+    ghi_chu: ghiChu.results,
+    co_the_trao_doi: !!pFull?.phieu_gui_id && (canGhiChu || uRow.nguoi_sua_chua === user.email),
   });
 });
 

@@ -31,7 +31,7 @@ interface DetailResponse {
 // de mo chi tiet don); phai: nhat ky + anh dong goi. Kho o buoc "cho dong goi" nhap duoc Ma van don
 // (truoc day o nay chi hien luc "nhap" nen Kho bam "Gui hang" khong nhap duoc van don).
 
-export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
+export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void; nested?: boolean }) {
   const toast = useToast();
   const { nameOf } = useLkName();
   const [data, setData] = useState<DetailResponse | null>(null);
@@ -83,7 +83,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
   const khoChoGui = user.la_kho && t.trang_thai === "da_duyet_ke_toan";
   const batBuocMa = t.loai_doi_tru !== "tru_cong_no";
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
-  const canOpenUnit = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view;
+  const canOpenUnit = !nested && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
 
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
   const guiDuyet = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
@@ -313,7 +313,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged }: { traId
           </Section>
         </DetailGrid>
       </Modal>
-      {openUnit && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
+      {openUnit && <UnitDetailModal unitId={openUnit} user={user} nested onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
     </>
   );
 }

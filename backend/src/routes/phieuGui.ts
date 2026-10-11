@@ -23,8 +23,8 @@ phieuGui.use("*", verifySessionMiddleware, loadUser);
 function isKtv(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_qtri: boolean }) {
   return u.la_ktv_dvbh || u.la_ve_tinh || u.la_qtri;
 }
-function canReadGhiChu(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_kho: boolean; la_admin_bh: boolean; la_qtri: boolean; la_giam_sat: boolean; la_view: boolean }) {
-  return isKtv(u) || u.la_kho || u.la_admin_bh || u.la_qtri || u.la_giam_sat || u.la_view;
+function canReadGhiChu(u: { la_ktv_dvbh: boolean; la_ve_tinh: boolean; la_kho: boolean; la_admin_bh: boolean; la_qtri: boolean; la_giam_sat: boolean; la_view: boolean; la_nv_sua_chua: boolean }) {
+  return isKtv(u) || u.la_kho || u.la_admin_bh || u.la_qtri || u.la_giam_sat || u.la_view || u.la_nv_sua_chua;
 }
 // GS khu vuc cua KTV / Admin bao hanh "tao ho don bao hanh" (yeu cau 05/09/2026 muc 1) - CHOT qua
 // AskUserQuestion: nguoi tao ho quan ly duoc TOAN BO thung truoc khi Kho tiep nhan (nhu chinh KTV do),
@@ -422,7 +422,8 @@ phieuGui.get("/:id/ghi-chu", async (c) => {
 
 phieuGui.post("/:id/ghi-chu", async (c) => {
   const user = c.get("user");
-  if (!(isKtv(user) || user.la_kho || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
+  // 11/10/2026: NV sua chua + Giam sat cung trao doi duoc (tu UI chi tiet don).
+  if (!(isKtv(user) || user.la_kho || user.la_admin_bh || user.la_nv_sua_chua || user.la_giam_sat)) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
   const body = await c.req.json<{ noi_dung?: string }>().catch(() => ({}) as { noi_dung?: string });
   if (!body.noi_dung?.trim()) return c.json({ error: "MISSING_NOI_DUNG" }, 400);

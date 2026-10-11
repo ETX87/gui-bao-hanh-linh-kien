@@ -115,5 +115,9 @@ export function useLkName() {
     if (!ma) return "";
     return items.find((x) => x.ma_lk === ma)?.don_vi?.trim() || "";
   };
-  return { nameOf, phanLoaiOf, loading };
+  const soThangOf = (ma: string | null | undefined): number | null => {
+    if (!ma) return null;
+    return items.find((x) => x.ma_lk === ma)?.so_thang_bao_hanh ?? null;
+  };
+  return { nameOf, phanLoaiOf, soThangOf, loading };
 }

@@ -199,7 +199,8 @@ Admin BH, nhật ký ghi tiếng Việt có dấu — xem mục cuối file. **M
 bảng tối đa 2 dòng/dòng, 1 màn 1440×900 thấy 20–25 dòng việc (bảng Admin BH từ ~7 lên ~20 dòng) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.018):** menu chia nhóm
 theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục hiện số việc của màn đó (cộng nhiều hàng đợi) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.019):** thiết kế lại UI chi
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
-UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file.
+UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
+"tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4661,4 +4662,45 @@ màn hình => các table danh sách nguyên tắc hiện tối đa chiều cao =
   - bấm đơn vị → mở DH-000006-1 chồng lên; Esc chỉ đóng chi tiết đơn, phiếu trả còn mở, trang vẫn khoá cuộn;
   - phiếu gửi BH-000003: modal 1152×558, 2 cột.
 - Mobile 375px: không phần tử nào tràn ngang.
+
+## UI chi tiết đơn bảo hành "tất cả trong một" (11/10/2026) — v1.021
+
+**(a) Nguyên văn yêu cầu:** *"tôi muốn 1 màn hình UI chi tiết có thể xem được tất cả các thông tin của đơn hàng, các liên kết liên quan có thể click vào xem nhanh, + lịch sử log, các thông tin có phân chia rõ ràng thành các vùng dữ liệu liên quan, đầy đủ các thông tin có thể kéo về để người dùng sử dụng trong công việc thuận tiện nhất có thể => lập kế hoạch và giao diện demo => đứng dưới vai trò 1 người QC, AQ khó tính, rà soát lại và đưa ra các nhận xét => yêu cầu tái đánh giá => đưa ra phương án chốt"*
+
+Quy trình đã làm: lập kế hoạch 6 vùng → demo giao diện (widget) → tự rà soát dưới vai QC (10 nhận xét: không biết đơn đang ở bước nào/ai giữ, chồng modal dễ lạc, quá tải trường case, bằng chứng case cũ/mới không rõ, người liên quan có thể sai khi làm lại, quyền xem, trao đổi bị tách rời, tiến trình tràn trên mobile, thiếu sao chép nhanh, gọi API khi bấm liên kết) → tái đánh giá → phương án chốt. Người dùng chốt 2 điểm mở:
+- *"ko cần doanh thu hiện ngay. nhưng có thế click vào link CRM để mở case chi tiết nếu cần"* → không hiện 3 trường doanh thu case, giữ nút "Xem trên CRM".
+- *"Có trao đổi thêm"* → viết trao đổi ngay trong chi tiết đơn.
+
+**(b) Đã làm:**
+- Backend `GET /admin/don-vi/:id` trả thêm trong **1 lần gọi** (bấm chip liên kết không gọi API):
+  - `lien_ket.phieu_gui` (trạng thái, vận chuyển, Kho nhận, Admin nhận nội bộ, số đơn, thời điểm gửi lấy từ log `da_gui`);
+  - `lien_ket.phieu_tra` (trạng thái, đối trừ, mã ĐH/MISA/vận đơn, số đơn vị);
+  - `lien_ket.odoo` (mã đơn, trạng thái Odoo, lỗi, lần báo dvbh gần nhất + lỗi báo);
+  - `ktv_info` (mã KTV, SĐT, khu vực từ danh bạ + `email_gs`);
+  - `ghi_chu` (trao đổi của phiếu gửi) + `co_the_trao_doi`.
+- `POST /phieu-gui/:id/ghi-chu`: thêm NV sửa chữa + Giám sát được viết; `canReadGhiChu` thêm NV.
+- `UnitDetailModal.tsx` viết lại:
+  - **Thanh tiến trình 8 bước** (KTV gửi → Kho nhận → Admin nhận → Phân loại → Sửa chữa → Hoàn tất → Phiếu trả → KTV nhận), có ngày từng mốc, bước bỏ qua gạch ngang (VD Đổi mới không qua sửa chữa), đơn huỷ/chuyển kho kết thúc bằng mốc đỏ; khách lẻ bắt đầu bằng "Tạo đơn dịch vụ", kết thúc "Khách nhận". Kèm dòng **"Đang ở: <ai> — <việc>"**. Mobile rút gọn "Bước k/N · tên bước".
+  - Vùng **Liên kết**: chip Phiếu gửi / Đơn cha ×N (k/N xong) / Phiếu trả (hoặc "chưa có") / Odoo → bấm mở **ô xem nhanh tại chỗ**; có nút "Mở phiếu gửi/phiếu trả" (chồng modal). Trong ô Đơn cha bấm #k để chuyển sang đơn vị anh em.
+  - **Tối đa 2 lớp modal**: prop `nested` cho `UnitDetailModal`, `PhieuGuiDetailModal`, `PhieuTraDetailModal` — mở từ bên trong nhau thì ẩn nút "Mở phiếu"/không cho bấm dòng đơn vị.
+  - **Khách hàng & case** (`CaseSnapshotPanel`): 8 trường chính (khách, sản phẩm, serial có nút sao chép, ngày mua, **hạn bảo hành tính sẵn** còn/hết từ `so_thang_bao_hanh` của linh kiện thực tế, địa bàn, hãng, KTV trên case) + "Xem thêm N trường" (nhóm/loại yêu cầu, hình thức BH, đối tác, các mốc CSKH, lý do quá hạn, nội dung/cách thức xử lý…); **không có doanh thu**; ghi rõ "Bằng chứng lưu lúc …"; mã case có nút sao chép.
+  - **Người liên quan**: KTV (SĐT bấm gọi), mã KTV · khu vực, Giám sát, tạo hộ bởi, Kho nhận thùng, Admin nhận nội bộ, Admin phân loại, NV sửa chữa, Admin xác nhận hoàn tất, Kế toán duyệt, Kho gửi trả — lấy người làm **gần nhất** từ nhật ký, chỉ hiện dòng có giá trị.
+  - Xử lý: thêm "Số lần làm lại", lý do yêu cầu bổ sung khi chưa phân loại; đối trừ khác đề xuất KTV tô vàng.
+  - Banner sự cố tiếp nhận của Kho hiện ngay trong chi tiết đơn.
+  - Cột phải "Nhật ký & trao đổi": tab mới **"💬 Trao đổi"** gộp vào dòng thời gian, ô viết + "Gửi" (Ctrl+Enter) ở tab Tất cả/Trao đổi; đơn khách lẻ (không có phiếu gửi) không có trao đổi.
+  - Nút sao chép mã đơn trên tiêu đề (`CopyBtn` mới trong `ui/DetailParts.tsx`).
+- `LogTimeline`: thêm `footer` và `alwaysTabs`. `useLkName` thêm `soThangOf`.
+- Bỏ khối "Cùng đơn" riêng (đã nằm trong ô xem nhanh Đơn cha).
+
+**(c) Vấn đề trong lúc làm:**
+- Log phân loại cũ ghi không dấu ("Admin BH phan loai") nên khớp theo nội dung chữ bị trượt → đổi sang khớp theo chuyển trạng thái (`cho_phan_loai`/`admin_can_xem_lai` → trạng thái sau phân loại).
+- `ring-dashed` không phải lớp Tailwind → dùng `border border-dashed`.
+- Heredoc Python dài trong Bash lại lỗi EOF → viết file bằng Write.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. `wrangler dev` local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`), đơn DH-000104-1 (Odoo, đã trả xong):
+- API trả đủ `lien_ket` (phiếu gửi/phiếu trả/Odoo), `ktv_info`, `co_the_trao_doi`.
+- 1440×900: tiến trình 8/8 có ngày, "Sửa chữa" bỏ qua (Đổi mới), "Đang ở: Đã hoàn tất"; người liên quan đủ 8 dòng; chip Phiếu trả mở ô xem nhanh "TR-000105 · Đã hoàn tất · Đổi trả · 1 đơn vị · ĐH DH1 · MISA MISA1".
+- "Mở phiếu trả" → 2 lớp modal, dòng đơn vị trong phiếu trả không bấm được (nested); Esc chỉ đóng phiếu trả.
+- Gửi trao đổi → tab "Trao đổi · 1".
+- 375px: không phần tử nào tràn ngang, tiến trình rút gọn "Bước 8/8 · KTV nhận".
 

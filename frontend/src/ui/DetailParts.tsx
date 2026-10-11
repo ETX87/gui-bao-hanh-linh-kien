@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 // Khoi dung chung cho moi "UI chi tiet" (don bao hanh / phieu gui / phieu tra) - thiet ke lai 10/10/2026
 // (phan hoi "UI chi tiet ... dang trong va thua qua nhieu vung", roi "xu ly lai toan bo cac giao dien UI
@@ -72,5 +72,27 @@ export function Thumbs({ urls }: { urls: { key: string; url: string; title?: str
         </a>
       ))}
     </div>
+  );
+}
+
+// Nut sao chep nho (11/10/2026): ma don / serial / ma case hay phai chep sang Zalo, Odoo.
+export function CopyBtn({ text, title = "Sao chép" }: { text: string | null | undefined; title?: string }) {
+  const [ok, setOk] = useState(false);
+  if (!text) return null;
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(text).then(() => {
+          setOk(true);
+          setTimeout(() => setOk(false), 1200);
+        });
+      }}
+      className="focus-ring inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] text-[var(--ink-faint)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-ink)]"
+    >
+      {ok ? "✓" : "⧉"}
+    </button>
   );
 }

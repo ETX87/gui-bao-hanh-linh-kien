@@ -39,7 +39,7 @@ interface DetailResponse {
 // kho nhan), van chuyen, danh sach don gon kem TIEN DO tung don (dem don vi theo trang thai - moi);
 // phai: QR + trao doi + nhat ky phieu gui (moi - truoc day man nay khong co nhat ky).
 
-export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: string; onClose: () => void; onChanged: () => void }) {
+export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { guiId: string; onClose: () => void; onChanged: () => void; nested?: boolean }) {
   const toast = useToast();
   const isMobile = useIsMobile();
   const auth = useAuth();
@@ -114,7 +114,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
   }
   const g = data.phieu_gui;
   const isNhap = g.trang_thai === "nhap";
-  const canOpenUnit = !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
+  const canOpenUnit = !nested && !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
 
   const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: dvvc, ma_van_don: maVanDon };
@@ -356,7 +356,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged }: { guiId: stri
         ) : (
           <AddDonModal guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
         ))}
-      {openUnit && user && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
+      {openUnit && user && <UnitDetailModal unitId={openUnit} user={user} nested onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
     </>
   );
 }
