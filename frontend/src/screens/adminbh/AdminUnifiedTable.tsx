@@ -10,6 +10,7 @@ import { AdminColSettingsModal } from "./AdminColSettingsModal";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, DonVi } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
+import { computeWarranty } from "../../lib/warranty";
 
 // "Bang thong nhat" Admin BH - port dung renderAdminUnifiedTable() cua prototype: 1 bang GOP ca don
 // cha (dang cho_xac_nhan_so_luong) LAN don vi (dang can xu ly) lam 1, cot tuy bien duoc (bat/tat, keo
@@ -17,9 +18,9 @@ import { UserName } from "../../hooks/useUserNames";
 // hang loat. Giai doan 4 truoc day tach rieng 2 bang + 8 cot co dinh - port lai day du theo dung yeu
 // cau QA 04/09/2026 "so sanh voi giao dien da xay dung tren ban prototype".
 //
-// KHONG co "Tinh trang BH" (canh bao het han bao hanh) thuc su tinh duoc - can du lieu case CRM qua
-// case-lookup client (Giai doan 5, CHUA viet - xem CLAUDE.md) - cot nay tam hien "—" cho moi dong,
-// ghi ro trong code de khong nham la da lam xong.
+// Khach hang + "Tinh trang BH" (12/10/2026): lay tu "bang chung case" da luu luc tao don (backend tra
+// case_khach_hang / case_ngay_mua / case_tiep_nhan). Het han BH -> badge do "Het BH" ngay o o linh kien
+// (canh bao truoc khi bam FAST / hang loat, vi 2 duong do khong qua form phan loai co banner).
 
 interface Props {
   parents: DonCha[];
@@ -51,6 +52,17 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const v = ma ? linhKienList.find((lk) => lk.ma_lk === ma)?.don_vi?.trim() : "";
     return v ? <Badge tone="gray">{v}</Badge> : <span className="text-[var(--ink-faint)]">—</span>;
   };
+  // Tinh trang BH theo linh kien thuc te: han = ngay mua + so thang BH cua linh kien.
+  const warranty = (r: { case_ngay_mua?: string | null; case_tiep_nhan?: string | null }, ma: string | null | undefined) =>
+    computeWarranty(r.case_ngay_mua, ma ? linhKienList.find((lk) => lk.ma_lk === ma)?.so_thang_bao_hanh : null, r.case_tiep_nhan);
+  const baoHanhCell = (w: ReturnType<typeof computeWarranty>): ReactNode =>
+    !w.known ? <span className="text-[var(--ink-faint)]">—</span> : w.expired ? <Badge tone="red">Hết BH {w.limitDate}</Badge> : <Badge tone="green">Còn BH đến {w.limitDate}</Badge>;
+  const hetBhBadge = (w: ReturnType<typeof computeWarranty>) =>
+    w.known && w.expired ? (
+      <span title={`Hết hạn bảo hành từ ${w.limitDate}`}>
+        <Badge tone="red" className="ml-1">Hết BH</Badge>
+      </span>
+    ) : null;
   const { order, hidden, visibleCols, colWidth, reorder, toggleHidden, commitWidth, reset } = useAdminCols();
   const [colSettingsOpen, setColSettingsOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -112,8 +124,18 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
       />
     ),
     mien: <MienBadge mien={p.mien} short />,
-    khachhang: <Ellipsis text="—" />,
-    linhkien: <Ellipsis text={lkName(p.ma_lk)} title={lkName(p.ma_lk)} />,
+    khachhang: <Ellipsis text={p.case_khach_hang || p.ten_khach_hang || "—"} title={p.case_khach_hang || p.ten_khach_hang || ""} />,
+    linhkien: (
+      <Ellipsis
+        text={
+          <>
+            {lkName(p.ma_lk)}
+            {hetBhBadge(warranty(p, p.ma_lk))}
+          </>
+        }
+        title={lkName(p.ma_lk)}
+      />
+    ),
     phanloai: phanLoai(p.ma_lk),
     mota: <Ellipsis text={p.mo_ta_loi} title={p.mo_ta_loi || ""} />,
     sla: <SlaBadge since={p.created_at} entityType="phieu_sc" entityId={p.id} clickable />,
@@ -122,13 +144,14 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     phieuguicode: <span className="text-[var(--ink-soft)] font-mono text-xs">{p.phieu_gui_id || "—"}</span>,
     doitru: p.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[p.loai_doi_tru_de_xuat] : "—",
     huongxuly: <span className="text-[var(--ink-soft)]">Chưa phân loại</span>,
-    baohanh: <span className="text-[var(--ink-soft)]">—</span>,
+    baohanh: baoHanhCell(warranty(p, p.ma_lk)),
   });
 
   const unitFields = (u: DonVi): Record<AdminColKey, ReactNode> => {
     const isKhachLe = !u.phieu_gui_id;
     const effLk = u.ma_lk_thuc_te || u.ma_lk;
     const daDoiLk = !!(u.ma_lk_thuc_te && u.ma_lk_thuc_te !== u.ma_lk);
+    const w = warranty(u, effLk);
     return {
       trangthai: <StatusBadge kind="unit" value={u.trang_thai} />,
       nguon: isKhachLe ? (
@@ -144,12 +167,13 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         />
       ),
       mien: <MienBadge mien={u.mien} short />,
-      khachhang: <Ellipsis text={u.nguon_tao === "admin_dich_vu" ? u.ten_khach_hang || "—" : "—"} />,
+      khachhang: <Ellipsis text={u.case_khach_hang || u.ten_khach_hang || "—"} title={u.case_khach_hang || u.ten_khach_hang || ""} />,
       linhkien: (
         <Ellipsis
           text={
             <>
               {lkName(effLk)} {daDoiLk && <Badge tone="blue" className="ml-1">Đã đổi LK</Badge>}
+              {hetBhBadge(w)}
             </>
           }
           title={lkName(effLk)}
@@ -163,7 +187,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
       phieuguicode: <span className="text-[var(--ink-soft)] font-mono text-xs">{u.phieu_gui_id || "—"}</span>,
       doitru: u.loai_doi_tru || u.loai_doi_tru_de_xuat ? LOAI_DOI_TRU_LABELS[(u.loai_doi_tru || u.loai_doi_tru_de_xuat)!] : "—",
       huongxuly: u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] : <span className="text-[var(--ink-soft)]">Chưa phân loại</span>,
-      baohanh: <span className="text-[var(--ink-soft)]">—</span>,
+      baohanh: baoHanhCell(w),
     };
   };
 
@@ -319,7 +343,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
               {f.trangthai}
               <span className="ml-auto">{f.sla}</span>
             </div>
-            <p className="text-sm font-semibold text-[var(--ink)]">{lkName(p.ma_lk)}</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">{f.linhkien}</p>
             {p.mo_ta_loi && <p className="text-sm text-[var(--ink-body)] line-clamp-2">{p.mo_ta_loi}</p>}
             <div className="text-xs text-[var(--ink-soft)]">{f.nguon}</div>
             <div className="pt-2" onClick={(e) => e.stopPropagation()}>
@@ -355,7 +379,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     <SlaBadge since={groupWorstSla(list)} />
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-[var(--ink)]">{lkName(list[0].ma_lk_thuc_te || list[0].ma_lk)}</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">{unitFields(list[0]).linhkien}</p>
                 {groupStatusSummary(list)}
                 <p className="text-xs font-semibold text-[var(--accent-ink)]">{isOpen ? "▾ Thu gọn" : `▸ Mở ${list.length} đơn vị`}</p>
               </div>

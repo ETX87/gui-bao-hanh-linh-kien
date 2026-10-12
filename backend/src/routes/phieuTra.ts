@@ -143,7 +143,8 @@ phieuTra.get("/", async (c) => {
     binds.push(trangThai);
   }
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM phieu_tra_bh WHERE ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+    // so_don (12/10/2026, de xuat #16): so don vi trong phieu, hien cot "Số đơn" o cac danh sach.
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.phieu_tra_id = phieu_tra_bh.id) AS so_don FROM phieu_tra_bh WHERE ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE ${where}`)
@@ -392,6 +393,37 @@ phieuTra.post("/:id/khieu-nai", async (c) => {
   if (!body.ghi_chu?.trim()) return c.json({ error: "MISSING_GHI_CHU" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'khieu_nai_van_chuyen', khong_nhan_duoc_ghi_chu = ?, updated_at = ? WHERE id = ?").bind(body.ghi_chu.trim(), nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "da_gui", "khieu_nai_van_chuyen", user.email, "KTV mở khiếu nại vận chuyển: " + body.ghi_chu.trim());
+  return c.json({ ok: true });
+});
+
+// Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026, dinh nghia "that lac tren duong tra" da
+// chot): thanh_cong -> hang da toi noi (ktv_da_nhan); that_bai -> 'gui_that_bai' (ket thuc, ghi ro ly
+// do - bat buoc ghi chu khi that bai).
+phieuTra.post("/:id/danh-gia-khieu-nai", async (c) => {
+  const user = c.get("user");
+  if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "khieu_nai_van_chuyen") return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ket_qua?: string; ghi_chu?: string }>().catch(() => ({}) as { ket_qua?: string; ghi_chu?: string });
+  if (body.ket_qua !== "thanh_cong" && body.ket_qua !== "that_bai") return c.json({ error: "INVALID_KET_QUA" }, 400);
+  const ghiChu = body.ghi_chu?.trim() || "";
+  if (body.ket_qua === "that_bai" && !ghiChu) return c.json({ error: "MISSING_GHI_CHU" }, 400);
+  const den = body.ket_qua === "thanh_cong" ? "ktv_da_nhan" : "gui_that_bai";
+  const now = nowVN();
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = ?, kq_khieu_nai = ?, kq_khieu_nai_ghi_chu = ?, kq_khieu_nai_boi = ?, kq_khieu_nai_luc = ?, updated_at = ? WHERE id = ?")
+    .bind(den, body.ket_qua, ghiChu || null, user.email, now, now, id)
+    .run();
+  await addLog(
+    c.env.DB,
+    "phieu_tra",
+    id,
+    "khieu_nai_van_chuyen",
+    den,
+    user.email,
+    (body.ket_qua === "thanh_cong" ? "Kho đánh giá khiếu nại: gửi THÀNH CÔNG (hàng đã tới nơi)" : "Kho đánh giá khiếu nại: gửi THẤT BẠI (thất lạc)") + (ghiChu ? " | " + ghiChu : ""),
+  );
   return c.json({ ok: true });
 });
 

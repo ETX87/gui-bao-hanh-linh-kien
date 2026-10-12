@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Chưa deploy (máy đang đăng nhập wrangler tài khoản sandbox).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3923,8 +3923,7 @@ thông lệ ngành đáng cân nhắc thêm:
 
 ## Câu hỏi mở còn lại (gộp từ #2, #4 và phát hiện mới ở trên — theo độ ưu tiên)
 
-1. **[Mới] Sẽ có bao nhiêu người thật được gán `la_admin_bh` khi ra mắt?** — quyết định việc phân
-   miền Nam/Bắc (#4 mục 2) có ý nghĩa thực tế hay không.
+1. ~~**[Mới] Sẽ có bao nhiêu người thật được gán `la_admin_bh` khi ra mắt?**~~ — **[ĐÃ CHỐT 12/10/2026]** nguyên văn: *"hiện tại có 2 khu vực riêng là MB, MN mỗi khu vực có thể từ nhiều người cùng hoạt động"* — đúng với cơ chế chia miền v1.025 (`users.mien`), không cần sửa gì.
 2. ~~`LOẠI ĐỐI TRỪ DO KTV CHỌN` trong `DON BAO HANH` nghĩa là gì~~ — **[ĐÃ CHỐT 22/08/2026, "Phản hồi
    vòng 4"]**: đúng là mô hình 2 tầng — **KTV đề xuất lúc tạo đơn** (`phieu_sc.loai_doi_tru_de_xuat`,
    select mới trong form "Thêm đơn bảo hành") **→ Admin bảo hành xác nhận/có thể đổi lại lúc phân
@@ -3933,15 +3932,12 @@ thông lệ ngành đáng cân nhắc thêm:
    định 21/08/2026 mục #11 (Admin BH là người xác nhận cuối cùng) — mâu thuẫn trước đó (100% dữ liệu
    lịch sử chỉ có giá trị "ĐỔI TRẢ") được diễn giải là do KTV lịch sử ít khi chọn "Trừ công nợ" trên
    thực tế, không phải vì trường này chưa từng do KTV chọn.
-3. **[Mới] `LK DE XUAT SUA CHUA` gắn với case CSKH (Bitrix) chứ không gắn với `DON BAO HANH`** — đây
-   có phải quy trình sửa-tại-chỗ khác hẳn phạm vi module này không, hay chỉ là do thiếu liên kết ID?
-4. Ngưỡng escalate khi Admin từ chối đề xuất linh kiện bao nhiêu lần thì đẩy lên quản lý (tạm đặt 2
-   lần ở sơ đồ cũ của #2, #4 chưa chốt số).
-5. Định nghĩa "thất lạc trên đường trả" — sau bao lâu không xác nhận nhận hàng thì tự động mở khiếu
-   nại vận chuyển.
-6. **[Mới]** Có bước "thu hồi chi phí bảo hành từ hãng/OEM" không — nếu có, cần trường tham chiếu gì.
-7. `debt_adjustments` — #4 mục 0 chốt "chưa làm ở giai đoạn này", nhưng câu hỏi 3.2 hồi #2 ("có cần
-   đối soát ngược MISA không") vẫn chưa có câu trả lời rõ ràng, chỉ đang bị hoãn.
+3. **`LK DE XUAT SUA CHUA` gắn với case CSKH (Bitrix) chứ không gắn với `DON BAO HANH`** — **[TRẢ LỜI
+   12/10/2026]** nguyên văn: *"xử lý lại, các đơn đều có liên kết với nhau theo dạng mẹ - con nếu có liên quan"*. **CÒN MỞ một phần**: bảng `de_xuat_linh_kien_bh` (NV xin vật tư) **chưa từng được xây** — cần chốt phạm vi trước khi làm (xem mục "Đề xuất Admin BH còn lại + chốt 6 câu hỏi mở (12/10/2026)").
+4. Ngưỡng escalate khi Admin từ chối đề xuất linh kiện — **[TRẢ LỜI 12/10/2026]** người dùng hỏi lại *"là sao? bị bug cho phép từ chối nhiều lần à => fix"*. Không phải lỗi: tính năng đề xuất linh kiện chưa có nên chưa có gì để từ chối. Gộp vào câu 3 — chốt khi làm tính năng đề xuất linh kiện.
+5. ~~Định nghĩa "thất lạc trên đường trả"~~ — **[ĐÃ CHỐT + ĐÃ LÀM 12/10/2026, v1.028]** nguyên văn: *"KTV báo vấn đề không nhận được linh kiện và phản hồi ngược về cho kho => kho sẽ đánh giá và đánh giá việc gửi thành công hay thất bại"*.
+6. ~~Có bước "thu hồi chi phí bảo hành từ hãng/OEM" không~~ — **[ĐÃ CHỐT + ĐÃ LÀM 12/10/2026, v1.028]** nguyên văn: *"có, hiện tại chỉ ghi nhận thủ công (có thể thêm 1 vùng để nhập số tiền đã thu được - không bắt buộc)"*.
+7. ~~`debt_adjustments` / có cần đối soát ngược MISA không~~ — **[ĐÃ CHỐT 12/10/2026]** nguyên văn: *"hiện tại thì không"*. Không làm.
 
 ## Đề xuất tiếp theo
 
@@ -4882,3 +4878,110 @@ Gửi thêm giữa lượt: *"Khi 1 đơn hàng chưa xác định khu vực b�
 - `/api/lich-su?q=SN1` ra 2 đơn của 2 case cùng serial; `q=CASE-E2E` ra 4 đơn 6 đơn vị; `?case_id=TEST-KTVA&exclude=` bỏ đúng đơn đang xem; q 2 ký tự → 400. Màn `#/lich-su` tìm được; mở đơn vị từ kết quả → UI chi tiết có khối "Lịch sử bảo hành sản phẩm (3 lần khác)".
 - Phiếu nháp BH-000001: chọn Giao trực tiếp → ô người giao = "QA Superuser", chỉ đọc, nút "Xác nhận đã giao hàng"; đổi về Nhà xe, nhập mã xe, "Lưu nháp, gửi sau" → modal đóng, server + cache lưu đúng. Tạo thùng mới → tự chọn lựa chọn gần nhất trên máy (Bưu điện) + thông tin đã nhập, danh sách xếp theo thứ tự dùng gần đây; đổi sang Nhà xe → lấy lại đúng thông tin Nhà xe; đóng thùng rỗng → tự xoá.
 
+## Đề xuất Admin BH còn lại + chốt 6 câu hỏi mở (12/10/2026) — v1.028, CHƯA deploy
+
+**(a) Nguyên văn yêu cầu:** *"tiếp nhận dự án"* → *"tiếp tục dự án còn dở"*. Trong lúc làm, người dùng trả lời 6 câu hỏi mở:
+
+> 1. Có bao nhiêu người sẽ giữ vai trò Admin BH => hiện tại có 2 khu vực riêng là MB, MN mỗi khu vực có thể từ nhiều người cùng hoạt động
+> 2. Sheet "LK đề xuất sửa chữa" đang gắn với case CRM, không gắn với đơn gửi bảo hành. => xử lý lại, các đơn đều có liên kết với nhau theo dạng mẹ - con nếu có liên quan
+> 3. Ngưỡng chuyển lên cấp trên khi đề xuất bị từ chối nhiều lần. (là sao? bị bug cho phép từ chối nhiều lần à => fix)
+> 4. Định nghĩa "thất lạc trên đường trả". => KTV báo vấn đề không nhận được linh kiện và phản hồi ngược về cho kho => kho sẽ đánh giá và đánh giá việc gửi thành công hay thất bại
+> 5. Có thu hồi chi phí bảo hành từ hãng không. => có, hiện tại chỉ ghi nhận thủ công (có thể thêm 1 vùng để nhập số tiền đã thu được - không bắt buộc)
+> 6. Có cần đối soát ngược MISA không. => hiện tại thì không
+
+Phát hiện đầu phiên: `wrangler whoami` trên máy này đang là tài khoản sandbox `mikanovncloudflare@gmail.com`, không phải
+`dichvu3t`. Ép `CLOUDFLARE_ACCOUNT_ID` cũng bị 7403, nên **không đọc được D1 production và không deploy được** ở phiên này.
+Repo `linh-kien-app` (v1.317) và dvbh (v1.448) đều sạch và đã deploy tiếp sau các mốc cũ, nên 2 việc treo bên đó (nửa phát
+đồng bộ đẩy, nhãn "KTV hủy đơn lỗi") gần như chắc đã lên production. Chưa xác minh được trên D1 thật.
+
+**(b) Đã làm — các đề xuất còn lại của "Rà soát 1 ngày làm việc Admin BH" (file báo cáo đã đánh dấu ✅):**
+- **#9 Ô tìm từ khoá** trên thanh lọc bảng Admin BH. Gõ xong 0,4 giây mới gọi API. Tham số `q` trong
+  `locBangThongNhat()`, áp cho cả đơn cha lẫn đơn vị, tìm trong:
+  - mã đơn / mã đơn vị / case / phiếu gửi, mô tả lỗi, khách lẻ + SĐT;
+  - mã và tên linh kiện (gửi + thực tế), email và tên KTV trong danh bạ;
+  - toàn bộ "bằng chứng case" (`case_lookup_snapshot.data`: tên khách, serial, sản phẩm…).
+- **#10 Tiếp nhận nhiều thùng 1 lần:**
+  - ô chọn trên từng thùng + "Chọn tất cả" + nút "Xác nhận đã nhận N thùng";
+  - modal mới `TiepNhanNoiBoModal`; route `POST /admin/phieu-gui/tiep-nhan-noi-bo-hang-loat` (≤200, trả `ok/loi[]`);
+  - logic dùng chung hàm `tiepNhanNoiBo()`; mỗi thùng hiện thêm "N đơn" (`so_don`).
+- **#12 Xác nhận hoàn tất hàng loạt:**
+  - màn "Chờ xác nhận hoàn tất" có ô chọn ở cột ID + "Chọn tất cả đang hiển thị";
+  - modal mới `BulkXacNhanHoanTatModal` hỏi 1 lần lý do chậm (nếu có đơn quá hạn) và xử lý xác (chỉ áp cho đơn Đổi mới
+    **chưa** chọn — không ghi đè lựa chọn đã chốt lúc phân loại);
+  - route `POST /admin/don-vi/xac-nhan-hoan-tat-hang-loat`; logic dùng chung hàm `xacNhanHoanTat()`;
+  - xác nhận hoàn tất / yêu cầu làm lại từ UI chi tiết đơn xong thì **tự đóng chi tiết**.
+- **#13 Cột "Khách hàng":** lấy tên khách từ bằng chứng case (`case_khach_hang`). Trước đây chỉ đơn khách lẻ có tên, đơn KTV
+  luôn "—". `GET /admin/don-cha` và `/admin/don-vi` trả thêm `case_khach_hang`, `case_ngay_mua`, `case_tiep_nhan`.
+- **#14 Badge "Hết BH"** ngay ở ô linh kiện (cả bảng desktop, thẻ mobile và thẻ nhóm ×N):
+  - tính bằng `computeWarranty()` với số tháng BH của linh kiện thực tế;
+  - cột ẩn "Tình trạng BH" nay hiện "Còn BH đến …" / "Hết BH …" thay vì luôn "—";
+  - mục đích: cảnh báo trước khi bấm FAST / hàng loạt, vì 2 đường này không qua form phân loại có banner.
+- **#16 / #17:** cột "Số đơn" ở 4 danh sách phiếu trả (Admin, Kho đóng gói, Kế toán duyệt, KTV nhận hàng). `GET /phieu-tra`
+  trả `so_don`. Mỗi thùng chờ tiếp nhận hiện số đơn.
+- Chưa làm: màn "nhập mã nhanh" dạng bảng cho nhiều phiếu trả (phần sau của #16).
+
+**(b) Đã làm — 6 câu trả lời:**
+- **Câu 1 (nhiều Admin BH mỗi miền):** đã đúng với chia miền v1.025, không sửa.
+- **Câu 4 (thất lạc):**
+  - Trước đây trạng thái `khieu_nai_van_chuyen` là **ngõ cụt** — không ai xử lý tiếp được.
+  - Nay Kho / qtri đánh giá trong chi tiết phiếu trả qua `POST /phieu-tra/:id/danh-gia-khieu-nai {ket_qua, ghi_chu}`:
+    - "✔ Gửi thành công" → `ktv_da_nhan`;
+    - "✖ Gửi thất bại (thất lạc)" → trạng thái kết thúc **mới `gui_that_bai`**, ghi chú bắt buộc.
+  - Lưu `kq_khieu_nai`, `_ghi_chu`, `_boi`, `_luc`; banner kết quả hiện trong chi tiết phiếu trả.
+  - Hàng đợi:
+    - thẻ đỏ "⚠ KTV báo không nhận được hàng — cần Kho đánh giá" ở màn Kho Đóng gói;
+    - số việc mới `kho_khieu_nai` (sidebar, Trang chủ);
+    - giai đoạn mới trong cảnh báo đơn tồn.
+  - Chỗ khác: UI chi tiết đơn hiện "Đang ở: Kho — đánh giá khiếu nại…". Báo về dvbh: `gui_that_bai` vẫn tính là `dang_tra`
+    (chưa hoàn tất với khách).
+- **Câu 5 (thu hồi từ hãng):**
+  - Khối "💰 Thu hồi chi phí từ hãng" (`ThuHoiHangSection`) trong UI chi tiết đơn: số tiền (không bắt buộc) + ghi chú.
+  - Admin BH / Kế toán / qtri sửa được ở mọi trạng thái; Giám sát / View chỉ xem khi đã có số liệu.
+  - Route `PATCH /admin/don-vi/:id/thu-hoi-hang`, có ghi nhật ký.
+- **Câu 6 (MISA):** không làm.
+- **Câu 2 + 3 — CHƯA làm, cần chốt phạm vi:**
+  - Bảng `de_xuat_linh_kien_bh` (NV sửa chữa xin vật tư, Admin duyệt / từ chối, mã đơn hàng / MISA vật tư) **chưa từng được
+    xây** — Giai đoạn 1 cố ý bỏ qua vì chưa rõ trường.
+  - Câu 3 không phải lỗi: "ngưỡng escalate" là quy tắc cho tính năng đó, hiện chưa có gì để từ chối.
+  - Người dùng muốn các đơn liên quan nối dạng mẹ – con. Cần hỏi lại trước khi thiết kế schema.
+- Migration mới `0012_khieu_nai_thu_hoi_hang.sql` (8 cột, không dựng lại bảng — `phieu_tra_bh.trang_thai` không có CHECK).
+
+**(c) Vấn đề phát hiện + đã sửa:**
+- **[Lỗi thật]** nút "Xác nhận đã nhận" thùng chờ tiếp nhận nội bộ gọi API không kèm lý do chậm.
+  - Hậu quả: thùng quá hạn SLA luôn bị `400 REQUIRE_LY_DO_CHAM`, mà màn hình không có ô để chọn → kẹt.
+  - Đã sửa: mọi lần tiếp nhận (1 hay nhiều thùng) đi qua modal có ô lý do chậm.
+- **[Lỗi thật]** `khieu_nai_van_chuyen` không có lối ra (xem câu 4).
+- Route xác nhận hoàn tất đơn lẻ trước đây ghi `xu_ly_xac` gửi lên cả cho đơn không phải Đổi mới. Nay chỉ ghi cho Đổi mới.
+- Kỹ thuật:
+  - Nhiều file trong working copy là CRLF (git lưu LF) → script sửa file phải chuẩn hoá xuống dòng trước khi so khớp.
+  - `Badge` không nhận `title` → bọc `span`.
+  - `Modal` dùng `footerActions` (không phải `footer`).
+
+**(d) Kiểm thử:**
+- Typecheck backend + frontend 0 lỗi, build sạch.
+- Chạy `wrangler dev` + vite local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc` từ bản sao), migration 0012 áp OK,
+  seed: bằng chứng case cho 2 case (1 hết BH), 3 đơn chờ hoàn tất, 2 phiếu khiếu nại.
+- API:
+  - tìm "thử" / "sntest7" ra đúng 2 đơn vị của case đó; từ khoá vô nghĩa ra 0;
+  - tiếp nhận hàng loạt: thiếu lý do chậm → lỗi theo dòng; danh sách rỗng → 400 `MISSING_IDS`;
+  - hoàn tất hàng loạt 3 đơn: 2 qua, 1 đơn Đổi mới thiếu xử lý xác báo lỗi riêng;
+  - khiếu nại:
+    - thất bại thiếu ghi chú → 400;
+    - thành công → `ktv_da_nhan`;
+    - đánh giá lần 2 → 400 `WRONG_STATE`;
+  - thu hồi: số âm → 400, 250.000 đ lưu và đọc lại đúng;
+  - workload `kho_khieu_nai` = 1.
+- UI desktop:
+  - bảng có ô tìm, tên khách, badge "Hết BH", thùng "1 đơn";
+  - gõ tìm lọc còn đúng nhóm;
+  - modal tiếp nhận thùng quá hạn: nút khoá tới khi chọn lý do → "Đã tiếp nhận 1 thùng";
+  - hoàn tất hàng loạt: nút khoá tới khi chọn lý do chậm + xử lý xác → đơn sang "sẵn sàng gộp", `xu_ly_xac = tieu_huy`;
+  - Kho Đóng gói hiện thẻ khiếu nại; đánh giá "thất bại" bắt ghi chú → phiếu "Gửi thất bại (thất lạc)" + banner kết quả;
+  - chi tiết đơn hiện khối thu hồi 250.000 đ.
+- Mobile 375px: không tràn ngang. Sửa thêm 1 chỗ: thẻ nhóm ×N trên mobile chưa hiện "Hết BH".
+- Lỗi console chỉ có 401 lúc chưa đăng nhập và các 400 cố ý.
+
+**Việc còn lại thuộc người dùng:**
+1. Đăng nhập wrangler bằng tài khoản `dichvu3t` (`npx wrangler login`).
+2. Áp migration 0012 lên production (`npm run db:migrate:remote`).
+3. `npm run deploy`. Phiên bản đã tăng sẵn lên **1.028**.

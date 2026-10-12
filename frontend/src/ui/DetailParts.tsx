@@ -58,8 +58,8 @@ export function Chip({ icon, children, title }: { icon: string; children: ReactN
   );
 }
 
-export function Banner({ tone, children }: { tone: "red" | "amber" | "blue"; children: ReactNode }) {
-  const cls = tone === "red" ? "bg-[var(--red-100)] text-[var(--red-700)]" : tone === "amber" ? "bg-[var(--amber-100)] text-[var(--amber-800)]" : "bg-[var(--blue-100)] text-[var(--blue-700)]";
+export function Banner({ tone, children }: { tone: "red" | "amber" | "blue" | "green"; children: ReactNode }) {
+  const cls = tone === "red" ? "bg-[var(--red-100)] text-[var(--red-700)]" : tone === "green" ? "bg-[var(--green-100)] text-[var(--green-700)]" : tone === "amber" ? "bg-[var(--amber-100)] text-[var(--amber-800)]" : "bg-[var(--blue-100)] text-[var(--blue-700)]";
   return <div className={`rounded-lg px-3 py-2 text-xs font-semibold ${cls}`}>{children}</div>;
 }
 

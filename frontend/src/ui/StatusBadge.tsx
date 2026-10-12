@@ -30,6 +30,7 @@ const TRA_STATUS: Record<string, Spec> = {
   da_gui: { tone: "blue", dot: true },
   ktv_da_nhan: { tone: "green" },
   khieu_nai_van_chuyen: { tone: "red", dot: true },
+  gui_that_bai: { tone: "red" },
 };
 
 const MAPS = {

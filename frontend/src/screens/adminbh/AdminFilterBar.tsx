@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { Btn, Select } from "../../ui/primitives";
+import { Btn, Input, Select } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useLinhKien, lkLabel } from "../../hooks/useLinhKien";
 import { displayName, useUserNames } from "../../hooks/useUserNames";
@@ -12,6 +12,7 @@ import { KHACH_LE_KEY } from "../../lib/constants";
 // (GET /admin/don-vi/loc-options), khong liet ke het danh muc.
 
 export interface AdminFilter {
+  q: string;
   tt: string;
   ktv: string;
   lk: string;
@@ -20,7 +21,7 @@ export interface AdminFilter {
   cham: string;
   mien: string;
 }
-export const EMPTY_FILTER: AdminFilter = { tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "", mien: "" };
+export const EMPTY_FILTER: AdminFilter = { q: "", tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "", mien: "" };
 
 export function filterQuery(f: AdminFilter): string {
   return (Object.keys(f) as (keyof AdminFilter)[])
@@ -56,6 +57,14 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
   }, [reloadKey]);
 
   const set = (k: keyof AdminFilter, v: string) => onChange({ ...value, [k]: v });
+  // O tim tu khoa (12/10/2026): go xong 400ms moi loc - khong goi API moi phim.
+  const [kw, setKw] = useState(value.q);
+  useEffect(() => setKw(value.q), [value.q]);
+  useEffect(() => {
+    if (kw.trim() === value.q) return;
+    const t = setTimeout(() => onChange({ ...value, q: kw.trim() }), 400);
+    return () => clearTimeout(t);
+  }, [kw]); // eslint-disable-line react-hooks/exhaustive-deps
   const active = Object.values(value).filter(Boolean).length;
 
   const ktvOptions = opts.ktv
@@ -68,6 +77,14 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
 
   return (
     <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
+      <div className="mb-1.5">
+        <Input
+          type="search"
+          value={kw}
+          onChange={(e) => setKw(e.target.value)}
+          placeholder="🔍 Tìm mã đơn / case / phiếu gửi, khách hàng, serial, linh kiện, KTV, mô tả lỗi…"
+        />
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5">
         <div className={cell}>
           <span className={lab}>Trạng thái</span>

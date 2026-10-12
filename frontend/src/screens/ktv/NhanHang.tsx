@@ -26,6 +26,7 @@ export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; in
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
+    { key: "sodon", header: "Số đơn", render: (r) => r.so_don ?? "—" },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "vandon", header: "Mã vận đơn", render: (r) => r.ma_van_don || "—" },
   ];

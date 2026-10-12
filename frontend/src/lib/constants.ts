@@ -90,6 +90,7 @@ export const TRANG_THAI_PHIEU_TRA_LABELS: Record<string, string> = {
   da_gui: "Đã gửi — chờ KTV xác nhận",
   ktv_da_nhan: "Đã hoàn tất",
   khieu_nai_van_chuyen: "Khiếu nại vận chuyển",
+  gui_that_bai: "Gửi thất bại (thất lạc)",
 };
 
 export const LY_DO_BO_SUNG_OPTIONS = [

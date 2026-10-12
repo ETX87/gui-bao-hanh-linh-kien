@@ -26,6 +26,7 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
     { key: "ktv", header: "KTV nhận", render: (r) => (r.ktv_nhan === KHACH_LE_KEY ? <Badge tone="violet">Khách lẻ</Badge> : <UserName email={r.ktv_nhan} />) },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
     { key: "loai", header: "Loại đối trừ", render: (r) => <Badge tone={r.loai_doi_tru === "tru_cong_no" ? "orange" : "blue"}>{LOAI_DOI_TRU_LABELS[r.loai_doi_tru]}</Badge> },
+    { key: "sodon", header: "Số đơn", render: (r) => r.so_don ?? "—" },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },
   ];

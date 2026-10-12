@@ -116,6 +116,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
     { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
+    { key: "sodon", header: "Số đơn", render: (r) => r.so_don ?? "—" },
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },
   ];

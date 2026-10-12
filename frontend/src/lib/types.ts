@@ -47,6 +47,7 @@ export interface PhieuGui {
   mien?: Mien | null;
   created_at: string;
   updated_at: string;
+  so_don?: number; // GET /admin/phieu-gui (12/10/2026)
 }
 
 export interface GhiChuLog {
@@ -82,6 +83,10 @@ export interface DonCha {
   // Cot join them (tu GET /admin/don-cha) - email KTV tao phieu gui chua don nay (null neu don dich
   // vu khach le, khong thuoc phieu gui nao).
   ktv?: string | null;
+  // Lay tu "bang chung case" da luu (case_lookup_snapshot) - 12/10/2026 de xuat #13/#14 ra soat Admin BH.
+  case_khach_hang?: string | null;
+  case_ngay_mua?: string | null;
+  case_tiep_nhan?: string | null;
 }
 
 export interface DonVi {
@@ -118,10 +123,20 @@ export interface DonVi {
   ktv?: string | null;
   ngay_gui_xe?: string | null;
   mien?: Mien | null;
+  // Lay tu "bang chung case" da luu (case_lookup_snapshot) - 12/10/2026 de xuat #13/#14 ra soat Admin BH.
+  case_khach_hang?: string | null;
+  case_ngay_mua?: string | null;
+  case_tiep_nhan?: string | null;
+  // Thu hoi chi phi bao hanh tu hang (12/10/2026) - ghi nhan thu cong, khong bat buoc.
+  so_tien_thu_hoi_hang?: number | null;
+  thu_hoi_hang_ghi_chu?: string | null;
+  thu_hoi_hang_boi?: string | null;
+  thu_hoi_hang_luc?: string | null;
 }
 
 export interface PhieuTra {
   id: string;
+  so_don?: number; // GET /phieu-tra (12/10/2026): so don vi trong phieu
   ktv_nhan: string;
   nguoi_tao: string;
   trang_thai: string;
@@ -132,6 +147,11 @@ export interface PhieuTra {
   ly_do_tu_choi_kt: string | null;
   danh_gia_ktv: string | null;
   khong_nhan_duoc_ghi_chu: string | null;
+  // Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026).
+  kq_khieu_nai?: "thanh_cong" | "that_bai" | null;
+  kq_khieu_nai_ghi_chu?: string | null;
+  kq_khieu_nai_boi?: string | null;
+  kq_khieu_nai_luc?: string | null;
   mien?: Mien | null;
   created_at: string;
   updated_at: string;

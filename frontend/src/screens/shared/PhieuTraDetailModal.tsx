@@ -44,6 +44,9 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const [khieuNai, setKhieuNai] = useState("");
   const [showTuChoi, setShowTuChoi] = useState(false);
   const [showKhieuNai, setShowKhieuNai] = useState(false);
+  // Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026): thanh_cong | that_bai.
+  const [danhGiaKN, setDanhGiaKN] = useState<"thanh_cong" | "that_bai" | null>(null);
+  const [ghiChuKN, setGhiChuKN] = useState("");
   const [busy, setBusy] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
 
@@ -103,6 +106,14 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const ktvXacNhanNhan = () => run(async () => { await api.post(`/phieu-tra/${traId}/ktv-xac-nhan-nhan`, { danh_gia: danhGia }); toast("Đã xác nhận nhận hàng.", "ok"); });
   const guiKhieuNai = () => run(async () => { await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: khieuNai }); toast("Đã gửi khiếu nại.", "ok"); setShowKhieuNai(false); });
 
+  const guiDanhGiaKN = () =>
+    run(async () => {
+      await api.post(`/phieu-tra/${traId}/danh-gia-khieu-nai`, { ket_qua: danhGiaKN, ghi_chu: ghiChuKN });
+      toast(danhGiaKN === "thanh_cong" ? "Đã ghi nhận: gửi thành công." : "Đã ghi nhận: gửi thất bại (thất lạc).", "ok");
+      setDanhGiaKN(null);
+    });
+  const khoDanhGiaKN = (user.la_kho || user.la_qtri) && t.trang_thai === "khieu_nai_van_chuyen";
+
   const ktvNhanDuocXacNhan = (user.la_ktv_dvbh || user.la_ve_tinh) && t.ktv_nhan === user.email && t.trang_thai === "da_gui";
   const coMa = !!(t.ma_don_hang || t.ma_misa || t.ma_van_don);
 
@@ -151,6 +162,16 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 Kho xác nhận kết thúc (dự phòng)
               </Btn>
             )}
+            {khoDanhGiaKN && !danhGiaKN && (
+              <>
+                <Btn variant="danger" onClick={() => setDanhGiaKN("that_bai")}>
+                  ✖ Gửi thất bại (thất lạc)
+                </Btn>
+                <Btn variant="success" onClick={() => setDanhGiaKN("thanh_cong")}>
+                  ✔ Gửi thành công
+                </Btn>
+              </>
+            )}
             {ktvNhanDuocXacNhan && !showKhieuNai && (
               <>
                 <Btn variant="danger" onClick={() => setShowKhieuNai(true)}>
@@ -193,6 +214,24 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               </div>
             </div>
           )}
+          {danhGiaKN && (
+            <div className={`rounded-lg border p-3 space-y-2 ${danhGiaKN === "that_bai" ? "border-[var(--red-500)] bg-[var(--red-100)]" : "border-[var(--green-500)] bg-[var(--green-100)]"}`}>
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                {danhGiaKN === "thanh_cong"
+                  ? "Xác nhận hàng ĐÃ tới nơi (KTV báo nhầm / đã tìm thấy) → phiếu chuyển Đã hoàn tất."
+                  : "Xác nhận gửi THẤT BẠI — hàng thất lạc trên đường trả → phiếu kết thúc ở trạng thái Gửi thất bại."}
+              </p>
+              <Field label={danhGiaKN === "that_bai" ? "Kết quả kiểm tra / lý do" : "Ghi chú (tuỳ chọn)"} required={danhGiaKN === "that_bai"}>
+                <Textarea rows={2} value={ghiChuKN} onChange={(e) => setGhiChuKN(e.target.value)} placeholder="VD: Nhà xe xác nhận đã giao ngày …, có chữ ký người nhận" autoFocus />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Btn onClick={() => setDanhGiaKN(null)}>Huỷ</Btn>
+                <Btn variant={danhGiaKN === "that_bai" ? "danger" : "success"} disabled={busy || (danhGiaKN === "that_bai" && !ghiChuKN.trim())} onClick={guiDanhGiaKN}>
+                  Xác nhận đánh giá
+                </Btn>
+              </div>
+            </div>
+          )}
           {showKhieuNai && (
             <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
               <Field label="Nội dung khiếu nại" required>
@@ -229,7 +268,13 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           </SummaryBox>
 
           {t.ly_do_tu_choi_kt && <Banner tone="amber">Kế toán từ chối lần trước: {t.ly_do_tu_choi_kt}</Banner>}
-          {t.khong_nhan_duoc_ghi_chu && <Banner tone="red">⚠ Khiếu nại vận chuyển: {t.khong_nhan_duoc_ghi_chu}</Banner>}
+          {t.khong_nhan_duoc_ghi_chu && <Banner tone="red">⚠ KTV báo không nhận được hàng: {t.khong_nhan_duoc_ghi_chu}</Banner>}
+          {t.kq_khieu_nai && (
+            <Banner tone={t.kq_khieu_nai === "that_bai" ? "red" : "green"}>
+              Kho đánh giá: {t.kq_khieu_nai === "that_bai" ? "gửi THẤT BẠI (thất lạc)" : "gửi thành công"}
+              {t.kq_khieu_nai_ghi_chu ? ` — ${t.kq_khieu_nai_ghi_chu}` : ""} · <UserName email={t.kq_khieu_nai_boi} /> · {fmtDate(t.kq_khieu_nai_luc)}
+            </Banner>
+          )}
           {t.danh_gia_ktv && <Banner tone="blue">Đánh giá của KTV: {t.danh_gia_ktv}</Banner>}
           {ktvNhanDuocXacNhan && (
             <Field label="Đánh giá khi nhận hàng (tuỳ chọn)">

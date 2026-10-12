@@ -178,6 +178,18 @@ export const STAGES: StageDef[] = [
     own: { vai_tro: "ktv", col: "t.ktv_nhan" },
     hash: { ktv: "/ktv/nhan-hang", kho: "/kho/dong-goi" },
   },
+  {
+    // 12/10/2026: KTV bao khong nhan duoc hang, Kho chua danh gia gui thanh cong / that bai.
+    key: "kho_khieu_nai",
+    label: "KTV báo không nhận được hàng, Kho chưa đánh giá",
+    vai_tro: ["kho"],
+    don_vi: "phiếu",
+    from: `phieu_tra_bh t WHERE t.trang_thai = 'khieu_nai_van_chuyen'`,
+    since: "t.updated_at",
+    ktvCol: "t.ktv_nhan",
+    mienAlias: "t",
+    hash: { kho: "/kho/dong-goi" },
+  },
 ];
 
 export const VAI_TRO_LABEL: Record<VaiTro, string> = { ktv: "Kỹ thuật viên", kho: "Kho", admin: "Admin bảo hành", nv: "NV sửa chữa", ketoan: "Kế toán" };

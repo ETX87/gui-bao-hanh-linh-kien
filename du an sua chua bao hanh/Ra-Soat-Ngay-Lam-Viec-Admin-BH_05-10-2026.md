@@ -35,15 +35,15 @@ lớn rơi vào B, C và E2. Máy phản hồi đều dưới 3 giây, nên ch�
 | 6 | Phiếu trả: gõ mã rồi bấm "Gửi duyệt" mà chưa "Lưu mã" thì báo thiếu MISA, phiếu vẫn ở trạng thái Nhập (dễ mắc) | TB | "Gửi duyệt" tự lưu mã trước | ✅ Sửa v1.012 |
 | 7 | Số "việc cần làm" của Admin tính cả đơn đang chờ KTV bổ sung | Thấp | Bỏ `cho_bo_sung_tt` khỏi số đếm | ✅ Sửa v1.012 |
 | 8 | Top linh kiện 30 ngày chỉ tính đơn đã "xác nhận hoàn tất", bỏ sót toàn bộ đơn Đổi mới / Trừ nợ / Trả lại (dữ liệu thử: 16/131 đơn được tính) | Cao | Tính cả đơn đã tới bước trả hàng (trừ huỷ/chuyển kho) | ✅ Sửa v1.012 |
-| 9 | Bảng thống nhất chưa có lọc / tìm / sắp xếp (theo KTV, linh kiện, trạng thái, SLA, thùng) | Cao | Thanh lọc + ô tìm + nhóm theo KTV / linh kiện | Đề xuất |
-| 10 | Chưa có hàng loạt cho tiếp nhận thùng và xác nhận số lượng (84% SL không đổi) | Cao | "Tiếp nhận tất cả thùng đã chọn"; "Xác nhận SL = khai cho N đơn đã chọn" | Đề xuất |
-| 11 | ⚡ FAST chỉ làm từng đơn; muốn "Đổi mới trong BH" cho 30 đơn phải bấm 60 lần | Cao | Thanh hàng loạt có sẵn các nút FAST (Đổi mới / Trừ nợ / Huỷ không hàng…) cho N đơn đã chọn | Đề xuất |
-| 12 | Xác nhận hoàn tất: không có hàng loạt, xác nhận xong modal chi tiết vẫn mở | TB | Chọn nhiều → xác nhận; tự đóng chi tiết | Đề xuất |
-| 13 | Cột "Khách hàng" trống, cột "Nguồn" hiện email chứ không hiện tên KTV, đề xuất đối trừ của KTV bị ẩn mặc định | TB | Lấy tên khách từ bản lưu case, tên KTV từ danh bạ; hiện cột đề xuất | Đề xuất |
-| 14 | Cảnh báo hết hạn bảo hành chỉ hiện trong form phân loại đầy đủ; FAST / hàng loạt bỏ qua | TB | Badge "Hết BH" ngay trên dòng bảng (tính từ bản lưu case) | Đề xuất |
-| 15 | Đổi mới qua FAST / hàng loạt không bao giờ ghi "xử lý xác" (trả đối tác / tiêu huỷ / lưu kho) | TB | Hỏi lựa chọn xử lý xác (mặc định theo cài đặt) ngay trong FAST / hàng loạt | Cần chốt nghiệp vụ |
-| 16 | Danh sách phiếu trả không có cột số đơn; chưa nhập được mã cho nhiều phiếu trên 1 màn | Thấp | Thêm cột số đơn; màn "nhập mã nhanh" dạng bảng | Đề xuất |
-| 17 | Thùng chờ tiếp nhận chỉ hiện email, không hiện tên KTV và số đơn | Thấp | Hiện tên + số đơn | Đề xuất |
+| 9 | Bảng thống nhất chưa có lọc / tìm / sắp xếp (theo KTV, linh kiện, trạng thái, SLA, thùng) | Cao | Thanh lọc + ô tìm + nhóm theo KTV / linh kiện | ✅ Lọc v1.016, ô tìm v1.028 |
+| 10 | Chưa có hàng loạt cho tiếp nhận thùng và xác nhận số lượng (84% SL không đổi) | Cao | "Tiếp nhận tất cả thùng đã chọn"; "Xác nhận SL = khai cho N đơn đã chọn" | ✅ SL v1.016, tiếp nhận thùng v1.028 |
+| 11 | ⚡ FAST chỉ làm từng đơn; muốn "Đổi mới trong BH" cho 30 đơn phải bấm 60 lần | Cao | Thanh hàng loạt có sẵn các nút FAST (Đổi mới / Trừ nợ / Huỷ không hàng…) cho N đơn đã chọn | ✅ v1.013 |
+| 12 | Xác nhận hoàn tất: không có hàng loạt, xác nhận xong modal chi tiết vẫn mở | TB | Chọn nhiều → xác nhận; tự đóng chi tiết | ✅ v1.028 |
+| 13 | Cột "Khách hàng" trống, cột "Nguồn" hiện email chứ không hiện tên KTV, đề xuất đối trừ của KTV bị ẩn mặc định | TB | Lấy tên khách từ bản lưu case, tên KTV từ danh bạ; hiện cột đề xuất | ✅ Tên KTV v1.016, tên khách v1.028 |
+| 14 | Cảnh báo hết hạn bảo hành chỉ hiện trong form phân loại đầy đủ; FAST / hàng loạt bỏ qua | TB | Badge "Hết BH" ngay trên dòng bảng (tính từ bản lưu case) | ✅ v1.028 |
+| 15 | Đổi mới qua FAST / hàng loạt không bao giờ ghi "xử lý xác" (trả đối tác / tiêu huỷ / lưu kho) | TB | Hỏi lựa chọn xử lý xác (mặc định theo cài đặt) ngay trong FAST / hàng loạt | ✅ v1.013 |
+| 16 | Danh sách phiếu trả không có cột số đơn; chưa nhập được mã cho nhiều phiếu trên 1 màn | Thấp | Thêm cột số đơn; màn "nhập mã nhanh" dạng bảng | ✅ Cột số đơn v1.028 — màn nhập mã nhanh chưa làm |
+| 17 | Thùng chờ tiếp nhận chỉ hiện email, không hiện tên KTV và số đơn | Thấp | Hiện tên + số đơn | ✅ Tên v1.016, số đơn v1.028 |
 
 ## 3. Cảnh báo / chỉ dẫn đã có
 

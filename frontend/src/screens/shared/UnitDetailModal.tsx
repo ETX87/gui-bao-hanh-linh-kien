@@ -27,6 +27,7 @@ import { FastActionsModal } from "./FastActionsModal";
 import { YeuCauBoSungModal } from "./YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "./BaoCaoSaiModal";
 import { XacNhanHoanTatModal } from "./XacNhanHoanTatModal";
+import { ThuHoiHangSection } from "./ThuHoiHangSection";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
@@ -221,7 +222,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   } else {
     steps.push({ label: "Sửa chữa", at: ndLog?.thoi_gian, done: needNv && !!ndLog && tt !== "cho_chan_doan", skip: daPhanLoai && !needNv && SAU_PHAN_LOAI.includes(tt) });
     steps.push({ label: "Hoàn tất", at: htLog?.thoi_gian, done: tt === "san_sang_gom_phieu_tra" || !!u.phieu_tra_id });
-    steps.push({ label: "Phiếu trả", at: pt?.created_at, done: !!pt && ["da_gui", "ktv_da_nhan", "khieu_nai_van_chuyen", "ket_thuc_khong_gui"].includes(pt.trang_thai) });
+    steps.push({ label: "Phiếu trả", at: pt?.created_at, done: !!pt && ["da_gui", "ktv_da_nhan", "khieu_nai_van_chuyen", "gui_that_bai", "ket_thuc_khong_gui"].includes(pt.trang_thai) });
     steps.push({ label: isKhachLe ? "Khách nhận" : "KTV nhận", at: nhanLog?.thoi_gian, done: pt?.trang_thai === "ktv_da_nhan" || pt?.trang_thai === "ket_thuc_khong_gui" });
   }
   const curIdx = steps.findIndex((s) => !s.done && !s.skip);
@@ -239,7 +240,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   else if (pt.trang_thai === "cho_ke_toan_duyet") dangO = "Kế toán — duyệt phiếu trả";
   else if (pt.trang_thai === "da_duyet_ke_toan") dangO = "Kho — đóng gói, gửi hàng";
   else if (pt.trang_thai === "da_gui") dangO = isKhachLe ? "Đang giao cho khách" : <>KTV {ktvEmail ? <UserName email={ktvEmail} /> : ""} — xác nhận đã nhận</>;
-  else if (pt.trang_thai === "khieu_nai_van_chuyen") dangO = "Khiếu nại vận chuyển";
+  else if (pt.trang_thai === "khieu_nai_van_chuyen") dangO = "Kho — đánh giá khiếu nại KTV không nhận được hàng";
+  else if (pt.trang_thai === "gui_that_bai") dangO = "Gửi thất bại (thất lạc) — Kho đã đánh giá";
   else dangO = "Đã hoàn tất";
 
   // ---- Quyen mo phieu (chong toi da 2 lop: an khi nested) ----
@@ -553,6 +555,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
               )}
             </Section>
 
+            <ThuHoiHangSection key={`${u.id}-${u.thu_hoi_hang_luc || ""}`} unit={u} user={user} onSaved={load} />
+
             {soAnh > 0 && (
               <Section title={`🖼 Ảnh (${soAnh})`}>
                 <div className="flex flex-wrap gap-2">
@@ -635,7 +639,19 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       )}
       {sub === "bo-sung" && <YeuCauBoSungModal parentId={p.id} onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "bao-cao-sai" && <BaoCaoSaiModal parentId={p.id} onClose={() => setSub(null)} onDone={afterAction} />}
-      {sub === "xac-nhan" && <XacNhanHoanTatModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
+      {sub === "xac-nhan" && (
+        // 12/10/2026 (de xuat #12): xac nhan hoan tat / yeu cau lam lai xong thi dong luon chi tiet don -
+        // viec cua Admin voi don nay da xong, khong de modal chi tiet mo lai gay hieu nham chua luu.
+        <XacNhanHoanTatModal
+          unit={u}
+          onClose={() => setSub(null)}
+          onDone={() => {
+            setSub(null);
+            onChanged();
+            onClose();
+          }}
+        />
+      )}
       {sub === "tra-ktv" && <TraTrucTiepModal unitId={u.id} mode="ktv" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "tra-kho" && <TraTrucTiepModal unitId={u.id} mode="kho" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "chan-doan" && <ChanDoanModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}

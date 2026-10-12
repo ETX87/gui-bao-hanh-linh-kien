@@ -26,6 +26,7 @@ const EMPTY = {
   kho_cho_tiep_nhan: 0,
   kho_cho_dong_goi: 0,
   kho_cho_ban_giao: 0,
+  kho_khieu_nai: 0,
   admin_cho_tiep_nhan_noi_bo: 0,
   admin_cho_xac_nhan_sl: 0,
   admin_cho_phan_loai: 0,
@@ -97,6 +98,10 @@ workload.get("/", async (c) => {
       }),
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'da_duyet_ke_toan'${mt.sql}`, ...mt.binds).then((r) => {
         counts.kho_cho_dong_goi = r?.cnt ?? 0;
+      }),
+      // KTV bao khong nhan duoc hang -> Kho danh gia gui thanh cong / that bai (12/10/2026).
+      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'khieu_nai_van_chuyen'${mt.sql}`, ...mt.binds).then((r) => {
+        counts.kho_khieu_nai = r?.cnt ?? 0;
       }),
       // Thung Kho da nhan, cho Admin BH nhan ban giao noi bo (nhac Kho mang hang sang).
       one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0${mg.sql}`, ...mg.binds).then((r) => {

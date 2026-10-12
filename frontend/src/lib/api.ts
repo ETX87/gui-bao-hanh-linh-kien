@@ -44,6 +44,7 @@ export const api = {
 // Thong diep loi de doc bang tieng Viet cho cac ma loi backend hay gap - dung o Toast/inline error.
 // Khong co trong danh sach nay thi hien nguyen code (van con thong tin hon la an di).
 export const ERROR_MESSAGES: Record<string, string> = {
+  MISSING_IDS: "Chưa chọn mục nào.",
   FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
   XEM_NHU_CHI_DOC: "Đang ở chế độ \"Xem như người dùng\" — chỉ xem, không thao tác được. Thoát về Admin để thao tác.",
   INVALID_ROLE: "Vai trò test không hợp lệ.",

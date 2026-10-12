@@ -133,7 +133,8 @@ function unitStage(unitTt: string, traTt: string | null): string {
   if (unitTt === "ket_thuc_tu_choi" || unitTt === "ket_thuc_chuyen_kho") return "tu_choi";
   if (unitTt !== "san_sang_gom_phieu_tra") return "dang_xu_ly";
   if (traTt === "ktv_da_nhan") return "hoan_tat";
-  if (traTt === "da_gui" || traTt === "khieu_nai_van_chuyen") return "dang_tra";
+  // gui_that_bai (12/10/2026, Kho danh gia hang that lac): chua hoan tat voi khach -> van bao "dang_tra".
+  if (traTt === "da_gui" || traTt === "khieu_nai_van_chuyen" || traTt === "gui_that_bai") return "dang_tra";
   return "cho_tra";
 }
 
