@@ -5067,3 +5067,5 @@ production (`npm run db:migrate:remote`), rồi `npm run deploy` (phiên bản �
 
 **(d) Kiểm thử:** typecheck 0 lỗi; xác nhận endpoint `?ids=` của dvbh trả cùng bộ cột (có `ma_import_odoo`). Kiểm tra sau deploy bằng D1 production — xem dòng cuối mục này.
 
+
+**Kết quả sau deploy (Version `438e4489`):** cron 14:00 chạy bước mới không lỗi, bổ sung được 992 ID (đơn thiếu ID giảm 1.421 → 429). Phần còn lại sẽ được bổ sung ở lần cron 14:15. Sau đó chỉ còn khoảng 9 đơn, là các đơn mà chính dvbh cũng chưa có ID.
