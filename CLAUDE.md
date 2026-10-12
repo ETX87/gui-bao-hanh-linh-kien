@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Chưa deploy (máy đang đăng nhập wrangler tài khoản sandbox). **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. Vẫn chưa deploy.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`).
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4878,7 +4878,7 @@ Gửi thêm giữa lượt: *"Khi 1 đơn hàng chưa xác định khu vực b�
 - `/api/lich-su?q=SN1` ra 2 đơn của 2 case cùng serial; `q=CASE-E2E` ra 4 đơn 6 đơn vị; `?case_id=TEST-KTVA&exclude=` bỏ đúng đơn đang xem; q 2 ký tự → 400. Màn `#/lich-su` tìm được; mở đơn vị từ kết quả → UI chi tiết có khối "Lịch sử bảo hành sản phẩm (3 lần khác)".
 - Phiếu nháp BH-000001: chọn Giao trực tiếp → ô người giao = "QA Superuser", chỉ đọc, nút "Xác nhận đã giao hàng"; đổi về Nhà xe, nhập mã xe, "Lưu nháp, gửi sau" → modal đóng, server + cache lưu đúng. Tạo thùng mới → tự chọn lựa chọn gần nhất trên máy (Bưu điện) + thông tin đã nhập, danh sách xếp theo thứ tự dùng gần đây; đổi sang Nhà xe → lấy lại đúng thông tin Nhà xe; đóng thùng rỗng → tự xoá.
 
-## Đề xuất Admin BH còn lại + chốt 6 câu hỏi mở (12/10/2026) — v1.028, CHƯA deploy
+## Đề xuất Admin BH còn lại + chốt 6 câu hỏi mở (12/10/2026) — v1.028, đã deploy (cùng v1.029)
 
 **(a) Nguyên văn yêu cầu:** *"tiếp nhận dự án"* → *"tiếp tục dự án còn dở"*. Trong lúc làm, người dùng trả lời 6 câu hỏi mở:
 
@@ -4986,7 +4986,7 @@ Repo `linh-kien-app` (v1.317) và dvbh (v1.448) đều sạch và đã deploy ti
 2. Áp migration 0012 lên production (`npm run db:migrate:remote`).
 3. `npm run deploy`. Phiên bản đã tăng sẵn lên **1.028**.
 
-## Đề xuất linh kiện sửa chữa + 4 kết quả NV + phương án xử lý khi gửi thất bại (12/10/2026) — v1.029, CHƯA deploy
+## Đề xuất linh kiện sửa chữa + 4 kết quả NV + phương án xử lý khi gửi thất bại (12/10/2026) — v1.029, ĐÃ DEPLOY 12/10/2026
 
 **(a) Nguyên văn yêu cầu** (sau khi hỏi "các vấn đề còn lại là sao?" và mình nêu lại các việc còn mở):
 
@@ -5049,3 +5049,5 @@ wrangler.jsonc` sạch), migration 0013 áp OK. API:
 
 **Việc còn lại thuộc người dùng:** đăng nhập wrangler bằng tài khoản `dichvu3t`, áp migration **0012 + 0013** lên
 production (`npm run db:migrate:remote`), rồi `npm run deploy` (phiên bản đã là **1.029**).
+
+**Deploy (12/10/2026, cùng ngày):** người dùng đăng nhập lại wrangler bằng tài khoản `dichvu3t`. Đã áp migration 0012 + 0013 lên D1 production và chạy `npm run deploy` (Version ID `3f4a3605-ab90-4bcc-9ef3-9001d241308a`). Kiểm tra sau deploy: `/api/de-xuat`, `/api/canh-bao`, `/api/lich-su` đều trả `MISSING_TOKEN` (route có thật), bundle JS đang chạy mang `APP_VERSION` 1.029.
