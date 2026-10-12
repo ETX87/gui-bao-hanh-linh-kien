@@ -11,7 +11,7 @@ import {
   HUONG_XU_LY_LABELS,
   LOAI_BAO_HANH_LABELS,
   LOAI_DOI_TRU_LABELS,
-  KET_QUA_CHAN_DOAN_LABELS,
+  ketQuaLabel,
   XU_LY_XAC_LABELS,
   TRANG_THAI_UNIT_LABELS,
   TRANG_THAI_PHIEU_GUI_LABELS,
@@ -28,6 +28,7 @@ import { YeuCauBoSungModal } from "./YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "./BaoCaoSaiModal";
 import { XacNhanHoanTatModal } from "./XacNhanHoanTatModal";
 import { ThuHoiHangSection } from "./ThuHoiHangSection";
+import { DeXuatSection } from "./DeXuatLinhKien";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
@@ -188,7 +189,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
     }
   }
   if (user.la_nv_sua_chua && u.trang_thai === "cho_chan_doan" && u.nguoi_sua_chua === user.email) {
-    buttons.push({ label: "🔧 Chẩn đoán", onClick: () => setSub("chan-doan"), variant: "primary" });
+    buttons.push({ label: "🔧 Nộp kết quả sửa chữa", onClick: () => setSub("chan-doan"), variant: "primary" });
   }
 
   const daPhanLoai = !!(u.loai_bao_hanh || u.huong_xu_ly);
@@ -538,7 +539,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                       }
                     />
                   )}
-                  {u.ket_qua_chan_doan && <Kv k="Kết quả chẩn đoán" v={KET_QUA_CHAN_DOAN_LABELS[u.ket_qua_chan_doan] ?? u.ket_qua_chan_doan} />}
+                  {ketQuaLabel(u) && <Kv k="Kết quả NV" v={ketQuaLabel(u)} />}
                   {u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />}
                   {u.thong_tin_mail_pd && <Kv k="Mail phê duyệt" v={u.thong_tin_mail_pd} />}
                   {u.ma_phe_duyet && <Kv k="Mã phê duyệt" v={u.ma_phe_duyet} />}
@@ -554,6 +555,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                 </p>
               )}
             </Section>
+
+            <DeXuatSection unitId={u.id} unitTrangThai={u.trang_thai} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
 
             <ThuHoiHangSection key={`${u.id}-${u.thu_hoi_hang_luc || ""}`} unit={u} user={user} onSaved={load} />
 

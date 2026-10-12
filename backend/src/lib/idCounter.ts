@@ -4,7 +4,7 @@
  * nguon lon co nao). Prefix dung DUNG quy uoc cua ham nextId() trong prototype-html/index.html:
  * gui -> "BH", dh (don sua chua cha) -> "DH", tra (phieu tra) -> "TR", deu dem 6 chu so.
  */
-export async function nextSequentialId(db: D1Database, table: "phieu_gui_bh" | "phieu_sua_chua_bh" | "phieu_tra_bh", prefix: "BH" | "DH" | "TR"): Promise<string> {
+export async function nextSequentialId(db: D1Database, table: "phieu_gui_bh" | "phieu_sua_chua_bh" | "phieu_tra_bh" | "de_xuat_linh_kien_bh", prefix: "BH" | "DH" | "TR" | "DX"): Promise<string> {
   const row = await db
     .prepare("UPDATE id_counters SET gia_tri_hien_tai = gia_tri_hien_tai + 1 WHERE ten_bang = ? RETURNING gia_tri_hien_tai")
     .bind(table)

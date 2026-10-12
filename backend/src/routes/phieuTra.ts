@@ -409,6 +409,7 @@ phieuTra.post("/:id/danh-gia-khieu-nai", async (c) => {
   const body = await c.req.json<{ ket_qua?: string; ghi_chu?: string }>().catch(() => ({}) as { ket_qua?: string; ghi_chu?: string });
   if (body.ket_qua !== "thanh_cong" && body.ket_qua !== "that_bai") return c.json({ error: "INVALID_KET_QUA" }, 400);
   const ghiChu = body.ghi_chu?.trim() || "";
+  // That bai: Kho bat buoc ghi PHUONG AN XU LY (xu ly ngoai he thong - chot 12/10/2026).
   if (body.ket_qua === "that_bai" && !ghiChu) return c.json({ error: "MISSING_GHI_CHU" }, 400);
   const den = body.ket_qua === "thanh_cong" ? "ktv_da_nhan" : "gui_that_bai";
   const now = nowVN();
@@ -422,7 +423,7 @@ phieuTra.post("/:id/danh-gia-khieu-nai", async (c) => {
     "khieu_nai_van_chuyen",
     den,
     user.email,
-    (body.ket_qua === "thanh_cong" ? "Kho đánh giá khiếu nại: gửi THÀNH CÔNG (hàng đã tới nơi)" : "Kho đánh giá khiếu nại: gửi THẤT BẠI (thất lạc)") + (ghiChu ? " | " + ghiChu : ""),
+    (body.ket_qua === "thanh_cong" ? "Kho đánh giá khiếu nại: gửi THÀNH CÔNG (hàng đã tới nơi)" : "Kho đánh giá khiếu nại: gửi THẤT BẠI (thất lạc)") + (ghiChu ? (body.ket_qua === "that_bai" ? " | Phương án xử lý: " : " | ") + ghiChu : ""),
   );
   return c.json({ ok: true });
 });

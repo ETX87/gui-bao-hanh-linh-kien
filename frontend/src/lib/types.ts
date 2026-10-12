@@ -103,6 +103,9 @@ export interface DonVi {
   ly_do_tu_choi: string | null;
   xu_ly_xac: string | null;
   ket_qua_chan_doan: string | null;
+  ket_qua_nv?: string | null; // 12/10/2026: da_sua_xong | khong_sua_duoc | khong_loi | kiem_tra_tu_van
+  so_dx_cho_cap?: number; // GET /nv/viec-cua-toi
+  so_dx_da_cap?: number;
   admin_xac_nhan_hoan_tat: boolean;
   phieu_tra_id: string | null;
   trang_thai: string;
@@ -132,6 +135,32 @@ export interface DonVi {
   thu_hoi_hang_ghi_chu?: string | null;
   thu_hoi_hang_boi?: string | null;
   thu_hoi_hang_luc?: string | null;
+}
+
+// De xuat linh kien sua chua (12/10/2026) - don con cua 1 don vi bao hanh.
+export interface DeXuatLk {
+  id: string;
+  unit_id: string;
+  ma_lk: string;
+  so_luong: number;
+  ghi_chu: string | null;
+  trang_thai: "cho_cap" | "da_cap" | "tu_choi" | "huy";
+  nguoi_de_xuat: string;
+  created_at: string;
+  ma_misa: string | null;
+  ma_don_hang: string | null;
+  ly_do_tu_choi: string | null;
+  nguoi_xu_ly: string | null;
+  xu_ly_luc: string | null;
+  updated_at: string;
+  // join them o GET /de-xuat
+  unit_trang_thai?: string;
+  ma_lk_thuc_te?: string | null;
+  unit_ma_lk?: string | null;
+  mo_ta_loi?: string | null;
+  case_id?: string | null;
+  mien?: Mien | null;
+  ktv?: string | null;
 }
 
 export interface PhieuTra {

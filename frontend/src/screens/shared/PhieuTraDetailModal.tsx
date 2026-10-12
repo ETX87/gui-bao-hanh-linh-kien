@@ -219,10 +219,10 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               <p className="text-sm font-semibold text-[var(--ink)]">
                 {danhGiaKN === "thanh_cong"
                   ? "Xác nhận hàng ĐÃ tới nơi (KTV báo nhầm / đã tìm thấy) → phiếu chuyển Đã hoàn tất."
-                  : "Xác nhận gửi THẤT BẠI — hàng thất lạc trên đường trả → phiếu kết thúc ở trạng thái Gửi thất bại."}
+                  : "Xác nhận gửi THẤT BẠI — hàng thất lạc trên đường trả → phiếu kết thúc ở trạng thái Gửi thất bại. Kho ghi phương án xử lý, việc xử lý tiếp làm ngoài hệ thống."}
               </p>
-              <Field label={danhGiaKN === "that_bai" ? "Kết quả kiểm tra / lý do" : "Ghi chú (tuỳ chọn)"} required={danhGiaKN === "that_bai"}>
-                <Textarea rows={2} value={ghiChuKN} onChange={(e) => setGhiChuKN(e.target.value)} placeholder="VD: Nhà xe xác nhận đã giao ngày …, có chữ ký người nhận" autoFocus />
+              <Field label={danhGiaKN === "that_bai" ? "Phương án xử lý (xử lý ngoài hệ thống)" : "Ghi chú (tuỳ chọn)"} required={danhGiaKN === "that_bai"}>
+                <Textarea rows={2} value={ghiChuKN} onChange={(e) => setGhiChuKN(e.target.value)} placeholder={danhGiaKN === "that_bai" ? "VD: Nhà xe bồi thường, Kho gửi bù linh kiện mới qua phiếu xuất …" : "VD: Nhà xe xác nhận đã giao ngày …, có chữ ký người nhận"} autoFocus />
               </Field>
               <div className="flex justify-end gap-2">
                 <Btn onClick={() => setDanhGiaKN(null)}>Huỷ</Btn>
@@ -272,7 +272,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           {t.kq_khieu_nai && (
             <Banner tone={t.kq_khieu_nai === "that_bai" ? "red" : "green"}>
               Kho đánh giá: {t.kq_khieu_nai === "that_bai" ? "gửi THẤT BẠI (thất lạc)" : "gửi thành công"}
-              {t.kq_khieu_nai_ghi_chu ? ` — ${t.kq_khieu_nai_ghi_chu}` : ""} · <UserName email={t.kq_khieu_nai_boi} /> · {fmtDate(t.kq_khieu_nai_luc)}
+              {t.kq_khieu_nai_ghi_chu ? (t.kq_khieu_nai === "that_bai" ? ` — Phương án xử lý: ${t.kq_khieu_nai_ghi_chu}` : ` — ${t.kq_khieu_nai_ghi_chu}`) : ""} · <UserName email={t.kq_khieu_nai_boi} /> · {fmtDate(t.kq_khieu_nai_luc)}
             </Banner>
           )}
           {t.danh_gia_ktv && <Banner tone="blue">Đánh giá của KTV: {t.danh_gia_ktv}</Banner>}

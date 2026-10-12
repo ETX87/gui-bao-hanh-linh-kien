@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
-import { HUONG_XU_LY_LABELS, KET_QUA_CHAN_DOAN_LABELS } from "../../lib/constants";
+import { HUONG_XU_LY_LABELS, ketQuaLabel } from "../../lib/constants";
 import { useLinhKien, lkLabel } from "../../hooks/useLinhKien";
 import { UserName } from "../../hooks/useUserNames";
 import { useAuth } from "../../auth/AuthContext";
@@ -37,6 +37,7 @@ interface UnitRow {
   trang_thai: string;
   huong_xu_ly: string | null;
   ket_qua_chan_doan: string | null;
+  ket_qua_nv?: string | null;
   ma_lk_thuc_te: string | null;
   phieu_tra_id: string | null;
   updated_at: string;
@@ -112,7 +113,7 @@ function LichSuList({ data, onOpenUnit }: { data: LichSuResp; onOpenUnit?: (id: 
                     #{x.so_thu_tu}
                     <StatusBadge kind="unit" value={x.trang_thai} />
                     {x.huong_xu_ly && <span className="text-[var(--ink-soft)]">{HUONG_XU_LY_LABELS[x.huong_xu_ly] ?? x.huong_xu_ly}</span>}
-                    {x.ket_qua_chan_doan && <span className="text-[var(--ink-faint)]">· {KET_QUA_CHAN_DOAN_LABELS[x.ket_qua_chan_doan] ?? x.ket_qua_chan_doan}</span>}
+                    {ketQuaLabel(x) && <span className="text-[var(--ink-faint)]">· {ketQuaLabel(x)}</span>}
                     {x.ma_lk_thuc_te && x.ma_lk_thuc_te !== d.ma_lk && <span className="text-[var(--ink-faint)]">· thay {lk(x.ma_lk_thuc_te)}</span>}
                   </button>
                 ))}

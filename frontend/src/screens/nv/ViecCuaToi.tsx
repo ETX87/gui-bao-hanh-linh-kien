@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
-import { Card, Spinner } from "../../ui/primitives";
+import { Badge, Card, Spinner } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
@@ -11,7 +11,7 @@ import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser, DonVi } from "../../lib/types";
 
 // "Viec cua toi" (NV sua chua) - port dung renderNvViecCuaToi(). Click dong mo UnitDetailModal (da co
-// san nut "Chan doan" o footer). Phan trang that (server LIMIT/OFFSET).
+// san nut "Nop ket qua sua chua" + khoi "De xuat linh kien" trong chi tiet). Phan trang that (server LIMIT/OFFSET).
 
 export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
@@ -25,6 +25,19 @@ export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "lbh", header: "Loại BH", render: (r) => (r.loai_bao_hanh ? LOAI_BAO_HANH_LABELS[r.loai_bao_hanh] : "—") },
     { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk_thuc_te || r.ma_lk) },
+    {
+      key: "dx",
+      header: "Linh kiện xin cấp",
+      render: (r) =>
+        r.so_dx_cho_cap || r.so_dx_da_cap ? (
+          <span className="flex gap-1">
+            {!!r.so_dx_cho_cap && <Badge tone="amber">{r.so_dx_cho_cap} chờ cấp</Badge>}
+            {!!r.so_dx_da_cap && <Badge tone="green">{r.so_dx_da_cap} đã cấp</Badge>}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[260px] truncate", render: (r) => r.mo_ta_loi || "—" },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
   ];

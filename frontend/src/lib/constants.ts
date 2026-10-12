@@ -32,7 +32,28 @@ export const KET_QUA_CHAN_DOAN_LABELS: Record<string, string> = {
   sua_duoc: "Sửa được",
   de_xuat_doi_moi: "Đề xuất đổi mới",
   tra_xac: "Trả xác",
+  // 4 ket qua moi cua NV (12/10/2026) - cot ket_qua_nv.
+  da_sua_xong: "Đã sửa xong",
+  khong_sua_duoc: "Không sửa được",
+  kiem_tra_tu_van: "Chỉ kiểm tra, tư vấn",
 };
+
+// Lua chon NV nop ket qua (12/10/2026): "Da sua xong, khong sua duoc, khong co loi, chi kiem tra tu van".
+export const KET_QUA_NV_OPTIONS: { value: string; label: string }[] = [
+  { value: "da_sua_xong", label: "Đã sửa xong" },
+  { value: "khong_sua_duoc", label: "Không sửa được" },
+  { value: "khong_loi", label: "Không có lỗi" },
+  { value: "kiem_tra_tu_van", label: "Chỉ kiểm tra, tư vấn" },
+];
+
+// Ket qua hien thi: uu tien ket_qua_nv (moi), roi cot cu ket_qua_chan_doan.
+export function ketQuaLabel(u: { ket_qua_nv?: string | null; ket_qua_chan_doan?: string | null }): string | null {
+  const v = u.ket_qua_nv || u.ket_qua_chan_doan;
+  return v ? KET_QUA_CHAN_DOAN_LABELS[v] || v : null;
+}
+
+// De xuat linh kien (12/10/2026).
+export const DE_XUAT_TT_LABELS: Record<string, string> = { cho_cap: "Chờ cấp", da_cap: "Đã cấp", tu_choi: "Từ chối", huy: "Đã huỷ" };
 
 export const HUONG_CAN_NV = ["sua_chua", "dich_vu_tinh_phi"];
 

@@ -18,6 +18,13 @@ export type XuLyXac = (typeof XU_LY_XAC_VALUES)[number];
 export const KET_QUA_CHAN_DOAN_VALUES = ["khong_loi", "sua_duoc", "de_xuat_doi_moi", "tra_xac"] as const;
 export type KetQuaChanDoan = (typeof KET_QUA_CHAN_DOAN_VALUES)[number];
 
+// Ket qua cuoi cua NV sua chua (12/10/2026): "Da sua xong, khong sua duoc, khong co loi, chi kiem tra tu
+// van". Luu o cot moi phieu_sua_chua_bh_ct.ket_qua_nv (cot cu ket_qua_chan_doan giu cho du lieu cu).
+export const KET_QUA_NV_VALUES = ["da_sua_xong", "khong_sua_duoc", "khong_loi", "kiem_tra_tu_van"] as const;
+export type KetQuaNv = (typeof KET_QUA_NV_VALUES)[number];
+// Ghi kem vao cot cu (neu tuong duong) de bao cao cu van dung.
+export const KET_QUA_NV_TO_CU: Partial<Record<KetQuaNv, KetQuaChanDoan>> = { da_sua_xong: "sua_duoc", khong_loi: "khong_loi" };
+
 // Huong xu ly BAT BUOC gan 1 NV cu the (sua_chua/dich_vu_tinh_phi) - don vi chuyen sang cho_chan_doan.
 export const HUONG_CAN_NV: readonly HuongXuLy[] = ["sua_chua", "dich_vu_tinh_phi"];
 
@@ -36,5 +43,6 @@ export const LBL: Record<string, string> = {
   doi_tra: "Đổi trả", tru_cong_no: "Trừ công nợ",
   tra_doi_tac: "Trả xác cho đối tác", tieu_huy: "Tiêu huỷ", luu_kho: "Đang lưu kho",
   khong_loi: "Không lỗi", sua_duoc: "Sửa được", de_xuat_doi_moi: "Đề xuất đổi mới", tra_xac: "Trả xác",
+  da_sua_xong: "Đã sửa xong", khong_sua_duoc: "Không sửa được", kiem_tra_tu_van: "Chỉ kiểm tra, tư vấn",
   sai_case: "Sai case", thieu_mota: "Thiếu mô tả", linh_kien_khong_khop: "Linh kiện không khớp", khac: "Khác",
 };

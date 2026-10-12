@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Chưa deploy (máy đang đăng nhập wrangler tài khoản sandbox).
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Chưa deploy (máy đang đăng nhập wrangler tài khoản sandbox). **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. Vẫn chưa deploy.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -3933,8 +3933,8 @@ thông lệ ngành đáng cân nhắc thêm:
    lịch sử chỉ có giá trị "ĐỔI TRẢ") được diễn giải là do KTV lịch sử ít khi chọn "Trừ công nợ" trên
    thực tế, không phải vì trường này chưa từng do KTV chọn.
 3. **`LK DE XUAT SUA CHUA` gắn với case CSKH (Bitrix) chứ không gắn với `DON BAO HANH`** — **[TRẢ LỜI
-   12/10/2026]** nguyên văn: *"xử lý lại, các đơn đều có liên kết với nhau theo dạng mẹ - con nếu có liên quan"*. **CÒN MỞ một phần**: bảng `de_xuat_linh_kien_bh` (NV xin vật tư) **chưa từng được xây** — cần chốt phạm vi trước khi làm (xem mục "Đề xuất Admin BH còn lại + chốt 6 câu hỏi mở (12/10/2026)").
-4. Ngưỡng escalate khi Admin từ chối đề xuất linh kiện — **[TRẢ LỜI 12/10/2026]** người dùng hỏi lại *"là sao? bị bug cho phép từ chối nhiều lần à => fix"*. Không phải lỗi: tính năng đề xuất linh kiện chưa có nên chưa có gì để từ chối. Gộp vào câu 3 — chốt khi làm tính năng đề xuất linh kiện.
+   12/10/2026]** nguyên văn: *"xử lý lại, các đơn đều có liên kết với nhau theo dạng mẹ - con nếu có liên quan"*. **[ĐÃ CHỐT + ĐÃ LÀM 12/10/2026, v1.029]** — xem mục "Đề xuất linh kiện sửa chữa + 4 kết quả NV (12/10/2026)".
+4. Ngưỡng escalate khi Admin từ chối đề xuất linh kiện — **[TRẢ LỜI 12/10/2026]** người dùng hỏi lại *"là sao? bị bug cho phép từ chối nhiều lần à => fix"*. Không phải lỗi: tính năng đề xuất linh kiện chưa có nên chưa có gì để từ chối. **[ĐÃ CHỐT 12/10/2026]**: *"Cứ đề xuất đến khi sửa xong hoặc xác định là không sửa được"* — không giới hạn, không escalate.
 5. ~~Định nghĩa "thất lạc trên đường trả"~~ — **[ĐÃ CHỐT + ĐÃ LÀM 12/10/2026, v1.028]** nguyên văn: *"KTV báo vấn đề không nhận được linh kiện và phản hồi ngược về cho kho => kho sẽ đánh giá và đánh giá việc gửi thành công hay thất bại"*.
 6. ~~Có bước "thu hồi chi phí bảo hành từ hãng/OEM" không~~ — **[ĐÃ CHỐT + ĐÃ LÀM 12/10/2026, v1.028]** nguyên văn: *"có, hiện tại chỉ ghi nhận thủ công (có thể thêm 1 vùng để nhập số tiền đã thu được - không bắt buộc)"*.
 7. ~~`debt_adjustments` / có cần đối soát ngược MISA không~~ — **[ĐÃ CHỐT 12/10/2026]** nguyên văn: *"hiện tại thì không"*. Không làm.
@@ -4985,3 +4985,67 @@ Repo `linh-kien-app` (v1.317) và dvbh (v1.448) đều sạch và đã deploy ti
 1. Đăng nhập wrangler bằng tài khoản `dichvu3t` (`npx wrangler login`).
 2. Áp migration 0012 lên production (`npm run db:migrate:remote`).
 3. `npm run deploy`. Phiên bản đã tăng sẵn lên **1.028**.
+
+## Đề xuất linh kiện sửa chữa + 4 kết quả NV + phương án xử lý khi gửi thất bại (12/10/2026) — v1.029, CHƯA deploy
+
+**(a) Nguyên văn yêu cầu** (sau khi hỏi "các vấn đề còn lại là sao?" và mình nêu lại các việc còn mở):
+
+> 2. NV sẽ tự báo linh kiện cần được cấp, Admin bảo hành sẽ lên misa để xuất từ kho sang. Cứ đề xuất đến khi sửa xong hoặc xác định là không sửa được. => NV sửa chữa sẽ xác nhận: Đã sửa xong, không sửa được, không có lỗi, chỉ kiểm tra tư vấn.
+> 3. Nếu gửi thất bại => kho sẽ ghi chú lại phương án xử lý và xử lý ngoài
+>
+> Commit đầy đủ các nội dung cập nhật và thay đổi
+
+**(b) Đã làm:**
+- **Đề xuất linh kiện** = **đơn con** của đơn vị bảo hành (`de_xuat_linh_kien_bh.unit_id`, mã `DX-000001`, migration
+  `0013_de_xuat_linh_kien.sql`, thêm dòng `id_counters`). Đây là cách hiểu "các đơn đều có liên kết với nhau theo dạng mẹ –
+  con" của câu trả lời 12/10/2026.
+  - Trạng thái: `cho_cap` → `da_cap` (Admin nhập **mã phiếu xuất MISA bắt buộc**, mã đơn hàng tuỳ chọn) | `tu_choi`
+    (Admin, bắt buộc lý do) | `huy` (NV tự huỷ, hoặc tự huỷ khi NV nộp kết quả).
+  - **Không giới hạn** số lần đề xuất / từ chối, không có ngưỡng báo quản lý (đóng câu hỏi mở "ngưỡng escalate").
+  - Đơn vị **không bị tạm dừng** khi đang chờ cấp (vẫn ở `cho_chan_doan`, NV vẫn làm tiếp).
+  - Nhật ký ghi vào đơn vị (entity `phieu_sc_ct`, trạng thái giữ nguyên) vì `logs_bh.entity_type` có CHECK chỉ 4 loại.
+  - Route mới `backend/src/routes/deXuat.ts` (`/api/de-xuat`):
+    - `GET /?trang_thai=` — hàng đợi Admin (theo miền);
+    - `GET /don-vi/:unitId` — danh sách đơn con;
+    - `POST /don-vi/:unitId {items[]}` — NV được giao, đơn đang `cho_chan_doan`, tối đa 30 dòng/lần;
+    - `POST /:id/huy` — NV đã đề xuất;
+    - `POST /cap {ids, ma_misa, ma_don_hang}` — Admin cấp 1 hoặc nhiều đề xuất chung 1 phiếu MISA;
+    - `POST /:id/tu-choi {ly_do}`.
+  - Giao diện:
+    - khối "🔩 Đề xuất linh kiện (N)" trong UI chi tiết đơn (`screens/shared/DeXuatLinhKien.tsx`): NV có nút
+      "+ Đề xuất linh kiện" (form nhiều dòng: linh kiện + số lượng + ghi chú), huỷ đề xuất của mình; Admin có "Cấp" /
+      "Từ chối" từng dòng + "Cấp tất cả N";
+    - màn mới **"Cấp linh kiện sửa chữa"** `#/admin/de-xuat` (nhóm Admin bảo hành): tab Chờ cấp / Đã cấp / Từ chối /
+      Đã huỷ, chọn nhiều → "Cấp N đề xuất (chung 1 mã MISA)", bấm dòng mở đơn bảo hành;
+    - "Việc của tôi" của NV có cột "Linh kiện xin cấp" (N chờ cấp / N đã cấp);
+    - số việc `admin_de_xuat_cho_cap` (menu, Trang chủ) + giai đoạn cảnh báo đơn tồn "Đề xuất linh kiện NV chờ Admin cấp".
+- **4 kết quả NV** thay 4 kết quả chẩn đoán cũ: Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra, tư vấn.
+  - Cột cũ `ket_qua_chan_doan` có CHECK chỉ 4 giá trị cũ, và bảng `phieu_sua_chua_bh_ct` có bảng con FK trỏ tới → không
+    dựng lại bảng; thêm cột mới **`ket_qua_nv`**. Vẫn ghi kèm cột cũ khi tương đương (`da_sua_xong`→`sua_duoc`,
+    `khong_loi`→`khong_loi`) để dữ liệu/báo cáo cũ không gãy.
+  - API giữ tên trường `ket_qua_chan_doan` nhưng chỉ nhận 4 giá trị mới (giá trị cũ → 400 `INVALID_KET_QUA`).
+  - Nộp kết quả → đơn sang "Chờ Admin xác nhận hoàn tất" như cũ; đề xuất còn "chờ cấp" tự huỷ (form báo trước).
+  - Nút trong chi tiết đổi tên "🔧 Nộp kết quả sửa chữa". Hiển thị kết quả dùng `ketQuaLabel()` (ưu tiên `ket_qua_nv`) ở
+    UI chi tiết, màn Xác nhận hoàn tất, lịch sử Serial/Case.
+- **Gửi thất bại (thất lạc)**: ô ghi chú bắt buộc đổi tên thành "Phương án xử lý (xử lý ngoài hệ thống)"; banner + nhật ký
+  ghi "Phương án xử lý: …". Hệ thống không làm bước gửi bù / phiếu trả mới — Kho xử lý ngoài theo đúng câu trả lời.
+
+**(c) Vấn đề trong lúc làm:**
+- `id_counters` không có dòng cho bảng mới thì `nextSequentialId` luôn trả `-000001` (trùng khoá) → migration thêm dòng.
+- Câu FROM của giai đoạn cảnh báo ban đầu ghép sai vị trí `ON` khi nối `U_FROM` → viết JOIN tường minh.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (bỏ tạm binding remote rồi khôi phục — `git diff
+wrangler.jsonc` sạch), migration 0013 áp OK. API:
+- danh sách rỗng → `MISSING_LINH_KIEN`; số lượng 0 → `INVALID_SO_LUONG`; đơn không ở bước sửa → `WRONG_STATE`;
+- tạo 2 đề xuất 1 lần (DX-000001, 002) + 1 đề xuất ở đơn khác; hàng đợi Admin = 3, workload = 3;
+- cấp thiếu MISA → `REQUIRE_MA_MISA`; cấp có MISA → `da_cap`; từ chối thiếu lý do → `MISSING_LY_DO`; từ chối 2 lần →
+  `WRONG_STATE`; đề xuất lại sau khi bị từ chối → OK;
+- "Việc của tôi" trả đúng số chờ cấp / đã cấp từng đơn;
+- nộp kết quả giá trị cũ `sua_duoc` → 400; `da_sua_xong` → OK, đơn sang `cho_admin_xac_nhan`, `ket_qua_nv=da_sua_xong`,
+  cột cũ `sua_duoc`, đề xuất còn chờ cấp tự `huy` kèm lý do.
+- UI: màn "Cấp linh kiện sửa chữa" hiện đúng đề xuất, nút "Xác nhận đã cấp" khoá tới khi nhập MISA, cấp xong hàng đợi về 0;
+  chi tiết đơn của NV có khối đề xuất (dòng "Đã cấp · MISA XK-0002") + nút "+ Đề xuất linh kiện" + "🔧 Nộp kết quả sửa
+  chữa"; form đề xuất khoá nút gửi khi chưa chọn linh kiện; form kết quả đủ 4 lựa chọn. Console chỉ có các 400 cố ý.
+
+**Việc còn lại thuộc người dùng:** đăng nhập wrangler bằng tài khoản `dichvu3t`, áp migration **0012 + 0013** lên
+production (`npm run db:migrate:remote`), rồi `npm run deploy` (phiên bản đã là **1.029**).

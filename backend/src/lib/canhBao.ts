@@ -112,6 +112,19 @@ export const STAGES: StageDef[] = [
     hash: { nv: "/nv/viec-cua-toi" },
   },
   {
+    // 12/10/2026: NV de xuat cap linh kien, Admin BH chua len MISA xuat kho.
+    key: "de_xuat_lk",
+    label: "Đề xuất linh kiện NV chờ Admin cấp",
+    vai_tro: ["admin", "nv"],
+    don_vi: "phiếu",
+    from: `de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = 'cho_cap'`,
+    since: "d.created_at",
+    ktvCol: "g.nguoi_tao",
+    mienAlias: "p",
+    own: { vai_tro: "nv", col: "d.nguoi_de_xuat" },
+    hash: { admin: "/admin/de-xuat", nv: "/nv/viec-cua-toi" },
+  },
+  {
     key: "xac_nhan_ht",
     label: "Đơn chờ Admin xác nhận hoàn tất",
     vai_tro: ["admin"],

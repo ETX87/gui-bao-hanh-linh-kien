@@ -32,6 +32,7 @@ const EMPTY = {
   admin_cho_phan_loai: 0,
   admin_cho_xac_nhan_hoan_tat: 0,
   admin_san_sang_gom: 0,
+  admin_de_xuat_cho_cap: 0,
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
 };
@@ -139,6 +140,13 @@ workload.get("/", async (c) => {
       }),
       one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${mp.sql}`, ...mp.binds).then((r) => {
         counts.admin_san_sang_gom = r?.cnt ?? 0;
+      }),
+      // 12/10/2026: de xuat linh kien NV cho Admin len MISA cap.
+      one(
+        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_cap'${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.admin_de_xuat_cho_cap = r?.cnt ?? 0;
       }),
     );
   }

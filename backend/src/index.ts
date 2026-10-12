@@ -24,6 +24,7 @@ import odooDonRoutes from "./routes/odooDon";
 import mienRoutes from "./routes/mien";
 import canhBaoRoutes from "./routes/canhBao";
 import lichSuRoutes from "./routes/lichSu";
+import deXuatRoutes from "./routes/deXuat";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 
@@ -55,6 +56,7 @@ app.route("/api/odoo-don", odooDonRoutes);
 app.route("/api/mien", mienRoutes);
 app.route("/api/canh-bao", canhBaoRoutes);
 app.route("/api/lich-su", lichSuRoutes);
+app.route("/api/de-xuat", deXuatRoutes);
 
 app.onError((err, c) => {
   console.error(err);

@@ -25,6 +25,7 @@ export interface WorkloadCounts {
   admin_cho_phan_loai: number;
   admin_cho_xac_nhan_hoan_tat: number;
   admin_san_sang_gom: number;
+  admin_de_xuat_cho_cap: number;
   nv_cho_chan_doan: number;
   ketoan_cho_duyet: number;
 }
@@ -43,6 +44,7 @@ const EMPTY: WorkloadCounts = {
   admin_cho_phan_loai: 0,
   admin_cho_xac_nhan_hoan_tat: 0,
   admin_san_sang_gom: 0,
+  admin_de_xuat_cho_cap: 0,
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
 };

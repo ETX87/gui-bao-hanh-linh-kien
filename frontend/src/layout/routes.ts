@@ -65,6 +65,7 @@ const CATALOG: CatalogItem[] = [
   { hash: "/kho/dong-goi", label: "Đóng gói & gửi trả", short: "Đóng gói", icon: "📤", group: G.kho, desc: "Phiếu trả đã duyệt chờ đóng gói + khiếu nại không nhận được hàng", countKeys: ["kho_cho_dong_goi", "kho_khieu_nai"], show: (u) => u.la_kho || u.la_qtri },
 
   { hash: "/admin/phan-loai", label: "Xử lý đơn bảo hành", short: "Xử lý đơn", icon: "🗂️", group: G.admin, desc: "Nhận thùng nội bộ, xác nhận SL, phân loại", countKeys: ["admin_cho_tiep_nhan_noi_bo", "admin_cho_xac_nhan_sl", "admin_cho_phan_loai"], show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: G.admin, desc: "NV xin linh kiện — lên MISA xuất kho rồi cấp", countKeys: ["admin_de_xuat_cho_cap"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/admin/xac-nhan", label: "Xác nhận hoàn tất", short: "Hoàn tất", icon: "✔️", group: G.admin, desc: "Duyệt kết quả NV sửa chữa", countKeys: ["admin_cho_xac_nhan_hoan_tat"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/admin/phieu-tra", label: "Phiếu trả bảo hành", short: "Phiếu trả", icon: "↩️", group: G.admin, desc: "Đơn xong chờ gộp phiếu trả", countKeys: ["admin_san_sang_gom"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/ktv/tao-phieu", label: "Tạo hộ đơn cho KTV", short: "Tạo hộ", icon: "📦", group: G.admin, desc: "Thùng nháp đang tạo hộ KTV", countKeys: ["ktv_phieu_nhap"], show: (u) => !isKtv(u) && (u.la_admin_bh || u.la_qtri) },
@@ -139,6 +140,7 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   admin_cho_phan_loai: "đơn chờ phân loại",
   admin_cho_xac_nhan_hoan_tat: "đơn chờ xác nhận hoàn tất",
   admin_san_sang_gom: "đơn chờ gộp phiếu trả",
+  admin_de_xuat_cho_cap: "đề xuất linh kiện chờ cấp",
   nv_cho_chan_doan: "đơn chờ chẩn đoán",
   ketoan_cho_duyet: "phiếu chờ duyệt",
 };
