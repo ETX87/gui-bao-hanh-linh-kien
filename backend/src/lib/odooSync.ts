@@ -125,6 +125,36 @@ async function resolveMissingKtv(env: Env): Promise<number> {
   return withKtv.length;
 }
 
+// 2b) Don keo ve TRUOC khi dvbh co External ID (ma_import_odoo, them 09/10/2026) khong duoc keo lai theo con
+// tro -> hoi lai rieng theo ?ids= (toi da 5 lo x 200 / lan cron). Con tro rieng "import_id_after" de cac don
+// dvbh cung chua co ID khong chan mai cac don phia sau; het vong thi quay lai tu dau.
+async function resolveMissingImportId(env: Env): Promise<number> {
+  let after = Number((await getState(env.DB, "import_id_after")) || 0);
+  let total = 0;
+  for (let i = 0; i < 5; i++) {
+    const { results } = await env.DB.prepare(
+      `SELECT odoo_id FROM don_bh_odoo WHERE ma_import_odoo IS NULL AND odoo_id > ? ORDER BY odoo_id LIMIT 200`,
+    )
+      .bind(after)
+      .all<{ odoo_id: number }>();
+    if (results.length === 0) {
+      after = 0;
+      break;
+    }
+    const body = await callDvbh<{ rows: OdooRow[] }>(env, `don-bao-hanh-odoo?ids=${results.map((r) => r.odoo_id).join(",")}`);
+    const withId = body.rows.filter((r) => r.ma_import_odoo);
+    if (withId.length > 0) await upsertRows(env.DB, withId);
+    total += withId.length;
+    after = results[results.length - 1].odoo_id;
+    if (results.length < 200) {
+      after = 0;
+      break;
+    }
+  }
+  await setState(env.DB, "import_id_after", String(after));
+  return total;
+}
+
 // Trang thai gui sua suy ra tu du lieu suachua (thu tu tang dan theo tien do).
 const STAGE_ORDER = ["cho_gui", "dang_gui", "kho_da_nhan", "dang_xu_ly", "cho_tra", "dang_tra"] as const;
 const TERMINAL = new Set(["hoan_tat", "tu_choi"]);
@@ -263,6 +293,7 @@ export interface OdooSyncResult {
   ok: boolean;
   keo_ve: number;
   bo_sung_ktv: number;
+  bo_sung_id: number;
   day_trang_thai: number;
   loi: string[];
   luc: string;
@@ -271,8 +302,8 @@ export interface OdooSyncResult {
 // Chay ca 3 buoc, moi buoc doc lap (1 buoc loi khong chan buoc khac). Ghi ket qua vao sync_state de
 // man Cai dat hien "lan dong bo gan nhat".
 export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
-  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, day_trang_thai: 0, loi: [], luc: nowVN() };
-  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "day_trang_thai") => {
+  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, bo_sung_id: 0, day_trang_thai: 0, loi: [], luc: nowVN() };
+  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "bo_sung_id" | "day_trang_thai") => {
     try {
       res[key] = await fn();
     } catch (e) {
@@ -282,6 +313,7 @@ export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
   };
   await step("Kéo đơn Odoo", () => pullOdoo(env), "keo_ve");
   await step("Bổ sung KTV", () => resolveMissingKtv(env), "bo_sung_ktv");
+  await step("Bổ sung ID import", () => resolveMissingImportId(env), "bo_sung_id");
   await step("Đẩy trạng thái", () => pushStatuses(env), "day_trang_thai");
   await setState(env.DB, "odoo_last_run", JSON.stringify(res));
   if (!res.ok) console.error("[odooSync]", res.loi.join(" | "));

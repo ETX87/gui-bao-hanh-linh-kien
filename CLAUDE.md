@@ -5051,3 +5051,19 @@ wrangler.jsonc` sạch), migration 0013 áp OK. API:
 production (`npm run db:migrate:remote`), rồi `npm run deploy` (phiên bản đã là **1.029**).
 
 **Deploy (12/10/2026, cùng ngày):** người dùng đăng nhập lại wrangler bằng tài khoản `dichvu3t`. Đã áp migration 0012 + 0013 lên D1 production và chạy `npm run deploy` (Version ID `3f4a3605-ab90-4bcc-9ef3-9001d241308a`). Kiểm tra sau deploy: `/api/de-xuat`, `/api/canh-bao`, `/api/lich-su` đều trả `MISSING_TOKEN` (route có thật), bundle JS đang chạy mang `APP_VERSION` 1.029.
+
+## Rà soát việc dang dở sau deploy v1.029 + bổ sung ID import Odoo cho đơn cũ (12/10/2026) — v1.030
+
+**(a) Nguyên văn yêu cầu:** *"kiểm tra xem có thiếu công việc nào đang dang dở không"*
+
+**(b) Kết quả rà soát (đọc D1 production thật):**
+- 3 repo (`suachua`, dvbh, `linh-kien-app`) không còn thay đổi code chưa commit (dvbh chỉ có 2 file báo cáo xlsx tháng 8/9 chưa theo dõi, không phải code). Không còn migration nào chờ áp.
+- Cron Odoo chạy đều, không lỗi (lần gần nhất 13:45); không đơn nào lỗi báo trạng thái về dvbh; không phân loại linh kiện nào chờ đẩy về linh-kien-app; mọi thùng đã gửi đều có miền.
+- Đồng bộ đẩy từ linh-kien-app đã chạy thật: 640/1.100 KTV trong danh bạ có nguồn `dong_bo`, 17 khu vực.
+- **Việc dang dở thật:** 1.421/1.929 đơn Odoo thiếu `ma_import_odoo` (External ID dùng cho file import ngược về Odoo, thêm 09/10/2026) — toàn bộ là đơn kéo về ngày 05–09/10, TRƯỚC khi dvbh có cột này. dvbh hiện đã có ID cho 1.920/1.929 đơn, nhưng cron chỉ kéo đơn mới theo con trỏ nên các đơn cũ không bao giờ được bổ sung → file "Xuất import Odoo" bỏ sót các đơn này (đếm vào "đơn chưa có ID import").
+- Ghi nhận (không phải lỗi): 2 tài khoản xử lý chưa gán miền (`honganh4099@gmail.com` Anh Hồng, `ivy3690.in@gmail.com` Ivy Nguyen) — đang thấy cả 2 miền; cần Admin gán MB/MN nếu muốn tách.
+
+**(c) Đã sửa:** `lib/odooSync.ts` thêm bước `resolveMissingImportId` vào cron 15 phút (sau "Bổ sung KTV"): hỏi lại dvbh theo `?ids=` các đơn còn thiếu ID, tối đa 5 lô × 200/lần, con trỏ riêng `sync_state.import_id_after` (để ~9 đơn dvbh cũng chưa có ID không chặn các đơn sau; hết vòng quay lại từ đầu). Kết quả `bo_sung_id` hiện ở thẻ đồng bộ Odoo (Cài đặt).
+
+**(d) Kiểm thử:** typecheck 0 lỗi; xác nhận endpoint `?ids=` của dvbh trả cùng bộ cột (có `ma_import_odoo`). Kiểm tra sau deploy bằng D1 production — xem dòng cuối mục này.
+
