@@ -22,6 +22,9 @@ import partnerKhoRoutes from "./routes/partnerKho";
 import workloadRoutes from "./routes/workload";
 import odooDonRoutes from "./routes/odooDon";
 import mienRoutes from "./routes/mien";
+import canhBaoRoutes from "./routes/canhBao";
+import lichSuRoutes from "./routes/lichSu";
+import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
@@ -50,6 +53,8 @@ app.route("/api/partner/kho-action", partnerKhoRoutes);
 app.route("/api/workload", workloadRoutes);
 app.route("/api/odoo-don", odooDonRoutes);
 app.route("/api/mien", mienRoutes);
+app.route("/api/canh-bao", canhBaoRoutes);
+app.route("/api/lich-su", lichSuRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -66,6 +71,8 @@ export default {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
     ctx.waitUntil(pushPhanLoaiPending(env).then(() => undefined).catch(() => undefined));
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
+    // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
+    ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));
   },
 };

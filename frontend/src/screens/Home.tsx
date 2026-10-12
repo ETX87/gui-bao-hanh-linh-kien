@@ -5,6 +5,7 @@ import { useWorkload, type WorkloadCounts } from "../hooks/useWorkload";
 import { routesForUser } from "../layout/routes";
 import { Card, StatCard } from "../ui/primitives";
 import type { AppUser } from "../lib/types";
+import { CanhBaoTonDon } from "./shared/CanhBaoTonDon";
 
 // Trang chu - "Viec cua toi" (chi hien muc co viec, tone coral, port dung MyWorkloadStrip) + luoi
 // StatCard day du moi hang doi theo dung vai tro dang dang nhap (ke ca muc =0, lam mo - nguyen tac
@@ -128,6 +129,9 @@ export function HomeScreen({ user }: { user: AppUser }) {
           </div>
         )}
       </section>
+
+      {/* 12/10/2026: canh bao don ton + thoi gian xu ly TB theo vai tro. */}
+      <CanhBaoTonDon canTinhLai={user.la_admin_bh || user.la_qtri} />
 
       <Card className="p-3" title="Tổng quan hàng đợi">
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">

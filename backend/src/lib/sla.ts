@@ -11,7 +11,7 @@ const DAY = 24 * HOUR;
 
 // Moi cot thoi gian luu dang "YYYY-MM-DD HH:MM:SS" gio VN (lib/vnTime.ts). Parse nhu UTC => epoch
 // "gio VN ma hoa nhu UTC" - getUTCDay() chinh la thu trong tuan theo gio VN.
-function parseVn(dateStr: string): number {
+export function parseVn(dateStr: string): number {
   return new Date(dateStr.replace(" ", "T").replace(/Z$/i, "") + "Z").getTime();
 }
 function nowVnMs(): number {

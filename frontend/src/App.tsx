@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { LichSuScreen } from "./screens/shared/LichSuBaoHanh";
 import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
 import { RouterProvider, useRoute } from "./router/Router";
@@ -34,6 +35,7 @@ function Routed({ user }: { user: AppUser }) {
   const { path } = useRoute();
 
   if (path === "/home" || path === "/") return <HomeScreen user={user} />;
+  if (path === "/lich-su") return <LichSuScreen />;
 
   // la_qtri (Admin he thong) la superuser - phan hoi 04/09/2026 "Vai trò Admin cần nhìn được tất cả
   // các modules của hệ thống": moi cong duoi day mo them cho ca la_qtri, dong bo dung voi

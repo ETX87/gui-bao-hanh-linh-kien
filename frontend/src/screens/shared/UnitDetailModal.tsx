@@ -21,6 +21,7 @@ import {
 import { LogTimeline } from "./LogTimeline";
 import { useLkName } from "../../hooks/useLinhKien";
 import { CaseSnapshotPanel } from "./CaseSnapshotPanel";
+import { LichSuSanPhamPanel } from "./LichSuBaoHanh";
 import { PhanLoaiModal } from "./PhanLoaiModal";
 import { FastActionsModal } from "./FastActionsModal";
 import { YeuCauBoSungModal } from "./YeuCauBoSungModal";
@@ -502,6 +503,9 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
             </Section>
 
             {p.case_id && <CaseSnapshotPanel caseId={p.case_id} canSync={user.la_admin_bh || user.la_qtri} soThangBh={soThangOf(effLk)} />}
+
+            {/* 12/10/2026: cac lan bao hanh khac cua cung san pham (cung case / cung serial). */}
+            {p.case_id && <LichSuSanPhamPanel caseId={p.case_id} parentId={p.id} onOpenUnit={nested ? undefined : setCurId} />}
 
             {nguoi.length > 0 && (
               <Section title="👥 Người liên quan">

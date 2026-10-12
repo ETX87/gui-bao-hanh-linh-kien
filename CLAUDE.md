@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng".
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -4845,3 +4845,40 @@ Gửi thêm giữa lượt: *"Khi 1 đơn hàng chưa xác định khu vực b�
 - Trình đọc file: xlsx do `buildXlsx` tạo (không nén), xlsx do openpyxl tạo (deflate, có dòng tiêu đề phụ), csv `;` — đều đọc đúng.
 - End-to-end 2 Worker local (linh-kien-app `wrangler dev` D1 local nối qua service binding): sai key → 401; "Gửi lại ngay" đẩy 2 dòng, D1 linh-kien-app nhận đúng "Mạch"/"Bộ / Cụm", cờ về 0; PATCH tiếp tự đẩy ngay (cờ = 0 sau 1,5s).
 - UI: nút Tải / Import / Thêm, thanh chờ đồng bộ, 20 ô phân loại có gợi ý, modal Import đúng; sidebar không còn "Mua hàng".
+
+## Giao trực tiếp = KTV, nhớ cách giao trên máy, "Lưu nháp gửi sau", cảnh báo đơn tồn, lịch sử Serial/Case (12/10/2026) — v1.027
+
+**(a) Nguyên văn yêu cầu:**
+
+> 1. giao trực tiếp, người giao = KTV đang báo tạo đơn bảo hành.
+> 2. Danh sách lựa chọn cách giao hàng sẽ lưu lại trên cache của người dùng, lần sau sẽ ưu tiên hiện lựa chọn và thông tin đã nhập lần trước
+> 3. Khi tạo thùng hàng ngoài lựa chọn xác nhận đã gửi xe thì có lựa chọn khác không? nếu ktv thực tế chưa gửi xe mà mới chỉ tạo ra để đó thì sao?
+> 4. cần bổ sung thêm các cảnh báo riêng về đơn tồn với mỗi vai trò, ví dụ kho đang tồn bao nhiêu đơn chưa nhận từ KTV, bao nhiêu đơn admin sửa chữa chưa tiếp nhận, quá hạn bao nhiêu lâu, cảnh báo nguy hiêm, hiện thị thời gian xử lý trung bình cho từng giao đoạn, từng vai trò
+> 5. thêm lịch sử sửa chữa bảo hành theo mã Serial hoặc ID case từng xử lý trên hệ thống
+
+**(b) Đã làm:**
+1. **Giao trực tiếp** (`PhieuGuiDetailModal.tsx`): chọn "Giao trực tiếp" thì ô "Người giao hàng" tự điền tên KTV sở hữu thùng (tên, chưa có tên thì gmail) và không sửa được; lưu đúng giá trị đó vào `ma_xe_hoac_tai_xe`. Nút xác nhận đổi chữ "Xác nhận đã giao hàng".
+2. **Nhớ cách giao hàng trên máy** (`lib/nhaXeCache.ts`, `localStorage` `nha_xe_cache_v1`, theo email KTV sở hữu thùng — tạo hộ nhớ riêng cho đúng KTV):
+   - lựa chọn gần nhất + thông tin đã nhập **riêng từng hình thức** (đổi qua lại giữa Nhà xe / Xe nội bộ / Bưu điện không mất thông tin của nhau);
+   - danh sách hình thức xếp theo thứ tự dùng gần đây; gợi ý mã xe / đơn vị vận chuyển gộp từ máy + server.
+   - Thùng nháp mới (chưa có đơn) ưu tiên cache trên máy hơn bộ nhớ server `ktv_nha_xe_bh` (server vẫn dùng khi đổi máy); thùng đang làm dở chỉ điền ô trống. Ghi cache mỗi lần Lưu nháp / Lưu nháp gửi sau / Xác nhận gửi.
+   - Sửa kèm: ô vận chuyển chỉ khởi tạo 1 lần khi mở phiếu — trước đây thêm/xoá 1 đơn là tải lại phiếu và mất thông tin vận chuyển chưa lưu.
+3. **Trả lời câu 3:** thùng chưa gửi thật thì cứ để **nháp** — Kho không thấy, không tính SLA của Kho, không báo sang khovan (khovan chỉ được báo lúc xác nhận gửi). Thêm cho rõ: nút footer "💾 Lưu nháp, gửi sau" (lưu thông tin vận chuyển rồi đóng, chỉ hiện khi thùng đã có đơn) + banner vàng giải thích "thùng đang là nháp, Kho chưa thấy…"; thùng nháp đã có đơn để quá 24h hiện ở cảnh báo đơn tồn của KTV (mục 4). Thùng nháp rỗng vẫn tự xoá khi đóng như cũ.
+4. **Cảnh báo đơn tồn + thời gian xử lý trung bình** (`backend/src/lib/canhBao.ts`, `GET /api/canh-bao`, `POST /api/canh-bao/tinh-lai`; frontend `screens/shared/CanhBaoTonDon.tsx` ở Trang chủ và Tổng quan hệ thống):
+   - 13 giai đoạn, mỗi giai đoạn gắn vai trò: KTV (thùng nháp có đơn chưa gửi, đơn chờ bổ sung, hàng trả chưa xác nhận nhận), Kho (thùng đã gửi chưa nhận, chưa bàn giao Admin, phiếu đã duyệt chưa gửi trả), Admin BH (chưa tiếp nhận nội bộ, chờ xác nhận SL, chờ phân loại, chờ KTV bổ sung, chờ xác nhận hoàn tất, chưa gộp phiếu trả, phiếu trả nháp), NV (chờ chẩn đoán), Kế toán (chờ duyệt).
+   - Mỗi dòng: số đang tồn, số quá hạn 24h, số nguy hiểm >72h, thời gian chờ lâu nhất, TB xử lý 30 ngày; chấm màu xanh / vàng / đỏ (cùng 3 ngưỡng badge SLA, giờ SLA bỏ Chủ nhật). Bấm dòng mở đúng màn xử lý.
+   - Phạm vi: KTV / NV thấy việc của chính mình; Kho / Admin / Kế toán theo miền; Giám sát theo khu vực phụ trách, View theo khu vực được gán; qtri toàn hệ thống.
+   - TB xử lý: tính từ nhật ký chuyển trạng thái 30 ngày (bỏ dòng tu = den như ghi chú / lý do chậm / đổi miền), đơn vị con mốc vào "chờ phân loại" bằng `created_at`; 2 bước không phải chuyển trạng thái tính từ cột mốc (Kho → Admin nhận nội bộ; Admin nhận → xác nhận SL). Lưu `sync_state.giai_doan_tb`, cron 15 phút tính lại tối đa 1 lần/giờ; lần đầu chưa có thì tính ngay; Admin BH / qtri có nút "↻ Tính lại TB".
+5. **Lịch sử theo Serial / ID case** (`routes/lichSu.ts` `GET /api/lich-su`; frontend `screens/shared/LichSuBaoHanh.tsx`):
+   - Màn mới `#/lich-su` "Lịch sử Serial / Case" (mọi vai trò, nhóm cùng Trang chủ trên sidebar, cuối danh sách để không chiếm tab mobile): nhập Serial hoặc ID case (≥3 ký tự; từ 5 ký tự tìm gần đúng), liệt kê các lần gửi bảo hành (Lần N, mã đơn, ngày, KTV / khách lẻ, linh kiện, lỗi, case · serial · sản phẩm · khách · link CRM, từng đơn vị: trạng thái + hướng xử lý + kết quả chẩn đoán + linh kiện thay). Admin / qtri / Giám sát / View bấm đơn vị mở UI chi tiết.
+   - Serial lấy từ bằng chứng case đã lưu (`case_lookup_snapshot.data.seri_san_pham`), không gọi API dvbh. KTV (không kèm vai trò khác) chỉ thấy đơn của chính mình.
+   - UI chi tiết đơn: khối "🔁 Lịch sử bảo hành sản phẩm (N lần khác)" + banner vàng nhắc kiểm tra sửa lại lần 2 — các đơn khác cùng case hoặc cùng serial (`?case_id=&exclude=`); bấm đơn vị chuyển sang đơn đó.
+   - Không có migration mới.
+
+**(c) Vấn đề:** không có lỗi phát sinh. Ghi nhận: TB xử lý dùng giờ SLA (bỏ Chủ nhật), dữ liệu cũ trước khi có nhật ký đầy đủ sẽ cho TB thấp / thiếu mẫu (hiện "—" khi chưa có).
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (bỏ tạm binding remote rồi khôi phục `wrangler.jsonc`):
+- `/api/canh-bao` trả đủ 13 giai đoạn đúng vai trò (tài khoản đa vai trò), số tồn / quá hạn / lâu nhất / TB (VD phân loại TB 90h trên 14 mẫu); thẻ hiện ở Trang chủ và Tổng quan, mobile 375px không tràn.
+- `/api/lich-su?q=SN1` ra 2 đơn của 2 case cùng serial; `q=CASE-E2E` ra 4 đơn 6 đơn vị; `?case_id=TEST-KTVA&exclude=` bỏ đúng đơn đang xem; q 2 ký tự → 400. Màn `#/lich-su` tìm được; mở đơn vị từ kết quả → UI chi tiết có khối "Lịch sử bảo hành sản phẩm (3 lần khác)".
+- Phiếu nháp BH-000001: chọn Giao trực tiếp → ô người giao = "QA Superuser", chỉ đọc, nút "Xác nhận đã giao hàng"; đổi về Nhà xe, nhập mã xe, "Lưu nháp, gửi sau" → modal đóng, server + cache lưu đúng. Tạo thùng mới → tự chọn lựa chọn gần nhất trên máy (Bưu điện) + thông tin đã nhập, danh sách xếp theo thứ tự dùng gần đây; đổi sang Nhà xe → lấy lại đúng thông tin Nhà xe; đóng thùng rỗng → tự xoá.
+

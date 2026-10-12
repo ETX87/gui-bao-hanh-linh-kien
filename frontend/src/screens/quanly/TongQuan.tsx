@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CanhBaoTonDon } from "../shared/CanhBaoTonDon";
 import { api } from "../../lib/api";
 import { useRoute } from "../../router/Router";
 import { Card, Spinner, StatCard } from "../../ui/primitives";
@@ -60,6 +61,8 @@ export function QuanLyTongQuanScreen() {
           <span className={`font-extrabold text-3xl md:text-2xl tabular-nums ${quaHan > 0 ? "text-[var(--red-600)]" : "text-[var(--ink-faint)]"}`}>{quaHan}</span>
         </button>
       </Card>
+
+      <CanhBaoTonDon />
 
       <Card className="p-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>

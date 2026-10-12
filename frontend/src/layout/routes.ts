@@ -79,6 +79,9 @@ const CATALOG: CatalogItem[] = [
   { hash: "/qtri/nguoi-dung", label: "Người dùng & phân quyền", short: "Người dùng", icon: "👥", group: G.qtri, desc: "Duyệt tài khoản, gán vai trò", show: (u) => u.la_qtri },
   { hash: "/qtri/cai-dat", label: "Cài đặt hệ thống", short: "Cài đặt", icon: "⚙️", group: G.qtri, desc: "Lý do chậm/huỷ, đồng bộ Odoo", show: (u) => u.la_qtri },
 
+  // 12/10/2026: tra lich su bao hanh theo Serial / ID case - moi vai tro. Nhom "" -> hien cung nhom Trang chu tren Sidebar; nam cuoi
+  // danh sach de BottomNav mobile khong day cac tab cong viec ra khoi thanh duoi.
+  { hash: "/lich-su", label: "Lịch sử Serial / Case", short: "Lịch sử", icon: "🔁", group: "", desc: "Tra lịch sử bảo hành theo Serial hoặc ID case", show: () => true },
   // Lien ket ra ngoai sang he "Dat mua linh kien" (05/09/2026) - luon hien cho moi nguoi.
   { hash: "/mua-hang", label: "Mua hàng", short: "Mua hàng", icon: "🛒", href: "https://linhkien.dichvu3t.workers.dev/", group: G.link, desc: "Mở hệ Đặt mua linh kiện", show: () => false }, // 11/10/2026: ẩn theo yêu cầu "ẩn menu sidebar Liên kết mua hàng"
 ];

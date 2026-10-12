@@ -1,6 +1,6 @@
 import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
 import { DoiMienBadge } from "../../ui/MienBadge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
@@ -20,7 +20,8 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import { useAuth } from "../../auth/AuthContext";
 import { DetailGrid, SummaryBox, Section, Kv, Chip, Banner, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
 import type { DonCha, LogRow, PhieuGui } from "../../lib/types";
-import { UserName } from "../../hooks/useUserNames";
+import { UserName, displayName, useUserNames } from "../../hooks/useUserNames";
+import { readNhaXe, saveNhaXe, sortHinhThuc } from "../../lib/nhaXeCache";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -57,15 +58,43 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
   const [odooOpen, setOdooOpen] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  useUserNames();
+  // O van chuyen chi khoi tao 1 LAN khi mo phieu - cac lan tai lai sau thao tac (them don, xoa don...)
+  // khong ghi de thong tin KTV dang go do (truoc 12/10/2026 them 1 don la mat thong tin chua luu).
+  const inited = useRef(false);
 
   const load = () =>
     api.get<DetailResponse>(`/phieu-gui/${guiId}`).then((r) => {
       setData(r);
-      setHinhThuc(r.phieu_gui.hinh_thuc_gui || "xe_noi_bo");
-      setMaXe(r.phieu_gui.ma_xe_hoac_tai_xe || "");
-      setDvvc(r.phieu_gui.don_vi_van_chuyen || "");
-      setMaVanDon(r.phieu_gui.ma_van_don || "");
-      setNgayGuiXe(r.phieu_gui.ngay_gui_xe || "");
+      if (inited.current) return;
+      inited.current = true;
+      const g0 = r.phieu_gui;
+      let ht = g0.hinh_thuc_gui || "xe_noi_bo";
+      let mx = g0.ma_xe_hoac_tai_xe || "";
+      let dv = g0.don_vi_van_chuyen || "";
+      // Bo nho tren may (12/10/2026): thung nhap moi (chua co don) -> uu tien lua chon + thong tin lan
+      // truoc cua KTV nay; thung nhap dang lam do -> chi dien vao o con trong.
+      if (g0.trang_thai === "nhap") {
+        const c = readNhaXe(g0.nguoi_tao);
+        if (c && r.don_cha.length === 0) {
+          ht = c.last;
+          mx = c.by[c.last]?.maXe ?? mx;
+          dv = c.by[c.last]?.dvvc ?? dv;
+        } else if (c?.by[ht]) {
+          mx = mx || c.by[ht].maXe;
+          dv = dv || c.by[ht].dvvc;
+        }
+        // Giao truc tiep: nguoi giao = chinh KTV so huu thung.
+        if (ht === "giao_truc_tiep") {
+          mx = displayName(g0.nguoi_tao);
+          dv = "";
+        }
+      }
+      setHinhThuc(ht);
+      setMaXe(mx);
+      setDvvc(dv);
+      setMaVanDon(g0.ma_van_don || "");
+      setNgayGuiXe(g0.ngay_gui_xe || "");
     });
   // Don Odoo vua them co the mang linh kien moi tu them vao danh muc -> danh sach cache tren may chua
   // co ten; tai lai danh muc 1 lan (server da tang version).
@@ -119,15 +148,51 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
 
   const giaoTrucTiep = hinhThuc === "giao_truc_tiep";
-  const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: maXe, don_vi_van_chuyen: giaoTrucTiep ? "" : dvvc, ma_van_don: giaoTrucTiep ? "" : maVanDon };
-  const saveHeader = () => run(async () => { await api.patch(`/phieu-gui/${g.id}`, header); toast("Đã lưu.", "ok"); }, false);
+  const cache = isNhap ? readNhaXe(g.nguoi_tao) : null;
+  const options = sortHinhThuc(HINH_THUC_OPTIONS, cache);
+  // 12/10/2026: "giao trực tiếp, người giao = KTV đang báo tạo đơn bảo hành" - tu dien ten KTV so huu
+  // thung, khong cho sua.
+  const nguoiGiao = giaoTrucTiep ? displayName(g.nguoi_tao) : maXe;
+  const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: nguoiGiao, don_vi_van_chuyen: giaoTrucTiep ? "" : dvvc, ma_van_don: giaoTrucTiep ? "" : maVanDon };
+  const nhoCache = () => saveNhaXe(g.nguoi_tao, hinhThuc, nguoiGiao, giaoTrucTiep ? "" : dvvc);
+  // Doi hinh thuc gui: lay lai thong tin da nhap rieng cho hinh thuc do (neu co tren may nay).
+  const doiHinhThuc = (v: string) => {
+    const prev = hinhThuc;
+    setHinhThuc(v);
+    if (v === "giao_truc_tiep") return;
+    const c = cache?.by[v];
+    if (c) {
+      setMaXe(c.maXe);
+      setDvvc(c.dvvc);
+    } else if (prev === "giao_truc_tiep") {
+      setMaXe("");
+    }
+  };
+  const saveHeader = () =>
+    run(async () => {
+      await api.patch(`/phieu-gui/${g.id}`, header);
+      nhoCache();
+      toast("Đã lưu.", "ok");
+    }, false);
+  // "Luu nhap, gui sau" (12/10/2026 - tra loi "nếu ktv thực tế chưa gửi xe mà mới chỉ tạo ra để đó thì
+  // sao?"): luu thong tin roi dong - thung van la NHAP, Kho chua thay, KTV mo lai xac nhan khi gui that.
+  const luuNhapDong = () =>
+    run(async () => {
+      await api.patch(`/phieu-gui/${g.id}`, header);
+      nhoCache();
+      toast("Đã lưu nháp — thùng CHƯA gửi. Khi giao hàng thật, mở lại và bấm “Xác nhận đã gửi xe”.", "ok");
+      onClose();
+    });
   // "Xac nhan da gui xe" tu PATCH thong tin van chuyen truoc roi moi POST (Phat hien 9 ra soat UX).
   const xacNhanGui = () =>
     run(async () => {
       await api.patch(`/phieu-gui/${g.id}`, header);
+      nhoCache();
       await api.post(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe });
-      toast("Đã lưu thông tin & xác nhận gửi xe.", "ok");
+      toast(giaoTrucTiep ? "Đã lưu thông tin & xác nhận đã giao hàng." : "Đã lưu thông tin & xác nhận gửi xe.", "ok");
     });
+  const goiYMaXe = [...new Set([...(cache?.recentMaXe ?? []), ...(data.goi_y?.ma_xe ?? [])])];
+  const goiYDvvc = [...new Set([...(cache?.recentDvvc ?? []), ...(data.goi_y?.dvvc ?? [])])];
   const xoaPhieu = () =>
     run(async () => {
       await api.delete(`/phieu-gui/${g.id}`);
@@ -151,8 +216,13 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                   Xoá phiếu
                 </Btn>
               )}
+              {data.don_cha.length > 0 && (
+                <Btn disabled={busy} onClick={luuNhapDong} title="Thùng vẫn là nháp, Kho chưa thấy. Mở lại để xác nhận khi đã gửi thật.">
+                  💾 Lưu nháp, gửi sau
+                </Btn>
+              )}
               <Btn variant="primary" disabled={busy || data.don_cha.length === 0} onClick={xacNhanGui}>
-                Xác nhận đã gửi xe
+                {giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}
               </Btn>
             </>
           ) : undefined
@@ -205,6 +275,13 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
             </div>
           </SummaryBox>
 
+          {isNhap && data.don_cha.length > 0 && (
+            <Banner tone="amber">
+              📝 Thùng đang là <b>nháp</b> — Kho chưa thấy thùng này. Nếu chưa gửi hàng thật, bấm “💾 Lưu nháp, gửi sau”; chỉ bấm “
+              {giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}” khi hàng đã được giao cho xe / mang tới Kho.
+            </Banner>
+          )}
+
           {!!g.su_co_tiep_nhan && (
             <Banner tone="red">
               ⚠ Kho báo sự cố tiếp nhận: {g.su_co_ly_do} {g.su_co_ghi_chu && `— ${g.su_co_ghi_chu}`}
@@ -227,8 +304,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                 <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
                   <div className="sm:col-span-3">
                     <Field label="Hình thức gửi">
-                      <Select value={hinhThuc} onChange={(e) => setHinhThuc(e.target.value)}>
-                        {HINH_THUC_OPTIONS.map((o) => (
+                      <Select value={hinhThuc} onChange={(e) => doiHinhThuc(e.target.value)}>
+                        {options.map((o) => (
                           <option key={o.value} value={o.value}>
                             {o.label}
                           </option>
@@ -243,7 +320,11 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                   </div>
                   <div className={hinhThuc === "giao_truc_tiep" ? "sm:col-span-6" : "sm:col-span-2"}>
                     <Field label={hinhThuc === "giao_truc_tiep" ? "Người giao hàng" : "Mã xe / Tài xế"}>
-                      <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" placeholder={hinhThuc === "giao_truc_tiep" ? "Tên người mang hàng đến" : undefined} />
+                      {giaoTrucTiep ? (
+                        <Input value={nguoiGiao} readOnly title="Giao trực tiếp: người giao là chính KTV của thùng" />
+                      ) : (
+                        <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
+                      )}
                     </Field>
                   </div>
                   {hinhThuc !== "giao_truc_tiep" && (
@@ -263,16 +344,16 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                 </div>
                 {/* Goi y go nhanh tu cac lan gui truoc cua KTV (05/10/2026 muc 4). */}
                 <datalist id="goiy-ma-xe">
-                  {(data.goi_y?.ma_xe ?? []).map((v) => (
+                  {goiYMaXe.map((v) => (
                     <option key={v} value={v} />
                   ))}
                 </datalist>
                 <datalist id="goiy-dvvc">
-                  {(data.goi_y?.dvvc ?? []).map((v) => (
+                  {goiYDvvc.map((v) => (
                     <option key={v} value={v} />
                   ))}
                 </datalist>
-                <p className="mt-1.5 text-[11px] text-[var(--ink-faint)]">Bấm “Xác nhận đã gửi xe” sẽ tự lưu toàn bộ thông tin vận chuyển.</p>
+                <p className="mt-1.5 text-[11px] text-[var(--ink-faint)]">Lựa chọn + thông tin lần trước được nhớ trên máy này. Bấm xác nhận sẽ tự lưu toàn bộ thông tin vận chuyển.</p>
               </>
             ) : (
               <dl className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-1.5">
