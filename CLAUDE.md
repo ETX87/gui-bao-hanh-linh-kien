@@ -5069,3 +5069,28 @@ production (`npm run db:migrate:remote`), rồi `npm run deploy` (phiên bản �
 
 
 **Kết quả sau deploy (Version `438e4489`):** cron 14:00 chạy bước mới không lỗi, bổ sung được 992 ID (đơn thiếu ID giảm 1.421 → 429). Phần còn lại sẽ được bổ sung ở lần cron 14:15. Sau đó chỉ còn khoảng 9 đơn, là các đơn mà chính dvbh cũng chưa có ID.
+
+## Vì sao KTV đồng bộ từ linh-kien-app thiếu khu vực (13/10/2026) — chỉ điều tra, không sửa code
+
+**(a) Nguyên văn câu hỏi:** *"sao đồng bộ danh sách KTV từ linh-kien-app về lại không đồng bộ cả khu vực"*
+
+**(b) Kết luận (đọc D1 production cả 2 hệ, chỉ đọc):** đồng bộ **có** gửi khu vực và đang chạy đúng.
+- Entity `ktv` gửi kèm cột `khu_vuc_ma`; entity riêng `khu_vuc` (ma, ten, gs_email) cũng gửi sang. Con trỏ của
+  cả 3 entity tới suachua cập nhật lúc 13:01 ngày 13/10/2026, không lỗi.
+- suachua đã có đủ 17 khu vực, đúng tên và GS phụ trách (MB1–3, MN1–3, PTDV, PTDV_MN, SCVP_MB/MN, B2B_MB/MN,
+  KDTT_MN, KHAC_MB/MN, THUNGAN-MB/MN).
+- Thiếu khu vực là do **nguồn**: chính linh-kien-app có 592/1099 KTV không có `khu_vuc_ma` (536 CTV + 56 KTV)
+  và cũng không có `giam_sat_quan_ly`. suachua chép đúng nguyên trạng, cũng là 592.
+- Không suy được khu vực từ CRM: chuỗi `case_dvbh.ky_thuat_vien` chỉ ghi tỉnh/thành, ví dụ
+  "(luongpv.dvkh) KTV HN - Phùng Văn Lượng", không có mã MB1/MN2.
+- **Cách xử lý:** gán khu vực cho các KTV này ở màn KTV bên linh-kien-app. Cron mỗi giờ sẽ tự đẩy sang, cột
+  `ngay_cap_nhat` đổi nên được chọn gửi lại. Trong lúc chờ, đơn của các KTV này nằm ở miền "Chưa khai báo";
+  có thể gán miền tạm ở `#/qtri/ktv`.
+
+**(c) Phát hiện phụ (chưa sửa):** 458 dòng trong `ktv_lien_he_bh` mang nhãn nguồn "noi_bo" dù gần như chắc là
+dữ liệu từ linh-kien-app. Lý do: các dòng này được đồng bộ trước khi có migration 0002 nên nhận giá trị mặc định
+"noi_bo", và từ đó chưa đổi gì bên linh-kien-app nên chưa được ghi lại thành "dong_bo". Đây chỉ là nhãn hiển thị,
+không ảnh hưởng nghiệp vụ.
+
+**(d) Kiểm thử:** chỉ chạy truy vấn đọc (`wrangler d1 execute --remote`) trên `sua-chua-bao-hanh-db`,
+`dat-mua-linh-kien-db`, `dvbh-db-smarttrade`. Không đổi code, không deploy.
