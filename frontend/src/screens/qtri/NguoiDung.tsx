@@ -163,6 +163,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                     <p className="font-semibold text-[var(--ink)] truncate">
                       {u.ten || "—"}
                       {u.email === currentEmail && <span className="ml-1.5 text-xs text-[var(--ink-faint)]">(bạn)</span>}
+                      <EtxTag u={u} />
                     </p>
                     <p className="text-xs text-[var(--ink-soft)] font-mono truncate">{u.email}</p>
                   </div>
@@ -234,6 +235,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                       <span className="font-medium text-[var(--ink)]">{u.ten || "—"}</span>
                       {u.email === currentEmail && <span className="ml-1 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
                       <span className="ml-1.5 text-xs text-[var(--ink-soft)] font-mono">{u.email}</span>
+                      <EtxTag u={u} />
                     </td>
                     <td className="">
                       <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs">
@@ -331,4 +333,16 @@ function AddUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => 
       </div>
     </Modal>
   );
+}
+
+// 16/10/2026: nhan trang thai ETX nhan su (lib/etxSync.ts backend).
+function EtxTag({ u }: { u: AppUser }) {
+  if (u.etx_trang_thai === "on") return <span className="ml-1.5 rounded px-1 text-[10px] font-semibold bg-[var(--green-50)] text-[var(--green-700)]" title="Đang làm việc trên ETX nhân sự">ETX</span>;
+  if (u.etx_trang_thai === "off")
+    return (
+      <span className="ml-1.5 rounded px-1 text-[10px] font-semibold bg-[var(--red-50)] text-[var(--red-700)]" title={u.khoa_boi_etx ? "Tự khoá vì ETX báo nghỉ việc" : "ETX báo đã nghỉ việc"}>
+        ETX nghỉ{u.khoa_boi_etx ? " · tự khoá" : ""}
+      </span>
+    );
+  return null;
 }

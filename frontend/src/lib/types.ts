@@ -18,6 +18,9 @@ export interface AppUser {
   la_qtri: boolean;
   // 11/10/2026: mien phu trach cua nguoi xu ly - MB / MN / ALL (ca 2) / null (chua gan = thay tat ca).
   mien?: "MB" | "MN" | "ALL" | null;
+  // 16/10/2026: trang thai tren ETX nhan su (chi tra o GET /users) - 'on' dang lam / 'off' da nghi / null khong co tren ETX.
+  etx_trang_thai?: "on" | "off" | null;
+  khoa_boi_etx?: number;
 }
 
 // Mien cua don: MB / MN / null = "Khu vuc chua khai bao".

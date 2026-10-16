@@ -88,6 +88,15 @@ auth.get("/callback", async (c) => {
     }
   }
 
+  // 16/10/2026: nhan su dang lam tren ETX (danh ba lay tu linh-kien-app, lib/etxSync.ts) -> tu duyet luon, chua gan vai tro.
+  let etxDangLam = false;
+  if (!isBootstrapAdmin && !ktvMatch) {
+    const e = await c.env.DB.prepare("SELECT 1 AS x FROM etx_nhan_su_bh WHERE gmail = ? AND trang_thai_lam_viec = 'on' LIMIT 1")
+      .bind(userInfo.email.trim().toLowerCase())
+      .first<{ x: number }>();
+    etxDangLam = !!e;
+  }
+
   await c.env.DB.prepare("PRAGMA foreign_keys = ON").run();
   if (ktvMatch) {
     await c.env.DB.prepare(
@@ -106,9 +115,10 @@ auth.get("/callback", async (c) => {
     await c.env.DB.prepare(
       `INSERT INTO users (email, ten, trang_thai_duyet, la_qtri)
        VALUES (?, ?, ?, ?)
-       ON CONFLICT(email) DO UPDATE SET ten = excluded.ten, updated_at = ?`,
+       ON CONFLICT(email) DO UPDATE SET ten = excluded.ten, updated_at = ?,
+         trang_thai_duyet = CASE WHEN ? = 1 AND trang_thai_duyet = 'Cho duyet' THEN 'Da duyet' ELSE trang_thai_duyet END`,
     )
-      .bind(userInfo.email, userInfo.name ?? null, isBootstrapAdmin ? "Da duyet" : "Cho duyet", isBootstrapAdmin ? 1 : 0, nowVN())
+      .bind(userInfo.email, userInfo.name ?? null, isBootstrapAdmin || etxDangLam ? "Da duyet" : "Cho duyet", isBootstrapAdmin ? 1 : 0, nowVN(), etxDangLam ? 1 : 0)
       .run();
   }
 

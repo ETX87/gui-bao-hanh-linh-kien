@@ -168,6 +168,129 @@ function OdooSyncCard() {
   );
 }
 
+interface EtxStatus {
+  lan_gan_nhat: {
+    ok: boolean; luc: string; tong: number; dang_lam: number; nghi_viec: number; thay_doi: number; tu_duyet: number;
+    khoa: number; mo_khoa: number; bo_qua_qtri: string[]; lan_dau: boolean; etx_dong_bo_luc: string | null; loi: string | null;
+  } | null;
+  tk_dang_lam: number;
+  tk_khong_co_etx: number;
+  nghi_ma_dang_mo: { email: string; ten: string | null; la_qtri: number }[];
+  khoa_boi_etx: { email: string; ten: string | null }[];
+}
+
+// Dong bo "ETX nhan su" (16/10/2026, backend/src/lib/etxSync.ts): tu duyet tai khoan co tren ETX, tu khoa khi nghi viec.
+function EtxSyncCard() {
+  const toast = useToast();
+  const [st, setSt] = useState<EtxStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [xem, setXem] = useState<"" | "nghi" | "khoa">("");
+  const [chon, setChon] = useState<Set<string>>(new Set());
+  const load = () => api.get<EtxStatus>("/etx/status").then(setSt).catch((e) => toast(errorMessage(e), "error"));
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const syncNow = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<NonNullable<EtxStatus["lan_gan_nhat"]>>("/etx/sync-now");
+      toast(
+        r.ok ? `Đã đồng bộ ${r.tong} nhân sự: tự duyệt ${r.tu_duyet}, khoá ${r.khoa}, mở khoá ${r.mo_khoa}.` : `Đồng bộ lỗi: ${r.loi}`,
+        r.ok ? "ok" : "error",
+      );
+      await load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const khoa = async () => {
+    if (!chon.size || !window.confirm(`Khoá ${chon.size} tài khoản ETX báo nghỉ việc?`)) return;
+    setBusy(true);
+    try {
+      const r = await api.post<{ da_khoa: number }>("/etx/khoa-nghi-viec", { emails: [...chon] });
+      toast(`Đã khoá ${r.da_khoa} tài khoản.`, "ok");
+      setChon(new Set());
+      await load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const lr = st?.lan_gan_nhat;
+  const nghi = st?.nghi_ma_dang_mo ?? [];
+  const daKhoa = st?.khoa_boi_etx ?? [];
+  return (
+    <Card title="👥 Đồng bộ ETX nhân sự" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={syncNow}>Đồng bộ ngay</Btn>}>
+      <p className="text-xs text-[var(--ink-soft)] mb-2">
+        Mỗi ngày 1 lần, lấy danh bạ ETX từ linh-kien-app: tài khoản có trên ETX và đang làm việc được tự duyệt, chuyển sang nghỉ
+        việc thì tự khoá, đi làm lại thì tự mở. Khu vực của KTV lấy theo danh bạ KTV đồng bộ từ linh-kien-app.
+      </p>
+      {st && (
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-lg bg-[var(--surface-2)] p-2"><div className="text-lg font-bold">{st.tk_dang_lam}</div><div className="text-[11px] text-[var(--ink-soft)]">Tài khoản đang làm trên ETX</div></div>
+          <button type="button" onClick={() => setXem(xem === "nghi" ? "" : "nghi")} className={`rounded-lg p-2 ${nghi.length ? "bg-[var(--amber-50)] ring-1 ring-[var(--amber-200)]" : "bg-[var(--surface-2)]"}`}>
+            <div className="text-lg font-bold">{nghi.length}</div><div className="text-[11px] text-[var(--ink-soft)]">Đang mở nhưng ETX báo nghỉ ▾</div>
+          </button>
+          <button type="button" onClick={() => setXem(xem === "khoa" ? "" : "khoa")} className="rounded-lg bg-[var(--surface-2)] p-2">
+            <div className="text-lg font-bold">{daKhoa.length}</div><div className="text-[11px] text-[var(--ink-soft)]">Đã tự khoá do nghỉ việc ▾</div>
+          </button>
+        </div>
+      )}
+      {xem === "nghi" && (
+        <div className="mt-2 rounded-lg border border-[var(--line)] p-2 text-xs">
+          {nghi.length ? (
+            <>
+              <div className="max-h-56 overflow-y-auto space-y-1">
+                {nghi.map((u) => (
+                  <label key={u.email} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      disabled={!!u.la_qtri}
+                      checked={chon.has(u.email)}
+                      onChange={(e) => {
+                        const n = new Set(chon);
+                        if (e.target.checked) n.add(u.email);
+                        else n.delete(u.email);
+                        setChon(n);
+                      }}
+                    />
+                    <span className="font-medium">{u.ten || u.email}</span>
+                    <span className="text-[var(--ink-faint)]">{u.email}</span>
+                    {!!u.la_qtri && <span className="text-[var(--amber-700)]">(Admin hệ thống — không khoá tự động)</span>}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Btn size="sm" variant="danger" disabled={busy || !chon.size} onClick={khoa}>Khoá {chon.size || ""} tài khoản đã chọn</Btn>
+                <span className="text-[var(--ink-faint)]">Lần đồng bộ đầu không tự khoá những người này (có CTV ETX báo nghỉ nhưng vẫn làm).</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-[var(--ink-faint)]">Không có.</p>
+          )}
+        </div>
+      )}
+      {xem === "khoa" && (
+        <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-[var(--line)] p-2 text-xs space-y-1">
+          {daKhoa.length ? daKhoa.map((u) => <div key={u.email}><span className="font-medium">{u.ten || u.email}</span> <span className="text-[var(--ink-faint)]">{u.email}</span></div>) : <p className="text-[var(--ink-faint)]">Không có.</p>}
+          {daKhoa.length > 0 && <p className="text-[var(--ink-faint)]">Mở lại ở màn Người dùng (bỏ tick "Khoá"), hoặc tự mở khi ETX báo đi làm lại.</p>}
+        </div>
+      )}
+      <p className={`mt-3 text-xs ${lr && !lr.ok ? "text-[var(--red-700)] font-semibold" : "text-[var(--ink-soft)]"}`}>
+        {lr
+          ? lr.ok
+            ? `Lần gần nhất ${lr.luc}: ${lr.tong} nhân sự (${lr.dang_lam} Gmail đang làm, ${lr.nghi_viec} đã nghỉ) — tự duyệt ${lr.tu_duyet}, khoá ${lr.khoa}, mở khoá ${lr.mo_khoa}.${lr.lan_dau ? " (Lần đầu: chỉ lưu danh bạ, không khoá ai.)" : ""}${lr.bo_qua_qtri.length ? ` Bỏ qua Admin hệ thống: ${lr.bo_qua_qtri.join(", ")}.` : ""}${lr.etx_dong_bo_luc ? ` linh-kien-app kéo ETX lúc ${lr.etx_dong_bo_luc}.` : ""}`
+            : `Lần gần nhất ${lr.luc}: lỗi — ${lr.loi}`
+          : "Chưa chạy lần nào."}
+      </p>
+    </Card>
+  );
+}
+
 // Top linh kien xu ly thanh cong 30 ngay (05/10/2026 muc 7): moi ngay tu tinh 1 lan khi toi khung gio
 // cai dat (cron 15 phut kiem tra), dung de xep thu tu danh sach chon linh kien.
 function TopLinhKienCard() {
@@ -336,6 +459,7 @@ export function QtriCaiDatScreen() {
       <SettingListCard title="⏱ Lý do chậm" path="/settings/ly-do-cham" />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />
+      <EtxSyncCard />
       <TopLinhKienCard />
     </div>
   );

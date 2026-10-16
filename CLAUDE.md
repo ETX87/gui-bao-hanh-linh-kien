@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`).
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`). **Mốc mới nhất (16/10/2026, v1.031):** tài khoản tự duyệt nếu có trên ETX nhân sự, tự khoá khi nghỉ việc, tự mở khi đi làm lại (danh bạ ETX lấy từ linh-kien-app); khu vực KTV tiếp tục lấy theo danh bạ đồng bộ từ linh-kien-app.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -5094,3 +5094,59 @@ không ảnh hưởng nghiệp vụ.
 
 **(d) Kiểm thử:** chỉ chạy truy vấn đọc (`wrangler d1 execute --remote`) trên `sua-chua-bao-hanh-db`,
 `dat-mua-linh-kien-db`, `dvbh-db-smarttrade`. Không đổi code, không deploy.
+
+## Tự duyệt / tự khoá tài khoản theo ETX nhân sự (16/10/2026) — v1.031 (+ linh-kien-app v1.344)
+
+**(a) Nguyên văn yêu cầu:** *"tương tự hệ thống linh-kien-app => các tài khoản tự được duyệt nếu có trên hệ thống ETX nhân sự, tự khóa nếu nghỉ việc, tự phân khu vực dựa theo khu vực trên linh-kien-app kéo về"*
+
+**(b) Đã làm:**
+- **Nguồn ETX:** suachua KHÔNG gọi thẳng API ETX. Đọc lại bảng `etx_nhan_su` mà linh-kien-app đã kéo về mỗi tuần, qua route mới
+  `GET /api/suachua-partner/etx-nhan-su` (linh-kien-app v1.344, Service Binding `LINHKIEN_SERVICE` + secret đồng bộ dùng chung).
+  Nhờ vậy không cần cấp thêm secret ETX, cũng không tăng tải cho đối tác ETX.
+- `migrations/0014_etx_nhan_su.sql`: bảng `etx_nhan_su_bh` (bản sao, gmail chữ thường); cột `users.khoa_boi_etx`.
+- `lib/etxSync.ts` `runEtxSync` (cron 15 phút gọi `maybeRunEtxSync`: 1 lần/ngày từ 1h sáng; lần lỗi thì 15 phút sau thử lại).
+  Tính theo Gmail: chỉ cần 1 mã nhân sự "on" là coi như đang làm.
+  - **Tự duyệt** (`tuDuyetTaiKhoanCho`):
+    - "Chờ duyệt" + là email đăng nhập của KTV trong danh bạ → "Đã duyệt" + cờ KTV / Vệ tinh;
+    - "Chờ duyệt" + Gmail đang làm trên ETX → "Đã duyệt", chưa có vai trò (Admin gán sau).
+    - Chạy ở 3 chỗ: mỗi lần đồng bộ ETX, khi nhận đồng bộ danh bạ KTV (`routes/sync.ts /ktv`), và lúc đăng nhập
+      (`routes/auth.ts`: Gmail đang làm trên ETX → tạo tài khoản "Đã duyệt").
+  - **Tự khoá:** Gmail chuyển đang làm → nghỉ giữa 2 lần đồng bộ → `bi_khoa=1, khoa_boi_etx=1`.
+    - Giống linh-kien-app: chỉ khoá khi trạng thái ĐỔI. Lần đồng bộ đầu tiên chỉ lưu danh bạ, không khoá ai, vì có CTV ETX
+      báo nghỉ nhưng vẫn làm.
+    - Không tự khoá Admin hệ thống và tài khoản bootstrap; các trường hợp bỏ qua được ghi lại.
+  - **Tự mở khoá:** nghỉ → đi làm lại thì chỉ mở tài khoản bị khoá BỞI ETX. Tài khoản Admin khoá tay không bị mở; Admin bỏ khoá
+    tay thì `khoa_boi_etx` về 0.
+  - Danh sách linh-kien-app trả về rỗng thì báo lỗi, không dùng làm căn cứ khoá.
+- **Khu vực:** không cần code mới. KTV mang `khu_vuc_ma` qua đồng bộ danh bạ KTV. Bên linh-kien-app (v1.343) tự gán khu vực
+  theo quản lý trực tiếp trên ETX khi tạo KTV từ ETX. Miền vẫn suy từ khu vực (`lib/mien.ts`).
+- API `routes/etx.ts` (chỉ qtri): `GET /api/etx/status`, `POST /api/etx/sync-now`, `POST /api/etx/khoa-nghi-viec` (khoá tay những
+  người "đang mở nhưng ETX báo nghỉ", không khoá Admin / chính mình).
+- Giao diện:
+  - Cài đặt hệ thống có thẻ "👥 Đồng bộ ETX nhân sự": số tài khoản đang làm, "Đang mở nhưng ETX báo nghỉ" (mở danh sách, tick
+    rồi khoá), "Đã tự khoá do nghỉ việc", kết quả lần gần nhất, nút "Đồng bộ ngay".
+  - Màn Người dùng có nhãn "ETX" / "ETX nghỉ" / "ETX nghỉ · tự khoá"; `GET /users` trả thêm `etx_trang_thai`, `khoa_boi_etx`.
+
+**(c) Vấn đề trong lúc làm:** `wrangler d1 execute --command` nhiều câu lệnh bị crash libuv trên Windows (dữ liệu mẫu không ghi) →
+dùng `--file`. linh-kien-app còn thay đổi tài liệu chưa commit của 1 phiên khác (`docs/HUONG_DAN_API_DOI_TAC_*`) → không đụng,
+chỉ commit đúng 2 file.
+
+**(d) Kiểm thử:** typecheck backend + frontend cả 2 repo 0 lỗi, build sạch. Local: suachua `wrangler dev` + Worker giả tên
+`linhkien` (trả danh bạ ETX mẫu đổi được), `wrangler.jsonc` sửa tạm rồi khôi phục.
+- **Lần 1 (lần đầu):**
+  - tự duyệt 3: gmail viết hoa; người có 1 mã on + 1 mã off; KTV kèm cờ;
+  - người không có trên ETX vẫn chờ duyệt;
+  - không khoá ai.
+- **Lần 2:**
+  - 2 người chuyển nghỉ bị tự khoá;
+  - Admin hệ thống được bỏ qua và có ghi lại;
+  - người Admin khoá tay đi làm lại vẫn bị khoá;
+  - người mới xuất hiện trên ETX được duyệt.
+- **Lần 3:** đi làm lại → tự mở khoá.
+- **Các trường hợp khác:**
+  - khoá tay chỉ khoá đúng người trong danh sách, bỏ qua Admin;
+  - nguồn rỗng → lỗi, không khoá;
+  - `POST /partner/sync/ktv` tự duyệt KTV Vệ tinh đang chờ.
+- **Giao diện:** thẻ Cài đặt và nhãn ở màn Người dùng hiển thị đúng.
+- **Production trước deploy:** 19 tài khoản, đều "Đã duyệt", không ai đang chờ.
+

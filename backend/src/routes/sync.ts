@@ -1,3 +1,4 @@
+import { tuDuyetTaiKhoanCho } from "../lib/etxSync";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
@@ -62,7 +63,10 @@ sync.post("/ktv", async (c) => {
   if (statements.length) {
     await c.env.DB.batch(statements);
   }
-  return c.json({ upserted: statements.length, skipped });
+  // 16/10/2026: KTV moi ve danh ba (linh-kien-app tu tao tu ETX) -> tai khoan dang "Cho duyet" cung Gmail duoc duyet ngay,
+  // khong doi lan dang nhap sau.
+  const tuDuyet = statements.length ? await tuDuyetTaiKhoanCho(c.env.DB) : 0;
+  return c.json({ upserted: statements.length, skipped, tu_duyet: tuDuyet });
 });
 
 interface KhuVucSyncRow {

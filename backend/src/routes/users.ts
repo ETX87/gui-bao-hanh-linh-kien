@@ -35,7 +35,9 @@ users.get("/", async (c) => {
     binds.push(`%${kw}%`, `%${kw}%`);
   }
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT email, ten, bi_khoa, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    c.env.DB.prepare(`SELECT email, ten, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
+       (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai
+       FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM users WHERE ${where}`).bind(...binds).first<{ cnt: number }>(),
@@ -103,7 +105,7 @@ users.patch("/:email", async (c) => {
       .run();
   }
   if (body.bi_khoa !== undefined) {
-    await c.env.DB.prepare("UPDATE users SET bi_khoa = ?, updated_at = ? WHERE email = ?").bind(body.bi_khoa ? 1 : 0, nowVN(), targetEmail).run();
+    await c.env.DB.prepare("UPDATE users SET bi_khoa = ?, khoa_boi_etx = 0, updated_at = ? WHERE email = ?").bind(body.bi_khoa ? 1 : 0, nowVN(), targetEmail).run();
   }
   // 11/10/2026: mien phu trach cua nguoi xu ly (MB / MN / ALL = ca 2 / null = chua gan, thay tat ca).
   if (body.mien !== undefined) {

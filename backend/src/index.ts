@@ -27,6 +27,8 @@ import lichSuRoutes from "./routes/lichSu";
 import deXuatRoutes from "./routes/deXuat";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
+import { maybeRunEtxSync } from "./lib/etxSync";
+import etxRoutes from "./routes/etx";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
@@ -57,6 +59,7 @@ app.route("/api/mien", mienRoutes);
 app.route("/api/canh-bao", canhBaoRoutes);
 app.route("/api/lich-su", lichSuRoutes);
 app.route("/api/de-xuat", deXuatRoutes);
+app.route("/api/etx", etxRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -75,6 +78,7 @@ export default {
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
+    ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));
   },
 };
