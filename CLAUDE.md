@@ -5150,3 +5150,29 @@ chỉ commit đúng 2 file.
 - **Giao diện:** thẻ Cài đặt và nhãn ở màn Người dùng hiển thị đúng.
 - **Production trước deploy:** 19 tài khoản, đều "Đã duyệt", không ai đang chờ.
 
+
+## Bộ lọc danh sách nhân sự (16/10/2026) — v1.032
+
+**(a) Nguyên văn yêu cầu:** *"thêm các công cụ filter ở danh sách nhân sự"*. Hiểu là màn **Người dùng** (`#/qtri/nguoi-dung`).
+
+**(b) Đã làm:**
+- `GET /api/users` nhận thêm các tham số, lọc ở server, vẫn phân trang:
+  - `trang_thai` (Cho duyet / Da duyet / Tu choi);
+  - `khoa` (0 = đang hoạt động / 1 = đã khoá / `etx` = tự khoá do nghỉ việc);
+  - `vai_tro` (1 cờ vai trò, hoặc `none` = chưa có vai trò);
+  - `mien` (MB / MN / ALL / `none` = chưa gán);
+  - `etx` (on / off / `off_mo` = đã nghỉ nhưng chưa khoá / `none` = không có trên ETX).
+- `screens/qtri/NguoiDung.tsx`:
+  - thanh lọc `UserFilterBar` (cùng kiểu `fbar` với bảng Admin BH): 5 ô Duyệt / Khoá / Vai trò / Miền / ETX, cộng nút "✕ Xoá lọc (N)";
+  - kết hợp được với ô tìm email / tên;
+  - đổi lọc thì bỏ các thay đổi vai trò chưa lưu;
+  - không còn thay cả màn bằng spinner khi đang tải, nên thanh lọc và ô tìm không bị mất;
+  - không có kết quả thì hiện "Không có người dùng nào khớp bộ lọc".
+
+**(c) Vấn đề:** không có.
+
+**(d) Kiểm thử:** typecheck 0 lỗi. Chạy local trên dữ liệu thử ETX của đợt trước, từng bộ lọc và tổ hợp đều ra đúng:
+- `khoa=etx` → n1, n2; `etx=off_mo` → q1; `vai_tro=none` → 8;
+- `etx=off&khoa=1` → 2; `vai_tro=la_qtri&q=t.vn` → 2.
+
+Trên giao diện, chọn "ETX: Đã nghỉ" → 3 người, hiện nút "Xoá lọc (1)".

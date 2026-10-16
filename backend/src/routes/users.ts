@@ -34,6 +34,30 @@ users.get("/", async (c) => {
     where += " AND (email LIKE ? OR ten LIKE ?)";
     binds.push(`%${kw}%`, `%${kw}%`);
   }
+  // 16/10/2026: bo loc danh sach nhan su - trang thai duyet, khoa, vai tro, mien, trang thai ETX.
+  const tt = c.req.query("trang_thai");
+  if (tt === "Cho duyet" || tt === "Da duyet" || tt === "Tu choi") {
+    where += " AND trang_thai_duyet = ?";
+    binds.push(tt);
+  }
+  const khoa = c.req.query("khoa");
+  if (khoa === "1") where += " AND COALESCE(bi_khoa, 0) = 1";
+  else if (khoa === "0") where += " AND COALESCE(bi_khoa, 0) = 0";
+  else if (khoa === "etx") where += " AND COALESCE(bi_khoa, 0) = 1 AND khoa_boi_etx = 1";
+  const vt = c.req.query("vai_tro");
+  if (isRoleFlag(vt)) where += ` AND ${vt} = 1`;
+  else if (vt === "none") where += ` AND ${ROLE_FLAGS.map((f) => `COALESCE(${f}, 0) = 0`).join(" AND ")}`;
+  const mien = c.req.query("mien");
+  if (mien === "MB" || mien === "MN" || mien === "ALL") {
+    where += " AND mien = ?";
+    binds.push(mien);
+  } else if (mien === "none") where += " AND mien IS NULL";
+  const ETX_ST = "(SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email))";
+  const etx = c.req.query("etx");
+  if (etx === "on") where += ` AND ${ETX_ST} = 'on'`;
+  else if (etx === "off") where += ` AND ${ETX_ST} = 'off'`;
+  else if (etx === "none") where += ` AND ${ETX_ST} IS NULL`;
+  else if (etx === "off_mo") where += ` AND ${ETX_ST} = 'off' AND COALESCE(bi_khoa, 0) = 0`;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT email, ten, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
        (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai

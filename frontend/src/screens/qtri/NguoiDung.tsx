@@ -38,7 +38,16 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
     const t = setTimeout(() => setQ(qInput), 300);
     return () => clearTimeout(t);
   }, [qInput]);
-  const { items: users, total, page, pageCount, setPage, loading, reload } = usePagedApi<AppUser>(`/users${q ? `?q=${encodeURIComponent(q)}` : ""}`, "users");
+  const [loc, setLoc] = useState<UserLoc>(LOC_RONG);
+  const qs = useMemo(() => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    for (const [k, v] of Object.entries(loc)) if (v) p.set(k, v);
+    const str = p.toString();
+    return str ? `?${str}` : "";
+  }, [q, loc]);
+  const soLoc = Object.values(loc).filter(Boolean).length;
+  const { items: users, total, page, pageCount, setPage, loading, reload } = usePagedApi<AppUser>(`/users${qs}`, "users");
   const [addOpen, setAddOpen] = useState(false);
   const [pending, setPending] = useState<PendingFlags>({});
   const [saving, setSaving] = useState(false);
@@ -46,7 +55,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
   // Doi trang/tim -> bo cac thay doi chua luu (tranh luu nham cho user khong con hien).
   useEffect(() => {
     setPending({});
-  }, [q, page]);
+  }, [qs, page]);
 
   const pendingCount = useMemo(() => Object.values(pending).reduce((s, m) => s + Object.keys(m).length, 0), [pending]);
 
@@ -120,8 +129,6 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
     }
   };
 
-  if (loading && users.length === 0) return <Spinner />;
-
   return (
     <Card className="p-3">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -133,6 +140,13 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
           </Btn>
         </div>
       </div>
+
+      <UserFilterBar value={loc} onChange={setLoc} soLoc={soLoc} />
+
+      {loading && users.length === 0 && <Spinner />}
+      {!loading && users.length === 0 && (
+        <p className="py-6 text-center text-sm text-[var(--ink-faint)]">{soLoc || q ? "Không có người dùng nào khớp bộ lọc." : "Chưa có người dùng."}</p>
+      )}
 
       {pendingCount > 0 && (
         <div className="flex items-center justify-between gap-3 mb-2 rounded-lg border border-[var(--brand-400)] bg-[var(--accent-soft)] px-3 py-2">
@@ -345,4 +359,85 @@ function EtxTag({ u }: { u: AppUser }) {
       </span>
     );
   return null;
+}
+
+// 16/10/2026: bo loc danh sach nhan su (yeu cau "them cac cong cu filter o danh sach nhan su") - loc o server (GET /users).
+interface UserLoc {
+  trang_thai: string;
+  khoa: string;
+  vai_tro: string;
+  mien: string;
+  etx: string;
+}
+const LOC_RONG: UserLoc = { trang_thai: "", khoa: "", vai_tro: "", mien: "", etx: "" };
+
+function UserFilterBar({ value, onChange, soLoc }: { value: UserLoc; onChange: (v: UserLoc) => void; soLoc: number }) {
+  const set = (k: keyof UserLoc, v: string) => onChange({ ...value, [k]: v });
+  const cell = "flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0";
+  const lab = "shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap";
+  return (
+    <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5 items-center">
+        <div className={cell}>
+          <span className={lab}>Duyệt</span>
+          <Select value={value.trang_thai} onChange={(e) => set("trang_thai", e.target.value)}>
+            <option value="">Tất cả</option>
+            <option value="Cho duyet">Chờ duyệt</option>
+            <option value="Da duyet">Đã duyệt</option>
+            <option value="Tu choi">Từ chối</option>
+          </Select>
+        </div>
+        <div className={cell}>
+          <span className={lab}>Khoá</span>
+          <Select value={value.khoa} onChange={(e) => set("khoa", e.target.value)}>
+            <option value="">Tất cả</option>
+            <option value="0">Đang hoạt động</option>
+            <option value="1">Đã khoá</option>
+            <option value="etx">Tự khoá do nghỉ việc (ETX)</option>
+          </Select>
+        </div>
+        <div className={cell}>
+          <span className={lab}>Vai trò</span>
+          <Select value={value.vai_tro} onChange={(e) => set("vai_tro", e.target.value)}>
+            <option value="">Tất cả</option>
+            {ROLE_FLAGS.map((r) => (
+              <option key={r.flag} value={r.flag}>
+                {r.label}
+              </option>
+            ))}
+            <option value="none">(Chưa có vai trò)</option>
+          </Select>
+        </div>
+        <div className={cell}>
+          <span className={lab}>Miền</span>
+          <Select value={value.mien} onChange={(e) => set("mien", e.target.value)}>
+            <option value="">Tất cả</option>
+            <option value="MB">Miền Bắc</option>
+            <option value="MN">Miền Nam</option>
+            <option value="ALL">Cả 2 miền</option>
+            <option value="none">(Chưa gán)</option>
+          </Select>
+        </div>
+        <div className={cell}>
+          <span className={lab}>ETX</span>
+          <Select value={value.etx} onChange={(e) => set("etx", e.target.value)}>
+            <option value="">Tất cả</option>
+            <option value="on">Đang làm</option>
+            <option value="off">Đã nghỉ</option>
+            <option value="off_mo">Đã nghỉ nhưng chưa khoá</option>
+            <option value="none">Không có trên ETX</option>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          {soLoc > 0 ? (
+            <Btn size="sm" variant="ghost" onClick={() => onChange(LOC_RONG)}>
+              ✕ Xoá lọc ({soLoc})
+            </Btn>
+          ) : (
+            <span className="text-[11px] text-[var(--ink-faint)]">Chưa lọc</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
