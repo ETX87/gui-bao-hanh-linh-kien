@@ -185,6 +185,11 @@ export interface PhieuTra {
   kq_khieu_nai_boi?: string | null;
   kq_khieu_nai_luc?: string | null;
   mien?: Mien | null;
+  // Kho / Ke toan day nguoc phieu da duyet ve Admin BH (19/10/2026).
+  ly_do_day_nguoc?: string | null;
+  day_nguoc_boi?: string | null;
+  day_nguoc_vai_tro?: "kho" | "ke_toan" | null;
+  day_nguoc_luc?: string | null;
   created_at: string;
   updated_at: string;
 }

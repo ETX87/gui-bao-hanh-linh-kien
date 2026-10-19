@@ -7,17 +7,19 @@ import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, Badge, Spinner } from "../../ui/primitives";
-import { LOAI_DOI_TRU_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
-import { useLkName } from "../../hooks/useLinhKien";
+import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
+import { useLinhKien, useLkName, lkOptions } from "../../hooks/useLinhKien";
+import { SearchableSelect } from "../../ui/SearchableSelect";
+import { ReturnUnitTable, UnitFilterBar, useFilteredUnits, EMPTY_LOC, type ReturnUnit, type UnitLoc } from "../adminbh/ReturnUnitTable";
 import { LogTimeline } from "./LogTimeline";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { DetailGrid, SummaryBox, Section, KvGrid, Kv, Chip, Banner, Thumbs, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
-import type { AppUser, DonVi, LogRow, PhieuTra } from "../../lib/types";
+import type { AppUser, LogRow, PhieuTra } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 
 interface DetailResponse {
   phieu_tra: PhieuTra;
-  don_vi: DonVi[];
+  don_vi: ReturnUnit[];
   anh: { id: number; anh_url: string }[];
   logs: LogRow[];
 }
@@ -49,6 +51,11 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const [ghiChuKN, setGhiChuKN] = useState("");
   const [busy, setBusy] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
+  // 19/10/2026: sua phieu (them/bot don vi, doi linh kien thuc te) + Kho/Ke toan day nguoc phieu len nham.
+  const [showThem, setShowThem] = useState(false);
+  const [doiLk, setDoiLk] = useState<ReturnUnit | null>(null);
+  const [dayNguoc, setDayNguoc] = useState<"kho" | "ke_toan" | null>(null);
+  const [lyDoDayNguoc, setLyDoDayNguoc] = useState("");
 
   const load = () =>
     api.get<DetailResponse>(`/phieu-tra/${traId}`).then((r) => {
@@ -84,7 +91,12 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   }
   const t = data.phieu_tra;
   const isNhap = t.trang_thai === "nhap";
-  const khoChoGui = user.la_kho && t.trang_thai === "da_duyet_ke_toan";
+  const isAdmin = user.la_admin_bh || user.la_qtri;
+  const isKeToan = user.la_ke_toan || user.la_qtri;
+  const isKho = user.la_kho || user.la_qtri;
+  // Sua duoc (ma, them/bot don vi, doi linh kien) cho toi khi Ke toan duyet cho Kho xuat.
+  const canEdit = isAdmin && (isNhap || t.trang_thai === "cho_ke_toan_duyet");
+  const khoChoGui = isKho && t.trang_thai === "da_duyet_ke_toan";
   const batBuocMa = t.loai_doi_tru !== "tru_cong_no";
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
   const canOpenUnit = !nested && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
@@ -92,7 +104,26 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
   const guiDuyet = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
   const huyGuiDuyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/huy-gui-duyet`); toast("Đã huỷ gửi duyệt.", "ok"); });
-  const tachDonVi = (unitId: string) => run(async () => { await api.delete(`/phieu-tra/${traId}/don-vi/${unitId}`); toast("Đã tách khỏi phiếu.", "ok"); });
+  const tachDonVi = (unitId: string) => {
+    if (!confirm(`Bỏ đơn ${unitId} khỏi phiếu? Đơn sẽ quay lại danh sách chờ tạo phiếu trả.`)) return;
+    run(async () => { await api.delete(`/phieu-tra/${traId}/don-vi/${unitId}`); toast("Đã bỏ đơn khỏi phiếu.", "ok"); });
+  };
+  const xoaPhieu = () => {
+    if (!confirm(`Xoá phiếu trả rỗng ${traId}?`)) return;
+    setBusy(true);
+    api
+      .delete(`/phieu-tra/${traId}`)
+      .then(() => { toast("Đã xoá phiếu trả.", "ok"); onChanged(); onClose(); })
+      .catch((e) => toast(errorMessage(e), "error"))
+      .finally(() => setBusy(false));
+  };
+  const guiDayNguoc = () =>
+    run(async () => {
+      await api.post(`/phieu-tra/${traId}/day-nguoc`, { vai_tro: dayNguoc, ly_do: lyDoDayNguoc });
+      toast("Đã đẩy ngược phiếu về Admin bảo hành.", "ok");
+      setDayNguoc(null);
+      setLyDoDayNguoc("");
+    });
   const duyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/duyet`); toast("Đã duyệt.", "ok"); });
   const tuChoi = () => run(async () => { await api.post(`/phieu-tra/${traId}/tu-choi`, { ly_do: lyDoTuChoi }); toast("Đã từ chối.", "ok"); setShowTuChoi(false); });
   const dongGoi = async (files: FileList | null) =>
@@ -126,17 +157,22 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
         headerActions={<StatusBadge kind="tra" value={t.trang_thai} />}
         footerActions={
           <>
-            {user.la_admin_bh && isNhap && (
+            {canEdit && data.don_vi.length === 0 && (
+              <Btn variant="danger" disabled={busy} onClick={xoaPhieu}>
+                🗑 Xoá phiếu rỗng
+              </Btn>
+            )}
+            {isAdmin && isNhap && data.don_vi.length > 0 && (
               <Btn variant="primary" disabled={busy} onClick={guiDuyet}>
                 Gửi duyệt kế toán
               </Btn>
             )}
-            {user.la_admin_bh && t.trang_thai === "cho_ke_toan_duyet" && (
+            {isAdmin && t.trang_thai === "cho_ke_toan_duyet" && (
               <Btn variant="danger" disabled={busy} onClick={huyGuiDuyet}>
                 Huỷ gửi duyệt
               </Btn>
             )}
-            {user.la_ke_toan && t.trang_thai === "cho_ke_toan_duyet" && !showTuChoi && (
+            {isKeToan && t.trang_thai === "cho_ke_toan_duyet" && !showTuChoi && (
               <>
                 <Btn variant="danger" onClick={() => setShowTuChoi(true)}>
                   Từ chối
@@ -145,6 +181,16 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                   Duyệt
                 </Btn>
               </>
+            )}
+            {t.trang_thai === "da_duyet_ke_toan" && !dayNguoc && isKeToan && (
+              <Btn variant="danger" onClick={() => setDayNguoc("ke_toan")} title="Huỷ duyệt, trả phiếu về Admin BH sửa (phiếu lên nhầm)">
+                ↩ Huỷ duyệt, trả Admin BH
+              </Btn>
+            )}
+            {t.trang_thai === "da_duyet_ke_toan" && !dayNguoc && isKho && !(isKeToan && user.la_qtri) && (
+              <Btn variant="danger" onClick={() => setDayNguoc("kho")} title="Trả phiếu về Admin BH sửa (hàng / phiếu lên nhầm)">
+                ↩ Kho trả lại Admin BH
+              </Btn>
             )}
             {khoChoGui && (
               <>
@@ -157,7 +203,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 </Btn>
               </>
             )}
-            {user.la_kho && t.trang_thai === "da_gui" && (
+            {isKho && t.trang_thai === "da_gui" && (
               <Btn variant="secondary" disabled={busy} onClick={khoXacNhanKetThuc}>
                 Kho xác nhận kết thúc (dự phòng)
               </Btn>
@@ -201,6 +247,22 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             </>
           }
         >
+          {dayNguoc && (
+            <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                {dayNguoc === "kho" ? "Kho" : "Kế toán"} đẩy ngược phiếu về Admin bảo hành → phiếu quay lại trạng thái Nhập để Admin sửa (thêm / bớt đơn, đổi linh kiện, sửa mã) rồi gửi duyệt lại.
+              </p>
+              <Field label="Lý do (phiếu lên nhầm gì?)" required>
+                <Textarea rows={2} value={lyDoDayNguoc} onChange={(e) => setLyDoDayNguoc(e.target.value)} placeholder="VD: Thiếu 1 bơm DH-000123-1, linh kiện thực tế không khớp hàng trong kho…" autoFocus />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Btn onClick={() => setDayNguoc(null)}>Huỷ</Btn>
+                <Btn variant="danger" disabled={!lyDoDayNguoc.trim() || busy} onClick={guiDayNguoc}>
+                  Xác nhận đẩy ngược
+                </Btn>
+              </div>
+            </div>
+          )}
           {showTuChoi && (
             <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
               <Field label="Lý do từ chối" required>
@@ -267,7 +329,15 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             </div>
           </SummaryBox>
 
+          {t.ly_do_day_nguoc && isNhap && (
+            <Banner tone="red">
+              ↩ {t.day_nguoc_vai_tro === "kho" ? "Kho" : "Kế toán"} đẩy ngược phiếu (lên nhầm): {t.ly_do_day_nguoc} · <UserName email={t.day_nguoc_boi} /> · {fmtDate(t.day_nguoc_luc)}
+            </Banner>
+          )}
           {t.ly_do_tu_choi_kt && <Banner tone="amber">Kế toán từ chối lần trước: {t.ly_do_tu_choi_kt}</Banner>}
+          {canEdit && t.trang_thai === "cho_ke_toan_duyet" && (
+            <Banner tone="blue">Phiếu đang chờ Kế toán duyệt — vẫn sửa được (thêm / bớt đơn, đổi linh kiện, sửa mã); mọi thay đổi được ghi vào nhật ký để Kế toán thấy.</Banner>
+          )}
           {t.khong_nhan_duoc_ghi_chu && <Banner tone="red">⚠ KTV báo không nhận được hàng: {t.khong_nhan_duoc_ghi_chu}</Banner>}
           {t.kq_khieu_nai && (
             <Banner tone={t.kq_khieu_nai === "that_bai" ? "red" : "green"}>
@@ -285,14 +355,14 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           <Section
             title="🧾 Mã chứng từ"
             right={
-              isNhap && user.la_admin_bh ? (
+              canEdit ? (
                 <Btn size="sm" onClick={saveCodes} disabled={busy}>
                   Lưu mã
                 </Btn>
               ) : undefined
             }
           >
-            {isNhap && user.la_admin_bh ? (
+            {canEdit ? (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Field label={`Mã đơn hàng${batBuocMa ? " *" : ""}`}>
                   <Input value={maDonHang} onChange={(e) => setMaDonHang(e.target.value)} />
@@ -324,43 +394,151 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             )}
           </Section>
 
-          <Section title={`📦 Đơn vị trong phiếu (${data.don_vi.length})`}>
-            <div className="divide-y divide-[var(--line)] -mx-1">
-              {data.don_vi.map((u) => (
-                <div
-                  key={u.id}
-                  onClick={canOpenUnit ? () => setOpenUnit(u.id) : undefined}
-                  className={`flex flex-wrap md:flex-nowrap items-center gap-x-3 gap-y-0.5 px-1 py-1.5 text-[13px] ${canOpenUnit ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
-                >
-                  <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{u.id}</span>
-                  <span className="min-w-0 md:max-w-[38%] truncate text-[var(--ink)]" title={nameOf(u.ma_lk_thuc_te || u.ma_lk)}>
-                    {nameOf(u.ma_lk_thuc_te || u.ma_lk)}
-                  </span>
-                  {u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
-                  <span className="basis-full md:basis-auto min-w-0 flex-1 truncate text-xs text-[var(--ink-soft)]" title={u.mo_ta_loi || ""}>
-                    {u.mo_ta_loi}
-                  </span>
-                  {user.la_admin_bh && isNhap && (
-                    <Btn
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        tachDonVi(u.id);
-                      }}
-                      disabled={busy}
-                      className="ml-auto shrink-0 !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
-                    >
-                      Tách khỏi phiếu
-                    </Btn>
-                  )}
-                </div>
-              ))}
-            </div>
+          <Section
+            title={`📦 Đơn vị trong phiếu (${data.don_vi.length})`}
+            right={
+              canEdit ? (
+                <Btn size="sm" variant="primary" disabled={busy} onClick={() => setShowThem(true)}>
+                  ＋ Thêm đơn vào phiếu
+                </Btn>
+              ) : undefined
+            }
+          >
+            <ReturnUnitTable
+              units={data.don_vi}
+              onOpen={canOpenUnit ? (u) => setOpenUnit(u.id) : undefined}
+              emptyText="Phiếu chưa có đơn nào."
+              rowExtra={
+                canEdit
+                  ? {
+                      header: "Sửa",
+                      render: (u) => (
+                        <span className="flex gap-1 whitespace-nowrap">
+                          <Btn size="sm" variant="secondary" disabled={busy} onClick={() => setDoiLk(u)} title="Đổi linh kiện thực tế trả về">
+                            Đổi LK
+                          </Btn>
+                          <Btn size="sm" variant="ghost" disabled={busy} onClick={() => tachDonVi(u.id)} className="!text-[var(--red-600)]" title="Bỏ đơn khỏi phiếu">
+                            Bỏ
+                          </Btn>
+                        </span>
+                      ),
+                    }
+                  : undefined
+              }
+            />
           </Section>
         </DetailGrid>
       </Modal>
+      {showThem && <ThemDonModal traId={traId} onClose={() => setShowThem(false)} onDone={() => { setShowThem(false); onChanged(); load(); }} />}
+      {doiLk && <DoiLinhKienModal traId={traId} unit={doiLk} onClose={() => setDoiLk(null)} onDone={() => { setDoiLk(null); onChanged(); load(); }} />}
       {openUnit && <UnitDetailModal unitId={openUnit} user={user} nested onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
     </>
+  );
+}
+
+// Them don vi san sang gom vao phieu (cung KTV nhan + cung loai doi tru) - 19/10/2026.
+function ThemDonModal({ traId, onClose, onDone }: { traId: string; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [units, setUnits] = useState<ReturnUnit[] | null>(null);
+  const [loc, setLoc] = useState<UnitLoc>(EMPTY_LOC);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api
+      .get<{ don_vi: ReturnUnit[] }>(`/phieu-tra/${traId}/co-the-them`)
+      .then((r) => setUnits(r.don_vi))
+      .catch((e) => { toast(errorMessage(e), "error"); setUnits([]); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [traId]);
+  const filtered = useFilteredUnits(units ?? [], loc);
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleMany = (ids: string[], on: boolean) => setSelected((s) => { const n = new Set(s); ids.forEach((id) => (on ? n.add(id) : n.delete(id))); return n; });
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>(`/phieu-tra/${traId}/don-vi`, { unit_ids: [...selected] });
+      toast(`Đã thêm ${r.ok} đơn vào phiếu${r.loi.length ? ` · ${r.loi.length} đơn không thêm được` : ""}.`, r.loi.length ? "error" : "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={`Thêm đơn vào phiếu ${traId}`}
+      onClose={onClose}
+      maxWidthClass="max-w-6xl"
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Huỷ</Btn>
+          <Btn variant="primary" disabled={!selected.size || busy} onClick={submit}>
+            Thêm {selected.size} đơn
+          </Btn>
+        </>
+      }
+    >
+      <p className="text-xs text-[var(--ink-soft)] mb-2">Chỉ hiện các đơn đang chờ tạo phiếu trả, cùng người nhận và cùng loại đối trừ với phiếu này.</p>
+      {units === null ? (
+        <Spinner />
+      ) : (
+        <>
+          <UnitFilterBar value={loc} onChange={setLoc} units={units} />
+          <ReturnUnitTable units={filtered} selected={selected} onToggle={toggle} onToggleMany={toggleMany} emptyText={units.length ? "Không có đơn nào khớp bộ lọc." : "Không còn đơn nào phù hợp để thêm vào phiếu này."} />
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// Doi linh kien thuc te tra ve cua 1 don vi trong phieu dang sua - 19/10/2026.
+function DoiLinhKienModal({ traId, unit, onClose, onDone }: { traId: string; unit: ReturnUnit; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const { items } = useLinhKien();
+  const { nameOf } = useLkName();
+  const cur = unit.ma_lk_thuc_te || unit.ma_lk || "";
+  const [ma, setMa] = useState(cur);
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    try {
+      await api.patch(`/phieu-tra/${traId}/don-vi/${unit.id}`, { ma_lk_thuc_te: ma });
+      toast("Đã đổi linh kiện thực tế.", "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={`Đổi linh kiện thực tế · ${unit.id}`}
+      onClose={onClose}
+      maxWidthClass="max-w-lg"
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Huỷ</Btn>
+          <Btn variant="primary" disabled={!ma || ma === cur || busy} onClick={submit}>
+            Lưu
+          </Btn>
+        </>
+      }
+    >
+      <div className="space-y-2 text-sm">
+        <p className="text-[var(--ink-soft)]">
+          KTV gửi: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk)}</b>
+          {unit.ma_lk_thuc_te && unit.ma_lk_thuc_te !== unit.ma_lk && (
+            <>
+              {" "}· hiện tại: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk_thuc_te)}</b>
+            </>
+          )}
+        </p>
+        <Field label="Linh kiện thực tế trả về" required>
+          <SearchableSelect options={lkOptions(items)} value={ma} onChange={setMa} allowEmpty={false} />
+        </Field>
+      </div>
+    </Modal>
   );
 }

@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`). **Mốc mới nhất (16/10/2026, v1.031):** tài khoản tự duyệt nếu có trên ETX nhân sự, tự khoá khi nghỉ việc, tự mở khi đi làm lại (danh bạ ETX lấy từ linh-kien-app); khu vực KTV tiếp tục lấy theo danh bạ đồng bộ từ linh-kien-app. **Mốc mới nhất (19/10/2026):** xoá toàn bộ dữ liệu test trên production và nhập 656 đơn bảo hành thật từ AppSheet (`don bh.xlsx`); sau đó dọn 7 thùng test bên khovan, gán xử lý xác "trả đối tác", sửa 23 đơn vị nhập sai phương án, nhập 82 đề xuất linh kiện — xem 2 mục cuối file. **Cùng ngày:** tài liệu hướng dẫn Word (.docx) có ảnh minh hoạ cho vai trò KTV — `du an sua chua bao hanh/Huong-dan-KTV/`.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`). **Mốc mới nhất (16/10/2026, v1.031):** tài khoản tự duyệt nếu có trên ETX nhân sự, tự khoá khi nghỉ việc, tự mở khi đi làm lại (danh bạ ETX lấy từ linh-kien-app); khu vực KTV tiếp tục lấy theo danh bạ đồng bộ từ linh-kien-app. **Mốc mới nhất (19/10/2026):** xoá toàn bộ dữ liệu test trên production và nhập 656 đơn bảo hành thật từ AppSheet (`don bh.xlsx`); sau đó dọn 7 thùng test bên khovan, gán xử lý xác "trả đối tác", sửa 23 đơn vị nhập sai phương án, nhập 82 đề xuất linh kiện — xem 2 mục cuối file. **Cùng ngày:** tài liệu hướng dẫn Word (.docx) có ảnh minh hoạ cho vai trò KTV — `du an sua chua bao hanh/Huong-dan-KTV/`. **Mốc mới nhất (19/10/2026, v1.034):** làm lại màn lên phiếu trả — danh sách đơn chờ trả dạng bảng nhóm theo KTV (tick 1/nhiều đơn → tạo phiếu, tự tách theo KTV × loại đối trừ), sửa phiếu (thêm/bớt đơn, đổi linh kiện thực tế) tới khi Kế toán duyệt, nút đẩy ngược cho Kho + Kế toán, bộ lọc/tìm kiếm cho cả 2 danh sách — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -5284,3 +5284,62 @@ Rồi gửi file `don bh.xlsx` (Desktop) kèm lời nhắn: *"đây là dữ li�
 **(c) Lỗi phát hiện + đã sửa:** lần nhập 656 đơn trước tách PAXL (phương án xử lý) bằng dấu phẩy, nên tách sai cả những phương án có dấu phẩy bên trong tên (VD "Xác nhận linh kiện, trừ công nợ") → 23 đơn vị nhận sai hướng xử lý. Đã đổi cách tách thành `\s+,\s+` và sửa bằng UPDATE; 5 phiếu trả có loại đối trừ được chỉnh lại thành `tru_cong_no` (`../backup-suachua/fix-paxl-20261019.sql`). Phân bố sau khi sửa: Đổi mới 615, Sửa chữa 93, Trừ công nợ 25, Từ chối 4, chưa có hướng 9.
 
 **(d) Kiểm thử:** truy vấn D1 production sau khi nhập trả về 82 đề xuất (81 đã cấp), bộ đếm = 82, 0 đề xuất trỏ tới linh kiện không có trong danh mục. Khovan không còn thùng `BH-*` nguồn `ext_suachua001`.
+
+## Làm lại màn lên phiếu trả: bảng nhóm theo KTV, sửa phiếu tới khi KT duyệt, đẩy ngược, bộ lọc (19/10/2026) — v1.034
+
+**(a) Nguyên văn yêu cầu:**
+
+> giao diện lên phiếu xuất trả hiện tại chưa ok =>
+> 1. Ở day sách đơn chờ trả: hiện danh sách theo dạng list
+> KTV (x123)
+>      đơn 1 (các cột liên quan)
+>      đơn 2 (các cột liên quan)
+> bên dưới là danh sách các đơn sửa chữa, đổi trả... chờ tạo phiếu trả (dạng bảng) => có thể tích chọn 1 đơn hoặc nhiều đơn để tạo phiếu trả.
+> 2. Trong phiếu trả đang tạo, có thể thêm bớt, thay đổi linh kiện thực tế bên trong (được sửa cho đến khi phiếu chuyển sang trạng thái KT xác nhận cho kho xuất). + Thêm nút đẩy ngược cho kho + kế toán phòng trường hợp đơn bị lên nhầm
+> 3. Bổ sung thêm các công cụ filter, tìm kiếm phù hợp cho giao diện xuất phiếu
+
+**(b) Đã làm:**
+1. **Đơn chờ tạo phiếu trả** (`screens/adminbh/PhieuTra.tsx` viết lại + component mới `screens/adminbh/ReturnUnitTable.tsx`):
+   - Bảng nhóm theo người nhận: dòng nhóm "👷 KTV ×N" (ô chọn cả nhóm, có trạng thái nửa chọn, nút "Tạo phiếu (N đơn / N đã chọn)"),
+     dưới là từng đơn: ID (+ Odoo), linh kiện thực tế + phân loại (+ "Đã đổi LK"), hướng xử lý, đối trừ, kết quả NV / xử lý xác,
+     case · khách, mô tả lỗi, miền, thời gian chờ. Bấm dòng mở UI chi tiết đơn. 20 nhóm/trang.
+   - Thanh thao tác: "Chọn tất cả đang lọc", "Đã chọn N đơn · K người nhận → P phiếu", "＋ Tạo phiếu trả", "Trả xác cho đối tác…",
+     "Bỏ chọn"; "⚡ Tự động gộp tất cả" giữ nguyên.
+   - `GET /phieu-tra/san-sang` trả thêm đủ cột (join đơn cha + tên khách từ bằng chứng case). Route mới `POST /phieu-tra/tao-nhieu
+     {unit_ids, doi_tac_key?}`: chọn đơn của nhiều KTV cùng lúc, tự tách 1 phiếu "nhập" cho mỗi tổ hợp (KTV, loại đối trừ)
+     (giữ ràng buộc 1 phiếu = 1 người nhận + 1 loại đối trừ); đơn không còn sẵn sàng trả về `bo_qua`. Tạo được 1 phiếu thì tự mở.
+2. **Sửa phiếu tới khi Kế toán duyệt** (trạng thái `nhap` + `cho_ke_toan_duyet`; ghi đè quyết định 21/08/2026 "chỉ tách khi còn nhập"):
+   - `GET /phieu-tra/:id/co-the-them` + `POST /phieu-tra/:id/don-vi {unit_ids}`: thêm đơn sẵn sàng cùng người nhận + cùng loại đối trừ
+     (phiếu trả xác đối tác chỉ cần cùng loại) — lỗi theo dòng `KTV_MISMATCH` / `LOAI_DOI_TRU_MISMATCH` / `NOT_READY`.
+   - `DELETE /phieu-tra/:id/don-vi/:unitId`: bỏ đơn (đơn quay lại danh sách chờ), nay có ghi nhật ký.
+   - `PATCH /phieu-tra/:id/don-vi/:unitId {ma_lk_thuc_te}`: đổi linh kiện thực tế (kiểm tra có trong danh mục), ghi nhật ký cả
+     đơn vị lẫn phiếu.
+   - `DELETE /phieu-tra/:id`: xoá phiếu rỗng. `gui-duyet` chặn phiếu rỗng (`EMPTY_PHIEU_TRA`).
+   - Mã chứng từ sửa được ở cả 2 trạng thái. Khi đang chờ KT duyệt có banner "vẫn sửa được, mọi thay đổi ghi nhật ký".
+   - UI chi tiết phiếu trả: bảng đơn vị dùng chung `ReturnUnitTable` + cột "Sửa" (Đổi LK / Bỏ), nút "＋ Thêm đơn vào phiếu" (modal
+     có bộ lọc + chọn nhiều), "🗑 Xoá phiếu rỗng".
+3. **Đẩy ngược** — `POST /phieu-tra/:id/day-nguoc {vai_tro: kho|ke_toan, ly_do}`: phiếu `da_duyet_ke_toan` (KT đã duyệt, Kho chưa
+   gửi) → về `nhap`, bắt buộc lý do. Nút "↩ Kho trả lại Admin BH" (Kho) và "↩ Huỷ duyệt, trả Admin BH" (Kế toán). Migration
+   `0015_phieu_tra_day_nguoc.sql` (4 cột `ly_do_day_nguoc`, `day_nguoc_boi`, `day_nguoc_vai_tro`, `day_nguoc_luc`); banner đỏ ở chi
+   tiết phiếu + nhãn "↩ Kho/KT đẩy ngược" ở danh sách; xoá khi Admin gửi duyệt lại.
+4. **Bộ lọc / tìm kiếm:**
+   - Đơn chờ: tìm (mã đơn, case, khách, linh kiện tên/mã, KTV, phiếu gửi — không dấu, nhiều từ), Đối trừ, Hướng xử lý, Nguồn
+     (KTV / khách lẻ), Miền, Thời gian chờ (>24h, giờ SLA bỏ Chủ nhật) — lọc trên máy.
+   - Danh sách phiếu trả (server, `GET /phieu-tra`): tìm `q` (mã phiếu, mã ĐH, MISA, vận đơn, email/tên/mã KTV, mã đơn vị, case,
+     linh kiện bên trong), Trạng thái (nhận nhiều giá trị, có nhóm "Đang sửa được"), Đối trừ, Người nhận (KTV / khách lẻ / đối tác),
+     Miền; thêm cột Vận đơn, Cập nhật, Ghi chú.
+- Sửa kèm: các nút trong chi tiết phiếu trả trước chỉ kiểm `la_admin_bh` / `la_kho` / `la_ke_toan` → nay gồm cả `la_qtri`.
+
+**(c) Vấn đề:** nhãn "Đã đổi LK" nằm trong ô tên bị cắt chữ nên không thấy → dời xuống dòng phụ. Ghi nhận (chưa sửa): KT duyệt đã
+báo đơn "chờ xử lý" sang khovan; đẩy ngược KHÔNG huỷ bên khovan (chưa có API huỷ) — Kho bên khovan có thao tác thì `partnerKho` vẫn
+chặn `WRONG_STATE` vì phiếu đã về `nhap`; duyệt lại sẽ báo sang khovan lần nữa.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (`wrangler dev` D1 `.wrangler/docs-ktv`, bỏ tạm binding
+remote rồi khôi phục `wrangler.jsonc`), seed 7 đơn sẵn sàng của 2 KTV + 1 khách lẻ, tài khoản đơn vai trò Admin BH / Kế toán / Kho:
+- API 24/24: tạo nhiều tách đúng 3 phiếu; co-the-them chỉ ra đơn cùng KTV + loại; thêm đơn khách lẻ vào phiếu KTV bị `KTV_MISMATCH`;
+  đổi LK / LK không tồn tại bị chặn; bỏ + thêm lại đơn khi đang chờ KT; sau KT duyệt thì không sửa được; đẩy ngược thiếu lý do /
+  sai vai trò bị chặn, Kho và KT đẩy ngược đúng, lưu lý do + nhật ký; phiếu rỗng không gửi duyệt được, xoá được; phiếu còn đơn
+  không xoá được; tìm theo mã đơn vị / tên KTV, lọc nhiều trạng thái; tạo phiếu trả xác đối tác.
+- UI 1440×900 (puppeteer): bảng nhóm theo KTV, chọn cả nhóm, thanh "Đã chọn 2 đơn · 1 người nhận → 2 phiếu", bộ lọc, danh sách phiếu
+  có bộ lọc + nhãn đẩy ngược; chi tiết phiếu có banner đẩy ngược, cột Sửa, modal Thêm đơn + Đổi linh kiện; Kho mở phiếu đã duyệt có
+  form "Kho trả lại Admin BH". 0 lỗi console.

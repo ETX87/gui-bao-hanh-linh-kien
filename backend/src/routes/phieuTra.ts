@@ -46,20 +46,66 @@ function requireAdminBH(c: { get(k: "user"): { la_admin_bh: boolean; la_qtri: bo
   return u.la_admin_bh || u.la_qtri;
 }
 
-// GET /api/phieu-tra/san-sang?ktv=<email|__khach_le__> - don vi san sang gom, nhom theo loai doi tru.
+// Phieu tra con sua duoc (them/bot don vi, doi linh kien thuc te, sua ma) cho toi khi Ke toan duyet
+// cho Kho xuat (19/10/2026: "duoc sua cho den khi phieu chuyen sang trang thai KT xac nhan cho kho xuat").
+const EDIT_STATES = ["nhap", "cho_ke_toan_duyet"];
+const DOI_TAC_PREFIX = "__doi_tac__:";
+
+// Cot hien thi cua 1 don vi "cho tao phieu tra" / "trong phieu tra" (19/10/2026, danh sach dang bang).
+const UNIT_COLS = `u.id, u.parent_id, u.so_thu_tu, u.trang_thai, u.loai_doi_tru, u.loai_bao_hanh, u.huong_xu_ly, u.ma_lk_thuc_te,
+  u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.nguoi_sua_chua, u.updated_at, u.phieu_tra_id,
+  p.case_id, p.ma_lk, p.mo_ta_loi, p.mien, p.phieu_gui_id, p.odoo_id, p.nguon_tao, p.ten_khach_hang,
+  (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang`;
+
+// GET /api/phieu-tra/san-sang - don vi san sang gom (chua thuoc phieu tra nao). Loc/tim lam tren may
+// (hang doi bi chan boi buoc "xac nhan hoan tat" nen khong lon).
 phieuTra.get("/san-sang", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const ms = mienScope(c.get("user"), "p");
   const { results } = await c.env.DB.prepare(
-    `SELECT u.id, u.loai_doi_tru, u.parent_id, p.mien, COALESCE(g.nguoi_tao, ?) as ktv_key
+    `SELECT ${UNIT_COLS}, COALESCE(g.nguoi_tao, ?) as ktv_key
      FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${ms.sql}`,
+     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL${ms.sql}
+     ORDER BY ktv_key, u.updated_at`,
   )
     .bind(KHACH_LE_KEY, ...ms.binds)
     .all();
   return c.json({ don_vi: results });
+});
+
+// POST /api/phieu-tra/tao-nhieu {unit_ids, doi_tac_ten?} - tao phieu tra tu cac don vi da tick (co the
+// thuoc nhieu KTV): moi to hop (KTV, loai doi tru) 1 phieu "nhap" moi. doi_tac_ten -> tat ca thanh phieu
+// "tra xac cho doi tac" (tach theo loai doi tru).
+phieuTra.post("/tao-nhieu", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ unit_ids?: string[]; doi_tac_key?: string }>().catch(() => ({}) as { unit_ids?: string[]; doi_tac_key?: string });
+  const ids = [...new Set((body.unit_ids ?? []).map(String))].slice(0, 500);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  if (body.doi_tac_key && !body.doi_tac_key.startsWith(DOI_TAC_PREFIX)) return c.json({ error: "INVALID_DOI_TAC" }, 400);
+  const { results } = await c.env.DB.prepare(
+    `SELECT u.id, u.loai_doi_tru, COALESCE(g.nguoi_tao, ?) as ktv_key
+     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE u.id IN (SELECT value FROM json_each(?)) AND u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL`,
+  )
+    .bind(KHACH_LE_KEY, JSON.stringify(ids))
+    .all<{ id: string; loai_doi_tru: LoaiDoiTru; ktv_key: string }>();
+  const okIds = new Set(results.map((r) => r.id));
+  const boQua = ids.filter((id) => !okIds.has(id));
+  const groups = new Map<string, string[]>();
+  for (const r of results) {
+    const key = `${body.doi_tac_key || r.ktv_key}::${r.loai_doi_tru || "doi_tra"}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(r.id);
+  }
+  const created: string[] = [];
+  for (const [key, gIds] of groups) {
+    const [ktvKey, loai] = key.split("::");
+    created.push(await createPhieuTraForUnits(c.env.DB, ktvKey, loai as LoaiDoiTru, gIds, user.email));
+  }
+  return c.json({ phieu_tra_ids: created, so_don: results.length, bo_qua: boQua }, created.length ? 201 : 400);
 });
 
 phieuTra.post("/", async (c) => {
@@ -139,8 +185,37 @@ phieuTra.get("/", async (c) => {
     binds.push(ktv);
   }
   if (trangThai) {
-    where += " AND trang_thai = ?";
-    binds.push(trangThai);
+    // Nhieu trang thai cach nhau dau phay (bo loc "dang xu ly" = nhap,cho_ke_toan_duyet,...).
+    const tts = trangThai.split(",").map((s) => s.trim()).filter(Boolean);
+    where += ` AND trang_thai IN (${tts.map(() => "?").join(",")})`;
+    binds.push(...tts);
+  }
+  // Bo loc + tim kiem man phieu tra (19/10/2026).
+  const loai = c.req.query("loai_doi_tru");
+  if (loai) {
+    where += " AND loai_doi_tru = ?";
+    binds.push(loai);
+  }
+  const nguoiNhan = c.req.query("nguoi_nhan"); // ktv | khach_le | doi_tac
+  if (nguoiNhan === "khach_le") where += ` AND ktv_nhan = '${KHACH_LE_KEY}'`;
+  else if (nguoiNhan === "doi_tac") where += ` AND ktv_nhan LIKE '${DOI_TAC_PREFIX}%'`;
+  else if (nguoiNhan === "ktv") where += ` AND ktv_nhan <> '${KHACH_LE_KEY}' AND ktv_nhan NOT LIKE '${DOI_TAC_PREFIX}%'`;
+  const mien = c.req.query("mien");
+  if (mien === "none") where += " AND mien IS NULL";
+  else if (mien === "MB" || mien === "MN") {
+    where += " AND mien = ?";
+    binds.push(mien);
+  }
+  const q = c.req.query("q")?.trim().toLowerCase();
+  if (q) {
+    const kw = `%${q}%`;
+    where += ` AND (LOWER(id) LIKE ? OR LOWER(COALESCE(ma_don_hang,'')) LIKE ? OR LOWER(COALESCE(ma_misa,'')) LIKE ? OR LOWER(COALESCE(ma_van_don,'')) LIKE ?
+      OR LOWER(ktv_nhan) LIKE ?
+      OR ktv_nhan IN (SELECT email_dang_nhap FROM ktv_lien_he_bh WHERE LOWER(COALESCE(ten_hien_thi,'')) LIKE ? OR LOWER(ma_ktv) LIKE ?)
+      OR ktv_nhan IN (SELECT email FROM users WHERE LOWER(COALESCE(ten,'')) LIKE ?)
+      OR id IN (SELECT u.phieu_tra_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+                WHERE u.phieu_tra_id IS NOT NULL AND (LOWER(u.id) LIKE ? OR LOWER(COALESCE(p.case_id,'')) LIKE ? OR LOWER(COALESCE(u.ma_lk_thuc_te, p.ma_lk, '')) LIKE ?)))`;
+    binds.push(kw, kw, kw, kw, kw, kw, kw, kw, kw, kw, kw);
   }
   const [{ results }, totalRow] = await Promise.all([
     // so_don (12/10/2026, de xuat #16): so don vi trong phieu, hien cot "Số đơn" o cac danh sach.
@@ -163,9 +238,9 @@ phieuTra.get("/:id", async (c) => {
   // JOIN don cha de tra ten linh kien / mo ta loi / case (Phat hien 4 vong ra soat UX): KTV nhan
   // hang tra / Ke toan duyet can biet trong phieu co gi, ban cu chi hien ID + huong_xu_ly tho.
   const { results: donVi } = await c.env.DB.prepare(
-    `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi
+    `SELECT ${UNIT_COLS}
      FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-     WHERE u.phieu_tra_id = ?`,
+     WHERE u.phieu_tra_id = ? ORDER BY u.id`,
   )
     .bind(id)
     .all();
@@ -187,15 +262,122 @@ phieuTra.patch("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-// DELETE /api/phieu-tra/:id/don-vi/:unitId - tach 1 don vi khoi phieu (chi khi phieu con "nhap").
+// DELETE /api/phieu-tra/:id/don-vi/:unitId - bo 1 don vi khoi phieu (don vi quay lai danh sach "cho tao
+// phieu tra"). Duoc khi phieu con "nhap" hoac "cho Ke toan duyet" (19/10/2026).
 phieuTra.delete("/:id/don-vi/:unitId", async (c) => {
+  const user = c.get("user");
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
   const unitId = c.req.param("unitId");
   const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
-  if (t.trang_thai !== "nhap") return c.json({ error: "WRONG_STATE" }, 400);
-  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = NULL WHERE id = ? AND phieu_tra_id = ?").bind(unitId, id).run();
+  if (!EDIT_STATES.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  const r = await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = NULL WHERE id = ? AND phieu_tra_id = ?").bind(unitId, id).run();
+  if (!r.meta?.changes) return c.json({ error: "NOT_FOUND" }, 404);
+  await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, t.trang_thai, user.email, `Bỏ đơn vị ${unitId} khỏi phiếu`);
+  await syncPhieuTraMien(c.env.DB, id);
+  return c.json({ ok: true });
+});
+
+// GET /api/phieu-tra/:id/co-the-them - don vi san sang gom co the them vao phieu nay (cung KTV nhan + cung
+// loai doi tru; phieu tra xac cho doi tac thi chi can cung loai doi tru).
+phieuTra.get("/:id/co-the-them", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT ktv_nhan, loai_doi_tru FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ ktv_nhan: string; loai_doi_tru: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  const ms = mienScope(c.get("user"), "p");
+  const doiTac = t.ktv_nhan.startsWith(DOI_TAC_PREFIX);
+  const { results } = await c.env.DB.prepare(
+    `SELECT ${UNIT_COLS}, COALESCE(g.nguoi_tao, ?) as ktv_key
+     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE u.trang_thai = 'san_sang_gom_phieu_tra' AND u.phieu_tra_id IS NULL AND COALESCE(u.loai_doi_tru, 'doi_tra') = ?
+       ${doiTac ? "" : "AND COALESCE(g.nguoi_tao, ?) = ?"}${ms.sql}
+     ORDER BY ktv_key, u.updated_at`,
+  )
+    .bind(KHACH_LE_KEY, t.loai_doi_tru, ...(doiTac ? [] : [KHACH_LE_KEY, t.ktv_nhan]), ...ms.binds)
+    .all();
+  return c.json({ don_vi: results });
+});
+
+// POST /api/phieu-tra/:id/don-vi {unit_ids} - them don vi vao phieu dang sua (nhap / cho Ke toan duyet).
+phieuTra.post("/:id/don-vi", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai, ktv_nhan, loai_doi_tru FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; ktv_nhan: string; loai_doi_tru: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!EDIT_STATES.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ unit_ids?: string[] }>().catch(() => ({}) as { unit_ids?: string[] });
+  const ids = [...new Set((body.unit_ids ?? []).map(String))].slice(0, 500);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const { results } = await c.env.DB.prepare(
+    `SELECT u.id, u.loai_doi_tru, u.trang_thai, u.phieu_tra_id, COALESCE(g.nguoi_tao, ?) as ktv_key
+     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE u.id IN (SELECT value FROM json_each(?))`,
+  )
+    .bind(KHACH_LE_KEY, JSON.stringify(ids))
+    .all<{ id: string; loai_doi_tru: string | null; trang_thai: string; phieu_tra_id: string | null; ktv_key: string }>();
+  const doiTac = t.ktv_nhan.startsWith(DOI_TAC_PREFIX);
+  const loi: { id: string; error: string }[] = [];
+  const ok: string[] = [];
+  for (const id2 of ids) {
+    const u = results.find((r) => r.id === id2);
+    if (!u) loi.push({ id: id2, error: "NOT_FOUND" });
+    else if (u.trang_thai !== "san_sang_gom_phieu_tra" || u.phieu_tra_id) loi.push({ id: id2, error: "NOT_READY" });
+    else if ((u.loai_doi_tru || "doi_tra") !== t.loai_doi_tru) loi.push({ id: id2, error: "LOAI_DOI_TRU_MISMATCH" });
+    else if (!doiTac && u.ktv_key !== t.ktv_nhan) loi.push({ id: id2, error: "KTV_MISMATCH" });
+    else ok.push(id2);
+  }
+  if (ok.length) {
+    await c.env.DB.batch(ok.map((uid) => c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ? AND phieu_tra_id IS NULL").bind(id, uid)));
+    await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, t.trang_thai, user.email, `Thêm ${ok.length} đơn vị vào phiếu: ${ok.join(", ")}`);
+    await syncPhieuTraMien(c.env.DB, id);
+  }
+  return c.json({ ok: ok.length, loi });
+});
+
+// PATCH /api/phieu-tra/:id/don-vi/:unitId {ma_lk_thuc_te} - doi linh kien thuc te tra ve trong phieu dang sua.
+phieuTra.patch("/:id/don-vi/:unitId", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const unitId = c.req.param("unitId");
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!EDIT_STATES.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  const u = await c.env.DB.prepare("SELECT u.ma_lk_thuc_te, u.trang_thai, p.ma_lk FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ? AND u.phieu_tra_id = ?")
+    .bind(unitId, id)
+    .first<{ ma_lk_thuc_te: string | null; trang_thai: string; ma_lk: string | null }>();
+  if (!u) return c.json({ error: "NOT_FOUND" }, 404);
+  const body = await c.req.json<{ ma_lk_thuc_te?: string | null }>().catch(() => ({}) as { ma_lk_thuc_te?: string | null });
+  const ma = body.ma_lk_thuc_te?.trim() || null;
+  if (!ma) return c.json({ error: "MISSING_LINH_KIEN" }, 400);
+  const lk = await c.env.DB.prepare("SELECT ma_lk FROM linh_kien_bh WHERE ma_lk = ?").bind(ma).first();
+  if (!lk) return c.json({ error: "LINH_KIEN_NOT_FOUND" }, 400);
+  const cu = u.ma_lk_thuc_te || u.ma_lk || "—";
+  if (cu === ma) return c.json({ ok: true });
+  const now = nowVN();
+  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ma_lk_thuc_te = ?, updated_at = ? WHERE id = ?").bind(ma, now, unitId).run();
+  const msg = `Đổi linh kiện thực tế trong phiếu trả ${id}: ${cu} → ${ma}`;
+  await addLog(c.env.DB, "phieu_sc_ct", unitId, u.trang_thai, u.trang_thai, user.email, msg);
+  await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, t.trang_thai, user.email, `Đơn vị ${unitId}: đổi linh kiện thực tế ${cu} → ${ma}`);
+  return c.json({ ok: true });
+});
+
+// DELETE /api/phieu-tra/:id - xoa phieu da rong (khong con don vi nao), chi khi con dang sua.
+phieuTra.delete("/:id", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!EDIT_STATES.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).first<{ n: number }>();
+  if ((n?.n ?? 0) > 0) return c.json({ error: "PHIEU_TRA_CON_DON" }, 400);
+  await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, "da_xoa", user.email, "Xoá phiếu trả rỗng");
+  await c.env.DB.prepare("DELETE FROM phieu_tra_bh_anh WHERE phieu_tra_id = ?").bind(id).run();
+  await c.env.DB.prepare("DELETE FROM phieu_tra_bh WHERE id = ?").bind(id).run();
   return c.json({ ok: true });
 });
 
@@ -209,7 +391,9 @@ phieuTra.post("/:id/gui-duyet", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "nhap") return c.json({ error: "WRONG_STATE" }, 400);
   if (t.loai_doi_tru !== "tru_cong_no" && !t.ma_misa?.trim()) return c.json({ error: "REQUIRE_MA_MISA" }, 400);
-  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'cho_ke_toan_duyet', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
+  const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).first<{ n: number }>();
+  if (!n?.n) return c.json({ error: "EMPTY_PHIEU_TRA" }, 400);
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'cho_ke_toan_duyet', ly_do_day_nguoc = NULL, day_nguoc_boi = NULL, day_nguoc_vai_tro = NULL, day_nguoc_luc = NULL, updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "nhap", "cho_ke_toan_duyet", user.email, "Gửi duyệt kế toán");
   return c.json({ ok: true });
 });
@@ -296,6 +480,29 @@ phieuTra.post("/:id/tu-choi", async (c) => {
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_tu_choi_kt = ?, updated_at = ? WHERE id = ?").bind(body.ly_do.trim(), nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Kế toán từ chối: " + body.ly_do.trim());
+  return c.json({ ok: true });
+});
+
+// POST /api/phieu-tra/:id/day-nguoc {vai_tro: 'kho'|'ke_toan', ly_do} - phieu da duyet nhung len nham
+// (19/10/2026: "them nut day nguoc cho kho + ke toan phong truong hop don bi len nham"): Kho (truoc khi
+// gui) hoac Ke toan (huy duyet) tra phieu ve "nhap" cho Admin BH sua, bat buoc ly do.
+phieuTra.post("/:id/day-nguoc", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+  const body = await c.req.json<{ vai_tro?: string; ly_do?: string }>().catch(() => ({}) as { vai_tro?: string; ly_do?: string });
+  const vaiTro = body.vai_tro === "kho" ? "kho" : body.vai_tro === "ke_toan" ? "ke_toan" : null;
+  if (!vaiTro) return c.json({ error: "INVALID_VAI_TRO" }, 400);
+  if (vaiTro === "kho" ? !(user.la_kho || user.la_qtri) : !(user.la_ke_toan || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
+  const lyDo = body.ly_do?.trim();
+  if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
+  const now = nowVN();
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_day_nguoc = ?, day_nguoc_boi = ?, day_nguoc_vai_tro = ?, day_nguoc_luc = ?, updated_at = ? WHERE id = ?")
+    .bind(lyDo, user.email, vaiTro, now, now, id)
+    .run();
+  await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "nhap", user.email, `${vaiTro === "kho" ? "Kho" : "Kế toán"} đẩy ngược phiếu về Admin BH (lên nhầm): ${lyDo}`);
   return c.json({ ok: true });
 });
 

@@ -45,6 +45,14 @@ export const api = {
 // Khong co trong danh sach nay thi hien nguyen code (van con thong tin hon la an di).
 export const ERROR_MESSAGES: Record<string, string> = {
   MISSING_IDS: "Chưa chọn mục nào.",
+  EMPTY_PHIEU_TRA: "Phiếu trả chưa có đơn vị nào.",
+  PHIEU_TRA_CON_DON: "Phiếu còn đơn vị bên trong — bỏ hết đơn vị trước khi xoá phiếu.",
+  KTV_MISMATCH: "Đơn vị không cùng KTV nhận với phiếu trả.",
+  LOAI_DOI_TRU_MISMATCH: "Đơn vị khác loại đối trừ với phiếu trả.",
+  NOT_READY: "Đơn vị chưa sẵn sàng hoặc đã thuộc phiếu trả khác.",
+  LINH_KIEN_NOT_FOUND: "Linh kiện không có trong danh mục.",
+  INVALID_DOI_TAC: "Tên đối tác không hợp lệ.",
+  INVALID_VAI_TRO: "Vai trò không hợp lệ.",
   MISSING_LINH_KIEN: "Chưa chọn linh kiện cần cấp.",
   INVALID_SO_TIEN: "Số tiền không hợp lệ (phải là số nguyên ≥ 0).",
   FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
