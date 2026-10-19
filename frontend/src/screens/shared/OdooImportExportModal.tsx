@@ -24,13 +24,12 @@ interface Row {
   cap_nhat_luc: string | null;
 }
 
-const today = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 const daysAgo = (n: number) => new Date(Date.now() + 7 * 3600 * 1000 - n * 86400 * 1000).toISOString().slice(0, 10);
 
 export function OdooImportExportModal({ onClose }: { onClose: () => void }) {
   const toast = useToast();
-  const [tu, setTu] = useState(daysAgo(7));
-  const [den, setDen] = useState(today());
+  const [tu, setTu] = useState(daysAgo(3));
+  const [den, setDen] = useState(daysAgo(-1)); // mac dinh -3 .. +1 ngay (giong moc tai Odoo ben auto qs)
   const [chiCanCapNhat, setChiCanCapNhat] = useState(true);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<{ rows: Row[]; thieu_id: number } | null>(null);
