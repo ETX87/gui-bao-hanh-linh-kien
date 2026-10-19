@@ -5343,3 +5343,5 @@ remote rồi khôi phục `wrangler.jsonc`), seed 7 đơn sẵn sàng của 2 KT
 - UI 1440×900 (puppeteer): bảng nhóm theo KTV, chọn cả nhóm, thanh "Đã chọn 2 đơn · 1 người nhận → 2 phiếu", bộ lọc, danh sách phiếu
   có bộ lọc + nhãn đẩy ngược; chi tiết phiếu có banner đẩy ngược, cột Sửa, modal Thêm đơn + Đổi linh kiện; Kho mở phiếu đã duyệt có
   form "Kho trả lại Admin BH". 0 lỗi console.
+
+**Deploy (19/10/2026):** đã áp migration 0015 lên D1 production và `npm run deploy` (Version ID `8a6733e9`); bundle đang chạy mang `APP_VERSION` 1.034.
