@@ -201,7 +201,7 @@ theo VAI TRÒ, mỗi nhóm hiện tổng số việc của vai trò, mỗi mục
 tiết đơn bảo hành (modal cao theo nội dung, 2 cột, nhật ký gộp có tab lọc) — xem mục cuối file. **Mốc mới nhất (10/10/2026, v1.020):** áp cùng khuôn đó cho
 UI chi tiết phiếu trả + phiếu gửi (`ui/DetailParts.tsx` dùng chung) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.021):** UI chi tiết đơn bảo hành
 "tất cả trong một" (tiến trình 8 bước, liên kết xem nhanh, người liên quan, trao đổi ngay trong chi tiết) — xem mục cuối file. **Mốc mới nhất (11/10/2026, v1.022):** mọi UI chi tiết chiếm 95% rộng × 95%
-cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`). **Mốc mới nhất (16/10/2026, v1.031):** tài khoản tự duyệt nếu có trên ETX nhân sự, tự khoá khi nghỉ việc, tự mở khi đi làm lại (danh bạ ETX lấy từ linh-kien-app); khu vực KTV tiếp tục lấy theo danh bạ đồng bộ từ linh-kien-app.
+cao màn hình desktop. **Mốc mới nhất (11/10/2026, v1.023):** sidebar gọn — mỗi mục chỉ còn tên + số việc. **Mốc mới nhất (11/10/2026, v1.024):** hình thức gửi "Giao trực tiếp" + sắp lại ô vận chuyển. **Mốc mới nhất (11/10/2026, v1.025):** chia hệ thống thành 2 miền Bắc / Nam + "Chưa khai báo" (đơn tự gán miền theo khu vực KTV, người xử lý gán miền phụ trách, đổi miền được + chuyển luôn KTV). **Mốc mới nhất (11/10/2026, v1.026):** danh mục linh kiện tải xlsx / import tháng BH + phân loại / sửa phân loại tay, phân loại đồng bộ ngược về linh-kien-app (chỉ dòng có thay đổi); ẩn menu "Mua hàng". **Mốc mới nhất (12/10/2026, v1.027):** giao trực tiếp tự lấy tên KTV làm người giao; nhớ cách giao hàng trên máy người dùng; nút "Lưu nháp, gửi sau"; cảnh báo đơn tồn + thời gian xử lý trung bình theo vai trò; lịch sử bảo hành theo Serial / ID case. **Mốc mới nhất (12/10/2026, v1.028):** làm nốt đề xuất rà soát Admin BH (ô tìm từ khoá, tiếp nhận nhiều thùng + sửa kẹt lý do chậm, xác nhận hoàn tất hàng loạt, tên khách + badge "Hết BH" từ bằng chứng case, cột số đơn); chốt 6 câu hỏi mở — Kho đánh giá khiếu nại "không nhận được hàng" (thành công / thất bại thất lạc), ghi nhận số tiền thu hồi từ hãng. Đã deploy cùng v1.029. **Mốc mới nhất (12/10/2026, v1.029):** tính năng "Đề xuất linh kiện" (NV xin cấp linh kiện = đơn con của đơn bảo hành, Admin BH lên MISA rồi cấp / từ chối, không giới hạn số lần) + NV nộp 1 trong 4 kết quả (Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn) + Kho ghi "phương án xử lý" khi gửi thất bại. **Đã deploy production 12/10/2026** (migration 0012 + 0013 đã áp, Version ID `3f4a3605`). **Mốc mới nhất (16/10/2026, v1.031):** tài khoản tự duyệt nếu có trên ETX nhân sự, tự khoá khi nghỉ việc, tự mở khi đi làm lại (danh bạ ETX lấy từ linh-kien-app); khu vực KTV tiếp tục lấy theo danh bạ đồng bộ từ linh-kien-app. **Mốc mới nhất (19/10/2026):** xoá toàn bộ dữ liệu test trên production và nhập 656 đơn bảo hành thật từ AppSheet (`don bh.xlsx`) — xem mục cuối file.
 
 ## Bản đồ tài liệu (đọc theo đúng thứ tự này nếu cần hiểu lại từ đầu)
 
@@ -5176,3 +5176,79 @@ chỉ commit đúng 2 file.
 - `etx=off&khoa=1` → 2; `vai_tro=la_qtri&q=t.vn` → 2.
 
 Trên giao diện, chọn "ETX: Đã nghỉ" → 3 người, hiện nút "Xoá lọc (1)".
+
+## Xoá dữ liệu test + nhập 656 đơn thật từ AppSheet (19/10/2026) — chỉ thao tác dữ liệu, không đổi code
+
+**(a) Nguyên văn yêu cầu:**
+
+> xóa toàn bộ dữ liệu test trên app để tiến hành đẩy đồng bộ data thật lên. (data test là data do người người dùng tạo gần đây (không phải data do API đẩy)
+
+Rồi gửi file `don bh.xlsx` (Desktop) kèm lời nhắn: *"đây là dữ liệu bảo hành mới cần phân tích và đẩy lên hệ thống"*.
+
+Đã chốt qua AskUserQuestion:
+- Xoá dữ liệu test xong thì đánh số mã lại từ đầu.
+- Nhập **toàn bộ 656 đơn**, mỗi đơn vào đúng trạng thái hiện tại.
+- Ghép với đơn Odoo theo **mã ca + mã linh kiện**.
+- **Cấp mã mới**, ghi mã cũ vào ghi chú và nhật ký.
+
+**(b) Đã làm:**
+
+1. **Xoá dữ liệu test.**
+   - Sao lưu toàn bộ D1 trước khi xoá: `../backup-suachua/suachua-truoc-xoa-test-20261019.sql` (nằm ngoài repo).
+   - Đã xoá: 6 thùng, 81 đơn cha, 5 đơn vị, 3 phiếu trả, 57 nhật ký, 2 bằng chứng case, 3 bản ghi nhớ nhà xe, bảng top linh kiện, `sync_state.giai_doan_tb`.
+   - Đặt lại `id_counters` về 0 và tăng `linh_kien_version`.
+   - Toàn bộ dữ liệu test do chính người dùng tạo (tài khoản meomeo3101 / mrthaiappsheet, từ 04 đến 15/10).
+   - Giữ nguyên: tài khoản, danh bạ KTV, khu vực, linh kiện, đơn Odoo lấy từ API, ETX, cài đặt.
+   - Có 78 đơn Odoo đã báo trạng thái sang dvbh. Nhánh "gỡ đơn" của cron chỉ bắt `cho_gui`/`khong_gui`, nên đã đặt `odoo_status_sync.last_status='cho_gui'` để cron đẩy `null`. Cron 09:45 đã gỡ đủ 78 đơn, dvbh còn 0.
+2. **Phân tích file.**
+   - Sheet DATA có 656 đơn (tạo từ 02 đến 18/10/2026), thuộc 155 thùng và 138 phiếu trả.
+   - Sheet "LK DE XUAT SUA CHUA" (82 dòng) và "DON MISA LK" (43 dòng) **chưa nhập**.
+   - Đối chiếu: 84/86 email KTV có trong danh bạ, 103/114 mã linh kiện có trong danh mục.
+3. **Script chuyển đổi** `../backup-suachua/gen-import-appsheet.py` sinh ra `../backup-suachua/import-appsheet-20261019.sql` (2.737 lệnh).
+   - **Thùng:** nhóm theo `ID THÙNG HÀNG` được 154 phiếu gửi. Tất cả ở `da_tiep_nhan` và đã được Admin nhận nội bộ. Mã thùng cũ ghi vào `ghi_chu`.
+   - **Đơn cha:**
+     - Mỗi dòng AppSheet là 1 đơn cha. `so_luong_khai` và `so_luong_thuc_nhan` đều lấy `SỐ LƯỢNG`; `case_id` lấy `MÃ YÊU CẦU`; `email_gs` lấy `EMAIL TN`.
+     - Dòng combo có nhiều mã linh kiện: lấy mã đầu tiên có trong danh mục, chuỗi mã đầy đủ ghi vào ghi chú.
+     - `ghi_chu` gồm: AppSheet ID, model, serial, ghi chú, cách thức xử lý, nguyên nhân chậm, linh kiện thiếu hàng, mã tem.
+     - 27 dòng không có thùng thì nhập thành `admin_dich_vu`, tên khách lấy cột NGƯỜI GỬI.
+   - **Đơn vị:** mỗi đơn cha tách đủ N đơn vị theo số lượng, tổng 746. Đơn vị thứ i nhận phương án xử lý thứ i:
+     - "Đổi mới" → `doi_moi`, "Sửa chữa" → `sua_chua`, "Xác nhận trừ công nợ" → `xac_nhan_tru_no`.
+     - "Hỗ trợ … có phê duyệt" → `ngoai_bh`; "Hủy" → `tu_choi`.
+     - `ma_lk_thuc_te` lấy cột LINH KIỆN THAY THẾ.
+   - **Trạng thái:**
+     - Đã sửa xong, có ID gửi trả: đơn vị ở `san_sang_gom_phieu_tra`, đã hoàn tất. Phiếu trả theo trạng thái AppSheet:
+       - ĐANG CHUYỂN ĐẾN KTV → `da_gui`;
+       - ĐÃ ĐÓNG HÀNG / ĐANG ĐÓNG / HÀNG TRỪ KHO → `da_duyet_ke_toan`;
+       - CHỜ MÃ ĐƠN HÀNG → `nhap`;
+       - KTV NHẬN THÙNG → `ktv_da_nhan`.
+       - Phiếu có dòng ở nhiều trạng thái thì lấy bước thấp nhất. MÃ XUẤT KHO đưa vào `ma_misa`.
+     - Admin giao trực tiếp cho kho (36 dòng): 37 đơn vị ở `san_sang_gom_phieu_tra`, chưa có phiếu trả.
+     - Đang sửa chữa: `cho_chan_doan`, gán NV. Dòng không có người sửa thì vào `cho_phan_loai`.
+     - SCVP đã bàn giao cho Admin → `cho_admin_xac_nhan`.
+     - Hủy → `ket_thuc_tu_choi`.
+   - **NV sửa chữa** tra theo tên trên ETX: Nguyễn Viết Khương → `nvk.joseph86@gmail.com`, Nguyễn Vũ Việt → `fotohuongthanh@gmail.com`.
+   - **Miền:** lấy theo khu vực của KTV; KTV không có khu vực thì lấy khu vực do GS (cột EMAIL TN) phụ trách. Kết quả MB 318 đơn, MN 338 đơn, không đơn nào "Chưa khai báo".
+   - **Tài khoản mới (80):** cần thêm vì khoá ngoại `users`.
+     - 77 KTV có trong danh bạ → "Đã duyệt" kèm cờ KTV / Vệ tinh.
+     - 2 NV sửa chữa.
+     - `phamgiang3104@gmail.com` không có trong danh bạ → "Chờ duyệt".
+   - **Linh kiện mới (11, `noi_bo`):** chủ yếu là mã máy / model.
+   - **Ghép Odoo:** 113 đơn ghép được với Odoo. Cron 10:30 đã báo trạng thái về dvbh: 83 đơn `dang_tra`, 30 đơn `cho_tra`.
+   - Mỗi thùng, đơn cha và phiếu trả có 1 dòng nhật ký "Nhập từ AppSheet (mã cũ …)".
+
+**(c) Vấn đề trong lúc làm:**
+- D1 lỗi "too many terms in compound SELECT" khi gộp 6 vế `UNION ALL` → đổi sang subquery.
+- `--file` không trả về dòng kết quả, nên các truy vấn tra cứu phải chạy bằng `--command`.
+- Nạp bản sao lưu vào local bị lỗi thứ tự tạo bảng → dựng schema bằng migration, rồi nạp bản xuất `--no-schema`.
+- Regex tách mã linh kiện bắt nhầm phần chữ trong ngoặc → sửa để chỉ nhận chuỗi có dạng mã.
+
+**(d) Kiểm thử:**
+- Chạy thử trên bản sao local (dựng bằng migration, nạp dữ liệu production hiện tại): 2.737 lệnh đều chạy được; `PRAGMA foreign_key_check` không báo lỗi.
+- Sau khi nhập lên production: 154 thùng, 656 đơn cha, 746 đơn vị, 138 phiếu trả, 113 đơn Odoo; `id_counters` = 154 / 656 / 138.
+- dvbh đã nhận đủ 113 trạng thái.
+
+**Chưa làm:**
+- Chưa nhập 2 sheet đề xuất linh kiện / đơn MISA cũ.
+- Đơn Đổi mới chưa có thông tin "xử lý xác".
+- Chưa lưu bằng chứng case (bấm "Đồng bộ lại" trong UI chi tiết khi cần).
+- Mã thùng mới đánh lại từ BH-000001, nên có thể trùng các mã thùng test cũ còn nằm bên khovan (BH-000026/27).
