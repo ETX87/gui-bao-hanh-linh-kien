@@ -6,6 +6,7 @@ import { computeEmailGs } from "../lib/gs";
 import { runOdooSync } from "../lib/odooSync";
 import { buildOdooImportRows } from "../lib/odooImportExport";
 import { nowVN } from "../lib/vnTime";
+import { kwClause } from "../lib/search";
 import { parsePage } from "../lib/pagination";
 
 // Don bao hanh tao tren Odoo, keo ve qua dvbh (cron 15 phut - lib/odooSync.ts). KTV thay "don cua
@@ -71,6 +72,7 @@ odooDon.get("/da-gui", async (c) => {
   const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
   if ("error" in t) return c.json({ error: t.error }, t.status);
   const { limit, offset } = parsePage(c);
+  const kw = kwClause(c.req.query("q"), ["o.ma_don", "o.case_id", "o.ma_linh_kien", "o.ten_linh_kien", "p.id", "p.phieu_gui_id"]);
   const [rows, cnt] = await Promise.all([
     c.env.DB.prepare(
       `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.ngay_tao,
@@ -80,13 +82,13 @@ odooDon.get("/da-gui", async (c) => {
        JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
        JOIN don_bh_odoo o ON o.odoo_id = p.odoo_id
        LEFT JOIN odoo_status_sync s ON s.odoo_id = p.odoo_id
-       WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?
+       WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?${kw.sql}
        ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`,
     )
-      .bind(t.email, limit, offset)
+      .bind(t.email, ...kw.binds, limit, offset)
       .all(),
-    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?`)
-      .bind(t.email)
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id JOIN don_bh_odoo o ON o.odoo_id = p.odoo_id WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?${kw.sql}`)
+      .bind(t.email, ...kw.binds)
       .first<{ n: number }>(),
   ]);
   return c.json({ don: rows.results, total: cnt?.n ?? 0 });

@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { parsePage } from "../lib/pagination";
+import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope } from "../lib/mien";
 
 // De xuat linh kien sua chua (12/10/2026) - nguyen van chot: "NV se tu bao linh kien can duoc cap, Admin
@@ -38,7 +39,9 @@ deXuat.get("/", async (c) => {
   if (!isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const tt = c.req.query("trang_thai") || "cho_cap";
   const { limit, offset } = parsePage(c);
-  const ms = mienScope(user, "p");
+  const ms0 = mienScope(user, "p");
+  const kw = kwClause(c.req.query("q"), ["d.id", "d.ma_lk", tenLkOf("d.ma_lk"), "d.ma_misa", "d.ma_don_hang", "d.ghi_chu", "d.nguoi_tao", tenOf("d.nguoi_tao"), "u.id", "p.case_id", "p.mo_ta_loi", "g.nguoi_tao", tenOf("g.nguoi_tao")]);
+  const ms = { sql: ms0.sql + kw.sql, binds: [...ms0.binds, ...kw.binds] };
   const fw = `FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = ?${ms.sql}`;
   const order = tt === "cho_cap" ? "d.created_at" : "d.updated_at DESC";

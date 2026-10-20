@@ -8,7 +8,6 @@ import { isOverdue } from "../../lib/format";
 import { useNvList } from "../../hooks/useNvList";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { LyDoChamGateField } from "./LyDoChamGateField";
-import { XuLyXacField } from "./XuLyXacField";
 import { ktvChangeLines, confirmKtvChange } from "../../lib/ktvDeXuat";
 import type { DonVi, FastActionMeta } from "../../lib/types";
 
@@ -81,8 +80,9 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   const needsMailPd = meta.loaiBH === "ngoai_bh";
   // "Từ chối" (khong co ly do huy dat san) phai hoi ly do huy (ra soat Admin BH 05/10/2026).
   const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
-  // Doi moi: chon cach xu ly xac 1 lan cho tat ca (05/10/2026).
-  const needsXuLyXac = meta.huong === "doi_moi";
+  // Doi moi (20/10/2026): "Khi duyệt nhanh, trả xác mặc định là trả đối tác (đi tắt qua luôn). Admin bh
+  // có thể thay đổi sau." -> khong hoi xu ly xac nua, backend tu ghi tra_doi_tac (doi lai trong UI chi tiet).
+  const needsXuLyXac = false;
   const { items: lyDoTuChoiList } = useLyDoTuChoi();
 
   const [nv, setNv] = useState("");
@@ -90,7 +90,7 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   const [maPd, setMaPd] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
-  const [xuLyXac, setXuLyXac] = useState("");
+  const xuLyXac = "";
   const [busy, setBusy] = useState(false);
 
   const needsForm = needsNv || needsMailPd || needsLyDoTuChoi || needsXuLyXac || overdue;
@@ -142,7 +142,6 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
       <div className="space-y-4">
         <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
         {bulk && overdue && <p className="text-xs text-[var(--ink-soft)]">{overdueCount}/{units.length} đơn đang quá hạn — lý do chậm áp cho các đơn này.</p>}
-        {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} count={units.length} />}
         {needsNv && (
           <Field label="Nhân viên sửa chữa phụ trách" required>
             <Select value={nv} onChange={(e) => setNv(e.target.value)}>

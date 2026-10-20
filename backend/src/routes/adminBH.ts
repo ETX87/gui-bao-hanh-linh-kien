@@ -8,6 +8,9 @@ import { addLog } from "../lib/logs";
 import { isOverdue, slaCutoffVn } from "../lib/sla";
 import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
+import { syncCaseSnapshots } from "../lib/caseSnapshot";
+import { nhanHoThung } from "../lib/nhanHo";
+import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
@@ -32,7 +35,8 @@ adminBH.get("/phieu-gui", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
   const ms = mienScope(c.get("user"), "phieu_gui_bh");
-  const fromWhere = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" + ms.sql;
+  // 20/10/2026: ?trang_thai=da_gui -> thung dang gui ve Kho (de Admin "nhan ho Kho" khi KTV giao truc tiep).
+  const fromWhere = (c.req.query("trang_thai") === "da_gui" ? "FROM phieu_gui_bh WHERE trang_thai = 'da_gui'" : "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0") + ms.sql;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...ms.binds).first<{ cnt: number }>(),
@@ -75,6 +79,20 @@ adminBH.post("/phieu-gui/:id/tiep-nhan-noi-bo", async (c) => {
   const r = await tiepNhanNoiBo(c.env.DB, c.req.param("id"), body.ly_do_cham, user.email);
   if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
   return c.json({ ok: true });
+});
+
+// 20/10/2026: Admin BH nhan ho Kho (hang da ve tay Admin - KTV giao truc tiep): bo qua Kho tiep nhan +
+// tiep nhan noi bo. tu_xac_nhan_sl = true -> xac nhan luon SL = SL KTV khai.
+adminBH.post("/phieu-gui/:id/nhan-ho-kho", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ ghi_chu?: string; tu_xac_nhan_sl?: boolean }>().catch(() => ({}) as { ghi_chu?: string; tu_xac_nhan_sl?: boolean });
+  const r = await nhanHoThung(c.env.DB, c.req.param("id"), user.email, {
+    tuXacNhanSL: !!body.tu_xac_nhan_sl,
+    ghiChu: "Admin BH nhận hộ Kho (hàng đã về tay Admin)" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""),
+  });
+  if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
+  return c.json(r);
 });
 
 // "Day lai chua tiep nhan" - chi cho phep neu CHUA co don vi con nao duoc tach (an toan du lieu).
@@ -567,7 +585,11 @@ adminBH.post("/don-cha/:id/bao-cao-sai", async (c) => {
 adminBH.get("/xac-nhan", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
-  const ms = mienScope(c.get("user"), "p");
+  const ms0 = mienScope(c.get("user"), "p");
+  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
+    "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
+    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+  const ms = { sql: ms0.sql + kw.sql, binds: [...ms0.binds, ...kw.binds] };
   const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms.sql}`;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT u.*, p.mien ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
@@ -631,6 +653,22 @@ adminBH.post("/don-vi/:id/xac-nhan-hoan-tat", async (c) => {
 
 // Thu hoi chi phi bao hanh tu hang (12/10/2026): ghi nhan thu cong so tien da thu duoc (khong bat
 // buoc), sua duoc o moi trang thai. Admin BH / Ke toan / qtri.
+// 20/10/2026: doi xu ly xac sau khi da phan loai (FAST Doi moi mac dinh "tra doi tac").
+adminBH.patch("/don-vi/:id/xu-ly-xac", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ xu_ly_xac?: string }>().catch(() => ({}) as { xu_ly_xac?: string });
+  if (!XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
+  const u = await c.env.DB.prepare("SELECT trang_thai, huong_xu_ly, xu_ly_xac FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; huong_xu_ly: string | null; xu_ly_xac: string | null }>();
+  if (!u) return c.json({ error: "NOT_FOUND" }, 404);
+  if (u.huong_xu_ly !== "doi_moi") return c.json({ error: "WRONG_STATE" }, 400);
+  if (u.xu_ly_xac === body.xu_ly_xac) return c.json({ ok: true });
+  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET xu_ly_xac = ?, updated_at = updated_at WHERE id = ?").bind(body.xu_ly_xac, id).run();
+  await addLog(c.env.DB, "phieu_sc_ct", id, u.trang_thai, u.trang_thai, user.email, `Đổi xử lý xác: ${LBL[u.xu_ly_xac ?? ""] || u.xu_ly_xac || "—"} → ${LBL[body.xu_ly_xac!] || body.xu_ly_xac}`);
+  return c.json({ ok: true });
+});
+
 adminBH.patch("/don-vi/:id/thu-hoi-hang", async (c) => {
   const user = c.get("user");
   if (!(user.la_admin_bh || user.la_ke_toan || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
@@ -719,6 +757,7 @@ adminBH.post("/don-dich-vu", async (c) => {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
   }
   await addLog(c.env.DB, "phieu_sc", id, null, "da_tach", user.email, "Admin BH tạo đơn dịch vụ tính phí (khách lẻ)");
+  if (body.case_id) c.executionCtx.waitUntil(syncCaseSnapshots(c.env, [body.case_id]).catch(() => 0));
   return c.json({ id }, 201);
 });
 
@@ -817,7 +856,8 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
       nguoi_sua_chua: body.nv,
       ly_do_tu_choi: meta.lyDoTuChoi || body.ly_do_tu_choi,
       ly_do_cham: body.ly_do_cham,
-      xu_ly_xac: body.xu_ly_xac,
+      // 20/10/2026: FAST Doi moi khong hoi xu ly xac - mac dinh "tra doi tac", Admin doi lai sau.
+      xu_ly_xac: meta.huong === "doi_moi" ? body.xu_ly_xac || "tra_doi_tac" : body.xu_ly_xac,
     },
     actor,
   );

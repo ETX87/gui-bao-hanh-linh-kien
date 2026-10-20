@@ -40,8 +40,8 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     setBusy(true);
     try {
       const [anh_truoc, anh_sau, anh_loi_thuc_te] = await Promise.all([filesToDataUrls(anhTruoc), filesToDataUrls(anhSau), filesToDataUrls(anhLoi)]);
-      await api.post(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: ketQua, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined });
-      toast("Đã nộp kết quả sửa chữa.", "ok");
+      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: ketQua, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined });
+      toast(r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");

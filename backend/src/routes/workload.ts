@@ -33,6 +33,7 @@ const EMPTY = {
   admin_cho_xac_nhan_hoan_tat: 0,
   admin_san_sang_gom: 0,
   admin_de_xuat_cho_cap: 0,
+  admin_phieu_tra_tu_choi: 0,
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
 };
@@ -147,6 +148,10 @@ workload.get("/", async (c) => {
         ...mp.binds,
       ).then((r) => {
         counts.admin_de_xuat_cho_cap = r?.cnt ?? 0;
+      }),
+      // 20/10/2026: phieu tra Ke toan tu choi, tra ve Admin BH.
+      one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'nhap' AND t.ly_do_tu_choi_kt IS NOT NULL${mt.sql}`, ...mt.binds).then((r) => {
+        counts.admin_phieu_tra_tu_choi = r?.cnt ?? 0;
       }),
     );
   }

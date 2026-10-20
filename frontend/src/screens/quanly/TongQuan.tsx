@@ -3,19 +3,7 @@ import { CanhBaoTonDon } from "../shared/CanhBaoTonDon";
 import { api } from "../../lib/api";
 import { useRoute } from "../../router/Router";
 import { Card, Spinner, StatCard } from "../../ui/primitives";
-import { TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
-import { UNIT_STATUS } from "../../ui/StatusBadge";
-
-const ICON_OF_STATUS: Record<string, string> = {
-  cho_phan_loai: "🗂️",
-  admin_can_xem_lai: "🔁",
-  cho_bo_sung_tt: "✍️",
-  cho_chan_doan: "🔧",
-  cho_admin_xac_nhan: "✔️",
-  san_sang_gom_phieu_tra: "↩️",
-  ket_thuc_tu_choi: "⛔",
-  ket_thuc_chuyen_kho: "🏬",
-};
+import { GIAI_DOAN } from "../../lib/constants";
 
 // "Tong quan he thong" (Giam sat/View) - THUAN CHI XEM. So lieu theo dung pham vi da scope o backend
 // (Giam sat qua email_gs, View qua Khu vuc).
@@ -65,10 +53,10 @@ export function QuanLyTongQuanScreen() {
       <CanhBaoTonDon />
 
       <Card className="p-3">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn bảo hành trong phạm vi</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn theo giai đoạn (cả thùng chưa về)</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
-          {Object.entries(TRANG_THAI_UNIT_LABELS).map(([key, label]) => (
-            <StatCard key={key} label={label} value={counts[key] || 0} tone={UNIT_STATUS[key]?.tone || "gray"} icon={ICON_OF_STATUS[key]} onClick={() => goto(key)} />
+          {GIAI_DOAN.map((g) => (
+            <StatCard key={g.key} label={g.label} value={counts[g.key] || 0} tone={g.tone} icon={g.icon} onClick={() => goto(g.key)} />
           ))}
         </div>
       </Card>

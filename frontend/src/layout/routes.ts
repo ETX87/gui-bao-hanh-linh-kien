@@ -52,8 +52,8 @@ const G = ROLE_GROUP;
 const CATALOG: CatalogItem[] = [
   { hash: "/home", label: "Trang chủ", short: "Trang chủ", icon: "🏠", group: "", desc: "Tổng hợp việc cần làm", show: () => true },
 
-  { hash: "/quanly/tong-quan", label: "Tổng quan hệ thống", short: "Tổng quan", icon: "📊", group: G.theoDoi, desc: "Số đơn theo trạng thái, đơn quá hạn", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri },
-  { hash: "/quanly/tra-cuu", label: "Tra cứu mọi đơn", short: "Tra cứu", icon: "🔎", group: G.theoDoi, desc: "Tìm đơn bảo hành bất kỳ", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri },
+  { hash: "/quanly/tong-quan", label: "Tổng quan hệ thống", short: "Tổng quan", icon: "📊", group: G.theoDoi, desc: "Số đơn theo giai đoạn, đơn quá hạn", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri || u.la_admin_bh },
+  { hash: "/quanly/tra-cuu", label: "Tra cứu mọi đơn", short: "Tra cứu", icon: "🔎", group: G.theoDoi, desc: "Tìm đơn ở mọi giai đoạn (cả thùng chưa về)", show: (u) => u.la_giam_sat || u.la_view || u.la_qtri || u.la_admin_bh },
   // Giam sat (khong kem Admin BH/qtri) tao ho thung cho KTV trong khu vuc - nam trong nhom cua GS.
   { hash: "/ktv/tao-phieu", label: "Tạo hộ đơn cho KTV", short: "Tạo hộ", icon: "📦", group: G.theoDoi, desc: "Thùng nháp đang tạo hộ KTV", countKeys: ["ktv_phieu_nhap"], show: (u) => !isKtv(u) && u.la_giam_sat && !u.la_admin_bh && !u.la_qtri },
 
@@ -68,6 +68,7 @@ const CATALOG: CatalogItem[] = [
   { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: G.admin, desc: "NV xin linh kiện — lên MISA xuất kho rồi cấp", countKeys: ["admin_de_xuat_cho_cap"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/admin/xac-nhan", label: "Xác nhận hoàn tất", short: "Hoàn tất", icon: "✔️", group: G.admin, desc: "Duyệt kết quả NV sửa chữa", countKeys: ["admin_cho_xac_nhan_hoan_tat"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/admin/phieu-tra", label: "Phiếu trả bảo hành", short: "Phiếu trả", icon: "↩️", group: G.admin, desc: "Đơn xong chờ gộp phiếu trả", countKeys: ["admin_san_sang_gom"], show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/admin/phieu-tra-ke-toan", label: "Phiếu đã gửi kế toán", short: "Đã gửi KT", icon: "💼", group: G.admin, desc: "Phiếu trả chờ KT duyệt / KT trả lại / đã duyệt", countKeys: ["admin_phieu_tra_tu_choi"], show: (u) => u.la_admin_bh || u.la_qtri },
   { hash: "/ktv/tao-phieu", label: "Tạo hộ đơn cho KTV", short: "Tạo hộ", icon: "📦", group: G.admin, desc: "Thùng nháp đang tạo hộ KTV", countKeys: ["ktv_phieu_nhap"], show: (u) => !isKtv(u) && (u.la_admin_bh || u.la_qtri) },
   { hash: "/linh-kien", label: "Danh mục linh kiện", short: "Linh kiện", icon: "🔩", group: G.admin, desc: "Linh kiện dùng trong bảo hành", show: (u) => u.la_admin_bh || u.la_qtri },
 
@@ -141,6 +142,7 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   admin_cho_xac_nhan_hoan_tat: "đơn chờ xác nhận hoàn tất",
   admin_san_sang_gom: "đơn chờ gộp phiếu trả",
   admin_de_xuat_cho_cap: "đề xuất linh kiện chờ cấp",
+  admin_phieu_tra_tu_choi: "phiếu trả Kế toán trả lại",
   nv_cho_chan_doan: "đơn chờ chẩn đoán",
   ketoan_cho_duyet: "phiếu chờ duyệt",
 };

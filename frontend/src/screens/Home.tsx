@@ -26,6 +26,7 @@ const LABELS: Record<keyof WorkloadCounts, string> = {
   admin_cho_xac_nhan_hoan_tat: "Chờ xác nhận hoàn tất",
   admin_san_sang_gom: "Đơn vị sẵn sàng gộp phiếu trả",
   admin_de_xuat_cho_cap: "Đề xuất linh kiện chờ cấp",
+  admin_phieu_tra_tu_choi: "Phiếu trả Kế toán trả lại",
   nv_cho_chan_doan: "Việc chờ chẩn đoán",
   ketoan_cho_duyet: "Phiếu trả chờ duyệt",
 };
@@ -45,6 +46,7 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   admin_cho_xac_nhan_hoan_tat: "/admin/xac-nhan",
   admin_san_sang_gom: "/admin/phieu-tra",
   admin_de_xuat_cho_cap: "/admin/de-xuat",
+  admin_phieu_tra_tu_choi: "/admin/phieu-tra-ke-toan",
   nv_cho_chan_doan: "/nv/viec-cua-toi",
   ketoan_cho_duyet: "/ketoan/duyet",
 };
@@ -64,6 +66,7 @@ const ICON_OF: Record<keyof WorkloadCounts, string> = {
   admin_cho_xac_nhan_hoan_tat: "✔️",
   admin_san_sang_gom: "↩️",
   admin_de_xuat_cho_cap: "🔩",
+  admin_phieu_tra_tu_choi: "↩️",
   nv_cho_chan_doan: "🔧",
   ketoan_cho_duyet: "💰",
 };
@@ -85,6 +88,7 @@ const TONE_OF: Record<keyof WorkloadCounts, "amber" | "blue" | "brand" | "red"> 
   admin_cho_xac_nhan_hoan_tat: "amber",
   admin_san_sang_gom: "brand",
   admin_de_xuat_cho_cap: "amber",
+  admin_phieu_tra_tu_choi: "red",
   nv_cho_chan_doan: "amber",
   ketoan_cho_duyet: "amber",
 };

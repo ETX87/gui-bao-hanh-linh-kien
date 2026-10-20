@@ -98,6 +98,32 @@ export const TRANG_THAI_UNIT_LABELS: Record<string, string> = {
   ket_thuc_chuyen_kho: "Đã chuyển kho",
 };
 
+// 20/10/2026: "giai doan" cua 1 don trong TOAN luong (man Tra cuu / Tong quan) - gom ca don cha chua
+// tach (thung) va trang thai phieu tra cua don vi da vao phieu. Thu tu = thu tu quy trinh.
+export const GIAI_DOAN: { key: string; label: string; tone: "gray" | "blue" | "amber" | "orange" | "violet" | "green" | "red"; icon: string }[] = [
+  { key: "thung_nhap", label: "Thùng nháp — KTV chưa gửi", tone: "gray", icon: "📝" },
+  { key: "thung_dang_gui", label: "Đang gửi về Kho", tone: "blue", icon: "🚚" },
+  { key: "thung_cho_admin_nhan", label: "Kho đã nhận — chờ Admin nhận", tone: "amber", icon: "📥" },
+  { key: "cho_xac_nhan_so_luong", label: "Chờ xác nhận SL", tone: "amber", icon: "🔢" },
+  { key: "cho_phan_loai", label: "Chờ phân loại", tone: "amber", icon: "🗂️" },
+  { key: "admin_can_xem_lai", label: "Admin cần xem lại", tone: "orange", icon: "🔁" },
+  { key: "cho_bo_sung_tt", label: "Chờ KTV bổ sung", tone: "violet", icon: "✍️" },
+  { key: "cho_chan_doan", label: "Đang sửa chữa (NV)", tone: "blue", icon: "🔧" },
+  { key: "cho_admin_xac_nhan", label: "Chờ Admin xác nhận", tone: "amber", icon: "✔️" },
+  { key: "san_sang_gom_phieu_tra", label: "Chờ tạo phiếu trả", tone: "amber", icon: "↩️" },
+  { key: "tra_nhap", label: "Phiếu trả nháp (Admin)", tone: "amber", icon: "📄" },
+  { key: "tra_cho_ke_toan_duyet", label: "Chờ Kế toán duyệt", tone: "violet", icon: "💰" },
+  { key: "tra_da_duyet_ke_toan", label: "Chờ Kho đóng gói / gửi", tone: "blue", icon: "📤" },
+  { key: "tra_da_gui", label: "Đang gửi trả KTV", tone: "blue", icon: "🚚" },
+  { key: "tra_khieu_nai_van_chuyen", label: "KTV báo không nhận được", tone: "red", icon: "⚠️" },
+  { key: "tra_ktv_da_nhan", label: "Hoàn tất (KTV đã nhận)", tone: "green", icon: "✅" },
+  { key: "tra_gui_that_bai", label: "Gửi thất bại (thất lạc)", tone: "red", icon: "❌" },
+  { key: "tra_ket_thuc_khong_gui", label: "Kết thúc, không gửi", tone: "gray", icon: "⏹️" },
+  { key: "ket_thuc_tu_choi", label: "Đã huỷ", tone: "gray", icon: "⛔" },
+  { key: "ket_thuc_chuyen_kho", label: "Đã chuyển kho", tone: "gray", icon: "🏬" },
+];
+export const GIAI_DOAN_MAP: Record<string, (typeof GIAI_DOAN)[number]> = Object.fromEntries(GIAI_DOAN.map((g) => [g.key, g]));
+
 export const TRANG_THAI_PHIEU_GUI_LABELS: Record<string, string> = {
   nhap: "Nháp",
   da_gui: "Đã gửi xe",

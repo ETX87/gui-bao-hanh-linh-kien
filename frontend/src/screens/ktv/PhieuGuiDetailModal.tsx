@@ -188,8 +188,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
     run(async () => {
       await api.patch(`/phieu-gui/${g.id}`, header);
       nhoCache();
-      await api.post(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe });
-      toast(giaoTrucTiep ? "Đã lưu thông tin & xác nhận đã giao hàng." : "Đã lưu thông tin & xác nhận gửi xe.", "ok");
+      const r = await api.post<{ tu_tiep_nhan?: boolean; so_don_vi?: number }>(`/phieu-gui/${g.id}/xac-nhan-gui`, { ngay_gui_xe: ngayGuiXe });
+      if (r.tu_tiep_nhan) toast(`Thùng do Admin BH tạo — đã tự bỏ qua Kho + tiếp nhận nội bộ, ${r.so_don_vi ?? 0} đơn vị vào thẳng hàng chờ phân loại.`, "ok");
+      else toast(giaoTrucTiep ? "Đã lưu thông tin & xác nhận đã giao hàng." : "Đã lưu thông tin & xác nhận gửi xe.", "ok");
     });
   const goiYMaXe = [...new Set([...(cache?.recentMaXe ?? []), ...(data.goi_y?.ma_xe ?? [])])];
   const goiYDvvc = [...new Set([...(cache?.recentDvvc ?? []), ...(data.goi_y?.dvvc ?? [])])];

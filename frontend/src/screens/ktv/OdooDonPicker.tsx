@@ -1,7 +1,8 @@
 import { lkLabel } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
-import { Btn, Badge, Spinner, Field, Textarea } from "../../ui/primitives";
+import { Btn, Badge, Spinner, Field, Textarea, Input } from "../../ui/primitives";
+import { normalizeVi } from "../../lib/normalizeVi";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { fmtDate } from "../../lib/format";
@@ -54,14 +55,37 @@ export function OdooDonList({
   onToggleAll: () => void;
   onKhongGui?: (d: OdooDon) => void;
 }) {
-  const allOn = don.length > 0 && don.every((d) => selected.has(d.odoo_id));
-  const pg = useClientPage(don);
+  // 20/10/2026: "bổ sung công cụ tìm kiếm ở danh sách chọn đơn bh (khi tạo thùng có thể tìm trong danh
+  // sách các đơn odoo)" - loc tren may (khong dau, nhieu tu, khong can dung thu tu).
+  const [q, setQ] = useState("");
+  const words = normalizeVi(q.trim()).split(/\s+/).filter(Boolean);
+  const shown = words.length
+    ? don.filter((d) => {
+        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.ma_linh_kien, d.ten_linh_kien, d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" "));
+        return words.every((w) => hay.includes(w));
+      })
+    : don;
+  const allOn = shown.length > 0 && shown.every((d) => selected.has(d.odoo_id));
+  const pg = useClientPage(shown);
+  useEffect(() => pg.setPage(0), [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleShown = () => {
+    if (!words.length) return onToggleAll();
+    const on = !allOn;
+    shown.forEach((d) => {
+      if (selected.has(d.odoo_id) !== on) onToggle(d.odoo_id);
+    });
+  };
   return (
     <div className="space-y-1">
+      {don.length > 3 && (
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Tìm mã đơn Odoo, case, linh kiện, lỗi…" className="mb-1" />
+      )}
       <label className="flex items-center gap-2 px-1 text-xs font-semibold text-[var(--ink-soft)]">
-        <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={allOn} onChange={onToggleAll} />
-        Chọn tất cả ({don.length}){selected.size > 0 ? ` — đã chọn ${selected.size}` : ""}
+        <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={allOn} onChange={toggleShown} />
+        Chọn tất cả {words.length ? `đang lọc (${shown.length}/${don.length})` : `(${don.length})`}
+        {selected.size > 0 ? ` — đã chọn ${selected.size}` : ""}
       </label>
+      {words.length > 0 && shown.length === 0 && <p className="px-1 text-sm text-[var(--ink-faint)]">Không có đơn nào khớp "{q}".</p>}
       {pg.pageItems.map((d) => (
         <label
           key={d.odoo_id}

@@ -97,7 +97,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   // Sua duoc (ma, them/bot don vi, doi linh kien) cho toi khi Ke toan duyet cho Kho xuat.
   const canEdit = isAdmin && (isNhap || t.trang_thai === "cho_ke_toan_duyet");
   const khoChoGui = isKho && t.trang_thai === "da_duyet_ke_toan";
-  const batBuocMa = t.loai_doi_tru !== "tru_cong_no";
+  // 20/10/2026: "mã misa ko bắt buộc ở bước admin bh (mã misa là bước của kế toán - admin bh có thể nhập hoặc không)".
+  const batBuocMa = false;
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
   const canOpenUnit = !nested && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
 
@@ -334,7 +335,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               ↩ {t.day_nguoc_vai_tro === "kho" ? "Kho" : "Kế toán"} đẩy ngược phiếu (lên nhầm): {t.ly_do_day_nguoc} · <UserName email={t.day_nguoc_boi} /> · {fmtDate(t.day_nguoc_luc)}
             </Banner>
           )}
-          {t.ly_do_tu_choi_kt && <Banner tone="amber">Kế toán từ chối lần trước: {t.ly_do_tu_choi_kt}</Banner>}
+          {t.ly_do_tu_choi_kt && <Banner tone={isNhap ? "red" : "amber"}>{isNhap ? "↩ Kế toán từ chối, trả lại Admin BH xử lý" : "Kế toán từ chối lần trước"}: {t.ly_do_tu_choi_kt}</Banner>}
           {canEdit && t.trang_thai === "cho_ke_toan_duyet" && (
             <Banner tone="blue">Phiếu đang chờ Kế toán duyệt — vẫn sửa được (thêm / bớt đơn, đổi linh kiện, sửa mã); mọi thay đổi được ghi vào nhật ký để Kế toán thấy.</Banner>
           )}

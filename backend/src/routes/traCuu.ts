@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
 import { parsePage } from "../lib/pagination";
 import { slaCutoffVn } from "../lib/sla";
+import { kwClause, tenOf, tenLkOf } from "../lib/search";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -21,45 +22,56 @@ function scopeClause(user: { la_giam_sat: boolean; la_view: boolean; la_qtri: bo
   return { where: "1=0", binds: [] };
 }
 
-// Phan trang that o tang SQL (LIMIT/OFFSET + COUNT) - day la bang "tra cuu MOI don hang toan he
-// thong", co kha nang phinh to nhat trong ca he thong nen uu tien phan trang dung dan nhat. "q" chuyen
-// tu "JSON.stringify toan dong roi loc o server" (ban cu, bat buoc phai SELECT het du lieu ve truoc)
-// sang SQL LIKE tren dung cac cot hien thi tren bang.
+// 20/10/2026 ("đơn gửi sửa chữa đang chờ, admin bh không tìm thấy ở đâu => admin bh ... cần nhìn thấy
+// trạng thái của đơn hàng tại mọi luồng quy trình"): tra cuu gom CA don cha chua tach don vi (thung nhap /
+// dang gui ve Kho / Kho da nhan cho Admin / cho xac nhan SL) LAN don vi; moi dong co "giai_doan" = buoc
+// thuc te cua don trong toan luong (don vi da vao phieu tra -> trang thai phieu tra "tra_<...>").
+const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"];
+
+function allRowsSql(scopeWhere: string): string {
+  const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
+      CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
+      u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, p.ma_lk) AS ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
+      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong
+    FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+    LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
+    WHERE ${scopeWhere}`;
+  const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
+      CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
+           WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
+      p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
+      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong
+    FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+    WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND ${scopeWhere}`;
+  return `(${units} UNION ALL ${parents}) x`;
+}
+
 traCuu.get("/don-vi", async (c) => {
   const user = c.get("user");
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
-  const kw = (c.req.query("q") || "").trim();
   const { limit, offset } = parsePage(c);
   const { where: scopeWhere, binds: scopeBinds } = scopeClause(user);
-  let where = scopeWhere;
-  const binds = [...scopeBinds];
-  if (kw) {
-    where += " AND (u.id LIKE ? OR p.case_id LIKE ? OR p.ma_lk LIKE ? OR p.mo_ta_loi LIKE ? OR p.ten_khach_hang LIKE ? OR g.nguoi_tao LIKE ?)";
-    const like = `%${kw}%`;
-    binds.push(like, like, like, like, like, like);
-  }
-  // Loc theo trang thai (Phat hien 12): bam 1 o dem o man Tong quan -> sang day da loc san.
-  // "qua_han" = cac trang thai dang cho xu ly ma updated_at cu hon 24h (gio VN).
+  let where = "1=1";
+  const binds: unknown[] = [];
+  // Loc theo giai doan (bam 1 o dem o man Tong quan -> sang day da loc san). "qua_han" = dang cho xu ly
+  // ma da troi qua 24h SLA (bo Chu nhat, moc cat tinh bang JS).
   const st = (c.req.query("trang_thai") || "").trim();
   if (st === "qua_han") {
-    // Moc cat tinh trong JS (slaCutoffVn) vi SLA khong tinh Chu nhat (chot 04/10/2026).
-    where += " AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan') AND u.updated_at < ?";
-    binds.push(slaCutoffVn(24));
+    where += ` AND x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`;
+    binds.push(...DANG_CHO, slaCutoffVn(24));
   } else if (st) {
-    where += " AND u.trang_thai = ?";
+    where += " AND x.giai_doan = ?";
     binds.push(st);
   }
-  const fromWhere = `FROM phieu_sua_chua_bh_ct u
-     JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE ${where}`;
+  const kw = kwClause(c.req.query("q"), ["x.id", "x.case_id", "x.ma_lk", tenLkOf("x.ma_lk"), "x.mo_ta_loi", "x.ten_khach_hang", "x.sdt_khach_hang", "x.ktv", tenOf("x.ktv"), "x.phieu_gui_id", "x.phieu_tra_id",
+    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"]);
+  where += kw.sql;
+  binds.push(...kw.binds);
+  const from = `FROM ${allRowsSql(scopeWhere)} WHERE ${where}`;
+  const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang, p.phieu_gui_id, g.nguoi_tao as ktv ${fromWhere} ORDER BY u.updated_at DESC LIMIT ? OFFSET ?`)
-      .bind(...binds, limit, offset)
-      .all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`)
-      .bind(...binds)
-      .first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT x.* ${from} ORDER BY x.updated_at DESC LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from}`).bind(...allBinds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
 });
@@ -68,19 +80,12 @@ traCuu.get("/tong-quan", async (c) => {
   const user = c.get("user");
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
   const { where, binds } = scopeClause(user);
-  const fromWhere = `FROM phieu_sua_chua_bh_ct u
-     JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE ${where}`;
+  const from = `FROM ${allRowsSql(where)}`;
+  const b2 = [...binds, ...binds];
   const [{ results }, quaHanRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT u.trang_thai, COUNT(*) as cnt ${fromWhere} GROUP BY u.trang_thai`).bind(...binds).all(),
-    // "qua han SLA" (Phat hien 12): don dang cho xu ly, updated_at cu hon 24h gio VN.
-    c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt ${fromWhere}
-         AND u.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt','cho_chan_doan','cho_admin_xac_nhan')
-         AND u.updated_at < ?`,
-    )
-      .bind(...binds, slaCutoffVn(24))
+    c.env.DB.prepare(`SELECT x.giai_doan AS trang_thai, COUNT(*) as cnt ${from} GROUP BY x.giai_doan`).bind(...b2).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from} WHERE x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`)
+      .bind(...b2, ...DANG_CHO, slaCutoffVn(24))
       .first<{ cnt: number }>(),
   ]);
   return c.json({ theo_trang_thai: results, qua_han: quaHanRow?.cnt ?? 0 });

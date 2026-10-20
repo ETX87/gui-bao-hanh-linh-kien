@@ -11,6 +11,7 @@ import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, doiTacKeyFromName } from "../../lib/constants";
 import { fmtDate } from "../../lib/format";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
+import { PhieuTraListCard } from "./PhieuTraList";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { useClientPage } from "../../hooks/useClientPage";
 import type { AppUser, PhieuTra } from "../../lib/types";
@@ -26,13 +27,6 @@ import { ReturnUnitTable, UnitFilterBar, useFilteredUnits, nguoiNhanLabel, EMPTY
 //  - Danh sach phieu tra: loc trang thai / loai doi tru / nguoi nhan / mien + tim (ma phieu, ma DH, MISA,
 //    van don, KTV, ma don vi, case, linh kien) o server.
 
-const TT_GROUPS: { value: string; label: string }[] = [
-  { value: "", label: "Tất cả" },
-  { value: "nhap,cho_ke_toan_duyet", label: "Đang sửa được (Nháp + Chờ KT)" },
-  ...Object.entries(TRANG_THAI_PHIEU_TRA_LABELS).map(([value, label]) => ({ value, label })),
-  { value: "ket_thuc_khong_gui", label: "Kết thúc, không gửi" },
-];
-
 export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const toast = useToast();
   const { refresh } = useWorkload();
@@ -43,29 +37,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Bo loc danh sach phieu tra (server).
-  const [tt, setTt] = useState("");
-  const [loaiPt, setLoaiPt] = useState("");
-  const [nhanPt, setNhanPt] = useState("");
-  const [mienPt, setMienPt] = useState("");
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setQ(qInput.trim()), 400);
-    return () => clearTimeout(t);
-  }, [qInput]);
-  const listPath = useMemo(() => {
-    const p = new URLSearchParams();
-    if (tt) p.set("trang_thai", tt);
-    if (loaiPt) p.set("loai_doi_tru", loaiPt);
-    if (nhanPt) p.set("nguoi_nhan", nhanPt);
-    if (mienPt) p.set("mien", mienPt);
-    if (q) p.set("q", q);
-    const s = p.toString();
-    return `/phieu-tra${s ? `?${s}` : ""}`;
-  }, [tt, loaiPt, nhanPt, mienPt, q]);
-  const { items: list, total: listTotal, page: listPage, pageCount: listPageCount, setPage: setListPage, loading: loadingList, reload: reloadList } = usePagedApi<PhieuTra>(listPath, "phieu_tra");
-  const soLocPt = [tt, loaiPt, nhanPt, mienPt, q].filter(Boolean).length;
+  const [listKey, setListKey] = useState(0);
 
   const loadSanSang = () => api.get<{ don_vi: ReturnUnit[] }>("/phieu-tra/san-sang").then((r) => setSanSang(r.don_vi));
   useEffect(() => {
@@ -75,7 +47,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const afterChange = () => {
     setSelected(new Set());
     loadSanSang();
-    reloadList();
+    setListKey((k) => k + 1);
     refresh();
   };
 
@@ -150,26 +122,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
     }
   };
 
-  if (!sanSang && loadingList) return <Spinner />;
-
-  const cols: Column<PhieuTra>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
-    { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="tra" value={r.trang_thai} /> },
-    { key: "ktv", header: "Người nhận", render: (r) => nguoiNhanLabel(r.ktv_nhan) },
-    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "loai", header: "Loại đối trừ", render: (r) => LOAI_DOI_TRU_LABELS[r.loai_doi_tru] },
-    { key: "sodon", header: "Số đơn", render: (r) => r.so_don ?? "—" },
-    { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
-    { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },
-    { key: "vd", header: "Vận đơn", render: (r) => r.ma_van_don || "—" },
-    { key: "up", header: "Cập nhật", render: (r) => <span className="text-xs whitespace-nowrap">{fmtDate(r.updated_at)}</span> },
-    {
-      key: "dn",
-      header: "Ghi chú",
-      render: (r) =>
-        r.ly_do_day_nguoc && r.trang_thai === "nhap" ? <Badge tone="red">↩ {r.day_nguoc_vai_tro === "kho" ? "Kho" : "KT"} đẩy ngược</Badge> : r.ly_do_tu_choi_kt && r.trang_thai === "nhap" ? <Badge tone="amber">KT từ chối</Badge> : "",
-    },
-  ];
+  if (!sanSang) return <Spinner />;
 
   return (
     <div className="space-y-3">
@@ -239,48 +192,21 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
         )}
       </Card>
 
-      <Card className="p-3">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">Danh sách phiếu trả ({listTotal})</h3>
-        <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-3 gap-y-1.5 items-center">
-            <div className="col-span-2 lg:col-span-1 flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 [&>*:last-child]:flex-1">
-              <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)]">Tìm</span>
-              <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Mã phiếu, mã ĐH, MISA, vận đơn, KTV, mã đơn, case…" />
-            </div>
-            <LocSelect label="Trạng thái" value={tt} onChange={setTt} options={TT_GROUPS} />
-            <LocSelect label="Đối trừ" value={loaiPt} onChange={setLoaiPt} options={[{ value: "", label: "Tất cả" }, ...Object.entries(LOAI_DOI_TRU_LABELS).map(([value, label]) => ({ value, label }))]} />
-            <LocSelect label="Người nhận" value={nhanPt} onChange={setNhanPt} options={[{ value: "", label: "Tất cả" }, { value: "ktv", label: "KTV" }, { value: "khach_le", label: "Khách lẻ" }, { value: "doi_tac", label: "Đối tác (trả xác)" }]} />
-            <LocSelect label="Miền" value={mienPt} onChange={setMienPt} options={[{ value: "", label: "Tất cả" }, { value: "MB", label: "Miền Bắc" }, { value: "MN", label: "Miền Nam" }, { value: "none", label: "Chưa khai báo" }]} />
-          </div>
-          {soLocPt > 0 && (
-            <div className="flex justify-end mt-1.5">
-              <button type="button" className="text-xs font-semibold text-[var(--link)] hover:underline" onClick={() => { setTt(""); setLoaiPt(""); setNhanPt(""); setMienPt(""); setQInput(""); setQ(""); }}>
-                ✕ Xoá lọc ({soLocPt})
-              </button>
-            </div>
-          )}
-        </div>
-        <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={soLocPt ? "Không có phiếu trả nào khớp bộ lọc." : "Chưa có phiếu trả nào."} />
-        <Pagination page={listPage} pageCount={listPageCount} total={listTotal} onChange={setListPage} />
-      </Card>
+      <PhieuTraListCard
+        user={user}
+        title="Phiếu trả đang làm"
+        reloadKey={listKey}
+        onChanged={afterChange}
+        tabs={[
+          { value: "nhap", label: "Nháp / bị trả lại" },
+          { value: "tu_choi_kt", label: "↩ KT từ chối" },
+          { value: "", label: "Tất cả" },
+        ]}
+      />
+      <p className="text-xs text-[var(--ink-soft)] px-1">Phiếu đã gửi Kế toán xem ở menu <a className="text-[var(--link)] font-semibold" href="#/admin/phieu-tra-ke-toan">Phiếu đã gửi kế toán</a>.</p>
 
       {detailId && <PhieuTraDetailModal traId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={afterChange} />}
       {openUnit && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={afterChange} />}
-    </div>
-  );
-}
-
-function LocSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
-  return (
-    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0">
-      <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap">{label}</span>
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </Select>
     </div>
   );
 }

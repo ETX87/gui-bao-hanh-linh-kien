@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { parsePage } from "../lib/pagination";
+import { kwClause, tenOf } from "../lib/search";
 import { mienScope } from "../lib/mien";
 
 // Man hinh Kho: "Diem tiep nhan kho" - tiep nhan o muc THUNG hang (khong mo kiem tung linh kien).
@@ -26,7 +27,11 @@ function requireKho(c: { get(k: "user"): { la_kho: boolean; la_qtri: boolean } }
 kho.get("/phieu-gui", async (c) => {
   if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
   // 11/10/2026: chi thung cua mien minh + "chua khai bao" (Kho gan 1 mien).
-  const ms = mienScope(c.get("user"), "phieu_gui_bh");
+  const ms0 = mienScope(c.get("user"), "phieu_gui_bh");
+  // 20/10/2026: tim kiem tu khoa (ma thung, van don, KTV, ma don / case / linh kien ben trong).
+  const kw = kwClause(c.req.query("q"), ["phieu_gui_bh.id", "phieu_gui_bh.ma_van_don", "phieu_gui_bh.ma_xe_hoac_tai_xe", "phieu_gui_bh.don_vi_van_chuyen", "phieu_gui_bh.nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
+    "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)"]);
+  const ms = { sql: ms0.sql + kw.sql, binds: [...ms0.binds, ...kw.binds] };
   // 09/10/2026 ("Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua"): thung Kho da tiep
   // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
   if (c.req.query("trang_thai") === "cho_ban_giao") {

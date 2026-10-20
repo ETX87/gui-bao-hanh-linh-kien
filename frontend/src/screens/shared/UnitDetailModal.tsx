@@ -540,7 +540,11 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                     />
                   )}
                   {ketQuaLabel(u) && <Kv k="Kết quả NV" v={ketQuaLabel(u)} />}
-                  {u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />}
+                  {u.huong_xu_ly === "doi_moi" && (user.la_admin_bh || user.la_qtri) ? (
+                    <Kv k="Xử lý xác" v={<XuLyXacInline unitId={u.id} value={u.xu_ly_xac} onSaved={load} />} />
+                  ) : (
+                    u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />
+                  )}
                   {u.thong_tin_mail_pd && <Kv k="Mail phê duyệt" v={u.thong_tin_mail_pd} />}
                   {u.ma_phe_duyet && <Kv k="Mã phê duyệt" v={u.ma_phe_duyet} />}
                   {u.so_lan_yeu_cau_lam_lai > 0 && <Kv k="Số lần làm lại" v={u.so_lan_yeu_cau_lam_lai} />}
@@ -661,5 +665,39 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}
       {openPt && pt && <PhieuTraDetailModal traId={pt.id} user={user} nested onClose={() => setOpenPt(false)} onChanged={() => { onChanged(); load(); }} />}
     </>
+  );
+}
+
+// 20/10/2026: FAST "Doi moi" tu ghi xu ly xac = tra doi tac - "Admin bh có thể thay đổi sau" ngay tai day.
+function XuLyXacInline({ unitId, value, onSaved }: { unitId: string; value: string | null; onSaved: () => void }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const change = async (v: string) => {
+    if (!v || v === value) return;
+    setBusy(true);
+    try {
+      await api.patch(`/admin/don-vi/${unitId}/xu-ly-xac`, { xu_ly_xac: v });
+      toast("Đã đổi xử lý xác.", "ok");
+      onSaved();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <select
+      className="rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-0.5 text-[13px]"
+      value={value || ""}
+      disabled={busy}
+      onChange={(e) => change(e.target.value)}
+    >
+      {!value && <option value="">— Chọn —</option>}
+      {Object.entries(XU_LY_XAC_LABELS).map(([k, l]) => (
+        <option key={k} value={k}>
+          {l}
+        </option>
+      ))}
+    </select>
   );
 }

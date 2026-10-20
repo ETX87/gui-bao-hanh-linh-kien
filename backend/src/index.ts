@@ -28,6 +28,7 @@ import deXuatRoutes from "./routes/deXuat";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
+import { backfillCaseSnapshots } from "./lib/caseSnapshot";
 import etxRoutes from "./routes/etx";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
@@ -80,5 +81,7 @@ export default {
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));
+    // 20/10/2026: bo sung bang chung case (dvbh) cho don chua co - toi da 40 case / lan.
+    ctx.waitUntil(backfillCaseSnapshots(env).then(() => undefined).catch((e) => console.error("[caseSnapshot]", e instanceof Error ? e.message : e)));
   },
 };

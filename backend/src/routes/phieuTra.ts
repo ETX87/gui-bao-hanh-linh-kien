@@ -190,6 +190,8 @@ phieuTra.get("/", async (c) => {
     where += ` AND trang_thai IN (${tts.map(() => "?").join(",")})`;
     binds.push(...tts);
   }
+  // 20/10/2026: phieu bi Ke toan tu choi, da tra ve Admin BH (nhap + co ly do tu choi).
+  if (c.req.query("tu_choi_kt") === "1") where += " AND trang_thai = 'nhap' AND ly_do_tu_choi_kt IS NOT NULL";
   // Bo loc + tim kiem man phieu tra (19/10/2026).
   const loai = c.req.query("loai_doi_tru");
   if (loai) {
@@ -390,7 +392,7 @@ phieuTra.post("/:id/gui-duyet", async (c) => {
   const t = await c.env.DB.prepare("SELECT trang_thai, loai_doi_tru, ma_misa FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; loai_doi_tru: string; ma_misa: string | null }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "nhap") return c.json({ error: "WRONG_STATE" }, 400);
-  if (t.loai_doi_tru !== "tru_cong_no" && !t.ma_misa?.trim()) return c.json({ error: "REQUIRE_MA_MISA" }, 400);
+  // 20/10/2026: bo bat buoc ma MISA o buoc Admin BH ("mã misa là bước của kế toán - admin bh có thể nhập hoặc không").
   const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).first<{ n: number }>();
   if (!n?.n) return c.json({ error: "EMPTY_PHIEU_TRA" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'cho_ke_toan_duyet', ly_do_day_nguoc = NULL, day_nguoc_boi = NULL, day_nguoc_vai_tro = NULL, day_nguoc_luc = NULL, updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
@@ -459,7 +461,7 @@ phieuTra.post("/:id/duyet", async (c) => {
   const t = await c.env.DB.prepare("SELECT trang_thai, ktv_nhan FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; ktv_nhan: string }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "cho_ke_toan_duyet") return c.json({ error: "WRONG_STATE" }, 400);
-  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_duyet_ke_toan', updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'da_duyet_ke_toan', ly_do_tu_choi_kt = NULL, updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "da_duyet_ke_toan", user.email, "Kế toán duyệt");
 
   const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.ktv_nhan).first<{ ten_hien_thi: string | null }>();
@@ -479,7 +481,7 @@ phieuTra.post("/:id/tu-choi", async (c) => {
   const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_tu_choi_kt = ?, updated_at = ? WHERE id = ?").bind(body.ly_do.trim(), nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Kế toán từ chối: " + body.ly_do.trim());
+  await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Kế toán từ chối, trả lại Admin BH: " + body.ly_do.trim());
   return c.json({ ok: true });
 });
 

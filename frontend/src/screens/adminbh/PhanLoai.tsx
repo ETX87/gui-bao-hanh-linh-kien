@@ -10,6 +10,7 @@ import { DonDichVuModal } from "./DonDichVuModal";
 import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
 import { TiepNhanNoiBoModal } from "./TiepNhanNoiBoModal";
+import { ThungDangGuiCard } from "./NhanHoKho";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
@@ -158,6 +159,8 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           <Pagination page={phieuGuiPage} pageCount={phieuGuiPageCount} total={phieuGuiTotal} onChange={setPhieuGuiPage} />
         </Card>
       )}
+
+      <ThungDangGuiCard onDone={afterChange} reloadKey={optsKey} />
 
       <Card className="p-3">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">

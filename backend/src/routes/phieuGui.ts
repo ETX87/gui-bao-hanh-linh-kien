@@ -11,7 +11,10 @@ import { parsePage } from "../lib/pagination";
 import { mienOfKtv } from "../lib/mien";
 import { lookupCase } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
+import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
+import { syncCaseSnapshots } from "../lib/caseSnapshot";
+import { nhanHoThung } from "../lib/nhanHo";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -53,9 +56,13 @@ phieuGui.get("/", async (c) => {
   else if (canTaoHo(user)) col = "nguoi_tao_ho";
   else if (isKtv(user)) col = "nguoi_tao"; // qtri fallback (khong xay ra thuc te vi canTaoHo() da gom qtri, giu de an toan)
   else return c.json({ error: "FORBIDDEN" }, 403);
+  const kw = kwClause(c.req.query("q"), [
+    "id", "ma_van_don", "ma_xe_hoac_tai_xe", "don_vi_van_chuyen", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
+    "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,'') || ' ' || COALESCE(p.mo_ta_loi,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)",
+  ]);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE ${col} = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(user.email, limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ?`).bind(user.email).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE ${col} = ?${kw.sql} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(user.email, ...kw.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}`).bind(user.email, ...kw.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
@@ -212,6 +219,13 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
     .bind(body.ngay_gui_xe || nowVN().slice(0, 10), nowVN(), id)
     .run();
   await addLog(c.env.DB, "phieu_gui", id, "nhap", "da_gui", user.email, "Xác nhận đã gửi xe");
+
+  // 20/10/2026: thung do Admin BH tao ho -> bo qua Kho + tiep nhan noi bo + xac nhan SL, vao thang phan loai.
+  // Khong bao sang khovan (Kho khong can nhan thung nay).
+  if ((user.la_admin_bh || user.la_qtri) && g.nguoi_tao_ho === user.email && user.email !== g.nguoi_tao) {
+    const r = await nhanHoThung(c.env.DB, id, user.email, { tuXacNhanSL: true, ghiChu: "Admin BH tạo hộ — tự bỏ qua Kho tiếp nhận + tiếp nhận nội bộ" });
+    return c.json({ ok: true, tu_tiep_nhan: true, so_don_vi: "error" in r ? 0 : r.so_don_vi });
+  }
 
   const ktvInfo = await c.env.DB.prepare("SELECT ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ten_hien_thi: string | null }>();
   await pushBoxToKhovan(c.env, id, ktvInfo?.ten_hien_thi || g.nguoi_tao, g.nguoi_tao);
@@ -392,6 +406,8 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     created.push(id);
   }
   if (created.length > 0) await addLog(c.env.DB, "phieu_gui", guiId, "nhap", "nhap", user.email, `Thêm ${created.length} đơn từ Odoo: ${ok.map((r) => r.ma_don || r.odoo_id).join(", ")}`);
+  // 20/10/2026: luu bang chung case tu dvbh ngay khi tao don (chay nen, khong lam cham thao tac).
+  if (created.length > 0) c.executionCtx.waitUntil(syncCaseSnapshots(c.env, ok.map((r) => r.case_id)).catch(() => 0));
   return c.json({ created, loi }, created.length > 0 ? 201 : 400);
 });
 
