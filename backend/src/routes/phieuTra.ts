@@ -196,7 +196,7 @@ phieuTra.get("/", async (c) => {
   // 21/10/2026: bo loc nguoi nhan (KTV cu the) / nguoi tao phieu / NV sua chua cua don ben trong / trang thai.
   if (c.req.query("loc_only")) {
     const loc = await distinctOpts(c.env.DB, { ktv: "ktv_nhan", nguoi_tao: "nguoi_tao", trang_thai: "trang_thai" }, `FROM phieu_tra_bh WHERE ${where}`, binds);
-    const nvRows = await c.env.DB.prepare(`SELECT DISTINCT u.nguoi_sua_chua AS v FROM phieu_sua_chua_bh_ct u JOIN phieu_tra_bh ON phieu_tra_bh.id = u.phieu_tra_id WHERE u.nguoi_sua_chua IS NOT NULL AND ${where} ORDER BY v LIMIT 500`).bind(...binds).all<{ v: string }>();
+    const nvRows = await c.env.DB.prepare(`SELECT DISTINCT u.nguoi_sua_chua AS v FROM phieu_sua_chua_bh_ct u WHERE u.nguoi_sua_chua IS NOT NULL AND u.phieu_tra_id IN (SELECT id FROM phieu_tra_bh WHERE ${where}) ORDER BY v LIMIT 500`).bind(...binds).all<{ v: string }>();
     loc.nv = nvRows.results.map((r) => r.v);
     return c.json({ loc });
   }
