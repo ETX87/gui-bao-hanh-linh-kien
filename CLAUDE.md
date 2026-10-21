@@ -5471,3 +5471,5 @@ rồi trả lại nguyên trạng.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chưa bấm thử giao diện (thay đổi chỉ ở giao diện, dùng lại
 `FilterBar` / cách lọc trên máy đã chạy ở các màn khác; backend không đổi).
+
+**Deploy (21/10/2026):** `npm run deploy` thành công (Version ID `2233ef0a`), không có migration mới.
