@@ -12,6 +12,14 @@ import { buildXlsx, downloadBlob } from "../../lib/xlsx";
 import { readSheetFile } from "../../lib/xlsxRead";
 import { normalizeVi } from "../../lib/normalizeVi";
 import { useAuth } from "../../auth/AuthContext";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+
+const LK_DEFS: FilterDef[] = [
+  { key: "phan_loai", label: "Phân loại", noneLabel: "Chưa phân loại" },
+  { key: "nguon", label: "Nguồn", kind: "map", labels: { dong_bo: "Đồng bộ", noi_bo: "Nội bộ" } },
+  { key: "duoc_dung", label: "Dùng trong BH", kind: "map", labels: { "1": "Có", "0": "Không" } },
+  { key: "so_thang", label: "Tháng BH", fmt: (v) => `${v} tháng`, noneLabel: "Chưa khai báo" },
+];
 
 // Danh muc linh kien - HYBRID dong bo (nguon_du_lieu='dong_bo', tu linh-kien-app) + tao them noi bo
 // (nguon_du_lieu='noi_bo'). Dong dong bo CHI sua duoc 2 cot rieng cua bao hanh (so_thang_bao_hanh,
@@ -23,13 +31,8 @@ import { useAuth } from "../../auth/AuthContext";
 
 export function LinhKienScreen() {
   const toast = useToast();
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput), 250);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<LinhKien>(`/linh-kien${search ? `?q=${encodeURIComponent(search)}` : ""}`, "linh_kien");
+  const flt = useListFilters("/linh-kien", LK_DEFS.map((d) => d.key));
+  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<LinhKien>(withQuery("/linh-kien", flt.query), "linh_kien");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -91,7 +94,6 @@ export function LinhKienScreen() {
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Danh mục linh kiện ({total})</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-          <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tìm theo mã/tên…" className="sm:!w-52" />
           <Btn onClick={exportXlsx} disabled={exporting} title="Tải toàn bộ danh mục (xlsx) - sửa cột Tháng BH / Phân loại rồi Import lại">
             ⬇ Tải danh sách
           </Btn>
@@ -107,6 +109,7 @@ export function LinhKienScreen() {
           )}
         </div>
       </div>
+      <FilterBar f={flt} defs={LK_DEFS} placeholder="Tìm theo mã / tên / phân loại…" />
       {pl.cho_day > 0 && (
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-[var(--amber-50)] px-3 py-1.5 text-xs text-[var(--amber-800)]">
           ⏳ {pl.cho_day} phân loại đã sửa chưa đồng bộ được sang linh-kien-app (hệ thống tự gửi lại mỗi 15 phút).

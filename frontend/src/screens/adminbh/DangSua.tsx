@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -19,25 +20,21 @@ import { LocSelect } from "./PhieuTraList";
 
 type Row = DonVi & { ktv?: string | null; mo_ta_loi?: string | null; ten_khach_hang?: string | null; dx_cho_cap?: number; dx_da_cap?: number };
 
+const DEFS: FilterDef[] = [
+  { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
+  { key: "lk", label: "Linh kiện", kind: "lk" },
+  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
+];
+
 export function AdminDangSuaScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const { nameOf } = useLkName();
   useUserNames();
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  const [nv, setNv] = useState("");
+  const flt = useListFilters("/admin/dang-sua", ["nv", ...DEFS.map((d) => d.key)]);
+  const nv = flt.values.nv || "";
+  const setNv = (v: string) => flt.set("nv", v);
+  const path = withQuery("/admin/dang-sua", flt.query);
   const [detailId, setDetailId] = useState<string | null>(null);
-  useEffect(() => {
-    const t = setTimeout(() => setQ(qInput.trim()), 400);
-    return () => clearTimeout(t);
-  }, [qInput]);
-  const path = useMemo(() => {
-    const p = new URLSearchParams();
-    if (q) p.set("q", q);
-    if (nv) p.set("nv", nv);
-    const s = p.toString();
-    return `/admin/dang-sua${s ? `?${s}` : ""}`;
-  }, [q, nv]);
   const { items: rows, total, page, pageCount, setPage, reload, raw } = usePagedApi<Row>(path, "don_vi");
   const theoNv = (raw.theo_nv as { nv: string | null; n: number }[] | undefined) || [];
   const tongTatCa = theoNv.reduce((s, x) => s + x.n, 0);
@@ -84,21 +81,8 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
           })}
         </div>
       )}
-      <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-3 gap-y-1.5 items-center">
-          <div className="lg:col-span-2 flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 [&>*:last-child]:flex-1">
-            <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)]">Tìm</span>
-            <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Mã đơn, case, linh kiện, lỗi, NV, KTV, khách…" />
-          </div>
-          <LocSelect
-            label="NV"
-            value={nv}
-            onChange={setNv}
-            options={[{ value: "", label: "Tất cả" }, ...theoNv.map((x) => ({ value: x.nv || "__chua_gan__", label: x.nv ? `${displayName(x.nv)} (${x.n})` : `Chưa gán NV (${x.n})` }))]}
-          />
-        </div>
-      </div>
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={q || nv ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào đang chờ NV sửa chữa."} />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, NV, KTV, khách, serial…" />
+      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào đang chờ NV sửa chữa."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <UnitDetailModal

@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { parsePage } from "../lib/pagination";
 import { bumpLinhKienVersion, getLinhKienVersion } from "../lib/linhKienVersion";
 import { computeTopLinhKien, getLkTopGio } from "../lib/topLinhKien";
@@ -55,6 +56,12 @@ linhKien.get("/", async (c) => {
     ]);
     return c.json({ linh_kien: results, version });
   }
+  // 21/10/2026: loc phan loai / nguon / dung trong BH / so thang BH (ban phan trang cua man danh muc).
+  const LOC = { phan_loai: "don_vi", nguon: "nguon_du_lieu", duoc_dung: "duoc_dung_bao_hanh", so_thang: "so_thang_bao_hanh" };
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, "FROM linh_kien_bh WHERE 1=1", []) });
+  const f = eqFilters(c, LOC);
+  where += f.sql;
+  binds.push(...f.binds);
   const { limit, offset } = parsePage(c);
   const fromWhere = `FROM linh_kien_bh WHERE ${where}`;
   const [{ results }, totalRow] = await Promise.all([

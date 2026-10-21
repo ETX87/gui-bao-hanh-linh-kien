@@ -11,6 +11,7 @@ import { parsePage } from "../lib/pagination";
 import { mienOfKtv } from "../lib/mien";
 import { lookupCase } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
@@ -60,9 +61,17 @@ phieuGui.get("/", async (c) => {
     "id", "ma_van_don", "ma_xe_hoac_tai_xe", "don_vi_van_chuyen", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
     "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,'') || ' ' || COALESCE(p.mo_ta_loi,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)",
   ]);
+  // 21/10/2026: bo loc trang thai / hinh thuc gui / KTV (khi tao ho) / mien.
+  const LOC = { trang_thai: "trang_thai", hinh_thuc_gui: "hinh_thuc_gui", ktv: "nguoi_tao", mien: "mien" };
+  if (c.req.query("loc_only")) {
+    return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${col} = ?`, [user.email]) });
+  }
+  const f = eqFilters(c, LOC);
+  const w = `FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}${f.sql}`;
+  const b = [user.email, ...kw.binds, ...f.binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE ${col} = ?${kw.sql} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(user.email, ...kw.binds, limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}`).bind(user.email, ...kw.binds).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT * ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).bind(...b).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
@@ -463,17 +472,17 @@ phieuGui.get("/don-vi/tra-cuu", async (c) => {
   if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const kw = (c.req.query("q") || "").trim();
   const { limit, offset } = parsePage(c);
-  let where = "g.nguoi_tao = ?";
-  const binds: unknown[] = [user.email];
-  if (kw) {
-    where += " AND (u.id LIKE ? OR p.case_id LIKE ? OR p.ma_lk LIKE ? OR p.mo_ta_loi LIKE ?)";
-    const like = `%${kw}%`;
-    binds.push(like, like, like, like);
-  }
-  const fromWhere = `FROM phieu_sua_chua_bh_ct u
+  const baseFrom = `FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-     WHERE ${where}`;
+     WHERE g.nguoi_tao = ?`;
+  // 21/10/2026: loc trang thai / huong xu ly / linh kien / thung.
+  const LOC = { trang_thai: "u.trang_thai", huong_xu_ly: "u.huong_xu_ly", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", phieu_gui: "p.phieu_gui_id" };
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFrom, [user.email]) });
+  const kwc = kwClause(kw, ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+  const f = eqFilters(c, LOC);
+  const binds: unknown[] = [user.email, ...kwc.binds, ...f.binds];
+  const fromWhere = baseFrom + kwc.sql + f.sql;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.loai_doi_tru_de_xuat, g.ngay_gui_xe ${fromWhere} ORDER BY u.updated_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)

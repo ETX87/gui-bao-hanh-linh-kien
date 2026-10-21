@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
 import { parsePage } from "../lib/pagination";
 import { slaCutoffVn } from "../lib/sla";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
@@ -63,6 +64,12 @@ traCuu.get("/don-vi", async (c) => {
     where += " AND x.giai_doan = ?";
     binds.push(st);
   }
+  // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
+  const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk: "x.ma_lk", mien: "x.mien" };
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
+  const f = eqFilters(c, LOC);
+  where += f.sql;
+  binds.push(...f.binds);
   const kw = kwClause(c.req.query("q"), ["x.id", "x.case_id", "x.ma_lk", tenLkOf("x.ma_lk"), "x.mo_ta_loi", "x.ten_khach_hang", "x.sdt_khach_hang", "x.ktv", tenOf("x.ktv"), "x.phieu_gui_id", "x.phieu_tra_id",
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"]);
   where += kw.sql;

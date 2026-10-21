@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { displayName } from "../../hooks/useUserNames";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useRoute } from "../../router/Router";
-import { Card, Badge, Spinner, Input } from "../../ui/primitives";
+import { Card, Badge, Spinner } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
-import { GIAI_DOAN_MAP, KHACH_LE_KEY } from "../../lib/constants";
+import { GIAI_DOAN_MAP, HUONG_XU_LY_LABELS, KHACH_LE_KEY } from "../../lib/constants";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { MienBadge } from "../../ui/MienBadge";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -33,6 +35,14 @@ interface TraCuuRow {
 }
 import { UserName } from "../../hooks/useUserNames";
 
+const DEFS: FilterDef[] = [
+  { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" },
+  { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" },
+  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" },
+  { key: "lk", label: "Linh kiện", kind: "lk" },
+  { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+];
+
 // "Tra cuu moi don hang trong pham vi" (Giam sat/View) - THUAN CHI XEM. Phan trang that.
 // Phat hien 12 vong ra soat UX: nhan ?trang_thai= tu man Tong quan (bam 1 o dem) -> loc san + hien
 // chip "dang loc" bo duoc.
@@ -40,18 +50,9 @@ import { UserName } from "../../hooks/useUserNames";
 export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   const { query, nav } = useRoute();
   const stFilter = query.get("trang_thai") || "";
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setQ(qInput), 250);
-    return () => clearTimeout(t);
-  }, [qInput]);
-
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (stFilter) params.set("trang_thai", stFilter);
-  const qs = params.toString();
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<TraCuuRow>(`/tra-cuu/don-vi${qs ? `?${qs}` : ""}`, "don_vi");
+  const flt = useListFilters("/tra-cuu/don-vi", DEFS.map((d) => d.key));
+  const base = stFilter ? `/tra-cuu/don-vi?trang_thai=${encodeURIComponent(stFilter)}` : "/tra-cuu/don-vi";
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<TraCuuRow>(withQuery(base, flt.query), "don_vi");
   const { nameOf } = useLkName();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
@@ -86,22 +87,26 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
   ];
 
-  if (loading && rows.length === 0) return <Spinner />;
+  if (loading && rows.length === 0 && !flt.active && !stFilter) return <Spinner />;
 
   return (
     <Card className="p-3">
       <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">🔍 Tra cứu mọi đơn — mọi giai đoạn ({total})</h3>
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Mã đơn, thùng, phiếu trả, case, KTV, khách, serial, linh kiện…" className="max-w-sm" />
-        {stFilter && (
+      <FilterBar
+        f={flt}
+        defs={DEFS}
+        placeholder="Mã đơn, thùng, phiếu trả, case, KTV, khách, serial, linh kiện…"
+        extra={
+          stFilter && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1">
             Lọc: {stLabel}
             <button onClick={() => nav("/quanly/tra-cuu")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
               ✕
             </button>
           </span>
-        )}
-      </div>
+          )
+        }
+      />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => (r.loai === "unit" ? setDetailId(r.id) : r.phieu_gui_id ? setGuiId(r.phieu_gui_id) : undefined)} emptyText="Không tìm thấy đơn nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {guiId && <PhieuGuiDetailModal guiId={guiId} onClose={() => setGuiId(null)} onChanged={reload} />}

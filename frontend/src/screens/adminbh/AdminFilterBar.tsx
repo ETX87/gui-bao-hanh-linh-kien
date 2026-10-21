@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterSelect } from "../../ui/FilterBar";
 import { api } from "../../lib/api";
 import { Btn, Input, Select } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
@@ -86,17 +87,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
         />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5">
-        <div className={cell}>
-          <span className={lab}>Trạng thái</span>
-          <Select value={value.tt} onChange={(e) => set("tt", e.target.value)}>
-            <option value="">Tất cả</option>
-            {TT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <FilterSelect label="Trạng thái" value={value.tt} onChange={(v) => set("tt", v)} options={TT_OPTIONS} />
         <div className={cell}>
           <span className={lab}>Người gửi</span>
           <SearchableSelect options={ktvOptions} value={value.ktv} onChange={(v) => set("ktv", v)} placeholder="Tất cả" />
@@ -109,21 +100,18 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
           <span className={lab}>LK thực sửa</span>
           <SearchableSelect options={lkOpts(opts.lk_tt)} value={value.lk_tt} onChange={(v) => set("lk_tt", v)} placeholder="Tất cả" />
         </div>
-        <div className={cell}>
-          <span className={lab}>Loại LK</span>
-          <Select value={value.pl} onChange={(e) => set("pl", e.target.value)}>
-            <option value="">Tất cả</option>
-            {opts.phan_loai
+        <FilterSelect
+          label="Loại LK"
+          value={value.pl}
+          onChange={(v) => set("pl", v)}
+          options={[
+            ...opts.phan_loai
               .filter((v) => v)
               .sort((a, b) => a.localeCompare(b, "vi"))
-              .map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            {opts.phan_loai.includes("") && <option value="__none__">(Chưa phân loại)</option>}
-          </Select>
-        </div>
+              .map((v) => ({ value: v, label: v })),
+            ...(opts.phan_loai.includes("") ? [{ value: "__none__", label: "(Chưa phân loại)" }] : []),
+          ]}
+        />
         <div className={cell}>
           <span className={lab}>SLA</span>
           <Select value={value.cham} onChange={(e) => set("cham", e.target.value)}>

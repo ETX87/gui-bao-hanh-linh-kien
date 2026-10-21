@@ -540,6 +540,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                     />
                   )}
                   {ketQuaLabel(u) && <Kv k="Kết quả NV" v={ketQuaLabel(u)} />}
+                  {u.ghi_chu_nv && <Kv k="Ghi chú NV" v={<span className="whitespace-pre-wrap">{u.ghi_chu_nv}</span>} wide />}
                   {u.huong_xu_ly === "doi_moi" && (user.la_admin_bh || user.la_qtri) ? (
                     <Kv k="Xử lý xác" v={<XuLyXacInline unitId={u.id} value={u.xu_ly_xac} onSaved={load} />} />
                   ) : (

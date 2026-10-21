@@ -1,3 +1,4 @@
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -192,6 +193,21 @@ phieuTra.get("/", async (c) => {
   }
   // 20/10/2026: phieu bi Ke toan tu choi, da tra ve Admin BH (nhap + co ly do tu choi).
   if (c.req.query("tu_choi_kt") === "1") where += " AND trang_thai = 'nhap' AND ly_do_tu_choi_kt IS NOT NULL";
+  // 21/10/2026: bo loc nguoi nhan (KTV cu the) / nguoi tao phieu / NV sua chua cua don ben trong / trang thai.
+  if (c.req.query("loc_only")) {
+    const loc = await distinctOpts(c.env.DB, { ktv: "ktv_nhan", nguoi_tao: "nguoi_tao", trang_thai: "trang_thai" }, `FROM phieu_tra_bh WHERE ${where}`, binds);
+    const nvRows = await c.env.DB.prepare(`SELECT DISTINCT u.nguoi_sua_chua AS v FROM phieu_sua_chua_bh_ct u JOIN phieu_tra_bh ON phieu_tra_bh.id = u.phieu_tra_id WHERE u.nguoi_sua_chua IS NOT NULL AND ${where} ORDER BY v LIMIT 500`).bind(...binds).all<{ v: string }>();
+    loc.nv = nvRows.results.map((r) => r.v);
+    return c.json({ loc });
+  }
+  const f = eqFilters(c, { nguoi_tao: "nguoi_tao" });
+  where += f.sql;
+  binds.push(...f.binds);
+  const nvF = c.req.query("nv");
+  if (nvF) {
+    where += " AND id IN (SELECT phieu_tra_id FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id IS NOT NULL AND nguoi_sua_chua = ?)";
+    binds.push(nvF);
+  }
   // Bo loc + tim kiem man phieu tra (19/10/2026).
   const loai = c.req.query("loai_doi_tru");
   if (loai) {

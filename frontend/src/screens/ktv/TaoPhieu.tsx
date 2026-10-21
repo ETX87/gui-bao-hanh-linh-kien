@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
@@ -28,7 +29,14 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const isSelfKtv = user.la_ktv_dvbh || user.la_ve_tinh;
   const hoMode = !isSelfKtv && (user.la_giam_sat || user.la_admin_bh || user.la_qtri);
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuGui>("/phieu-gui", "phieu_gui");
+  const LOC_DEFS: FilterDef[] = [
+    { key: "trang_thai", label: "Trạng thái", kind: "map", labels: TRANG_THAI_PHIEU_GUI_LABELS },
+    { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
+    ...(hoMode ? [{ key: "ktv", label: "KTV", kind: "person" as const }] : []),
+    { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  ];
+  const flt = useListFilters("/phieu-gui", LOC_DEFS.map((d) => d.key));
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuGui>(withQuery("/phieu-gui", flt.query), "phieu_gui");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -83,7 +91,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     }
   };
 
-  if (loading && rows.length === 0) return <Spinner />;
+  if (loading && rows.length === 0 && !flt.active) return <Spinner />;
 
   const cols: Column<PhieuGui>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
@@ -168,7 +176,8 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
           + Tạo phiếu mới
         </Btn>
       </div>
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={hoMode ? "Chưa tạo hộ phiếu nào." : "Chưa có phiếu gửi nào."} />
+      <FilterBar f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã đơn / case / linh kiện bên trong…" />
+      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : hoMode ? "Chưa tạo hộ phiếu nào." : "Chưa có phiếu gửi nào."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && <PhieuGuiDetailModal guiId={detailId} onClose={() => setDetailId(null)} onChanged={afterChange} />}
       {pickOpen && (

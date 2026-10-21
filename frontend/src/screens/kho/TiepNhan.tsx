@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { api } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
@@ -22,13 +24,21 @@ import { UserName, displayName } from "../../hooks/useUserNames";
 // noi bo da chot tu prototype. "Cho tiep nhan" phan trang that (co the dai) - "Da tiep nhan gan day"
 // CO CHU DICH khong phan trang (backend luon tra dung 8 dong gan nhat, khong phai lich su day du).
 
+const DEFS: FilterDef[] = [
+  { key: "ktv", label: "KTV gửi", kind: "person" },
+  { key: "tao_ho", label: "Người tạo hộ", kind: "person", noneLabel: "KTV tự tạo" },
+  { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
+  { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+];
+
 export function KhoTiepNhanScreen() {
   const toast = useToast();
   const { refresh } = useWorkload();
-  const { items: pending, total: pendingTotal, page, pageCount, setPage, loading, reload: reloadPending } = usePagedApi<PhieuGui>("/kho/phieu-gui?trang_thai=da_gui", "phieu_gui");
+  const flt = useListFilters("/kho/phieu-gui?trang_thai=da_gui", DEFS.map((d) => d.key));
+  const { items: pending, total: pendingTotal, page, pageCount, setPage, loading, reload: reloadPending } = usePagedApi<PhieuGui>(withQuery("/kho/phieu-gui?trang_thai=da_gui", flt.query), "phieu_gui");
   // 09/10/2026: "Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua" - thung Kho da
   // nhan nhung Admin BH chua xac nhan tiep nhan noi bo (Kho can mang hang sang/nhac Admin BH).
-  const banGiao = usePagedApi<PhieuGui>("/kho/phieu-gui?trang_thai=cho_ban_giao", "phieu_gui");
+  const banGiao = usePagedApi<PhieuGui>(withQuery("/kho/phieu-gui?trang_thai=cho_ban_giao", flt.query), "phieu_gui");
   const [recent, setRecent] = useState<PhieuGui[]>([]);
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
@@ -61,17 +71,18 @@ export function KhoTiepNhanScreen() {
     }
   };
 
-  if (loading && pending.length === 0) return <Spinner />;
+  if (loading && pending.length === 0 && !flt.active) return <Spinner />;
 
   return (
     <div className="space-y-3">
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, KTV, mã đơn / case / linh kiện bên trong…" />
       <Card className="p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
         </div>
         {pending.length === 0 ? (
-          <EmptyState text="Không có thùng nào chờ tiếp nhận." />
+          <EmptyState text={flt.active ? "Không có thùng nào khớp bộ lọc." : "Không có thùng nào chờ tiếp nhận."} />
         ) : (
           <div className="space-y-1">
             {pending.map((g) => (

@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { parsePage } from "../lib/pagination";
 
 // Man "Quan ly danh sach KTV" (qtri) - CRUD ktv_lien_he_bh, gap that phat hien 04/09/2026 ("thieu
@@ -48,6 +49,12 @@ ktvLienHe.get("/", async (c) => {
     binds.push(like, like, like, like, like);
   }
 
+  // 21/10/2026: loc khu vuc / vai tro / nguon / mien gan tam.
+  const LOC = { khu_vuc: "khu_vuc_ma", vai_tro: "vai_tro_ktv", nguon: "nguon_du_lieu", mien_gan: "mien_gan" };
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ktv_lien_he_bh WHERE ${where}`, binds) });
+  const f = eqFilters(c, LOC);
+  where += f.sql;
+  binds.push(...f.binds);
   if (c.req.query("limit") === undefined) {
     const { results } = await c.env.DB.prepare(`SELECT * FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv`)
       .bind(...binds)

@@ -1,0 +1,150 @@
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../lib/api";
+import { Input, Select } from "./primitives";
+import { SearchableSelect } from "./SearchableSelect";
+import { displayName, useUserNames } from "../hooks/useUserNames";
+import { useLkName } from "../hooks/useLinhKien";
+
+// Thanh loc dung chung cho moi bang danh sach (21/10/2026: "tất cả các giao diện có table danh sách đơn,
+// phiếu... đều phải bổ sung các filter phù hợp ... + công cụ tìm kiếm. lựa chọn filter nhiều hơn 5 lựa chọn
+// phải có tìm kiếm theo danh sách"). Moi o loc > 5 lua chon tu chuyen sang SearchableSelect (go de tim).
+// Lua chon lay tu chinh du lieu dang co cua danh sach (backend: ?loc_only=1 -> {loc: {key: string[]}}).
+
+export const NONE = "__none__";
+
+export type LocKind = "person" | "lk" | "map" | "text";
+export interface FilterDef {
+  key: string; // ten tham so query gui len backend
+  label: string;
+  kind?: LocKind; // cach hien nhan cho gia tri lay tu backend
+  labels?: Record<string, string>; // kind = "map"
+  static?: { value: string; label: string }[]; // lua chon co dinh (khong lay tu backend)
+  noneLabel?: string; // nhan cho gia tri rong (mac dinh "(Chưa có)")
+  fmt?: (v: string) => string; // nhan tuy bien (uu tien hon kind)
+}
+
+export interface ListFilters {
+  q: string;
+  setQ: (v: string) => void;
+  qInput: string;
+  values: Record<string, string>;
+  set: (k: string, v: string) => void;
+  clear: () => void;
+  active: number;
+  query: string; // "a=b&c=d" (khong co dau ? dau)
+  loc: Record<string, string[]>;
+  reloadLoc: () => void;
+}
+
+// locPath: duong dan API danh sach (co the kem query co dinh, vd "/phieu-tra?trang_thai=nhap").
+export function useListFilters(locPath: string | null, keys: string[]): ListFilters {
+  const [qInput, setQInput] = useState("");
+  const [q, setQ] = useState("");
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loc, setLoc] = useState<Record<string, string[]>>({});
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setQ(qInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [qInput]);
+  useEffect(() => {
+    if (!locPath) return;
+    const sep = locPath.includes("?") ? "&" : "?";
+    let alive = true;
+    api
+      .get<{ loc?: Record<string, string[]> }>(`${locPath}${sep}loc_only=1&limit=1`)
+      .then((r) => alive && setLoc(r.loc || {}))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [locPath, tick]);
+  const query = useMemo(() => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    for (const k of keys) if (values[k]) p.set(k, values[k]);
+    return p.toString();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, values, keys.join(",")]);
+  return {
+    q,
+    setQ: setQInput,
+    qInput,
+    values,
+    set: (k, v) => setValues((s) => ({ ...s, [k]: v })),
+    clear: () => {
+      setValues({});
+      setQInput("");
+      setQ("");
+    },
+    active: Object.values(values).filter(Boolean).length + (q ? 1 : 0),
+    query,
+    loc,
+    reloadLoc: () => setTick((t) => t + 1),
+  };
+}
+
+// Ghep path + query loc.
+export function withQuery(path: string, query: string): string {
+  if (!query) return path;
+  return path + (path.includes("?") ? "&" : "?") + query;
+}
+
+export function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string; hint?: string }[] }) {
+  return (
+    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0">
+      <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap">{label}</span>
+      {options.length > 5 ? (
+        <SearchableSelect options={options} value={value} onChange={onChange} placeholder="Tất cả" />
+      ) : (
+        <Select value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">Tất cả</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      )}
+    </div>
+  );
+}
+
+export function FilterBar({ f, defs, placeholder, extra }: { f: ListFilters; defs: FilterDef[]; placeholder: string; extra?: React.ReactNode }) {
+  useUserNames();
+  const { nameOf } = useLkName();
+  const optsOf = (d: FilterDef) => {
+    if (d.static) return d.static;
+    const raw = f.loc[d.key] || [];
+    return raw
+      .map((v) => {
+        if (!v) return { value: NONE, label: d.noneLabel || "(Chưa có)" };
+        const label = d.fmt ? d.fmt(v) : d.kind === "person" ? displayName(v) : d.kind === "lk" ? nameOf(v) : d.kind === "map" ? d.labels?.[v] || v : v;
+        return { value: v, label, hint: d.kind === "person" && label !== v ? v : undefined };
+      })
+      .sort((a, b) => (a.value === NONE ? 1 : b.value === NONE ? -1 : a.label.localeCompare(b.label, "vi")));
+  };
+  const visible = defs.filter((d) => d.static || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
+  return (
+    <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
+      <div className="flex flex-col md:flex-row md:items-center gap-1.5">
+        <div className="flex-1 min-w-0">
+          <Input type="search" value={f.qInput} onChange={(e) => f.setQ(e.target.value)} placeholder={`🔍 ${placeholder}`} />
+        </div>
+        {extra}
+        {f.active > 0 && (
+          <button type="button" className="shrink-0 text-xs font-semibold text-[var(--link)] hover:underline" onClick={f.clear}>
+            ✕ Xoá lọc ({f.active})
+          </button>
+        )}
+      </div>
+      {visible.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5 mt-1.5">
+          {visible.map((d) => (
+            <FilterSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

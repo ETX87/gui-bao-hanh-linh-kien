@@ -10,6 +10,7 @@ import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, t
 import { parsePage } from "../lib/pagination";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { nhanHoThung } from "../lib/nhanHo";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
 
@@ -36,10 +37,17 @@ adminBH.get("/phieu-gui", async (c) => {
   const { limit, offset } = parsePage(c);
   const ms = mienScope(c.get("user"), "phieu_gui_bh");
   // 20/10/2026: ?trang_thai=da_gui -> thung dang gui ve Kho (de Admin "nhan ho Kho" khi KTV giao truc tiep).
-  const fromWhere = (c.req.query("trang_thai") === "da_gui" ? "FROM phieu_gui_bh WHERE trang_thai = 'da_gui'" : "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0") + ms.sql;
+  const base = (c.req.query("trang_thai") === "da_gui" ? "FROM phieu_gui_bh WHERE trang_thai = 'da_gui'" : "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0") + ms.sql;
+  // 21/10/2026: loc KTV gui / Kho nhan / hinh thuc gui + tim.
+  const LOC = { ktv: "nguoi_tao", kho: "nguoi_nhan_kho", hinh_thuc_gui: "hinh_thuc_gui", mien: "mien" };
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, base, ms.binds) });
+  const f = eqFilters(c, LOC);
+  const kw = kwClause(c.req.query("q"), ["id", "ma_van_don", "ma_xe_hoac_tai_xe", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"), "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)"]);
+  const fromWhere = base + f.sql + kw.sql;
+  const b = [...ms.binds, ...f.binds, ...kw.binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...ms.binds).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...b).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
@@ -598,9 +606,13 @@ adminBH.get("/dang-sua", async (c) => {
     nvSql = " AND u.nguoi_sua_chua = ?";
     nvBinds.push(nv);
   }
-  const binds = [...ms0.binds, ...kw.binds, ...nvBinds];
-  const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-    WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql}${kw.sql}${nvSql}`;
+  const LOC = { ktv: "g.nguoi_tao", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly" };
+  const baseFw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+    WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql}`;
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFw, ms0.binds) });
+  const f = eqFilters(c, LOC);
+  const binds = [...ms0.binds, ...kw.binds, ...nvBinds, ...f.binds];
+  const fw = `${baseFw}${kw.sql}${nvSql}${f.sql}`;
   const [{ results }, totalRow, nvRows] = await Promise.all([
     c.env.DB.prepare(`SELECT u.*, p.mien, p.ma_lk, p.mo_ta_loi, p.case_id, p.phieu_gui_id, p.ten_khach_hang, g.nguoi_tao AS ktv,
       (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'cho_cap') AS dx_cho_cap,
@@ -620,7 +632,12 @@ adminBH.get("/xac-nhan", async (c) => {
   const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
     "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
-  const ms = { sql: ms0.sql + kw.sql, binds: [...ms0.binds, ...kw.binds] };
+  // 21/10/2026: loc NV / KTV gui / huong xu ly / ket qua NV / linh kien.
+  const LOC = { nv: "u.nguoi_sua_chua", ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", huong_xu_ly: "u.huong_xu_ly", ket_qua: "u.ket_qua_nv", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)" };
+  const baseXn = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms0.sql}`;
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseXn, ms0.binds) });
+  const f = eqFilters(c, LOC);
+  const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms.sql}`;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT u.*, p.mien ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),

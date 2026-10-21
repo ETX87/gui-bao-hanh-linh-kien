@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FilterBar, useListFilters, withQuery } from "../../ui/FilterBar";
+import { phieuTraDefs } from "../shared/phieuTraFilters";
 import { MienBadge } from "../../ui/MienBadge";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -16,10 +18,12 @@ import { UserName } from "../../hooks/useUserNames";
 
 export function KeToanDuyetScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuTra>("/phieu-tra?trang_thai=cho_ke_toan_duyet", "phieu_tra");
+  const DEFS = phieuTraDefs();
+  const flt = useListFilters("/phieu-tra?trang_thai=cho_ke_toan_duyet", DEFS.map((d) => d.key));
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuTra>(withQuery("/phieu-tra?trang_thai=cho_ke_toan_duyet", flt.query), "phieu_tra");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  if (loading && rows.length === 0) return <Spinner />;
+  if (loading && rows.length === 0 && !flt.active) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
@@ -34,7 +38,8 @@ export function KeToanDuyetScreen({ user }: { user: AppUser }) {
   return (
     <Card className="p-3">
       <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">💰 Chờ duyệt ({total})</h3>
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có phiếu trả nào chờ duyệt." />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã đơn / case / linh kiện bên trong…" />
+      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : "Không có phiếu trả nào chờ duyệt."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <PhieuTraDetailModal

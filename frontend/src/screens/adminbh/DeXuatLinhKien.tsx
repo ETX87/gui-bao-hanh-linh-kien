@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Badge, Btn, Card, Spinner } from "../../ui/primitives";
@@ -23,16 +24,25 @@ const TABS = [
   { key: "huy", label: "Đã huỷ" },
 ];
 
+const DEFS: FilterDef[] = [
+  { key: "nguoi_de_xuat", label: "Người đề xuất", kind: "person" },
+  { key: "nv", label: "NV sửa chữa", kind: "person" },
+  { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
+  { key: "lk", label: "Linh kiện xin", kind: "lk" },
+  { key: "nguoi_xu_ly", label: "Người xử lý", kind: "person", noneLabel: "Chưa xử lý" },
+];
+
 export function AdminDeXuatScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const { nameOf } = useLkName();
   const [tab, setTab] = useState("cho_cap");
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DeXuatLk>(`/de-xuat?trang_thai=${tab}`, "de_xuat");
+  const flt = useListFilters(`/de-xuat?trang_thai=${tab}`, DEFS.map((d) => d.key));
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DeXuatLk>(withQuery(`/de-xuat?trang_thai=${tab}`, flt.query), "de_xuat");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [capFor, setCapFor] = useState<DeXuatLk[] | null>(null);
   const [tuChoiFor, setTuChoiFor] = useState<DeXuatLk | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  useEffect(() => setSelected(new Set()), [page, tab]);
+  useEffect(() => setSelected(new Set()), [page, tab, flt.query]);
   const choCap = tab === "cho_cap";
 
   const toggle = (id: string, on: boolean) =>
@@ -84,7 +94,7 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
       : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ma_misa ? `MISA ${r.ma_misa}` : r.ly_do_tu_choi || "—"} · {fmtDate(r.xu_ly_luc)}</span> },
   ];
 
-  if (loading && rows.length === 0 && total === 0 && tab === "cho_cap") return <Spinner />;
+  if (loading && rows.length === 0 && total === 0 && tab === "cho_cap" && !flt.active) return <Spinner />;
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   return (
@@ -119,6 +129,7 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
         )}
       </div>
       {choCap && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Lên phiếu xuất MISA rồi bấm "Cấp" và nhập mã phiếu. Bấm dòng để mở đơn bảo hành.</p>}
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.unit_id)} emptyText="Không có đề xuất nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {capFor && (

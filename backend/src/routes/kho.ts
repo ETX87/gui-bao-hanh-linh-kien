@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { parsePage } from "../lib/pagination";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf } from "../lib/search";
 import { mienScope } from "../lib/mien";
 
@@ -31,7 +32,15 @@ kho.get("/phieu-gui", async (c) => {
   // 20/10/2026: tim kiem tu khoa (ma thung, van don, KTV, ma don / case / linh kien ben trong).
   const kw = kwClause(c.req.query("q"), ["phieu_gui_bh.id", "phieu_gui_bh.ma_van_don", "phieu_gui_bh.ma_xe_hoac_tai_xe", "phieu_gui_bh.don_vi_van_chuyen", "phieu_gui_bh.nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
     "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)"]);
-  const ms = { sql: ms0.sql + kw.sql, binds: [...ms0.binds, ...kw.binds] };
+  // 21/10/2026: loc KTV gui / nguoi tao ho / hinh thuc gui / mien.
+  const LOC = { ktv: "phieu_gui_bh.nguoi_tao", tao_ho: "phieu_gui_bh.nguoi_tao_ho", hinh_thuc_gui: "phieu_gui_bh.hinh_thuc_gui", mien: "phieu_gui_bh.mien" };
+  if (c.req.query("loc_only")) {
+    const tq = c.req.query("trang_thai");
+    const base = tq === "cho_ban_giao" ? "trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" : tq === "da_tiep_nhan" ? "trang_thai = 'da_tiep_nhan'" : "trang_thai = 'da_gui'";
+    return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${base}${ms0.sql}`, ms0.binds) });
+  }
+  const f = eqFilters(c, LOC);
+  const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   // 09/10/2026 ("Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua"): thung Kho da tiep
   // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
   if (c.req.query("trang_thai") === "cho_ban_giao") {

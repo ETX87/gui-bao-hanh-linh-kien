@@ -107,6 +107,7 @@ export interface DonVi {
   xu_ly_xac: string | null;
   ket_qua_chan_doan: string | null;
   ket_qua_nv?: string | null; // 12/10/2026: da_sua_xong | khong_sua_duoc | khong_loi | kiem_tra_tu_van
+  ghi_chu_nv?: string | null; // 21/10/2026: ghi chu NV khi nop ket qua
   so_dx_cho_cap?: number; // GET /nv/viec-cua-toi
   so_dx_da_cap?: number;
   admin_xac_nhan_hoan_tat: boolean;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MienBadge } from "../../ui/MienBadge";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { detectMien, type TuKhoa } from "../../lib/mien";
 import { Table, StopClick } from "../../ui/Table";
 import { api, errorMessage } from "../../lib/api";
@@ -12,6 +13,13 @@ import type { KtvLienHe } from "../../lib/types";
 
 const VAI_TRO_OPTIONS = ["KTV", "CTV", "Tram", "Ve tinh"];
 
+const KTV_DEFS: FilterDef[] = [
+  { key: "khu_vuc", label: "Khu vực", noneLabel: "Chưa có khu vực" },
+  { key: "vai_tro", label: "Vai trò", noneLabel: "Chưa có" },
+  { key: "nguon", label: "Nguồn", kind: "map", labels: { dong_bo: "Đồng bộ", noi_bo: "Nội bộ" } },
+  { key: "mien_gan", label: "Miền gán tạm", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Không gán" },
+];
+
 // Man "Quan ly danh sach KTV" (qtri, moi 04/09/2026) - CRUD ktv_lien_he_bh. Gap that phat hien: bang
 // nay truoc gio chi nhan duoc du lieu qua sync day tu linh-kien-app (chua trien khai xong ben do),
 // nen dang RONG tren production - khong co gi de auth.ts (GET /callback) doi chieu tu dong duyet tai
@@ -22,13 +30,8 @@ const VAI_TRO_OPTIONS = ["KTV", "CTV", "Tram", "Ve tinh"];
 
 export function QtriKtvScreen() {
   const toast = useToast();
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setQ(qInput), 300);
-    return () => clearTimeout(t);
-  }, [qInput]);
-  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>(`/ktv-lien-he${q ? `?q=${encodeURIComponent(q)}` : ""}`, "ktv");
+  const flt = useListFilters("/ktv-lien-he", KTV_DEFS.map((d) => d.key));
+  const { items, total, page, pageCount, setPage, loading, reload } = usePagedApi<KtvLienHe>(withQuery("/ktv-lien-he", flt.query), "ktv");
   const [editing, setEditing] = useState<KtvLienHe | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [tuKhoa, setTuKhoa] = useState<TuKhoa[]>([]);
@@ -50,19 +53,19 @@ export function QtriKtvScreen() {
     }
   };
 
-  if (loading && items.length === 0) return <Spinner />;
+  if (loading && items.length === 0 && !flt.active) return <Spinner />;
 
   return (
     <Card className="p-3">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📇 Danh sách KTV / CTV / Trạm ({total})</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm theo tên / email / SĐT / mã…" className="sm:!w-60" />
           <Btn variant="primary" onClick={() => setAddOpen(true)}>
             + Khai báo KTV
           </Btn>
         </div>
       </div>
+      <FilterBar f={flt} defs={KTV_DEFS} placeholder="Tìm theo tên / email / SĐT / mã / khu vực…" />
       <p className="text-xs text-[var(--ink-soft)] mb-2">
         KTV có trong danh sách này sẽ <b>tự động được duyệt</b> ngay khi đăng nhập lần đầu bằng đúng email đăng nhập bên dưới — không cần chờ Admin hệ thống duyệt tay ở màn "Người dùng".
       </p>

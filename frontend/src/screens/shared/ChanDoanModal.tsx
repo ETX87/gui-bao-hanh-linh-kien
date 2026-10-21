@@ -4,7 +4,7 @@ import { api, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Select } from "../../ui/primitives";
+import { Btn, Field, Select, Textarea } from "../../ui/primitives";
 import { KET_QUA_NV_OPTIONS } from "../../lib/constants";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
 import type { DeXuatLk, DonVi } from "../../lib/types";
@@ -26,6 +26,7 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [anhSau, setAnhSau] = useState<FileList | null>(null);
   const [anhLoi, setAnhLoi] = useState<FileList | null>(null);
   const [lyDoCham, setLyDoCham] = useState("");
+  const [ghiChu, setGhiChu] = useState("");
   const [busy, setBusy] = useState(false);
   // 12/10/2026: de xuat linh kien con "cho cap" se tu huy khi nop ket qua - bao truoc cho NV.
   const [soChoCap, setSoChoCap] = useState(0);
@@ -40,7 +41,7 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     setBusy(true);
     try {
       const [anh_truoc, anh_sau, anh_loi_thuc_te] = await Promise.all([filesToDataUrls(anhTruoc), filesToDataUrls(anhSau), filesToDataUrls(anhLoi)]);
-      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: ketQua, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined });
+      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: ketQua, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined });
       toast(r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
       onDone();
     } catch (e) {
@@ -77,6 +78,9 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
               </option>
             ))}
           </Select>
+        </Field>
+        <Field label="Ghi chú">
+          <Textarea rows={3} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} placeholder="Linh kiện đã thay, nguyên nhân lỗi, lưu ý cho Admin / Kho…" />
         </Field>
         {soChoCap > 0 && (
           <p className="rounded-lg bg-[var(--amber-100)] px-3 py-2 text-xs font-semibold text-[var(--amber-800)]">

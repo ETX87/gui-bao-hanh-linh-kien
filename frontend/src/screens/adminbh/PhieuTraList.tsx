@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { FilterBar, FilterSelect, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { phieuTraDefs } from "../shared/phieuTraFilters";
 import { MienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -24,33 +26,20 @@ export interface TtTab {
 export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { user: AppUser; title: string; tabs: TtTab[]; reloadKey?: number; onChanged?: () => void }) {
   const { refresh } = useWorkload();
   const [tab, setTab] = useState(tabs[0].value);
-  const [loaiPt, setLoaiPt] = useState("");
-  const [nhanPt, setNhanPt] = useState("");
-  const [mienPt, setMienPt] = useState("");
-  const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
-  useEffect(() => {
-    const t = setTimeout(() => setQ(qInput.trim()), 400);
-    return () => clearTimeout(t);
-  }, [qInput]);
-  const listPath = useMemo(() => {
-    const p = new URLSearchParams();
-    if (tab === "tu_choi_kt") p.set("tu_choi_kt", "1");
-    else if (tab) p.set("trang_thai", tab);
-    if (loaiPt) p.set("loai_doi_tru", loaiPt);
-    if (nhanPt) p.set("nguoi_nhan", nhanPt);
-    if (mienPt) p.set("mien", mienPt);
-    if (q) p.set("q", q);
-    const s = p.toString();
-    return `/phieu-tra${s ? `?${s}` : ""}`;
-  }, [tab, loaiPt, nhanPt, mienPt, q]);
+  const basePath = tab === "tu_choi_kt" ? "/phieu-tra?tu_choi_kt=1" : `/phieu-tra?trang_thai=${tab}`;
+  const DEFS: FilterDef[] = [
+    { key: "nguoi_nhan", label: "Loại người nhận", static: [{ value: "ktv", label: "KTV" }, { value: "khach_le", label: "Khách lẻ" }, { value: "doi_tac", label: "Đối tác (trả xác)" }] },
+    ...phieuTraDefs(),
+  ];
+  const flt = useListFilters(basePath, DEFS.map((d) => d.key));
+  const listPath = withQuery(basePath, flt.query);
   const { items: list, total, page, pageCount, setPage, reload } = usePagedApi<PhieuTra>(listPath, "phieu_tra");
   useEffect(() => {
     if (reloadKey) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
-  const soLoc = [loaiPt, nhanPt, mienPt, q].filter(Boolean).length;
+  const soLoc = flt.active;
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
@@ -98,24 +87,7 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { 
           ))}
         </div>
       </div>
-      <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-1.5 items-center">
-          <div className="col-span-2 lg:col-span-1 flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 [&>*:last-child]:flex-1">
-            <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)]">Tìm</span>
-            <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Mã phiếu, mã ĐH, MISA, vận đơn, KTV, mã đơn, case…" />
-          </div>
-          <LocSelect label="Đối trừ" value={loaiPt} onChange={setLoaiPt} options={[{ value: "", label: "Tất cả" }, ...Object.entries(LOAI_DOI_TRU_LABELS).map(([value, label]) => ({ value, label }))]} />
-          <LocSelect label="Người nhận" value={nhanPt} onChange={setNhanPt} options={[{ value: "", label: "Tất cả" }, { value: "ktv", label: "KTV" }, { value: "khach_le", label: "Khách lẻ" }, { value: "doi_tac", label: "Đối tác (trả xác)" }]} />
-          <LocSelect label="Miền" value={mienPt} onChange={setMienPt} options={[{ value: "", label: "Tất cả" }, { value: "MB", label: "Miền Bắc" }, { value: "MN", label: "Miền Nam" }, { value: "none", label: "Chưa khai báo" }]} />
-        </div>
-        {soLoc > 0 && (
-          <div className="flex justify-end mt-1.5">
-            <button type="button" className="text-xs font-semibold text-[var(--link)] hover:underline" onClick={() => { setLoaiPt(""); setNhanPt(""); setMienPt(""); setQInput(""); setQ(""); }}>
-              ✕ Xoá lọc ({soLoc})
-            </button>
-          </div>
-        )}
-      </div>
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, vận đơn, KTV, mã đơn, case, linh kiện…" />
       <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={soLoc ? "Không có phiếu trả nào khớp bộ lọc." : "Không có phiếu trả nào."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
@@ -134,7 +106,10 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { 
   );
 }
 
+// 21/10/2026: >5 lua chon -> tu dung o chon co tim kiem (FilterSelect).
 export function LocSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const real = options.filter((o) => o.value !== "");
+  if (real.length > 5) return <FilterSelect label={label} value={value} onChange={onChange} options={real} />;
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0">
       <span className="shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap">{label}</span>

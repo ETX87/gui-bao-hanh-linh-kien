@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FilterBar, useListFilters, withQuery } from "../../ui/FilterBar";
+import { phieuTraDefs } from "../shared/phieuTraFilters";
 import { MienBadge } from "../../ui/MienBadge";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -17,17 +19,19 @@ import { UserName } from "../../hooks/useUserNames";
 
 export function KhoDongGoiScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
+  const DEFS = phieuTraDefs();
+  const flt = useListFilters("/phieu-tra?trang_thai=da_duyet_ke_toan,da_gui,khieu_nai_van_chuyen", DEFS.map((d) => d.key));
   const { items: choDongGoi, total: choDongGoiTotal, page: choDongGoiPage, pageCount: choDongGoiPageCount, setPage: setChoDongGoiPage, loading: loading1, reload: reload1 } = usePagedApi<PhieuTra>(
-    "/phieu-tra?trang_thai=da_duyet_ke_toan",
+    withQuery("/phieu-tra?trang_thai=da_duyet_ke_toan", flt.query),
     "phieu_tra",
   );
   const { items: daGui, total: daGuiTotal, page: daGuiPage, pageCount: daGuiPageCount, setPage: setDaGuiPage, loading: loading2, reload: reload2 } = usePagedApi<PhieuTra>(
-    "/phieu-tra?trang_thai=da_gui",
+    withQuery("/phieu-tra?trang_thai=da_gui", flt.query),
     "phieu_tra",
   );
   // 12/10/2026: KTV bao khong nhan duoc hang -> Kho danh gia gui thanh cong / that bai.
   const { items: khieuNai, total: khieuNaiTotal, page: knPage, pageCount: knPageCount, setPage: setKnPage, reload: reload3 } = usePagedApi<PhieuTra>(
-    "/phieu-tra?trang_thai=khieu_nai_van_chuyen",
+    withQuery("/phieu-tra?trang_thai=khieu_nai_van_chuyen", flt.query),
     "phieu_tra",
   );
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -39,7 +43,7 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
     refresh();
   };
 
-  if (loading1 && loading2 && choDongGoi.length === 0 && daGui.length === 0) return <Spinner />;
+  if (loading1 && loading2 && choDongGoi.length === 0 && daGui.length === 0 && !flt.active) return <Spinner />;
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
@@ -53,6 +57,7 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-3">
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, vận đơn, KTV, mã đơn / case / linh kiện bên trong…" />
       {khieuNaiTotal > 0 && (
         <Card className="p-3 border-[var(--red-500)]">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--red-700)] mb-1">⚠ KTV báo không nhận được hàng — cần Kho đánh giá ({khieuNaiTotal})</h3>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Badge, Btn, Card, Spinner } from "../../ui/primitives";
@@ -7,7 +8,8 @@ import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { BulkXacNhanHoanTatModal } from "./BulkXacNhanHoanTatModal";
-import { HUONG_XU_LY_LABELS, ketQuaLabel } from "../../lib/constants";
+import { HUONG_XU_LY_LABELS, ketQuaLabel, KET_QUA_NV_OPTIONS } from "../../lib/constants";
+const KET_QUA_NV_LABELS: Record<string, string> = Object.fromEntries(KET_QUA_NV_OPTIONS.map((o) => [o.value, o.label]));
 import type { AppUser, DonVi } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 
@@ -15,15 +17,24 @@ import { UserName } from "../../hooks/useUserNames";
 // Click dong mo UnitDetailModal (da co san nut "Xac nhan hoan tat / Yeu cau lam lai" o footer). Phan
 // trang that (server LIMIT/OFFSET). 12/10/2026 (de xuat #12): chon nhieu dong -> xac nhan hang loat.
 
+const DEFS: FilterDef[] = [
+  { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Không qua NV" },
+  { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
+  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
+  { key: "ket_qua", label: "Kết quả NV", kind: "map", labels: KET_QUA_NV_LABELS, noneLabel: "Chưa có" },
+  { key: "lk", label: "Linh kiện", kind: "lk" },
+];
+
 export function AdminXacNhanScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>("/admin/xac-nhan", "don_vi");
+  const flt = useListFilters("/admin/xac-nhan", DEFS.map((d) => d.key));
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(withQuery("/admin/xac-nhan", flt.query), "don_vi");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   useEffect(() => setSelected(new Set()), [page]);
 
-  if (loading && rows.length === 0) return <Spinner />;
+  if (loading && rows.length === 0 && !flt.active) return <Spinner />;
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -58,6 +69,7 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
     { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
     { key: "nv", header: "NV phụ trách", render: (r) => <UserName email={r.nguoi_sua_chua} /> },
     { key: "kq", header: "Kết quả NV", render: (r) => ketQuaLabel(r) || "—" },
+    { key: "gcnv", header: "Ghi chú NV", render: (r) => <span className="block max-w-[240px] truncate" title={r.ghi_chu_nv || ""}>{r.ghi_chu_nv || "—"}</span> },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
   ];
 
@@ -81,7 +93,8 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
           </div>
         )}
       </div>
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText="Không có đơn nào chờ xác nhận." />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" />
+      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào chờ xác nhận."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {bulkOpen && (
         <BulkXacNhanHoanTatModal

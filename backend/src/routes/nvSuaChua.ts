@@ -6,6 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { LBL, KHACH_LE_KEY, KET_QUA_NV_VALUES, KET_QUA_NV_TO_CU, type KetQuaNv } from "../lib/constants";
+import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { parsePage } from "../lib/pagination";
 import { nextSequentialId } from "../lib/idCounter";
@@ -34,6 +35,14 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
     "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+  // 21/10/2026: loc KTV gui / linh kien / huong xu ly / bao hanh.
+  const LOC = { ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly", loai_bao_hanh: "u.loai_bao_hanh" };
+  if (c.req.query("loc_only")) {
+    return c.json({ loc: await distinctOpts(c.env.DB, LOC, "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?", [user.email]) });
+  }
+  const f = eqFilters(c, LOC);
+  kw.sql += f.sql;
+  kw.binds.push(...f.binds);
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id,
@@ -56,6 +65,7 @@ interface ChanDoanBody {
   anh_sau?: string[];
   anh_loi_thuc_te?: string[];
   ly_do_cham?: string;
+  ghi_chu?: string;
 }
 
 nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
@@ -71,8 +81,9 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   const now = nowVN();
-  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ket_qua_nv = ?, ket_qua_chan_doan = ?, trang_thai = 'cho_admin_xac_nhan', updated_at = ? WHERE id = ?")
-    .bind(body.ket_qua_chan_doan, KET_QUA_NV_TO_CU[body.ket_qua_chan_doan] ?? null, now, id)
+  const ghiChu = (body.ghi_chu || "").trim().slice(0, 2000) || null;
+  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ket_qua_nv = ?, ket_qua_chan_doan = ?, ghi_chu_nv = ?, trang_thai = 'cho_admin_xac_nhan', updated_at = ? WHERE id = ?")
+    .bind(body.ket_qua_chan_doan, KET_QUA_NV_TO_CU[body.ket_qua_chan_doan] ?? null, ghiChu, now, id)
     .run();
   // De xuat linh kien con cho cap luc NV chot ket qua -> tu huy (khong con can).
   const huy = await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'huy', ly_do_tu_choi = 'Tự huỷ khi NV nộp kết quả', nguoi_xu_ly = ?, xu_ly_luc = ?, updated_at = ? WHERE unit_id = ? AND trang_thai = 'cho_cap'")
@@ -85,7 +96,7 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   for (const url of body.anh_loi_thuc_te || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'loi_thuc_te', ?)").bind(id, url));
   if (statements.length) await c.env.DB.batch(statements);
 
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, "NV nộp kết quả: " + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, "NV nộp kết quả: " + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (ghiChu ? ` | Ghi chú: ${ghiChu}` : "") + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
 
   // 20/10/2026: "ktv sửa chữa sửa xong => đẩy sang kho luôn (tự tạo 1 phiếu trả hàng và đẩy qua kho, bỏ qua
   // admin bh xác nhận, bỏ qua kế toán duyệt)". Ket qua "Đã sửa xong" -> tu hoan tat + vao phieu tra trang
