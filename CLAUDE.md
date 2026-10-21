@@ -5526,3 +5526,5 @@ rồi trả lại nguyên trạng.
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chưa bấm thử giao diện / gọi API local.
+
+**Deploy (21/10/2026):** `npm run deploy` thành công (Version ID `3328fa72`), không có migration mới.
