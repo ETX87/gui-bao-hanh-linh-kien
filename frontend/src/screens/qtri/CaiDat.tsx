@@ -177,6 +177,12 @@ interface EtxStatus {
   tk_khong_co_etx: number;
   nghi_ma_dang_mo: { email: string; ten: string | null; la_qtri: number }[];
   khoa_boi_etx: { email: string; ten: string | null }[];
+  khu_vuc_gan_nhat: {
+    ok: boolean; luc: string; tong: number; so_tai_khoan: number; them: number; xoa: number;
+    bo_qua_chua_co_tk: number; bo_qua_khu_vuc_la: number; mien_cap_nhat: number; loi: string | null;
+  } | null;
+  tk_co_khu_vuc: number;
+  tk_mien_tu_dong: number;
 }
 
 // Dong bo "ETX nhan su" (16/10/2026, backend/src/lib/etxSync.ts): tu duyet tai khoan co tren ETX, tu khoa khi nghi viec.
@@ -191,6 +197,20 @@ function EtxSyncCard() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const [busyKv, setBusyKv] = useState(false);
+  const kv = st?.khu_vuc_gan_nhat ?? null;
+  const syncKv = async () => {
+    setBusyKv(true);
+    try {
+      const r = await api.post<NonNullable<EtxStatus["khu_vuc_gan_nhat"]>>("/etx/khu-vuc-sync-now");
+      toast(r.ok ? `Đã đồng bộ khu vực ${r.so_tai_khoan} tài khoản, cập nhật miền ${r.mien_cap_nhat}.` : `Đồng bộ lỗi: ${r.loi}`, r.ok ? "ok" : "error");
+      load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusyKv(false);
+    }
+  };
   const syncNow = async () => {
     setBusy(true);
     try {
@@ -287,6 +307,29 @@ function EtxSyncCard() {
             : `Lần gần nhất ${lr.luc}: lỗi — ${lr.loi}`
           : "Chưa chạy lần nào."}
       </p>
+      <div className="mt-4 border-t border-[var(--line)] pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-semibold text-[var(--ink)]">🗺 Khu vực phụ trách của nhân sự</div>
+            <p className="text-xs text-[var(--ink-soft)]">
+              Lấy từ linh-kien-app 1 lần/ngày. Tự suy miền cho tài khoản chưa gán miền tay (khu vực toàn MB → MB, toàn MN → MN, cả 2 → Cả 2).
+            </p>
+          </div>
+          <Btn size="sm" variant="secondary" disabled={busyKv} onClick={syncKv}>{busyKv ? "Đang đồng bộ…" : "Đồng bộ ngay"}</Btn>
+        </div>
+        {st && (
+          <p className="mt-1 text-xs text-[var(--ink-soft)]">
+            {st.tk_co_khu_vuc} tài khoản có khu vực · {st.tk_mien_tu_dong} tài khoản đang dùng miền tự suy.
+          </p>
+        )}
+        <p className={`mt-1 text-xs ${kv && !kv.ok ? "text-[var(--red-700)] font-semibold" : "text-[var(--ink-soft)]"}`}>
+          {kv
+            ? kv.ok
+              ? `Lần gần nhất ${kv.luc}: ${kv.tong} lượt gán, ${kv.so_tai_khoan} tài khoản — thêm ${kv.them}, bỏ ${kv.xoa}, cập nhật miền ${kv.mien_cap_nhat}.${kv.bo_qua_chua_co_tk ? ` Bỏ qua ${kv.bo_qua_chua_co_tk} lượt của người chưa có tài khoản bên này.` : ""}${kv.bo_qua_khu_vuc_la ? ` Bỏ qua ${kv.bo_qua_khu_vuc_la} lượt khu vực chưa có.` : ""}`
+              : `Lần gần nhất ${kv.luc}: lỗi — ${kv.loi}`
+            : "Chưa chạy lần nào."}
+        </p>
+      </div>
     </Card>
   );
 }

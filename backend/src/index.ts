@@ -28,6 +28,7 @@ import deXuatRoutes from "./routes/deXuat";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
+import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
 import { backfillCaseSnapshots } from "./lib/caseSnapshot";
 import etxRoutes from "./routes/etx";
 
@@ -80,6 +81,7 @@ export default {
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)));
+    ctx.waitUntil(maybeRunUserKhuVucSync(env).catch((e) => console.error("[userKhuVucSync]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));
     // 20/10/2026: bo sung bang chung case (dvbh) cho don chua co - toi da 40 case / lan.
     ctx.waitUntil(backfillCaseSnapshots(env).then(() => undefined).catch((e) => console.error("[caseSnapshot]", e instanceof Error ? e.message : e)));

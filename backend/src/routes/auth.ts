@@ -1,3 +1,4 @@
+import { runUserKhuVucSync } from "../lib/userKhuVucSync";
 import { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { Env } from "../types";
@@ -97,6 +98,8 @@ auth.get("/callback", async (c) => {
     etxDangLam = !!e;
   }
 
+  // 21/10/2026: tai khoan moi -> keo ngay khu vuc nhan su tu linh-kien-app (khong doi toi lan dong bo hang ngay).
+  const daCoTaiKhoan = !!(await c.env.DB.prepare("SELECT 1 AS x FROM users WHERE email = ?").bind(userInfo.email).first());
   await c.env.DB.prepare("PRAGMA foreign_keys = ON").run();
   if (ktvMatch) {
     await c.env.DB.prepare(
@@ -120,6 +123,10 @@ auth.get("/callback", async (c) => {
     )
       .bind(userInfo.email, userInfo.name ?? null, isBootstrapAdmin || etxDangLam ? "Da duyet" : "Cho duyet", isBootstrapAdmin ? 1 : 0, nowVN(), etxDangLam ? 1 : 0)
       .run();
+  }
+
+  if (!daCoTaiKhoan && !ktvMatch) {
+    c.executionCtx.waitUntil(runUserKhuVucSync(c.env).then(() => undefined).catch(() => undefined));
   }
 
   // Nhat ky dang nhap (bao mat noi bo). CF-Connecting-IP la header Cloudflare tu dong gan.

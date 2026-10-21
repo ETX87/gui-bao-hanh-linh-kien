@@ -134,7 +134,7 @@ users.patch("/:email", async (c) => {
   // 11/10/2026: mien phu trach cua nguoi xu ly (MB / MN / ALL = ca 2 / null = chua gan, thay tat ca).
   if (body.mien !== undefined) {
     if (body.mien !== null && !["MB", "MN", "ALL"].includes(body.mien)) return c.json({ error: "INVALID_MIEN" }, 400);
-    await c.env.DB.prepare("UPDATE users SET mien = ?, updated_at = ? WHERE email = ?").bind(body.mien, nowVN(), targetEmail).run();
+    await c.env.DB.prepare("UPDATE users SET mien = ?, mien_tu_dong = 0, updated_at = ? WHERE email = ?").bind(body.mien, nowVN(), targetEmail).run();
   }
   if (body.trang_thai_duyet !== undefined) {
     await c.env.DB.prepare("UPDATE users SET trang_thai_duyet = ?, updated_at = ? WHERE email = ?").bind(body.trang_thai_duyet, nowVN(), targetEmail).run();

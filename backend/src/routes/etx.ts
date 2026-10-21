@@ -4,6 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { runEtxSync } from "../lib/etxSync";
+import { runUserKhuVucSync } from "../lib/userKhuVucSync";
 
 // Dong bo "ETX nhan su" (16/10/2026, xem lib/etxSync.ts) - the "👥 Đồng bộ ETX nhân sự" o Cai dat he thong.
 const etx = new Hono<{ Bindings: Env }>();
@@ -22,7 +23,7 @@ etx.get("/status", async (c) => {
   const user = c.get("user");
   if (!user.la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
   const db = c.env.DB;
-  const [last, dem, nghiMaMo, khoaEtx] = await Promise.all([
+  const [last, dem, nghiMaMo, khoaEtx, kvLast, kvDem] = await Promise.all([
     db.prepare("SELECT value FROM sync_state WHERE key = 'etx_last'").first<{ value: string }>(),
     db
       .prepare(
@@ -33,20 +34,39 @@ etx.get("/status", async (c) => {
       .first<{ tk_dang_lam: number; tk_khong_co_etx: number }>(),
     db.prepare(`SELECT u.email, u.ten, u.la_qtri ${NGHI_MA_MO_SQL} ORDER BY u.email LIMIT 200`).all(),
     db.prepare("SELECT email, ten FROM users WHERE khoa_boi_etx = 1 AND bi_khoa = 1 ORDER BY email LIMIT 200").all(),
+    db.prepare("SELECT value FROM sync_state WHERE key = 'user_khu_vuc_last'").first<{ value: string }>(),
+    db
+      .prepare(
+        `SELECT (SELECT COUNT(DISTINCT user_email) FROM user_khu_vuc_bh) AS tk_co_khu_vuc,
+                (SELECT COUNT(*) FROM users WHERE mien_tu_dong = 1) AS tk_mien_tu_dong`,
+      )
+      .first<{ tk_co_khu_vuc: number; tk_mien_tu_dong: number }>(),
   ]);
+  let khu_vuc_gan_nhat: unknown = null;
+  try {
+    khu_vuc_gan_nhat = kvLast ? JSON.parse(kvLast.value) : null;
+  } catch {
+    khu_vuc_gan_nhat = null;
+  }
   let lan_gan_nhat: unknown = null;
   try {
     lan_gan_nhat = last ? JSON.parse(last.value) : null;
   } catch {
     lan_gan_nhat = null;
   }
-  return c.json({ lan_gan_nhat, ...dem, nghi_ma_dang_mo: nghiMaMo.results, khoa_boi_etx: khoaEtx.results });
+  return c.json({ lan_gan_nhat, ...dem, nghi_ma_dang_mo: nghiMaMo.results, khoa_boi_etx: khoaEtx.results, khu_vuc_gan_nhat, ...kvDem });
 });
 
 // POST /api/etx/sync-now
 etx.post("/sync-now", async (c) => {
   if (!c.get("user").la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
   return c.json(await runEtxSync(c.env));
+});
+
+// POST /api/etx/khu-vuc-sync-now - dong bo tay khu vuc nhan su tu linh-kien-app (lib/userKhuVucSync.ts).
+etx.post("/khu-vuc-sync-now", async (c) => {
+  if (!c.get("user").la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
+  return c.json(await runUserKhuVucSync(c.env));
 });
 
 // POST /api/etx/khoa-nghi-viec - { emails: string[] } khoa cac tai khoan ETX bao nghi viec (Admin chon tu danh sach
