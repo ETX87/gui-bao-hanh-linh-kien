@@ -182,6 +182,9 @@ interface HeaderBody {
   ma_xe_hoac_tai_xe?: string;
   don_vi_van_chuyen?: string;
   ma_van_don?: string;
+  // 21/10/2026: "khu vực gửi hàng bảo hành (khu vực động - KTV khu vực MB nhưng lại gửi hàng ra MN sửa
+  // chữa)" - mien kho nhan thung. "" = theo khu vuc cua KTV; "MB"/"MN" = chon tay. Bo qua neu khong gui.
+  mien_gui?: string;
 }
 
 // PATCH /api/phieu-gui/:id - luu header (khong con truong "ghi_chu" don dong - da bo theo CLAUDE.md
@@ -189,10 +192,22 @@ interface HeaderBody {
 phieuGui.patch("/:id", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; nguoi_tao_ho: string | null }>();
+  const g = await c.env.DB.prepare("SELECT nguoi_tao, nguoi_tao_ho, trang_thai, mien FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string; mien: string | null }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
   if (!ownsPhieuGui(user, g)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<HeaderBody>().catch(() => ({}) as HeaderBody);
+  // Mien gui ve (chi khi thung con nhap): ap cho ca thung + cac don cha ben trong.
+  if (body.mien_gui !== undefined && g.trang_thai === "nhap") {
+    const moi = body.mien_gui === "MB" || body.mien_gui === "MN" ? body.mien_gui : await mienOfKtv(c.env.DB, g.nguoi_tao);
+    if (moi !== g.mien) {
+      await c.env.DB.batch([
+        c.env.DB.prepare("UPDATE phieu_gui_bh SET mien = ? WHERE id = ?").bind(moi, id),
+        c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET mien = ? WHERE phieu_gui_id = ?").bind(moi, id),
+      ]);
+      const lbl = (m: string | null) => (m === "MB" ? "Miền Bắc" : m === "MN" ? "Miền Nam" : "Chưa khai báo");
+      await addLog(c.env.DB, "phieu_gui", id, g.trang_thai, g.trang_thai, user.email, `Đổi miền gửi về: ${lbl(g.mien)} → ${lbl(moi)}${body.mien_gui ? " (chọn tay, khác khu vực của KTV)" : " (theo khu vực của KTV)"}`);
+    }
+  }
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET hinh_thuc_gui = ?, ma_xe_hoac_tai_xe = ?, don_vi_van_chuyen = ?, ma_van_don = ?, updated_at = ? WHERE id = ?")
     .bind(body.hinh_thuc_gui ?? "", body.ma_xe_hoac_tai_xe ?? "", body.don_vi_van_chuyen ?? "", body.ma_van_don ?? "", nowVN(), id)
     .run();
@@ -274,7 +289,9 @@ phieuGui.get("/:id", async (c) => {
       .bind(id)
       .all(),
   ]);
-  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu, goi_y: goiY, logs, tien_do: tienDo });
+  // mien_ktv: mien theo khu vuc cua KTV so huu thung - de UI biet thung dang "theo khu vuc" hay gui khac mien.
+  const mienKtv = await mienOfKtv(c.env.DB, (g as { nguoi_tao: string }).nguoi_tao);
+  return c.json({ phieu_gui: g, don_cha: donCha, ghi_chu_log: ghiChu, goi_y: goiY, logs, tien_do: tienDo, mien_ktv: mienKtv });
 });
 
 interface AddDonBody {
