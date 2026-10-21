@@ -11,6 +11,7 @@ import { useClientPage } from "../../hooks/useClientPage";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import type { OdooDon } from "../../lib/types";
 import { displayName, useUserNames } from "../../hooks/useUserNames";
+import { useListFilters, withQuery } from "../../ui/FilterBar";
 
 // Don bao hanh tao tren Odoo dang "cho gui sua" cua 1 KTV (yeu cau 04/10/2026, CHOT "KTV chon don vao
 // thung") - danh sach co o chon, dung chung cho the o man "Gui hang bao hanh" va modal "Chon don Odoo"
@@ -271,7 +272,17 @@ export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; 
   const toast = useToast();
   useUserNames(); // ve lai khi bang ten tai xong
   const [busyId, setBusyId] = useState<number | null>(null);
-  const pg = useClientPage(items);
+  // 21/10/2026: tim trong danh sach don da huy (tren may, khong dau, nhieu tu).
+  const [q, setQ] = useState("");
+  const words = normalizeVi(q.trim()).split(/\s+/).filter(Boolean);
+  const shown = words.length
+    ? items.filter((d) => {
+        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.ma_linh_kien, d.ten_linh_kien, d.khong_gui_ly_do, d.khong_gui_boi, d.khong_gui_boi ? displayName(d.khong_gui_boi) : ""].filter(Boolean).join(" "));
+        return words.every((w) => hay.includes(w));
+      })
+    : items;
+  const pg = useClientPage(shown);
+  useEffect(() => pg.setPage(0), [q]); // eslint-disable-line react-hooks/exhaustive-deps
   if (items.length === 0) return <p className="text-sm text-[var(--ink-faint)]">Chưa có đơn nào bị hủy.</p>;
   const moLai = async (d: OdooDon) => {
     setBusyId(d.odoo_id);
@@ -287,6 +298,8 @@ export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; 
   };
   return (
     <div className="space-y-1">
+      {items.length > 3 && <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Tìm mã đơn Odoo, case, linh kiện, lý do, người hủy…" className="mb-1" />}
+      {words.length > 0 && shown.length === 0 && <p className="px-1 text-sm text-[var(--ink-faint)]">Không có đơn nào khớp "{q}".</p>}
       {pg.pageItems.map((d) => (
         <div key={d.odoo_id} className="flex flex-col gap-2 rounded-lg border border-dashed border-[var(--line-strong)] bg-[var(--surface-2)] px-2.5 py-1 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
@@ -369,11 +382,14 @@ function tienDo(d: OdooDaGui): string {
 
 export function OdooDaGuiList({ ktvEmail, reloadKey, onOpenPhieu }: { ktvEmail?: string | null; reloadKey: number; onOpenPhieu: (guiId: string) => void }) {
   const q = ktvEmail ? `?ktv_email=${encodeURIComponent(ktvEmail)}&_r=${reloadKey}` : `?_r=${reloadKey}`;
-  const pg = usePagedApi<OdooDaGui>(`/odoo-don/da-gui${q}`, "don");
-  if (pg.loading && pg.items.length === 0) return <Spinner />;
-  if (pg.items.length === 0) return <p className="text-sm text-[var(--ink-faint)]">Chưa có đơn Odoo nào được đưa vào thùng.</p>;
+  const flt = useListFilters(null, []);
+  const pg = usePagedApi<OdooDaGui>(withQuery(`/odoo-don/da-gui${q}`, flt.query), "don");
+  if (pg.loading && pg.items.length === 0 && !flt.active) return <Spinner />;
+  if (pg.items.length === 0 && !flt.active) return <p className="text-sm text-[var(--ink-faint)]">Chưa có đơn Odoo nào được đưa vào thùng.</p>;
   return (
     <div className="space-y-1">
+      <Input type="search" value={flt.qInput} onChange={(e) => flt.setQ(e.target.value)} placeholder="🔍 Tìm mã đơn Odoo, case, linh kiện, mã thùng, mã đơn…" className="mb-1" />
+      {pg.items.length === 0 && <p className="px-1 text-sm text-[var(--ink-faint)]">Không có đơn nào khớp "{flt.q}".</p>}
       {pg.items.map((d) => {
         const st = TIEN_DO[tienDo(d)] ?? { label: tienDo(d), tone: "gray" as const };
         return (

@@ -11,7 +11,8 @@ import { DonDichVuModal } from "./DonDichVuModal";
 import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
 import { TiepNhanNoiBoModal } from "./TiepNhanNoiBoModal";
-import { ThungDangGuiCard } from "./NhanHoKho";
+import { ThungDangGuiCard, THUNG_DEFS, THUNG_PLACEHOLDER } from "./NhanHoKho";
+import { FilterBar, useListFilters, withQuery } from "../../ui/FilterBar";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
@@ -40,6 +41,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [optsKey, setOptsKey] = useState(0);
   const [bulkSlOpen, setBulkSlOpen] = useState(false);
   const { refresh } = useWorkload();
+  const thungFlt = useListFilters("/admin/phieu-gui", THUNG_DEFS.map((d) => d.key));
   const {
     items: phieuGui,
     total: phieuGuiTotal,
@@ -48,7 +50,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     setPage: setPhieuGuiPage,
     loading: loadingPhieuGui,
     reload: reloadPhieuGui,
-  } = usePagedApi<PhieuGui>("/admin/phieu-gui", "phieu_gui");
+  } = usePagedApi<PhieuGui>(withQuery("/admin/phieu-gui", thungFlt.query), "phieu_gui");
   const {
     items: donCha,
     total: donChaTotal,
@@ -123,8 +125,9 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-3">
-      {phieuGuiTotal > 0 && (
+      {(phieuGuiTotal > 0 || thungFlt.active > 0) && (
         <Card className="px-3 py-2">
+          {(phieuGuiTotal > 5 || thungFlt.active > 0) && <FilterBar f={thungFlt} defs={THUNG_DEFS} placeholder={THUNG_PLACEHOLDER} />}
           <div className="flex flex-col md:flex-row md:items-start gap-2">
             <div className="shrink-0 flex flex-wrap items-center gap-2 md:pt-0.5">
               <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Thùng chờ tiếp nhận nội bộ ({phieuGuiTotal})</h3>

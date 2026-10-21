@@ -10,16 +10,28 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { UserName } from "../../hooks/useUserNames";
 import type { PhieuGui } from "../../lib/types";
+import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+
+// 21/10/2026: "bổ sung tìm kiếm ở các danh sách table" - loc + tim cho danh sach thung (Admin BH).
+export const THUNG_DEFS: FilterDef[] = [
+  { key: "ktv", label: "KTV gửi", kind: "person" },
+  { key: "kho", label: "Kho nhận", kind: "person" },
+  { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
+  { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+];
+export const THUNG_PLACEHOLDER = "Tìm mã thùng, vận đơn, nhà xe, KTV, mã đơn / case / linh kiện bên trong…";
+
 
 // 20/10/2026: "admin bh có thể tự xác nhận hộ cho kho nếu thực tế hàng đã về đế tay admin bh (Ktv giao
 // trực tiếp)" - thung dang gui ve Kho (da_gui), Admin bam "Nhan ho Kho" -> bo qua Kho tiep nhan + tiep
 // nhan noi bo (POST /admin/phieu-gui/:id/nhan-ho-kho).
 export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; reloadKey: number }) {
-  const { items, total, page, pageCount, setPage, reload } = usePagedApi<PhieuGui>(`/admin/phieu-gui?trang_thai=da_gui&_k=${reloadKey}`, "phieu_gui");
+  const flt = useListFilters("/admin/phieu-gui?trang_thai=da_gui", THUNG_DEFS.map((d) => d.key));
+  const { items, total, page, pageCount, setPage, reload } = usePagedApi<PhieuGui>(withQuery(`/admin/phieu-gui?trang_thai=da_gui&_k=${reloadKey}`, flt.query), "phieu_gui");
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState<PhieuGui | null>(null);
   const [view, setView] = useState<PhieuGui | null>(null);
-  if (total === 0) return null;
+  if (total === 0 && !flt.active) return null;
   return (
     <Card className="px-3 py-2">
       <button type="button" className="flex items-center gap-2 text-left w-full" onClick={() => setOpen((o) => !o)}>
@@ -29,6 +41,10 @@ export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; re
       </button>
       {open && (
         <>
+          <div className="mt-1.5">
+            <FilterBar f={flt} defs={THUNG_DEFS} placeholder={THUNG_PLACEHOLDER} />
+          </div>
+          {items.length === 0 && <p className="text-sm text-[var(--ink-faint)]">Không có thùng nào khớp bộ lọc.</p>}
           <div className="mt-1.5 flex flex-col md:flex-row md:flex-wrap gap-1.5">
             {items.map((g) => (
               <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px] cursor-pointer hover:bg-[var(--surface)]" onClick={() => setView(g)} title="Bấm để mở thùng xem bên trong">

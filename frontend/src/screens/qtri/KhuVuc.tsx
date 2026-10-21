@@ -8,7 +8,8 @@ import { SearchableSelect } from "../../ui/SearchableSelect";
 import { Pagination } from "../../ui/Pagination";
 import { useClientPage } from "../../hooks/useClientPage";
 import type { KhuVucQuanSat } from "../../lib/types";
-import { UserName } from "../../hooks/useUserNames";
+import { UserName, displayName } from "../../hooks/useUserNames";
+import { normalizeVi } from "../../lib/normalizeVi";
 
 // Man "Quan ly Giam sat khu vuc" (qtri, moi 07/09/2026) - gap that phat hien: qtri gan vai tro
 // la_giam_sat cho 1 nhan vien nhung khong co cho nao de gan Khu vuc ho phu trach (khu_vuc_bh.gs_email
@@ -24,7 +25,18 @@ export function QtriKhuVucScreen() {
     api.get<{ khu_vuc: KhuVucQuanSat[] }>("/khu-vuc").then((r) => setRows(r.khu_vuc));
   };
   useEffect(reload, []);
-  const pg = useClientPage(rows ?? []);
+  // 21/10/2026: tim khu vuc theo ma / ten / giam sat; loc khu vuc chua gan GS.
+  const [q, setQ] = useState("");
+  const [chuaGan, setChuaGan] = useState(false);
+  const words = normalizeVi(q.trim()).split(/\s+/).filter(Boolean);
+  const shown = (rows ?? []).filter((r) => {
+    if (chuaGan && r.gs_email) return false;
+    if (!words.length) return true;
+    const hay = normalizeVi([r.ma, r.ten, r.gs_email, r.gs_email ? displayName(r.gs_email) : ""].filter(Boolean).join(" "));
+    return words.every((w) => hay.includes(w));
+  });
+  const pg = useClientPage(shown);
+  useEffect(() => pg.setPage(0), [q, chuaGan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (rows === null) return <Spinner />;
 
@@ -37,6 +49,12 @@ export function QtriKhuVucScreen() {
         Danh sách Khu vực lấy từ mã khu vực đã có sẵn trên từng KTV (đồng bộ từ hệ Đặt mua linh kiện). Gán "Giám sát phụ trách" cho 1 Khu vực để tài khoản đó (vai trò{" "}
         <b>Giám sát</b>) thấy được đúng KTV/đơn bảo hành thuộc khu vực mình, và "tạo hộ đơn" được cho đúng KTV trong khu vực.
       </p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+        <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Tìm mã / tên khu vực, giám sát…" className="sm:!w-72" />
+        <label className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)] cursor-pointer">
+          <input type="checkbox" checked={chuaGan} onChange={(e) => setChuaGan(e.target.checked)} /> Chỉ khu vực chưa gán Giám sát
+        </label>
+      </div>
       <Table
         rows={pg.pageItems}
         rowKey={(r) => r.ma}
