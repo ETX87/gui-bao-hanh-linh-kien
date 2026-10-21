@@ -162,6 +162,15 @@ phieuTra.post("/tu-dong-gom", async (c) => {
   return c.json({ so_phieu_tao: created.length, phieu_tra_ids: created, so_phieu_gop_them: merged.length, phieu_tra_gop_ids: merged });
 });
 
+// Nhat ky Ke toan da xu ly 1 phieu tra: duyet (cho_ke_toan_duyet -> da_duyet_ke_toan), tu choi (-> nhap,
+// "Kế toán từ chối...") hoac day nguoc sau khi duyet (da_duyet_ke_toan -> nhap, "Kế toán đẩy ngược...").
+// Khong tinh "Huỷ gửi duyệt" (Admin tu rut) va day nguoc cua Kho.
+const KT_LOG = `l.entity_type = 'phieu_tra' AND l.entity_id = phieu_tra_bh.id AND ((l.tu_trang_thai = 'cho_ke_toan_duyet' AND l.den_trang_thai = 'da_duyet_ke_toan') OR (l.den_trang_thai = 'nhap' AND l.ghi_chu LIKE 'Kế toán%'))`;
+const KT_LAST = `(SELECT l.id FROM logs_bh l WHERE ${KT_LOG} ORDER BY l.thoi_gian DESC, l.id DESC LIMIT 1)`;
+const KT_LUC_SQL = `(SELECT thoi_gian FROM logs_bh WHERE id = ${KT_LAST})`;
+const KT_BOI_SQL = `(SELECT nguoi_thuc_hien FROM logs_bh WHERE id = ${KT_LAST})`;
+const KT_KQ_SQL = `COALESCE((SELECT CASE WHEN den_trang_thai = 'da_duyet_ke_toan' THEN 'duyet' WHEN tu_trang_thai = 'da_duyet_ke_toan' THEN 'day_nguoc' ELSE 'tu_choi' END FROM logs_bh WHERE id = ${KT_LAST}), 'appsheet')`;
+
 // GET /api/phieu-tra?ktv=&trang_thai=&limit=&offset=
 phieuTra.get("/", async (c) => {
   const user = c.get("user");
@@ -193,9 +202,27 @@ phieuTra.get("/", async (c) => {
   }
   // 20/10/2026: phieu bi Ke toan tu choi, da tra ve Admin BH (nhap + co ly do tu choi).
   if (c.req.query("tu_choi_kt") === "1") where += " AND trang_thai = 'nhap' AND ly_do_tu_choi_kt IS NOT NULL";
+  // 21/10/2026: "vai trò kế toán thiếu tab các đơn đã từng xử lý" - phieu Ke toan da duyet / tu choi / day
+  // nguoc (theo nhat ky) + phieu nhap tu AppSheet da qua buoc KT. Kem lan xu ly gan nhat (kt_luc/kt_boi/kt_kq).
+  const ktDaXuLy = c.req.query("kt_da_xu_ly") === "1";
+  if (ktDaXuLy) {
+    where += ` AND (EXISTS (SELECT 1 FROM logs_bh l WHERE ${KT_LOG}) OR (trang_thai <> 'nhap' AND id IN (SELECT entity_id FROM logs_bh WHERE entity_type = 'phieu_tra' AND ghi_chu LIKE 'Nhập từ AppSheet%')))`;
+    const ktKq = c.req.query("kt_kq");
+    if (ktKq) {
+      where += ` AND ${KT_KQ_SQL} = ?`;
+      binds.push(ktKq);
+    }
+    const ktBoi = c.req.query("kt_boi");
+    if (ktBoi) {
+      where += ` AND ${KT_BOI_SQL} = ?`;
+      binds.push(ktBoi);
+    }
+  }
   // 21/10/2026: bo loc nguoi nhan (KTV cu the) / nguoi tao phieu / NV sua chua cua don ben trong / trang thai.
   if (c.req.query("loc_only")) {
-    const loc = await distinctOpts(c.env.DB, { ktv: "ktv_nhan", nguoi_tao: "nguoi_tao", trang_thai: "trang_thai" }, `FROM phieu_tra_bh WHERE ${where}`, binds);
+    const locExprs: Record<string, string> = { ktv: "ktv_nhan", nguoi_tao: "nguoi_tao", trang_thai: "trang_thai" };
+    if (ktDaXuLy) Object.assign(locExprs, { kt_kq: KT_KQ_SQL, kt_boi: KT_BOI_SQL });
+    const loc = await distinctOpts(c.env.DB, locExprs, `FROM phieu_tra_bh WHERE ${where}`, binds);
     const nvRows = await c.env.DB.prepare(`SELECT DISTINCT u.nguoi_sua_chua AS v FROM phieu_sua_chua_bh_ct u WHERE u.nguoi_sua_chua IS NOT NULL AND u.phieu_tra_id IN (SELECT id FROM phieu_tra_bh WHERE ${where}) ORDER BY v LIMIT 500`).bind(...binds).all<{ v: string }>();
     loc.nv = nvRows.results.map((r) => r.v);
     return c.json({ loc });
@@ -237,7 +264,11 @@ phieuTra.get("/", async (c) => {
   }
   const [{ results }, totalRow] = await Promise.all([
     // so_don (12/10/2026, de xuat #16): so don vi trong phieu, hien cot "Số đơn" o cac danh sach.
-    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.phieu_tra_id = phieu_tra_bh.id) AS so_don FROM phieu_tra_bh WHERE ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+    c.env.DB.prepare(
+      ktDaXuLy
+        ? `SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.phieu_tra_id = phieu_tra_bh.id) AS so_don, ${KT_LUC_SQL} AS kt_luc, ${KT_BOI_SQL} AS kt_boi, ${KT_KQ_SQL} AS kt_kq FROM phieu_tra_bh WHERE ${where} ORDER BY COALESCE(kt_luc, updated_at) DESC LIMIT ? OFFSET ?`
+        : `SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.phieu_tra_id = phieu_tra_bh.id) AS so_don FROM phieu_tra_bh WHERE ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+    )
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_tra_bh WHERE ${where}`)
