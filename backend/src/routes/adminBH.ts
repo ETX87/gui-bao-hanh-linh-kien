@@ -582,6 +582,37 @@ adminBH.post("/don-cha/:id/bao-cao-sai", async (c) => {
 
 // ---------- 6. Xac nhan hoan tat (sau khi NV nop ket qua) ----------
 
+// 21/10/2026: menu rieng "KTV đang sửa" - cac don vi dang cho NV sua chua xu ly (cho_chan_doan).
+// Loc theo NV (?nv=email | __chua_gan__), tim q; kem so de xuat linh kien cho cap / da cap.
+adminBH.get("/dang-sua", async (c) => {
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const { limit, offset } = parsePage(c);
+  const ms0 = mienScope(c.get("user"), "p");
+  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
+    "u.nguoi_sua_chua", tenOf("u.nguoi_sua_chua"), "g.nguoi_tao", tenOf("g.nguoi_tao"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+  let nvSql = "";
+  const nvBinds: string[] = [];
+  const nv = c.req.query("nv");
+  if (nv === "__chua_gan__") nvSql = " AND (u.nguoi_sua_chua IS NULL OR u.nguoi_sua_chua = '')";
+  else if (nv) {
+    nvSql = " AND u.nguoi_sua_chua = ?";
+    nvBinds.push(nv);
+  }
+  const binds = [...ms0.binds, ...kw.binds, ...nvBinds];
+  const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+    WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql}${kw.sql}${nvSql}`;
+  const [{ results }, totalRow, nvRows] = await Promise.all([
+    c.env.DB.prepare(`SELECT u.*, p.mien, p.ma_lk, p.mo_ta_loi, p.case_id, p.phieu_gui_id, p.ten_khach_hang, g.nguoi_tao AS ktv,
+      (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'cho_cap') AS dx_cho_cap,
+      (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'da_cap') AS dx_da_cap
+      ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fw}`).bind(...binds).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT u.nguoi_sua_chua AS nv, COUNT(*) AS n FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+      WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql} GROUP BY u.nguoi_sua_chua ORDER BY n DESC`).bind(...ms0.binds).all<{ nv: string | null; n: number }>(),
+  ]);
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, theo_nv: nvRows.results });
+});
+
 adminBH.get("/xac-nhan", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);

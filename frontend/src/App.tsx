@@ -15,6 +15,7 @@ import { KhoTiepNhanScreen } from "./screens/kho/TiepNhan";
 import { KhoDongGoiScreen } from "./screens/kho/DongGoi";
 import { AdminPhanLoaiScreen } from "./screens/adminbh/PhanLoai";
 import { AdminXacNhanScreen } from "./screens/adminbh/XacNhan";
+import { AdminDangSuaScreen } from "./screens/adminbh/DangSua";
 import { AdminDeXuatScreen } from "./screens/adminbh/DeXuatLinhKien";
 import { AdminPhieuTraScreen } from "./screens/adminbh/PhieuTra";
 import { AdminPhieuTraKeToanScreen } from "./screens/adminbh/PhieuTraList";
@@ -60,6 +61,7 @@ function Routed({ user }: { user: AppUser }) {
   if ((user.la_kho || user.la_qtri) && path === "/kho/dong-goi") return <KhoDongGoiScreen user={user} />;
 
   if ((user.la_admin_bh || user.la_qtri) && path === "/admin/phan-loai") return <AdminPhanLoaiScreen user={user} />;
+  if ((user.la_admin_bh || user.la_qtri) && path === "/admin/dang-sua") return <AdminDangSuaScreen user={user} />;
   if ((user.la_admin_bh || user.la_qtri) && path === "/admin/xac-nhan") return <AdminXacNhanScreen user={user} />;
   if ((user.la_admin_bh || user.la_qtri) && path === "/admin/de-xuat") return <AdminDeXuatScreen user={user} />;
   if ((user.la_admin_bh || user.la_qtri) && path === "/admin/phieu-tra") return <AdminPhieuTraScreen user={user} />;
