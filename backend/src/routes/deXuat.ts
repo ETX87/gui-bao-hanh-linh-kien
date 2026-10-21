@@ -61,14 +61,17 @@ deXuat.get("/don-vi/:unitId", async (c) => {
 });
 
 // NV tao de xuat (1 hoac nhieu linh kien) cho don vi dang giao cho minh, dang o buoc sua chua.
+// 21/10/2026: Admin BH tao de xuat thay cho NV ("admin BH thêm quyền tạo đơn đề xuất linh kiện sửa chữa
+// thay cho nhân viên sửa chữa") - cung dieu kien don dang o buoc sua chua, khong can la NV duoc giao.
 deXuat.post("/don-vi/:unitId", async (c) => {
   const user = c.get("user");
-  if (!isNv(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!isNv(user) && !isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const unitId = c.req.param("unitId");
   const u = await unitOf(c.env.DB, unitId);
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   if (u.trang_thai !== "cho_chan_doan") return c.json({ error: "WRONG_STATE" }, 400);
-  if (u.nguoi_sua_chua !== user.email && !user.la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
+  const thayNv = u.nguoi_sua_chua !== user.email;
+  if (thayNv && !isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<{ items?: { ma_lk?: string; so_luong?: number; ghi_chu?: string }[] }>().catch(() => ({}) as { items?: { ma_lk?: string; so_luong?: number; ghi_chu?: string }[] });
   const items = (body.items || []).filter((x) => x.ma_lk?.trim()).slice(0, 30);
   if (!items.length) return c.json({ error: "MISSING_LINH_KIEN" }, 400);
@@ -82,7 +85,7 @@ deXuat.post("/don-vi/:unitId", async (c) => {
       .run();
     ids.push(id);
   }
-  await addLog(c.env.DB, "phieu_sc_ct", unitId, u.trang_thai, u.trang_thai, user.email, `NV đề xuất cấp linh kiện: ${items.map((x) => `${x.ma_lk} ×${x.so_luong ?? 1}`).join(", ")} (${ids.join(", ")})`);
+  await addLog(c.env.DB, "phieu_sc_ct", unitId, u.trang_thai, u.trang_thai, user.email, `${thayNv ? `Admin BH đề xuất hộ NV${u.nguoi_sua_chua ? ` ${u.nguoi_sua_chua}` : ""}` : "NV đề xuất"} cấp linh kiện: ${items.map((x) => `${x.ma_lk} ×${x.so_luong ?? 1}`).join(", ")} (${ids.join(", ")})`);
   return c.json({ ok: true, ids });
 });
 

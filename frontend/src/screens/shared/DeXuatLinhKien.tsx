@@ -210,8 +210,10 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitId]);
 
-  const canDeXuat = unitTrangThai === "cho_chan_doan" && ((user.la_nv_sua_chua && nguoiSuaChua === user.email) || user.la_qtri);
   const isAdmin = user.la_admin_bh || user.la_qtri;
+  // 21/10/2026: Admin BH de xuat thay cho NV sua chua (don dang o buoc sua chua).
+  const canDeXuat = unitTrangThai === "cho_chan_doan" && ((user.la_nv_sua_chua && nguoiSuaChua === user.email) || isAdmin);
+  const thayNv = canDeXuat && nguoiSuaChua !== user.email;
   if (!list || (list.length === 0 && !canDeXuat)) return null;
   const choCap = list.filter((d) => d.trang_thai === "cho_cap");
   const after = () => {
@@ -240,7 +242,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
           )}
           {canDeXuat && (
             <Btn size="sm" variant="primary" onClick={() => setFormOpen(true)}>
-              + Đề xuất linh kiện
+              {thayNv ? "+ Đề xuất hộ NV" : "+ Đề xuất linh kiện"}
             </Btn>
           )}
         </>
@@ -276,7 +278,8 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 </span>
               </div>
               <p className="text-xs text-[var(--ink-soft)]">
-                <UserName email={d.nguoi_de_xuat} /> · {fmtDate(d.created_at)}
+                <UserName email={d.nguoi_de_xuat} />
+                {nguoiSuaChua && d.nguoi_de_xuat !== nguoiSuaChua ? " (đề xuất hộ NV)" : ""} · {fmtDate(d.created_at)}
                 {d.ghi_chu ? ` · ${d.ghi_chu}` : ""}
                 {d.trang_thai === "da_cap" && ` · MISA ${d.ma_misa}${d.ma_don_hang ? ` · ĐH ${d.ma_don_hang}` : ""}`}
                 {(d.trang_thai === "tu_choi" || d.trang_thai === "huy") && d.ly_do_tu_choi ? ` · ${d.ly_do_tu_choi}` : ""}
