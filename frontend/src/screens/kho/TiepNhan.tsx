@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { DoiMienBadge } from "../../ui/MienBadge";
@@ -43,6 +44,9 @@ export function KhoTiepNhanScreen() {
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
   const [logFor, setLogFor] = useState<string | null>(null);
+  // 21/10/2026: "thùng hàng chờ tiếp nhận, cho phép click vào để mở nội dung thùng hàng ra để xem và tiếp
+  // nhận bên trong luôn" - bam dong mo chi tiet thung (danh sach don ben trong), nut tiep nhan o footer.
+  const [viewFor, setViewFor] = useState<PhieuGui | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
   const loadRecent = () => api.get<{ phieu_gui: PhieuGui[] }>("/kho/phieu-gui?trang_thai=da_tiep_nhan").then((r) => setRecent(r.phieu_gui));
@@ -88,11 +92,13 @@ export function KhoTiepNhanScreen() {
             {pending.map((g) => (
               // flex-col tren mobile (Phat hien 5 vong ra soat UX): ban cu la 1 hang flex cung nen
               // nut "Xac nhan tiep nhan" bi day ra ngoai man, Kho khong bam duoc tren dien thoai.
-              <div key={g.id} className="rounded-lg border border-[var(--line)] px-2.5 py-1 flex flex-col sm:flex-row sm:items-center gap-2 text-[13px]">
+              <div key={g.id} className="rounded-lg border border-[var(--line)] px-2.5 py-1 flex flex-col sm:flex-row sm:items-center gap-2 text-[13px] cursor-pointer hover:bg-[var(--surface-2)]" onClick={() => setViewFor(g)} title="Bấm để mở thùng xem bên trong">
                 {/* 09/10/2026: nut xu ly uu tien dat ngay sau ma ID (ben trai). */}
                 <span className="font-mono text-xs font-semibold text-[var(--link)] sm:w-24 shrink-0">{g.id}</span>
-                <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={reloadPending} short />
-                <div className="flex flex-wrap gap-1.5 shrink-0">
+                <span onClick={(e) => e.stopPropagation()}>
+                  <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={reloadPending} short />
+                </span>
+                <div className="flex flex-wrap gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <Btn size="sm" variant="primary" onClick={() => setTiepNhanFor(g)}>
                     Xác nhận tiếp nhận
                   </Btn>
@@ -103,8 +109,11 @@ export function KhoTiepNhanScreen() {
                 </div>
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
                   <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate" />
+                  {g.so_don != null && <span className="text-xs text-[var(--ink-soft)]">{g.so_don} đơn</span>}
                   <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
-                  <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
+                  </span>
                 </div>
               </div>
             ))}
@@ -155,8 +164,27 @@ export function KhoTiepNhanScreen() {
         )}
       </Card>
 
-      {suCoFor && <BaoSuCoModal gui={suCoFor} onClose={() => setSuCoFor(null)} onDone={() => { setSuCoFor(null); afterChange(); }} />}
-      {tiepNhanFor && <TiepNhanModal gui={tiepNhanFor} onClose={() => setTiepNhanFor(null)} onDone={() => { setTiepNhanFor(null); afterChange(); }} />}
+      {viewFor && (
+        <PhieuGuiDetailModal
+          guiId={viewFor.id}
+          onClose={() => setViewFor(null)}
+          onChanged={afterChange}
+          actions={
+            viewFor.trang_thai === "da_gui" ? (
+              <>
+                <Btn variant="danger" onClick={() => setSuCoFor(viewFor)}>
+                  Báo sự cố
+                </Btn>
+                <Btn variant="primary" onClick={() => setTiepNhanFor(viewFor)}>
+                  ✔ Xác nhận tiếp nhận
+                </Btn>
+              </>
+            ) : undefined
+          }
+        />
+      )}
+      {suCoFor && <BaoSuCoModal gui={suCoFor} onClose={() => setSuCoFor(null)} onDone={() => { setSuCoFor(null); setViewFor(null); afterChange(); }} />}
+      {tiepNhanFor && <TiepNhanModal gui={tiepNhanFor} onClose={() => setTiepNhanFor(null)} onDone={() => { setTiepNhanFor(null); setViewFor(null); afterChange(); }} />}
       {logFor && <GhiChuLogModal guiId={logFor} onClose={() => setLogFor(null)} />}
       {scanOpen && <CameraScanModal onClose={() => setScanOpen(false)} onScanned={handleScanned} />}
     </div>

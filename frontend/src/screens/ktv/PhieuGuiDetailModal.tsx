@@ -1,6 +1,6 @@
 import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
 import { DoiMienBadge } from "../../ui/MienBadge";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
@@ -41,7 +41,9 @@ interface DetailResponse {
 // kho nhan), van chuyen, danh sach don gon kem TIEN DO tung don (dem don vi theo trang thai - moi);
 // phai: QR + trao doi + nhat ky phieu gui (moi - truoc day man nay khong co nhat ky).
 
-export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { guiId: string; onClose: () => void; onChanged: () => void; nested?: boolean }) {
+// actions (21/10/2026): nut thao tac cua man goi (VD Kho "Xác nhận tiếp nhận", Admin "Xác nhận đã nhận") hien o
+// footer khi thung khong con nhap - mo thung xem ben trong roi tiep nhan ngay trong chi tiet.
+export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions }: { guiId: string; onClose: () => void; onChanged: () => void; nested?: boolean; actions?: ReactNode }) {
   const toast = useToast();
   const isMobile = useIsMobile();
   const auth = useAuth();
@@ -226,7 +228,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested }: { gui
                 {giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}
               </Btn>
             </>
-          ) : undefined
+          ) : (
+            actions
+          )
         }
       >
         <DetailGrid

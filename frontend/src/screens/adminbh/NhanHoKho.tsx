@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { api, errorMessage } from "../../lib/api";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useToast } from "../../ui/Toast";
@@ -17,6 +18,7 @@ export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; re
   const { items, total, page, pageCount, setPage, reload } = usePagedApi<PhieuGui>(`/admin/phieu-gui?trang_thai=da_gui&_k=${reloadKey}`, "phieu_gui");
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState<PhieuGui | null>(null);
+  const [view, setView] = useState<PhieuGui | null>(null);
   if (total === 0) return null;
   return (
     <Card className="px-3 py-2">
@@ -29,14 +31,14 @@ export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; re
         <>
           <div className="mt-1.5 flex flex-col md:flex-row md:flex-wrap gap-1.5">
             {items.map((g) => (
-              <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px]">
+              <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px] cursor-pointer hover:bg-[var(--surface)]" onClick={() => setView(g)} title="Bấm để mở thùng xem bên trong">
                 <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{g.id}</span>
                 <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate max-w-[180px]" />
                 <span className="text-xs text-[var(--ink-soft)] shrink-0">
                   {g.so_don ?? 0} đơn · {HINH_THUC_GUI_LABELS[g.hinh_thuc_gui || ""] || g.hinh_thuc_gui || "—"}
                 </span>
                 <SlaBadge since={g.updated_at} />
-                <Btn size="sm" variant="secondary" className="ml-auto shrink-0" onClick={() => setPick(g)}>
+                <Btn size="sm" variant="secondary" className="ml-auto shrink-0" onClick={(e) => { e.stopPropagation(); setPick(g); }}>
                   Nhận hộ Kho
                 </Btn>
               </div>
@@ -45,12 +47,25 @@ export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; re
           <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
         </>
       )}
+      {view && (
+        <PhieuGuiDetailModal
+          guiId={view.id}
+          onClose={() => setView(null)}
+          onChanged={reload}
+          actions={
+            <Btn variant="primary" onClick={() => setPick(view)}>
+              Nhận hộ Kho
+            </Btn>
+          }
+        />
+      )}
       {pick && (
         <NhanHoModal
           thung={pick}
           onClose={() => setPick(null)}
           onDone={() => {
             setPick(null);
+            setView(null);
             reload();
             onDone();
           }}

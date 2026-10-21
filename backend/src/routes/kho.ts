@@ -59,7 +59,7 @@ kho.get("/phieu-gui", async (c) => {
   }
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql} ORDER BY updated_at DESC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql} ORDER BY updated_at DESC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });

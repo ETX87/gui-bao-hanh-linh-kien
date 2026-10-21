@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
@@ -93,6 +94,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   // Tiep nhan noi bo 1 hoac nhieu thung (12/10/2026) - qua modal de hoi ly do cham khi qua han.
   const [thungChon, setThungChon] = useState<Set<string>>(new Set());
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui[] | null>(null);
+  const [viewThung, setViewThung] = useState<PhieuGui | null>(null);
   useEffect(() => setThungChon(new Set()), [phieuGuiPage]);
   const toggleThung = (id: string, on: boolean) =>
     setThungChon((prev) => {
@@ -142,14 +144,24 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
             </div>
             <div className="flex-1 min-w-0 flex flex-col md:flex-row md:flex-wrap gap-1.5 md:max-h-[72px] md:overflow-y-auto scrollbar-thin">
               {phieuGui.map((g) => (
-                <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px]">
-                  <input type="checkbox" checked={thungChon.has(g.id)} onChange={(e) => toggleThung(g.id, e.target.checked)} aria-label={`Chọn thùng ${g.id}`} />
+                <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px] cursor-pointer hover:bg-[var(--surface)]" onClick={() => setViewThung(g)} title="Bấm để mở thùng xem bên trong">
+                  <input type="checkbox" checked={thungChon.has(g.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleThung(g.id, e.target.checked)} aria-label={`Chọn thùng ${g.id}`} />
                   <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{g.id}</span>
                   <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate max-w-[180px]" />
                   <span className="text-xs text-[var(--ink-soft)] shrink-0">{g.so_don ?? 0} đơn</span>
                   {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Sự cố</Badge>}
-                  <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
-                  <Btn variant="primary" size="sm" onClick={() => setTiepNhanFor([g])} className="ml-auto shrink-0">
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
+                  </span>
+                  <Btn
+                    variant="primary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTiepNhanFor([g]);
+                    }}
+                    className="ml-auto shrink-0"
+                  >
                     Xác nhận đã nhận
                   </Btn>
                 </div>
@@ -229,12 +241,25 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           }}
         />
       )}
+      {viewThung && (
+        <PhieuGuiDetailModal
+          guiId={viewThung.id}
+          onClose={() => setViewThung(null)}
+          onChanged={afterChange}
+          actions={
+            <Btn variant="primary" onClick={() => setTiepNhanFor([viewThung])}>
+              ✔ Xác nhận đã nhận
+            </Btn>
+          }
+        />
+      )}
       {tiepNhanFor && (
         <TiepNhanNoiBoModal
           thung={tiepNhanFor}
           onClose={() => setTiepNhanFor(null)}
           onDone={() => {
             setTiepNhanFor(null);
+            setViewThung(null);
             setThungChon(new Set());
             afterChange();
           }}
