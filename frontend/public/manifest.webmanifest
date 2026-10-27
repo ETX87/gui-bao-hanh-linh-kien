@@ -1,6 +1,6 @@
 {
-  "name": "Sửa chữa bảo hành - Dịch Vụ 3T",
-  "short_name": "Sửa chữa 3T",
+  "name": "Bảo hành đổi trả 3T",
+  "short_name": "Bảo hành đổi trả 3T",
   "description": "Hệ thống gửi/nhận/xử lý sửa chữa bảo hành linh kiện - Dịch Vụ 3T",
   "start_url": "/",
   "scope": "/",

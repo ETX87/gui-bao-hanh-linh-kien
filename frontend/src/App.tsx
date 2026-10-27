@@ -114,7 +114,7 @@ function Shell_Login() {
         <div className="flex flex-col items-center gap-3 mb-6">
           <img src="/icon-192.png" alt="" className="w-16 h-16 rounded-2xl shadow-brand" />
           <div>
-            <h1 className="font-bold text-xl text-[var(--ink)]">Sửa chữa bảo hành 3T</h1>
+            <h1 className="font-bold text-xl text-[var(--ink)]">Bảo hành đổi trả 3T</h1>
             <p className="text-sm text-[var(--ink-soft)] mt-0.5">Gửi · Sửa · Trả linh kiện bảo hành</p>
           </div>
         </div>

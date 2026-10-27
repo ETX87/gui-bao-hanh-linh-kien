@@ -24,7 +24,7 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
         <img src="/icon-192.png" alt="3T" className="h-9 w-9 shrink-0 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.25)]" />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate text-base font-bold leading-tight">Sửa chữa 3T</p>
+            <p className="truncate text-base font-bold leading-tight">Bảo hành đổi trả 3T</p>
             <p className="truncate text-xs text-white/70">Gửi · Sửa · Trả bảo hành</p>
           </div>
         )}
