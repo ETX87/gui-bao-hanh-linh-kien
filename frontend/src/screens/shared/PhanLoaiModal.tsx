@@ -37,7 +37,9 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [huongXuLy, setHuongXuLy] = useState(unit.huong_xu_ly || "");
   const [nguoiSuaChua, setNguoiSuaChua] = useState(unit.nguoi_sua_chua || "");
   const [lyDoTuChoi, setLyDoTuChoi] = useState(unit.ly_do_tu_choi || "");
-  const [maLkThucTe, setMaLkThucTe] = useState(unit.ma_lk_thuc_te || unit.ma_lk || "");
+  // 29/10/2026: B = linh kien thuc te gui ve (mac dinh = A KTV chon), C = linh kien doi moi (trong = giong B).
+  const [maLkNhan, setMaLkNhan] = useState(unit.ma_lk_nhan || unit.ma_lk || "");
+  const [maLkThucTe, setMaLkThucTe] = useState(unit.ma_lk_thuc_te || "");
   const [xuLyXac, setXuLyXac] = useState(unit.xu_ly_xac || "");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +50,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const lkName = (ma: string) => lkLabel(linhKien.find((l) => l.ma_lk === ma)?.ten_lk, ma);
 
   const submit = async () => {
-    if (!confirmKtvChange(ktvChangeLines([unit], loaiDoiTru, maLkThucTe, lkName))) return;
+    if (!confirmKtvChange(ktvChangeLines([unit], loaiDoiTru, maLkNhan, lkName))) return;
     setBusy(true);
     try {
       await api.post(`/admin/don-vi/${unit.id}/phan-loai`, {
@@ -59,7 +61,9 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         huong_xu_ly: huongXuLy,
         nguoi_sua_chua: needsNv ? nguoiSuaChua : undefined,
         ly_do_tu_choi: needsTuChoi ? lyDoTuChoi : undefined,
-        ma_lk_thuc_te: maLkThucTe || null,
+        // "" = bo (B ve giong A, C ve giong B).
+        ma_lk_nhan: maLkNhan && maLkNhan !== unit.ma_lk ? maLkNhan : "",
+        ma_lk_thuc_te: maLkThucTe && maLkThucTe !== maLkNhan ? maLkThucTe : "",
         xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
         ly_do_cham: overdue ? lyDoCham : undefined,
       });
@@ -94,7 +98,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
           <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>
         )}
         {unit.loai_doi_tru_de_xuat && <p className="text-xs text-[var(--ink-soft)]">KTV đề xuất lúc gửi hàng: <b>{LOAI_DOI_TRU_LABELS[unit.loai_doi_tru_de_xuat]}</b></p>}
-        {unit.case_id && <CaseLookupAuto caseId={unit.case_id} maLk={maLkThucTe || unit.ma_lk || ""} linhKien={linhKien} />}
+        {unit.case_id && <CaseLookupAuto caseId={unit.case_id} maLk={maLkNhan || unit.ma_lk || ""} linhKien={linhKien} />}
 
         <SectionLabel>Phân loại bảo hành</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
@@ -164,14 +168,23 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
           </Field>
         )}
         {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} />}
-        <Field label="Linh kiện sửa chữa thực tế">
-          <SearchableSelect
-            options={lkOptions(linhKien)}
-            value={maLkThucTe}
-            onChange={setMaLkThucTe}
-            placeholder={`— (dùng đúng linh kiện KTV đã chọn: ${unit.ma_lk ? lkLabel(linhKien.find((l) => l.ma_lk === unit.ma_lk)?.ten_lk, unit.ma_lk) : "—"}) —`}
-          />
-        </Field>
+        <SectionLabel>Linh kiện</SectionLabel>
+        <p className="text-xs text-[var(--ink-soft)]">
+          KTV chọn: <b className="text-[var(--ink)]">{unit.ma_lk ? lkName(unit.ma_lk) : "—"}</b>
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Linh kiện thực tế gửi về" hint="Mặc định = linh kiện KTV chọn. Quản lý xác tính theo linh kiện này.">
+            <SearchableSelect options={lkOptions(linhKien)} value={maLkNhan} onChange={setMaLkNhan} placeholder="— Chọn linh kiện —" />
+          </Field>
+          <Field label={huongXuLy === "doi_moi" ? "Linh kiện đổi mới cho KTV" : "Linh kiện đổi mới / thay thế"} hint="Để trống = giống linh kiện gửi về.">
+            <SearchableSelect
+              options={[{ value: "", label: "— Giống linh kiện gửi về —" }, ...lkOptions(linhKien)]}
+              value={maLkThucTe}
+              onChange={setMaLkThucTe}
+              placeholder={`— (giống linh kiện gửi về${maLkNhan ? `: ${lkName(maLkNhan)}` : ""}) —`}
+            />
+          </Field>
+        </div>
       </div>
     </Modal>
   );

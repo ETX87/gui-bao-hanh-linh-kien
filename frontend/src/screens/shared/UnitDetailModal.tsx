@@ -19,7 +19,9 @@ import {
   HINH_THUC_GUI_LABELS,
 } from "../../lib/constants";
 import { LogTimeline } from "./LogTimeline";
-import { useLkName } from "../../hooks/useLinhKien";
+import { useLkName, useLinhKien, lkOptions } from "../../hooks/useLinhKien";
+import { SearchableSelect } from "../../ui/SearchableSelect";
+import { Field } from "../../ui/primitives";
 import { CaseSnapshotPanel } from "./CaseSnapshotPanel";
 import { LichSuSanPhamPanel } from "./LichSuBaoHanh";
 import { PhanLoaiModal } from "./PhanLoaiModal";
@@ -138,6 +140,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const [quick, setQuick] = useState<QuickKey>(null);
   const [openPg, setOpenPg] = useState(false);
   const [openPt, setOpenPt] = useState(false);
+  const [suaLk, setSuaLk] = useState(false);
   const [chat, setChat] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -166,9 +169,14 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const pt = lien_ket?.phieu_tra ?? null;
   const odoo = lien_ket?.odoo ?? null;
   const isKhachLe = !p.phieu_gui_id;
-  const effLk = u.ma_lk_thuc_te || p.ma_lk;
-  const daDoiLk = !!(u.ma_lk_thuc_te && u.ma_lk_thuc_te !== p.ma_lk);
+  // 29/10/2026: A = KTV chon (p.ma_lk), B = thuc te gui ve (u.ma_lk_nhan), C = doi moi (u.ma_lk_thuc_te).
+  // Tieu de hien B (linh kien that su dang xu ly / quan ly xac), dong phu hien A va C neu khac.
+  const lkB = u.ma_lk_nhan || p.ma_lk;
+  const effLk = lkB;
+  const nhanKhac = !!(u.ma_lk_nhan && u.ma_lk_nhan !== p.ma_lk);
+  const lkC = u.ma_lk_thuc_te && u.ma_lk_thuc_te !== lkB ? u.ma_lk_thuc_te : null;
   const phanLoai = phanLoaiOf(effLk);
+  const canSuaLk = user.la_admin_bh || user.la_qtri;
 
   const buttons: { label: string; onClick: () => void; variant?: "primary" | "success" | "danger" }[] = [];
   if (user.la_admin_bh) {
@@ -361,7 +369,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <p className="text-[15px] font-bold text-[var(--ink)] leading-snug">🔩 {lkName(effLk)}</p>
                 {phanLoai && <Badge tone="gray">{phanLoai}</Badge>}
-                {daDoiLk && <Badge tone="blue">Đã đổi LK</Badge>}
+                {nhanKhac && <Badge tone="amber">Khác LK KTV chọn</Badge>}
                 {p.nguon_tao === "admin_dich_vu" && <Badge tone="violet">Đơn dịch vụ</Badge>}
                 {p.phieu_gui_id ? (
                   <DoiMienBadge kind="phieu-gui" id={p.phieu_gui_id} mien={p.mien} ktvEmail={p.ktv} onDone={load} />
@@ -369,7 +377,16 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                   <DoiMienBadge kind="don-cha" id={p.id} mien={p.mien} onDone={load} />
                 )}
               </div>
-              {daDoiLk && <p className="text-xs text-[var(--ink-soft)]">KTV gửi: {lkName(p.ma_lk)}</p>}
+              <p className="text-xs text-[var(--ink-soft)] flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                <span>KTV chọn: <b className="text-[var(--ink-body)]">{lkName(p.ma_lk)}</b></span>
+                <span>Thực tế gửi về: <b className="text-[var(--ink-body)]">{lkName(lkB)}</b>{!u.ma_lk_nhan && <span className="text-[var(--ink-faint)]"> (theo KTV)</span>}</span>
+                <span>Đổi mới: <b className="text-[var(--ink-body)]">{lkC ? lkName(lkC) : "—"}</b></span>
+                {canSuaLk && (
+                  <button type="button" className="text-[var(--link)] font-semibold hover:underline" onClick={() => setSuaLk(true)}>
+                    ✎ Sửa linh kiện
+                  </button>
+                )}
+              </p>
               <p className="text-[13.5px] text-[var(--ink-body)] whitespace-pre-line">
                 <span className="text-[var(--ink-faint)]">Mô tả lỗi: </span>
                 {p.mo_ta_loi || "—"}
@@ -663,9 +680,58 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       {sub === "tra-ktv" && <TraTrucTiepModal unitId={u.id} mode="ktv" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "tra-kho" && <TraTrucTiepModal unitId={u.id} mode="kho" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "chan-doan" && <ChanDoanModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
+      {suaLk && <SuaLinhKienModal unitId={u.id} maLkKtv={p.ma_lk} maLkNhan={u.ma_lk_nhan ?? null} maLkThucTe={u.ma_lk_thuc_te} onClose={() => setSuaLk(false)} onDone={() => { setSuaLk(false); onChanged(); load(); }} />}
       {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}
       {openPt && pt && <PhieuTraDetailModal traId={pt.id} user={user} nested onClose={() => setOpenPt(false)} onChanged={() => { onChanged(); load(); }} />}
     </>
+  );
+}
+
+// 29/10/2026: Admin BH xac nhan lai linh kien thuc te gui ve (B) + linh kien doi moi (C) bat cu luc nao.
+function SuaLinhKienModal({ unitId, maLkKtv, maLkNhan, maLkThucTe, onClose, onDone }: { unitId: string; maLkKtv: string | null; maLkNhan: string | null; maLkThucTe: string | null; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const { items } = useLinhKien();
+  const { nameOf: lkName } = useLkName();
+  const [nhan, setNhan] = useState(maLkNhan || maLkKtv || "");
+  const [doiMoi, setDoiMoi] = useState(maLkThucTe || "");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.patch(`/admin/don-vi/${unitId}/linh-kien`, { ma_lk_nhan: nhan && nhan !== maLkKtv ? nhan : null, ma_lk_thuc_te: doiMoi && doiMoi !== nhan ? doiMoi : null });
+      toast("Đã lưu linh kiện.", "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title="Sửa linh kiện của đơn"
+      onClose={onClose}
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Huỷ</Btn>
+          <Btn variant="primary" disabled={busy || !nhan} onClick={save}>
+            Lưu
+          </Btn>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-xs text-[var(--ink-soft)]">
+          KTV chọn: <b className="text-[var(--ink)]">{maLkKtv ? lkName(maLkKtv) : "—"}</b>
+        </p>
+        <Field label="Linh kiện thực tế gửi về" hint="Quản lý xác tính theo linh kiện này.">
+          <SearchableSelect options={lkOptions(items)} value={nhan} onChange={setNhan} placeholder="— Chọn linh kiện —" />
+        </Field>
+        <Field label="Linh kiện đổi mới / thay thế" hint="Để trống = giống linh kiện gửi về.">
+          <SearchableSelect options={[{ value: "", label: "— Giống linh kiện gửi về —" }, ...lkOptions(items)]} value={doiMoi} onChange={setDoiMoi} placeholder="— Giống linh kiện gửi về —" />
+        </Field>
+      </div>
+    </Modal>
   );
 }
 

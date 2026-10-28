@@ -32,7 +32,7 @@ export function ktvChangeLines(units: UnitLike[], loaiDoiTru: string | null, maL
     const goc = ktvUnits[0].ma_lk || "";
     if (maLkThucTe && goc && maLkThucTe !== goc) {
       const n = lkName || ((m: string) => m);
-      lines.push(`Linh kiện KTV khai "${n(goc)}" → Admin chốt "${n(maLkThucTe)}"`);
+      lines.push(`Linh kiện KTV chọn "${n(goc)}" → Admin xác nhận thực tế gửi về "${n(maLkThucTe)}"`);
     }
   }
   return lines;

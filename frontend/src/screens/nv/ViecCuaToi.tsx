@@ -33,7 +33,7 @@ export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
   const cols: Column<DonVi>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "lbh", header: "Loại BH", render: (r) => (r.loai_bao_hanh ? LOAI_BAO_HANH_LABELS[r.loai_bao_hanh] : "—") },
-    { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk_thuc_te || r.ma_lk) },
+    { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk_nhan || r.ma_lk) },
     {
       key: "dx",
       header: "Linh kiện xin cấp",

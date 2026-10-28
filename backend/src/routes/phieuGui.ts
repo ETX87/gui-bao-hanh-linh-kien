@@ -494,9 +494,9 @@ phieuGui.get("/don-vi/tra-cuu", async (c) => {
      JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE g.nguoi_tao = ?`;
   // 21/10/2026: loc trang thai / huong xu ly / linh kien / thung.
-  const LOC = { trang_thai: "u.trang_thai", huong_xu_ly: "u.huong_xu_ly", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", phieu_gui: "p.phieu_gui_id" };
+  const LOC = { trang_thai: "u.trang_thai", huong_xu_ly: "u.huong_xu_ly", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", phieu_gui: "p.phieu_gui_id" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFrom, [user.email]) });
-  const kwc = kwClause(kw, ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+  const kwc = kwClause(kw, ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
   const f = eqFilters(c, LOC);
   const binds: unknown[] = [user.email, ...kwc.binds, ...f.binds];
   const fromWhere = baseFrom + kwc.sql + f.sql;

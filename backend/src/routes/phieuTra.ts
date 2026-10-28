@@ -53,7 +53,7 @@ const EDIT_STATES = ["nhap", "cho_ke_toan_duyet"];
 const DOI_TAC_PREFIX = "__doi_tac__:";
 
 // Cot hien thi cua 1 don vi "cho tao phieu tra" / "trong phieu tra" (19/10/2026, danh sach dang bang).
-const UNIT_COLS = `u.id, u.parent_id, u.so_thu_tu, u.trang_thai, u.loai_doi_tru, u.loai_bao_hanh, u.huong_xu_ly, u.ma_lk_thuc_te,
+const UNIT_COLS = `u.id, u.parent_id, u.so_thu_tu, u.trang_thai, u.loai_doi_tru, u.loai_bao_hanh, u.huong_xu_ly, u.ma_lk_thuc_te, u.ma_lk_nhan,
   u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.nguoi_sua_chua, u.updated_at, u.phieu_tra_id,
   p.case_id, p.ma_lk, p.mo_ta_loi, p.mien, p.phieu_gui_id, p.odoo_id, p.nguon_tao, p.ten_khach_hang,
   (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang`;
@@ -259,7 +259,7 @@ phieuTra.get("/", async (c) => {
       OR ktv_nhan IN (SELECT email_dang_nhap FROM ktv_lien_he_bh WHERE LOWER(COALESCE(ten_hien_thi,'')) LIKE ? OR LOWER(ma_ktv) LIKE ?)
       OR ktv_nhan IN (SELECT email FROM users WHERE LOWER(COALESCE(ten,'')) LIKE ?)
       OR id IN (SELECT u.phieu_tra_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-                WHERE u.phieu_tra_id IS NOT NULL AND (LOWER(u.id) LIKE ? OR LOWER(COALESCE(p.case_id,'')) LIKE ? OR LOWER(COALESCE(u.ma_lk_thuc_te, p.ma_lk, '')) LIKE ?)))`;
+                WHERE u.phieu_tra_id IS NOT NULL AND (LOWER(u.id) LIKE ? OR LOWER(COALESCE(p.case_id,'')) LIKE ? OR LOWER(COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk, '')) LIKE ?)))`;
     binds.push(kw, kw, kw, kw, kw, kw, kw, kw, kw, kw, kw);
   }
   const [{ results }, totalRow] = await Promise.all([
@@ -395,16 +395,16 @@ phieuTra.patch("/:id/don-vi/:unitId", async (c) => {
   const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (!EDIT_STATES.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
-  const u = await c.env.DB.prepare("SELECT u.ma_lk_thuc_te, u.trang_thai, p.ma_lk FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ? AND u.phieu_tra_id = ?")
+  const u = await c.env.DB.prepare("SELECT u.ma_lk_thuc_te, u.ma_lk_nhan, u.trang_thai, p.ma_lk FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ? AND u.phieu_tra_id = ?")
     .bind(unitId, id)
-    .first<{ ma_lk_thuc_te: string | null; trang_thai: string; ma_lk: string | null }>();
+    .first<{ ma_lk_thuc_te: string | null; ma_lk_nhan: string | null; trang_thai: string; ma_lk: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   const body = await c.req.json<{ ma_lk_thuc_te?: string | null }>().catch(() => ({}) as { ma_lk_thuc_te?: string | null });
   const ma = body.ma_lk_thuc_te?.trim() || null;
   if (!ma) return c.json({ error: "MISSING_LINH_KIEN" }, 400);
   const lk = await c.env.DB.prepare("SELECT ma_lk FROM linh_kien_bh WHERE ma_lk = ?").bind(ma).first();
   if (!lk) return c.json({ error: "LINH_KIEN_NOT_FOUND" }, 400);
-  const cu = u.ma_lk_thuc_te || u.ma_lk || "—";
+  const cu = u.ma_lk_thuc_te || u.ma_lk_nhan || u.ma_lk || "—";
   if (cu === ma) return c.json({ ok: true });
   const now = nowVN();
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ma_lk_thuc_te = ?, updated_at = ? WHERE id = ?").bind(ma, now, unitId).run();

@@ -39,6 +39,7 @@ interface UnitRow {
   ket_qua_chan_doan: string | null;
   ket_qua_nv?: string | null;
   ma_lk_thuc_te: string | null;
+  ma_lk_nhan?: string | null;
   phieu_tra_id: string | null;
   updated_at: string;
 }
@@ -114,7 +115,8 @@ function LichSuList({ data, onOpenUnit }: { data: LichSuResp; onOpenUnit?: (id: 
                     <StatusBadge kind="unit" value={x.trang_thai} />
                     {x.huong_xu_ly && <span className="text-[var(--ink-soft)]">{HUONG_XU_LY_LABELS[x.huong_xu_ly] ?? x.huong_xu_ly}</span>}
                     {ketQuaLabel(x) && <span className="text-[var(--ink-faint)]">· {ketQuaLabel(x)}</span>}
-                    {x.ma_lk_thuc_te && x.ma_lk_thuc_te !== d.ma_lk && <span className="text-[var(--ink-faint)]">· thay {lk(x.ma_lk_thuc_te)}</span>}
+                    {x.ma_lk_nhan && x.ma_lk_nhan !== d.ma_lk && <span className="text-[var(--ink-faint)]">· gửi về {lk(x.ma_lk_nhan)}</span>}
+                    {x.ma_lk_thuc_te && x.ma_lk_thuc_te !== (x.ma_lk_nhan || d.ma_lk) && <span className="text-[var(--ink-faint)]">· đổi mới {lk(x.ma_lk_thuc_te)}</span>}
                   </button>
                 ))}
               </div>

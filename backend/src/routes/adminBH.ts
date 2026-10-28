@@ -125,7 +125,7 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 //   tt   : cho_xac_nhan_so_luong (chi don cha) | cho_phan_loai | admin_can_xem_lai | cho_bo_sung_tt
 //   ktv  : email nguoi gui (g.nguoi_tao) | __khach_le__
 //   lk   : linh kien KTV gui (p.ma_lk)
-//   lk_tt: linh kien thuc sua (COALESCE(u.ma_lk_thuc_te, p.ma_lk); don cha = p.ma_lk)
+//   lk_tt: linh kien thuc sua (COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk); don cha = p.ma_lk)
 //   pl   : phan loai linh kien (linh_kien_bh.don_vi) | __none__
 //   cham : qua_han | dung_han (SLA 24h bo Chu nhat; don cha tinh tu created_at, don vi tu updated_at)
 //   mien : MB | MN | __none__ (chua khai bao) - loc them; ngoai ra luon gioi han theo mien cua nguoi xem.
@@ -165,7 +165,7 @@ function locBangThongNhat(c: { req: { query(k: string): string | undefined }; ge
     parts.push("p.ma_lk = ?");
     binds.push(lk);
   }
-  const effLk = kind === "unit" ? "COALESCE(u.ma_lk_thuc_te, p.ma_lk)" : "p.ma_lk";
+  const effLk = kind === "unit" ? "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)" : "p.ma_lk";
   const lkTt = q("lk_tt");
   if (lkTt) {
     parts.push(`${effLk} = ?`);
@@ -334,8 +334,8 @@ adminBH.get("/don-vi/loc-options", async (c) => {
   const [ktv, lk, lkTt, pl] = await Promise.all([
     c.env.DB.prepare(`SELECT DISTINCT COALESCE(g.nguoi_tao, '${KHACH_LE_KEY}') AS v ${base}`).all<{ v: string }>(),
     c.env.DB.prepare(`SELECT DISTINCT p.ma_lk AS v ${base} AND p.ma_lk IS NOT NULL`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.ma_lk_thuc_te, p.ma_lk) AS v ${base} AND COALESCE(u.ma_lk_thuc_te, p.ma_lk) IS NOT NULL`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT TRIM(COALESCE(l.don_vi,'')) AS v ${base.replace("WHERE", "LEFT JOIN linh_kien_bh l ON l.ma_lk = COALESCE(u.ma_lk_thuc_te, p.ma_lk) WHERE")}`).all<{ v: string }>(),
+    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS v ${base} AND COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) IS NOT NULL`).all<{ v: string }>(),
+    c.env.DB.prepare(`SELECT DISTINCT TRIM(COALESCE(l.don_vi,'')) AS v ${base.replace("WHERE", "LEFT JOIN linh_kien_bh l ON l.ma_lk = COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) WHERE")}`).all<{ v: string }>(),
   ]);
   return c.json({ ktv: ktv.results.map((r) => r.v), lk: lk.results.map((r) => r.v), lk_tt: lkTt.results.map((r) => r.v), phan_loai: pl.results.map((r) => r.v) });
 });
@@ -438,7 +438,8 @@ interface PhanLoaiBody {
   huong_xu_ly?: HuongXuLy;
   nguoi_sua_chua?: string;
   ly_do_tu_choi?: string;
-  ma_lk_thuc_te?: string | null;
+  ma_lk_thuc_te?: string | null; // C - linh kien doi moi / thay the (NULL = giong B)
+  ma_lk_nhan?: string | null; // B - linh kien thuc te gui ve, Admin xac nhan (NULL = giong A cua don cha)
   ly_do_cham?: string;
   // 05/10/2026: "Khi chon doi moi nhanh, se hien 1 lua chon phuong an xu ly voi xac => admin chon 1 lan
   // cho tat ca cac don xu ly" - huong doi_moi BAT BUOC chon xu ly xac ngay luc phan loai (don le, hang
@@ -474,7 +475,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     .prepare(
       `UPDATE phieu_sua_chua_bh_ct SET
          loai_bao_hanh = ?, thong_tin_mail_pd = ?, ma_phe_duyet = ?, huong_xu_ly = ?, loai_doi_tru = ?,
-         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ma_lk_thuc_te = COALESCE(?, ma_lk_thuc_te), xu_ly_xac = ?, trang_thai = ?, updated_at = ?
+         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ma_lk_thuc_te = CASE WHEN ? IS NULL THEN ma_lk_thuc_te ELSE NULLIF(?, '') END, ma_lk_nhan = CASE WHEN ? IS NULL THEN ma_lk_nhan ELSE NULLIF(?, '') END, xu_ly_xac = ?, trang_thai = ?, updated_at = ?
        WHERE id = ?`,
     )
     .bind(
@@ -485,7 +486,11 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       body.loai_doi_tru,
       HUONG_CAN_NV.includes(body.huong_xu_ly) ? body.nguoi_sua_chua : null,
       body.huong_xu_ly === "tu_choi" ? body.ly_do_tu_choi : null,
-      body.ma_lk_thuc_te === undefined ? null : body.ma_lk_thuc_te,
+      // undefined/null = giu nguyen, "" = bo (ve mac dinh).
+      body.ma_lk_thuc_te ?? null,
+      body.ma_lk_thuc_te ?? null,
+      body.ma_lk_nhan ?? null,
+      body.ma_lk_nhan ?? null,
       body.huong_xu_ly === "doi_moi" ? body.xu_ly_xac : null,
       trangThaiMoi,
       nowVN(),
@@ -502,6 +507,8 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     `Admin BH phân loại: ${LBL[body.loai_bao_hanh] || body.loai_bao_hanh} / ${LBL[body.huong_xu_ly] || body.huong_xu_ly} / Đối trừ: ${LBL[body.loai_doi_tru] || body.loai_doi_tru}` +
       (body.huong_xu_ly === "tu_choi" ? ` | Lý do huỷ: ${body.ly_do_tu_choi}` : "") +
       (body.huong_xu_ly === "doi_moi" ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
+      (body.ma_lk_nhan ? ` | LK thực tế gửi về: ${body.ma_lk_nhan}` : "") +
+      (body.ma_lk_thuc_te ? ` | LK đổi mới: ${body.ma_lk_thuc_te}` : "") +
       (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""),
   );
   return { ok: true };
@@ -596,7 +603,7 @@ adminBH.get("/dang-sua", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
   const ms0 = mienScope(c.get("user"), "p");
-  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
+  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"),
     "u.nguoi_sua_chua", tenOf("u.nguoi_sua_chua"), "g.nguoi_tao", tenOf("g.nguoi_tao"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
   let nvSql = "";
   const nvBinds: string[] = [];
@@ -606,7 +613,7 @@ adminBH.get("/dang-sua", async (c) => {
     nvSql = " AND u.nguoi_sua_chua = ?";
     nvBinds.push(nv);
   }
-  const LOC = { ktv: "g.nguoi_tao", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly" };
+  const LOC = { ktv: "g.nguoi_tao", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly" };
   const baseFw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql}`;
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFw, ms0.binds) });
@@ -629,11 +636,11 @@ adminBH.get("/xac-nhan", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
   const ms0 = mienScope(c.get("user"), "p");
-  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
+  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"),
     "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
   // 21/10/2026: loc NV / KTV gui / huong xu ly / ket qua NV / linh kien.
-  const LOC = { nv: "u.nguoi_sua_chua", ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", huong_xu_ly: "u.huong_xu_ly", ket_qua: "u.ket_qua_nv", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)" };
+  const LOC = { nv: "u.nguoi_sua_chua", ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", huong_xu_ly: "u.huong_xu_ly", ket_qua: "u.ket_qua_nv", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)" };
   const baseXn = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms0.sql}`;
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseXn, ms0.binds) });
   const f = eqFilters(c, LOC);
@@ -714,6 +721,37 @@ adminBH.patch("/don-vi/:id/xu-ly-xac", async (c) => {
   if (u.xu_ly_xac === body.xu_ly_xac) return c.json({ ok: true });
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET xu_ly_xac = ?, updated_at = updated_at WHERE id = ?").bind(body.xu_ly_xac, id).run();
   await addLog(c.env.DB, "phieu_sc_ct", id, u.trang_thai, u.trang_thai, user.email, `Đổi xử lý xác: ${LBL[u.xu_ly_xac ?? ""] || u.xu_ly_xac || "—"} → ${LBL[body.xu_ly_xac!] || body.xu_ly_xac}`);
+  return c.json({ ok: true });
+});
+
+// PATCH /api/admin/don-vi/:id/linh-kien {ma_lk_nhan?, ma_lk_thuc_te?} - 29/10/2026: Admin BH xac nhan lai
+// linh kien THUC TE GUI VE (B) va linh kien DOI MOI (C) bat cu luc nao (VD sau khi xu ly nhanh/hang loat).
+// undefined = giu nguyen, null/"" = bo (B ve giong A, C ve giong B). Quan ly xac tinh theo B.
+adminBH.patch("/don-vi/:id/linh-kien", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ ma_lk_nhan?: string | null; ma_lk_thuc_te?: string | null }>().catch(() => ({}) as { ma_lk_nhan?: string | null; ma_lk_thuc_te?: string | null });
+  const u = await c.env.DB.prepare(
+    "SELECT u.trang_thai, u.ma_lk_nhan, u.ma_lk_thuc_te, p.ma_lk FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ?",
+  )
+    .bind(id)
+    .first<{ trang_thai: string; ma_lk_nhan: string | null; ma_lk_thuc_te: string | null; ma_lk: string | null }>();
+  if (!u) return c.json({ error: "NOT_FOUND" }, 404);
+  const norm = (v: string | null | undefined) => (v === undefined ? undefined : v?.trim() || null);
+  const nhan = norm(body.ma_lk_nhan);
+  const thucTe = norm(body.ma_lk_thuc_te);
+  for (const ma of [nhan, thucTe]) {
+    if (ma && !(await c.env.DB.prepare("SELECT 1 FROM linh_kien_bh WHERE ma_lk = ?").bind(ma).first())) return c.json({ error: "LINH_KIEN_NOT_FOUND" }, 400);
+  }
+  const moiNhan = nhan === undefined ? u.ma_lk_nhan : nhan;
+  const moiTt = thucTe === undefined ? u.ma_lk_thuc_te : thucTe;
+  if (moiNhan === u.ma_lk_nhan && moiTt === u.ma_lk_thuc_te) return c.json({ ok: true });
+  await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ma_lk_nhan = ?, ma_lk_thuc_te = ?, updated_at = updated_at WHERE id = ?").bind(moiNhan, moiTt, id).run();
+  const parts: string[] = [];
+  if (moiNhan !== u.ma_lk_nhan) parts.push(`LK thực tế gửi về: ${u.ma_lk_nhan || u.ma_lk || "—"} → ${moiNhan || u.ma_lk || "—"}`);
+  if (moiTt !== u.ma_lk_thuc_te) parts.push(`LK đổi mới: ${u.ma_lk_thuc_te || "—"} → ${moiTt || "—"}`);
+  await addLog(c.env.DB, "phieu_sc_ct", id, u.trang_thai, u.trang_thai, user.email, parts.join(" | "));
   return c.json({ ok: true });
 });
 

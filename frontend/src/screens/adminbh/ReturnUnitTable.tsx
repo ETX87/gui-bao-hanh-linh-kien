@@ -47,7 +47,7 @@ export function useFilteredUnits(units: ReturnUnit[], loc: UnitLoc) {
       if (loc.cho === "qua_han" && hoursSince(u.updated_at) <= 24) return false;
       if (words.length) {
         const hay = normalizeVi(
-          [u.id, u.case_id, u.case_khach_hang, u.ten_khach_hang, u.mo_ta_loi, u.ma_lk, u.ma_lk_thuc_te, nameOf(u.ma_lk_thuc_te || u.ma_lk), u.ktv_key, u.ktv_key ? displayName(u.ktv_key) : "", u.phieu_gui_id]
+          [u.id, u.case_id, u.case_khach_hang, u.ten_khach_hang, u.mo_ta_loi, u.ma_lk, u.ma_lk_nhan, u.ma_lk_thuc_te, nameOf(u.ma_lk_thuc_te || u.ma_lk_nhan || u.ma_lk), nameOf(u.ma_lk_nhan || u.ma_lk), u.ktv_key, u.ktv_key ? displayName(u.ktv_key) : "", u.phieu_gui_id]
             .filter(Boolean)
             .join(" "),
         );
@@ -139,6 +139,7 @@ export function ReturnUnitTable({
   onOpen,
   rowExtra,
   emptyText = "Không có đơn nào.",
+  xacMode,
 }: {
   units: ReturnUnit[];
   selected?: Set<string>;
@@ -149,6 +150,9 @@ export function ReturnUnitTable({
   onOpen?: (u: ReturnUnit) => void;
   rowExtra?: { header: string; render: (u: ReturnUnit) => ReactNode }; // cot rieng (vd doi linh kien / bo khoi phieu)
   emptyText?: string;
+  // 29/10/2026: phieu tra XAC cho doi tac -> linh kien chinh la linh kien thuc te gui ve (B), khong phai
+  // linh kien doi moi (C) tra KTV.
+  xacMode?: boolean;
 }) {
   const { nameOf, phanLoaiOf } = useLkName();
   const groups = useMemo(() => {
@@ -183,7 +187,7 @@ export function ReturnUnitTable({
             )}
             <th>ID</th>
             {rowExtra && <th>{rowExtra.header}</th>}
-            <th>Linh kiện thực tế</th>
+            <th>{xacMode ? "Linh kiện xác (gửi về)" : "Linh kiện trả"}</th>
             <th>Hướng xử lý</th>
             <th>Đối trừ</th>
             <th>Kết quả / xử lý xác</th>
@@ -225,7 +229,12 @@ export function ReturnUnitTable({
                   </tr>
                 )}
                 {gUnits.map((u) => {
-                  const lk = u.ma_lk_thuc_te || u.ma_lk;
+                  // A = KTV chon, B = thuc te gui ve (xac), C = doi moi tra KTV.
+                  const lkB = u.ma_lk_nhan || u.ma_lk;
+                  const lkC = u.ma_lk_thuc_te || lkB;
+                  const lk = xacMode ? lkB : lkC;
+                  const phu = xacMode ? (lkC !== lkB ? `Đổi mới: ${nameOf(lkC)}` : "") : lkC !== lkB ? `Xác: ${nameOf(lkB)}` : "";
+                  const khacKtv = !!(u.ma_lk && lkB !== u.ma_lk);
                   const kq = ketQuaLabel(u);
                   return (
                     <tr key={u.id} className={`${onOpen ? "cursor-pointer hover:bg-[var(--surface-2)]" : ""} ${sel && selected!.has(u.id) ? "bg-[var(--brand-50)]" : ""}`} onClick={onOpen ? () => onOpen(u) : undefined}>
@@ -241,12 +250,13 @@ export function ReturnUnitTable({
                       {rowExtra && <td onClick={(e) => e.stopPropagation()}>{rowExtra.render(u)}</td>}
                       <td className="max-w-[260px]">
                         <div className="truncate" title={nameOf(lk)}>{nameOf(lk)}</div>
-                        {(phanLoaiOf(lk) || (u.ma_lk_thuc_te && u.ma_lk_thuc_te !== u.ma_lk)) && (
-                          <div className="flex items-center gap-1 text-[11px] text-[var(--ink-faint)] whitespace-nowrap">
+                        {(phanLoaiOf(lk) || phu || khacKtv) && (
+                          <div className="flex items-center gap-1 text-[11px] text-[var(--ink-faint)] whitespace-nowrap truncate">
                             {phanLoaiOf(lk)}
-                            {u.ma_lk_thuc_te && u.ma_lk_thuc_te !== u.ma_lk && (
-                              <span className="font-semibold text-[var(--blue-700)]" title={`KTV gửi: ${nameOf(u.ma_lk)}`}>
-                                · Đã đổi LK
+                            {phu && <span className="font-semibold text-[var(--blue-700)]" title={phu}>{phanLoaiOf(lk) ? "· " : ""}{phu}</span>}
+                            {khacKtv && (
+                              <span className="font-semibold text-[var(--amber-700)]" title={`KTV chọn: ${nameOf(u.ma_lk)}`}>
+                                · ≠ KTV chọn
                               </span>
                             )}
                           </div>

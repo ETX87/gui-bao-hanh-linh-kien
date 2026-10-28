@@ -32,7 +32,7 @@ const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "cho_xac_nhan_so_luo
 function allRowsSql(scopeWhere: string): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
       CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
-      u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, p.ma_lk) AS ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
+      u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id

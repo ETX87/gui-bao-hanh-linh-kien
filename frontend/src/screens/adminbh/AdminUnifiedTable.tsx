@@ -149,8 +149,9 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
 
   const unitFields = (u: DonVi): Record<AdminColKey, ReactNode> => {
     const isKhachLe = !u.phieu_gui_id;
-    const effLk = u.ma_lk_thuc_te || u.ma_lk;
-    const daDoiLk = !!(u.ma_lk_thuc_te && u.ma_lk_thuc_te !== u.ma_lk);
+    // 29/10/2026: bang xu ly hien linh kien THUC TE GUI VE (B), mac dinh = KTV chon.
+    const effLk = u.ma_lk_nhan || u.ma_lk;
+    const daDoiLk = !!(u.ma_lk_nhan && u.ma_lk_nhan !== u.ma_lk);
     const w = warranty(u, effLk);
     return {
       trangthai: <StatusBadge kind="unit" value={u.trang_thai} />,
@@ -172,7 +173,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         <Ellipsis
           text={
             <>
-              {lkName(effLk)} {daDoiLk && <Badge tone="blue" className="ml-1">Đã đổi LK</Badge>}
+              {lkName(effLk)} {daDoiLk && <Badge tone="amber" className="ml-1">≠ KTV chọn</Badge>}
               {hetBhBadge(w)}
             </>
           }

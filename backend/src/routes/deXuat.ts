@@ -53,7 +53,7 @@ deXuat.get("/", async (c) => {
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = ?${ms.sql}`;
   const order = tt === "cho_cap" ? "d.created_at" : "d.updated_at DESC";
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv ${fw} ORDER BY ${order} LIMIT ? OFFSET ?`)
+    c.env.DB.prepare(`SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv ${fw} ORDER BY ${order} LIMIT ? OFFSET ?`)
       .bind(tt, ...ms.binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fw}`).bind(tt, ...ms.binds).first<{ cnt: number }>(),

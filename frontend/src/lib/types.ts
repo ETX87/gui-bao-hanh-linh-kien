@@ -96,7 +96,8 @@ export interface DonVi {
   id: string;
   parent_id: string;
   so_thu_tu: number;
-  ma_lk_thuc_te: string | null;
+  ma_lk_thuc_te: string | null; // C - linh kien doi moi / thay the (NULL = giong B)
+  ma_lk_nhan?: string | null; // B - linh kien thuc te gui ve (NULL = giong A = ma_lk don cha)
   loai_bao_hanh: string | null;
   thong_tin_mail_pd: string | null;
   ma_phe_duyet: string | null;
@@ -160,6 +161,7 @@ export interface DeXuatLk {
   // join them o GET /de-xuat
   unit_trang_thai?: string;
   ma_lk_thuc_te?: string | null;
+  ma_lk_nhan?: string | null;
   unit_ma_lk?: string | null;
   mo_ta_loi?: string | null;
   case_id?: string | null;

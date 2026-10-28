@@ -32,11 +32,11 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   // JOIN don cha (Phat hien 3 vong ra soat UX 08/09/2026): ma_lk / mo_ta_loi / case_id nam o don CHA,
   // ban cu chi SELECT * FROM phieu_sua_chua_bh_ct nen hang doi cua NV TRONG cot "Linh kien" + "Mo ta
   // loi" - dung y het cach GET /admin/don-vi da JOIN.
-  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, p.ma_lk)"),
+  const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"),
     "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
   // 21/10/2026: loc KTV gui / linh kien / huong xu ly / bao hanh.
-  const LOC = { ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", lk: "COALESCE(u.ma_lk_thuc_te, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly", loai_bao_hanh: "u.loai_bao_hanh" };
+  const LOC = { ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly", loai_bao_hanh: "u.loai_bao_hanh" };
   if (c.req.query("loc_only")) {
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?", [user.email]) });
   }

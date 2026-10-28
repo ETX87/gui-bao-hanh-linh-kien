@@ -7,7 +7,7 @@ import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, Badge, Spinner } from "../../ui/primitives";
-import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, isDoiTacKey } from "../../lib/constants";
 import { useLinhKien, useLkName, lkOptions } from "../../hooks/useLinhKien";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { ReturnUnitTable, UnitFilterBar, useFilteredUnits, EMPTY_LOC, type ReturnUnit, type UnitLoc } from "../adminbh/ReturnUnitTable";
@@ -407,6 +407,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           >
             <ReturnUnitTable
               units={data.don_vi}
+              xacMode={isDoiTacKey(t.ktv_nhan)}
               onOpen={canOpenUnit ? (u) => setOpenUnit(u.id) : undefined}
               emptyText="Phiếu chưa có đơn nào."
               rowExtra={
@@ -498,14 +499,14 @@ function DoiLinhKienModal({ traId, unit, onClose, onDone }: { traId: string; uni
   const toast = useToast();
   const { items } = useLinhKien();
   const { nameOf } = useLkName();
-  const cur = unit.ma_lk_thuc_te || unit.ma_lk || "";
+  const cur = unit.ma_lk_thuc_te || unit.ma_lk_nhan || unit.ma_lk || "";
   const [ma, setMa] = useState(cur);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true);
     try {
       await api.patch(`/phieu-tra/${traId}/don-vi/${unit.id}`, { ma_lk_thuc_te: ma });
-      toast("Đã đổi linh kiện thực tế.", "ok");
+      toast("Đã đổi linh kiện đổi mới.", "ok");
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -515,7 +516,7 @@ function DoiLinhKienModal({ traId, unit, onClose, onDone }: { traId: string; uni
   };
   return (
     <Modal
-      title={`Đổi linh kiện thực tế · ${unit.id}`}
+      title={`Đổi linh kiện đổi mới · ${unit.id}`}
       onClose={onClose}
       maxWidthClass="max-w-lg"
       footerActions={
@@ -529,14 +530,15 @@ function DoiLinhKienModal({ traId, unit, onClose, onDone }: { traId: string; uni
     >
       <div className="space-y-2 text-sm">
         <p className="text-[var(--ink-soft)]">
-          KTV gửi: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk)}</b>
-          {unit.ma_lk_thuc_te && unit.ma_lk_thuc_te !== unit.ma_lk && (
+          KTV chọn: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk)}</b> · thực tế gửi về (xác):{" "}
+          <b className="text-[var(--ink)]">{nameOf(unit.ma_lk_nhan || unit.ma_lk)}</b>
+          {unit.ma_lk_thuc_te && (
             <>
-              {" "}· hiện tại: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk_thuc_te)}</b>
+              {" "}· đổi mới hiện tại: <b className="text-[var(--ink)]">{nameOf(unit.ma_lk_thuc_te)}</b>
             </>
           )}
         </p>
-        <Field label="Linh kiện thực tế trả về" required>
+        <Field label="Linh kiện đổi mới trả KTV" required>
           <SearchableSelect options={lkOptions(items)} value={ma} onChange={setMa} allowEmpty={false} />
         </Field>
       </div>

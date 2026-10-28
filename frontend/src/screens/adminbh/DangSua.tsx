@@ -42,7 +42,7 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
   const cols: Column<Row>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "nv", header: "NV sửa chữa", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : <Badge tone="red">Chưa gán</Badge>) },
-    { key: "lk", header: "Linh kiện", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk_thuc_te || r.ma_lk || "")}>{nameOf(r.ma_lk_thuc_te || r.ma_lk || "")}</span> },
+    { key: "lk", header: "Linh kiện", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk_nhan || r.ma_lk || "")}>{nameOf(r.ma_lk_nhan || r.ma_lk || "")}</span> },
     { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
     {
       key: "dx",

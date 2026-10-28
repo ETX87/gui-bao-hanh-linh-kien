@@ -105,7 +105,7 @@ lichSu.get("/", async (c) => {
     ids.length
       ? db
           .prepare(
-            `SELECT id, parent_id, so_thu_tu, trang_thai, huong_xu_ly, loai_bao_hanh, ket_qua_chan_doan, ket_qua_nv, ma_lk_thuc_te, xu_ly_xac, ly_do_tu_choi,
+            `SELECT id, parent_id, so_thu_tu, trang_thai, huong_xu_ly, loai_bao_hanh, ket_qua_chan_doan, ket_qua_nv, ma_lk_thuc_te, ma_lk_nhan, xu_ly_xac, ly_do_tu_choi,
                     phieu_tra_id, nguoi_sua_chua, so_lan_yeu_cau_lam_lai, updated_at
              FROM phieu_sua_chua_bh_ct WHERE parent_id IN (SELECT value FROM json_each(?)) ORDER BY parent_id, so_thu_tu`,
           )

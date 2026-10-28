@@ -5,8 +5,9 @@ import { bumpLinhKienVersion } from "./linhKienVersion";
 // buoc tra hang: san_sang_gom_phieu_tra, da vao phieu tra, hoac da duoc Admin xac nhan hoan tat. KHONG
 // tinh huong "tu_choi"/"chuyen_kho". Ban dau chi dem admin_xac_nhan_hoan_tat=1 -> bo sot toan bo don
 // "Doi moi"/"Tru cong no"/"Tra lai KTV" (di thang vao phieu tra, khong qua buoc xac nhan hoan tat) -
-// phat hien trong ra soat Admin BH 05/10/2026. Dem theo linh kien THUC TE (ma_lk_thuc_te, khong co thi
-// lay linh kien cua don cha).
+// phat hien trong ra soat Admin BH 05/10/2026. Dem theo linh kien THUC TE GUI VE (B = ma_lk_nhan,
+// khong co thi lay linh kien KTV chon o don cha) - 29/10/2026, truoc do dem theo ma_lk_thuc_te (nay la
+// linh kien doi moi C).
 export const LK_TOP_GIO_DEFAULT = 2; // 2h sang gio VN
 
 export async function computeTopLinhKien(db: D1Database): Promise<{ so_lk: number; tinh_luc: string }> {
@@ -14,11 +15,11 @@ export async function computeTopLinhKien(db: D1Database): Promise<{ so_lk: numbe
   const cutoff = new Date(Date.parse(now.replace(" ", "T") + "Z") - 30 * 86400000).toISOString().slice(0, 19).replace("T", " ");
   const { results } = await db
     .prepare(
-      `SELECT COALESCE(ct.ma_lk_thuc_te, p.ma_lk) AS ma_lk, COUNT(*) AS so_luong
+      `SELECT COALESCE(ct.ma_lk_nhan, p.ma_lk) AS ma_lk, COUNT(*) AS so_luong
        FROM phieu_sua_chua_bh_ct ct JOIN phieu_sua_chua_bh p ON p.id = ct.parent_id
        WHERE (ct.admin_xac_nhan_hoan_tat = 1 OR ct.phieu_tra_id IS NOT NULL OR ct.trang_thai = 'san_sang_gom_phieu_tra')
          AND COALESCE(ct.huong_xu_ly, '') NOT IN ('tu_choi', 'chuyen_kho')
-         AND ct.updated_at >= ? AND COALESCE(ct.ma_lk_thuc_te, p.ma_lk) IS NOT NULL
+         AND ct.updated_at >= ? AND COALESCE(ct.ma_lk_nhan, p.ma_lk) IS NOT NULL
        GROUP BY 1 ORDER BY so_luong DESC, ma_lk LIMIT 200`,
     )
     .bind(cutoff)
