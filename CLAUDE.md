@@ -5551,3 +5551,5 @@ rồi trả lại nguyên trạng.
 **(c) Vấn đề:** không có. Ghi nhận: xử lý nhanh / phân loại hàng loạt không hỏi B, C (B = A) — sửa sau bằng "✎ Sửa linh kiện" trong chi tiết đơn.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch; thử logic SQL giữ / bỏ / đặt giá trị bằng sqlite. Chưa bấm thử giao diện / gọi API local.
+
+**Deploy (29/10/2026):** áp migration 0018 lên D1 production (748 đơn vị, B đều để trống = theo A) và `npm run deploy` (Version ID `bf2c5469`).
