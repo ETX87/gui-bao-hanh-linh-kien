@@ -93,7 +93,8 @@ export function CanhBaoTonDon({ canTinhLai }: { canTinhLai?: boolean }) {
     >
       <div className="space-y-2.5">
         {groups.map((g) => (
-          <div key={g.label}>
+          // Dien thoai (31/10/2026): chi hien giai doan dang co ton - bang day du chi tren may tinh.
+          <div key={g.label} className={g.rows.some((r) => r.so_luong > 0) ? "" : "hidden md:block"}>
             <p className="mb-1 text-xs font-bold text-[var(--ink-soft)]">
               {g.label} <span className="font-normal text-[var(--ink-faint)]">· {g.pham_vi}</span>
             </p>
@@ -134,7 +135,7 @@ export function CanhBaoTonDon({ canTinhLai }: { canTinhLai?: boolean }) {
               </table>
             </div>
             <div className="md:hidden space-y-1.5">
-              {g.rows.map((r) => (
+              {g.rows.filter((r) => r.so_luong > 0).map((r) => (
                 <button
                   key={r.key}
                   onClick={r.hash ? () => nav(r.hash!) : undefined}
@@ -155,7 +156,7 @@ export function CanhBaoTonDon({ canTinhLai }: { canTinhLai?: boolean }) {
             </div>
           </div>
         ))}
-        <p className="text-[11px] text-[var(--ink-faint)]">
+        <p className="hidden md:block text-[11px] text-[var(--ink-faint)]">
           Xanh: trong 24h · Vàng: có đơn quá 24h · Đỏ: có đơn quá 72h (giờ SLA, không tính Chủ nhật). TB xử lý = thời gian trung bình 30 ngày gần nhất
           {data.tb_cap_nhat && `, cập nhật ${fmtDate(data.tb_cap_nhat)}`}.
         </p>

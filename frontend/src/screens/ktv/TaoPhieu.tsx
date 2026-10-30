@@ -116,7 +116,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   return (
     <div className="space-y-3">
     {isSelfKtv && (
-      <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1" role="tablist">
+      <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:max-w-md" role="tablist">
         {(
           [
             ["odoo", "🧾 Đơn Odoo mới", odoo.don?.length ?? 0],
@@ -139,9 +139,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     {isSelfKtv && tab === "odoo" && odoo.don && (
       <Card className="p-3">
         <div className="mb-2 flex flex-col md:flex-row md:items-center gap-2">
-          <h3 className="shrink-0 text-[15px] lg:text-sm font-bold text-[var(--ink)]" title="Đơn tạo trên Odoo thuộc bạn phụ trách — chọn đơn chưa gửi để tạo thùng, mã ca / linh kiện / số lượng được điền sẵn.">
-            🧾 Đơn bảo hành Odoo
-          </h3>
+
         <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:w-[380px]" role="tablist">
           {(
             [
@@ -166,7 +164,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
           ))}
         </div>
           {odooTab === "chua_gui" && odoo.don.length > 0 && (
-            <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="w-full sm:w-auto md:ml-auto">
+            <Btn variant="primary" disabled={creating || sel.selected.size === 0} onClick={taoThungTuOdoo} className="hidden md:inline-flex md:ml-auto">
               Tạo thùng với {sel.selected.size || ""} đơn đã chọn
             </Btn>
           )}
@@ -181,6 +179,14 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
               </>
             )}
           </>
+        )}
+        {/* Dien thoai: nut tao thung dinh tren thanh menu duoi, chi hien khi da chon don (31/10/2026). */}
+        {odooTab === "chua_gui" && sel.selected.size > 0 && (
+          <div className="md:hidden fixed inset-x-0 bottom-[4.5rem] z-[55] border-t border-[var(--line)] bg-white/95 px-3 py-2 backdrop-blur" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
+            <Btn variant="primary" size="touch" className="w-full" disabled={creating} onClick={taoThungTuOdoo}>
+              📦 Tạo thùng với {sel.selected.size} đơn đã chọn
+            </Btn>
+          </div>
         )}
         {odooTab === "da_gui" && <OdooDaGuiList reloadKey={daGuiKey} onOpenPhieu={setDetailId} />}
         {odooTab === "huy" && <OdooHuyList items={odoo.khongGui} onChanged={reloadOdoo} />}
@@ -206,7 +212,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : isSelfKtv ? "Thùng của tôi" : "Phiếu gửi hàng của tôi"} ({total})</h3>
         <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu())}>
-          + Tạo phiếu mới
+          {isSelfKtv ? "+ Tạo thùng mới" : "+ Tạo phiếu mới"}
         </Btn>
       </div>
       <FilterBar collapsible={isSelfKtv} f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã đơn / case / linh kiện bên trong…" />

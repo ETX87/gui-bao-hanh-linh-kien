@@ -57,7 +57,7 @@ export function Sidebar({ user, collapsed, onToggle }: { user: AppUser; collapse
               // Thu gon: icon + nhan ngan BEN DUOI (05/10/2026 - truoc day chi con icon, 16+ emoji khong nhan
               // khien khong biet muc nao dung de lam gi). Mo rong: nhan + mo ta 1 dong.
               const cls = `focus-ring relative w-full flex rounded-lg text-[13.5px] font-medium transition-colors ${
-                collapsed ? "items-center justify-center px-1 py-1.5 min-h-[34px]" : "items-center gap-2 px-2.5 py-1.5"
+                collapsed ? `items-center justify-center px-1 ${count > 0 ? "pt-3 pb-1.5" : "py-1.5"} min-h-[34px]` : "items-center gap-2 px-2.5 py-1.5"
               } ${
                 active ? "bg-white/[0.22] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]" : "text-white/85 hover:bg-white/10 hover:text-white"
               }`;

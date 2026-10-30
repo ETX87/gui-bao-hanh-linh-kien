@@ -146,18 +146,19 @@ export function StatCard({ label, value, tone = "gray", icon, onClick }: { label
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={`focus-ring relative h-full w-full overflow-hidden rounded-[14px] border border-white/70 bg-gradient-to-br p-4 md:p-3 text-left shadow-card ${t.card} ${
+      // 31/10/2026: dien thoai - the ngang 1 dong (icon · nhan · so), cao ~52px thay vi ~110px.
+      className={`focus-ring relative flex items-center gap-2.5 md:block h-full w-full overflow-hidden rounded-[14px] border border-white/70 bg-gradient-to-br px-3 py-2.5 md:p-3 text-left shadow-card ${t.card} ${
         onClick ? "transition hover:-translate-y-0.5 hover:shadow-pop" : "cursor-default"
       } ${active ? "" : "opacity-75"}`}
     >
       {icon && (
         <>
-          <span className={`flex h-10 w-10 md:h-8 md:w-8 items-center justify-center rounded-full text-white text-lg md:text-base shadow-[0_2px_8px_rgba(0,0,0,0.15)] ${t.icon}`}>{icon}</span>
-          <span className={`pointer-events-none absolute -bottom-2 -right-1 text-[48px] leading-none opacity-[0.12] grayscale`}>{icon}</span>
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-base shadow-[0_2px_8px_rgba(0,0,0,0.15)] ${t.icon}`}>{icon}</span>
+          <span className={`pointer-events-none absolute -bottom-2 -right-1 hidden md:block text-[48px] leading-none opacity-[0.12] grayscale`}>{icon}</span>
         </>
       )}
-      <p className={`${icon ? "mt-3 md:mt-2" : ""} text-sm lg:text-xs font-semibold leading-tight text-[var(--ink-body)]`}>{label}</p>
-      <p className={`mt-1 text-[28px] md:text-[24px] font-extrabold leading-none ${t.value}`}>{value}</p>
+      <p className={`${icon ? "md:mt-2" : ""} min-w-0 flex-1 text-[13px] lg:text-xs font-semibold leading-tight text-[var(--ink-body)]`}>{label}</p>
+      <p className={`md:mt-1 shrink-0 text-[22px] md:text-[24px] font-extrabold leading-none ${t.value}`}>{value}</p>
     </button>
   );
 }

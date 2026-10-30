@@ -4,6 +4,7 @@ import { Input, Select } from "./primitives";
 import { SearchableSelect } from "./SearchableSelect";
 import { displayName, useUserNames } from "../hooks/useUserNames";
 import { useLkName } from "../hooks/useLinhKien";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // Thanh loc dung chung cho moi bang danh sach (21/10/2026: "tất cả các giao diện có table danh sách đơn,
 // phiếu... đều phải bổ sung các filter phù hợp ... + công cụ tìm kiếm. lựa chọn filter nhiều hơn 5 lựa chọn
@@ -114,6 +115,9 @@ export function FilterSelect({ label, value, onChange, options }: { label: strin
 // may tinh chiem nua man hinh dau). Dang co loc thi tu mo de thay dang loc gi.
 export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: ListFilters; defs: FilterDef[]; placeholder: string; extra?: React.ReactNode; collapsible?: boolean }) {
   const [open, setOpen] = useState(false);
+  // 31/10/2026: tren dien thoai moi thanh loc deu thu vao nut "Lọc" (o loc chiem nua man hinh dau).
+  const isMobile = useIsMobile();
+  collapsible = collapsible || isMobile;
   useUserNames();
   const { nameOf } = useLkName();
   const optsOf = (d: FilterDef) => {

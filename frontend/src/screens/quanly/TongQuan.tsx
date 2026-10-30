@@ -54,9 +54,12 @@ export function QuanLyTongQuanScreen() {
 
       <Card className="p-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn theo giai đoạn (cả thùng chưa về)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-2.5">
           {GIAI_DOAN.map((g) => (
-            <StatCard key={g.key} label={g.label} value={counts[g.key] || 0} tone={g.tone} icon={g.icon} onClick={() => goto(g.key)} />
+            // Dien thoai: an giai doan = 0 (mo ta 18 the cao ~1.800px).
+            <div key={g.key} className={(counts[g.key] || 0) === 0 ? "hidden md:block" : ""}>
+              <StatCard label={g.label} value={counts[g.key] || 0} tone={g.tone} icon={g.icon} onClick={() => goto(g.key)} />
+            </div>
           ))}
         </div>
       </Card>

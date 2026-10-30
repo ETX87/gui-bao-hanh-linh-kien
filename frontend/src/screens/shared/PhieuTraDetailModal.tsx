@@ -93,6 +93,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const t = data.phieu_tra;
   const isNhap = t.trang_thai === "nhap";
   const isAdmin = user.la_admin_bh || user.la_qtri;
+  // 31/10/2026: KTV xem phieu tra cua minh - bo thong tin noi bo (doi tru, mien, nguoi tao, cot xu ly).
+  const ktvView = isPureKtv(user);
   const isKeToan = user.la_ke_toan || user.la_qtri;
   const isKho = user.la_kho || user.la_qtri;
   // Sua duoc (ma, them/bot don vi, doi linh kien) cho toi khi Ke toan duyet cho Kho xuat.
@@ -222,8 +224,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             )}
             {ktvNhanDuocXacNhan && !showKhieuNai && (
               <>
-                <Btn variant="danger" onClick={() => setShowKhieuNai(true)}>
-                  Khiếu nại vận chuyển
+                <Btn variant="secondary" onClick={() => setShowKhieuNai(true)}>
+                  {ktvView ? "Không nhận được" : "Khiếu nại vận chuyển"}
                 </Btn>
                 <Btn variant="success" disabled={busy} onClick={ktvXacNhanNhan}>
                   Xác nhận đã nhận
@@ -315,16 +317,18 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               <p className="text-[15px] font-bold text-[var(--ink)]">
                 👷 Trả cho <UserName email={t.ktv_nhan} />
               </p>
-              <Badge tone={t.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[t.loai_doi_tru]}</Badge>
-              <DoiMienBadge kind="phieu-tra" id={t.id} mien={t.mien} ktvEmail={t.ktv_nhan} onDone={load} />
+              {!ktvView && <Badge tone={t.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[t.loai_doi_tru]}</Badge>}
+              {!ktvView && <DoiMienBadge kind="phieu-tra" id={t.id} mien={t.mien} ktvEmail={t.ktv_nhan} onDone={load} />}
             </div>
             <div className="flex flex-wrap gap-1.5">
               <Chip icon="📦" title="Số đơn vị trong phiếu">
                 {data.don_vi.length} đơn vị
               </Chip>
-              <Chip icon="✍️" title="Người tạo">
-                <UserName email={t.nguoi_tao} />
-              </Chip>
+              {!ktvView && (
+                <Chip icon="✍️" title="Người tạo">
+                  <UserName email={t.nguoi_tao} />
+                </Chip>
+              )}
               <Chip icon="🕒" title="Tạo lúc">
                 {fmtDate(t.created_at)}
               </Chip>
@@ -407,6 +411,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             }
           >
             <ReturnUnitTable
+              simple={ktvView}
               units={data.don_vi}
               xacMode={isDoiTacKey(t.ktv_nhan)}
               onOpen={canOpenUnit ? (u) => setOpenUnit(u.id) : undefined}

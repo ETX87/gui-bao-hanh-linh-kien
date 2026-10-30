@@ -145,6 +145,8 @@ export function HomeScreen({ user }: { user: AppUser }) {
       {/* 12/10/2026: canh bao don ton + thoi gian xu ly TB theo vai tro. */}
       <CanhBaoTonDon canTinhLai={user.la_admin_bh || user.la_qtri} />
 
+      {/* Dien thoai: hero da liet ke du viec dang cho -> an luoi KPI (lap thong tin, dai 1,5 man hinh). */}
+      <div className="hidden md:block">
       <Card className="p-3" title="Tổng quan hàng đợi">
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
           {relevantKeys.map((k) =>
@@ -156,6 +158,7 @@ export function HomeScreen({ user }: { user: AppUser }) {
           )}
         </div>
       </Card>
+      </div>
     </>
   );
 }

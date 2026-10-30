@@ -36,7 +36,7 @@ export function KtvDonCuaToiScreen() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1" role="tablist">
+      <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:max-w-md" role="tablist">
         {(
           [
             ["dang", "Đang xử lý", r?.so_dang],
@@ -68,7 +68,7 @@ export function KtvDonCuaToiScreen() {
       ) : items.length === 0 ? (
         <p className="py-8 text-center text-sm text-[var(--ink-faint)]">{q ? "Không có đơn nào khớp." : nhom === "dang" ? "Chưa có đơn nào đang xử lý." : "Chưa có đơn nào đã xong."}</p>
       ) : (
-        <div className="grid gap-2.5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {items.map((d) => (
             <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} onBoSung={setBoSung} />
           ))}

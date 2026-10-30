@@ -71,7 +71,7 @@ export function KtvDonCard({ don, onOpen, onBoSung }: { don: KtvDon; onOpen?: ()
     <div
       role={onOpen ? "button" : undefined}
       onClick={onOpen}
-      className={`rounded-xl border bg-[var(--surface)] p-3 shadow-card ${boSung ? "border-[var(--red-200)]" : "border-[var(--line)]"} ${onOpen ? "cursor-pointer hover:border-[var(--line-strong)]" : ""}`}
+      className={`min-w-0 rounded-xl border bg-[var(--surface)] p-3 shadow-card ${boSung ? "border-[var(--red-200)]" : "border-[var(--line)]"} ${onOpen ? "cursor-pointer hover:border-[var(--line-strong)]" : ""}`}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
@@ -134,6 +134,14 @@ export function KtvPhieuTraCard({ pt, onDone, onOpen }: { pt: KtvPhieuTra; onDon
   const [busy, setBusy] = useState(false);
   const [khieuNai, setKhieuNai] = useState(false);
   const don = pt.don || [];
+  // Gop cac don vi cung linh kien + cung khach (1 don cha x2) thanh 1 dong "× N".
+  const mon: { key: string; ma_lk: string | null; khach: string | null; n: number }[] = [];
+  for (const d of don) {
+    const key = `${d.ma_lk}|${d.khach_hang || d.case_id}`;
+    const m = mon.find((x) => x.key === key);
+    if (m) m.n++;
+    else mon.push({ key, ma_lk: d.ma_lk, khach: d.khach_hang, n: 1 });
+  }
   const nhan = async () => {
     setBusy(true);
     try {
@@ -147,10 +155,10 @@ export function KtvPhieuTraCard({ pt, onDone, onOpen }: { pt: KtvPhieuTra; onDon
     }
   };
   return (
-    <div className="rounded-xl border border-[var(--orange-200)] bg-[var(--surface)] p-3 shadow-card">
+    <div className="min-w-0 rounded-xl border border-[var(--orange-200)] bg-[var(--surface)] p-3 shadow-card">
       <div className="flex items-start gap-2" role="button" onClick={onOpen}>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold text-[var(--ink)]">📬 Hàng trả về cho bạn · {pt.so_don ?? don.length} món</p>
+          <p className="truncate text-[15px] font-bold text-[var(--ink)]">📬 Hàng trả về · {pt.so_don ?? don.length} món</p>
           <p className="text-xs text-[var(--ink-soft)]">
             {pt.id}
             {pt.ma_van_don && ` · vận đơn ${pt.ma_van_don}`}
@@ -163,13 +171,14 @@ export function KtvPhieuTraCard({ pt, onDone, onOpen }: { pt: KtvPhieuTra; onDon
       </div>
       {don.length > 0 && (
         <ul className="mt-2 space-y-1 rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5" onClick={onOpen}>
-          {don.slice(0, 4).map((d) => (
-            <li key={d.id} className="truncate text-[13px] text-[var(--ink-body)]">
+          {mon.slice(0, 4).map((d) => (
+            <li key={d.key} className="truncate text-[13px] text-[var(--ink-body)]">
               • {nameOf(d.ma_lk)}
-              {d.khach_hang && <span className="text-[var(--ink-soft)]"> — {d.khach_hang}</span>}
+              {d.n > 1 && <b> × {d.n}</b>}
+              {d.khach && <span className="text-[var(--ink-soft)]"> — {d.khach}</span>}
             </li>
           ))}
-          {don.length > 4 && <li className="text-xs text-[var(--ink-faint)]">… và {don.length - 4} món khác</li>}
+          {mon.length > 4 && <li className="text-xs text-[var(--ink-faint)]">… và {mon.length - 4} món khác</li>}
         </ul>
       )}
       <div className="mt-2 flex gap-2">

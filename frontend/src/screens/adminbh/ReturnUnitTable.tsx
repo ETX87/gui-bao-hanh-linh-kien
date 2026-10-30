@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { Badge, Input, Select } from "../../ui/primitives";
 import { MienBadge } from "../../ui/MienBadge";
 import { SlaBadge } from "../../ui/SlaBadge";
@@ -140,6 +141,7 @@ export function ReturnUnitTable({
   rowExtra,
   emptyText = "Không có đơn nào.",
   xacMode,
+  simple,
 }: {
   units: ReturnUnit[];
   selected?: Set<string>;
@@ -153,8 +155,11 @@ export function ReturnUnitTable({
   // 29/10/2026: phieu tra XAC cho doi tac -> linh kien chinh la linh kien thuc te gui ve (B), khong phai
   // linh kien doi moi (C) tra KTV.
   xacMode?: boolean;
+  // 31/10/2026: KTV xem phieu tra cua minh - an huong xu ly / doi tru / mien / SLA (thong tin noi bo).
+  simple?: boolean;
 }) {
   const { nameOf, phanLoaiOf } = useLkName();
+  const isMobile = useIsMobile();
   const groups = useMemo(() => {
     if (!grouped) return [["", units] as [string, ReturnUnit[]]];
     const m = new Map<string, ReturnUnit[]>();
@@ -166,7 +171,7 @@ export function ReturnUnitTable({
     return [...m.entries()];
   }, [units, grouped]);
   const sel = !!selected && !!onToggle;
-  const nCols = 9 + (sel ? 1 : 0) + (rowExtra ? 1 : 0);
+  const nCols = (simple ? 4 : 9) + (sel ? 1 : 0) + (rowExtra ? 1 : 0);
 
   if (!units.length) return <p className="text-sm text-[var(--ink-soft)] py-3 text-center">{emptyText}</p>;
 
@@ -175,10 +180,69 @@ export function ReturnUnitTable({
     onToggleMany?.(ids, !all);
   };
 
+  // Dien thoai (31/10/2026): the xep doc thay bang 9 cot (bang cu bi ep con 2 cot, tieu de dung doc).
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {groups.map(([key, gUnits]) => {
+          const ids = gUnits.map((u) => u.id);
+          const nSel = sel ? ids.filter((id) => selected!.has(id)).length : 0;
+          return (
+            <div key={key || "_"} className="space-y-1.5">
+              {grouped && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--brand-50)] px-2.5 py-2">
+                  {sel && <input type="checkbox" className="h-5 w-5" aria-label="Chọn cả nhóm" checked={nSel === ids.length} onChange={() => checkAll(ids)} />}
+                  <span className="font-semibold text-[var(--ink)]">👷 {nguoiNhanLabel(key)}</span>
+                  <Badge tone="gray">×{gUnits.length}</Badge>
+                  <span className="ml-auto flex gap-1.5">{groupAction?.(key, gUnits)}</span>
+                </div>
+              )}
+              {gUnits.map((u) => {
+                const lkB = u.ma_lk_nhan || u.ma_lk;
+                const lkC = u.ma_lk_thuc_te || lkB;
+                const lk = xacMode ? lkB : lkC;
+                const khach = u.case_khach_hang || u.ten_khach_hang;
+                return (
+                  <div
+                    key={u.id}
+                    onClick={onOpen ? () => onOpen(u) : undefined}
+                    className={`flex gap-2 rounded-lg border px-2.5 py-2 ${sel && selected!.has(u.id) ? "border-[var(--accent)] bg-[var(--brand-50)]" : "border-[var(--line)]"} ${onOpen ? "cursor-pointer" : ""}`}
+                  >
+                    {sel && (
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" className="mt-0.5 h-5 w-5" checked={selected!.has(u.id)} onChange={() => onToggle!(u.id)} />
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-semibold text-[var(--ink)]">{nameOf(lk)}</p>
+                      {khach && <p className="truncate text-[13px] text-[var(--ink-body)]">👤 {khach}</p>}
+                      {u.mo_ta_loi && <p className="truncate text-xs text-[var(--ink-soft)]">{u.mo_ta_loi}</p>}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--ink-faint)]">
+                        <span className="font-mono">{u.id}</span>
+                        {!simple && u.huong_xu_ly && <Badge tone="gray">{HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly}</Badge>}
+                        {!simple && <Badge tone={u.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[u.loai_doi_tru || "doi_tra"]}</Badge>}
+                        {!simple && <SlaBadge since={u.updated_at} />}
+                      </div>
+                      {rowExtra && (
+                        <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                          {rowExtra.render(u)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
       <table className="tbl w-full text-left">
-        <thead className="bg-[var(--surface-2)] text-[var(--ink-soft)]">
+        <thead className="bg-[var(--surface-2)] text-[var(--ink-soft)] [&_th]:whitespace-nowrap">
           <tr>
             {sel && (
               <th className="w-8">
@@ -188,13 +252,13 @@ export function ReturnUnitTable({
             <th>ID</th>
             {rowExtra && <th>{rowExtra.header}</th>}
             <th>{xacMode ? "Linh kiện xác (gửi về)" : "Linh kiện trả"}</th>
-            <th>Hướng xử lý</th>
-            <th>Đối trừ</th>
-            <th>Kết quả / xử lý xác</th>
+            {!simple && <th>Hướng xử lý</th>}
+            {!simple && <th>Đối trừ</th>}
+            {!simple && <th>Kết quả / xử lý xác</th>}
             <th>Case · khách</th>
             <th>Mô tả lỗi</th>
-            <th>Miền</th>
-            <th>Chờ</th>
+            {!simple && <th>Miền</th>}
+            {!simple && <th>Chờ</th>}
           </tr>
         </thead>
         <tbody>
@@ -262,11 +326,13 @@ export function ReturnUnitTable({
                           </div>
                         )}
                       </td>
-                      <td className="whitespace-nowrap">{u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly : "—"}</td>
-                      <td className="whitespace-nowrap">
-                        <Badge tone={u.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[u.loai_doi_tru || "doi_tra"]}</Badge>
-                      </td>
-                      <td className="whitespace-nowrap text-xs">{[kq, u.xu_ly_xac ? `Xác: ${XU_LY_XAC_LABELS[u.xu_ly_xac] || u.xu_ly_xac}` : null].filter(Boolean).join(" · ") || "—"}</td>
+                      {!simple && <td className="whitespace-nowrap">{u.huong_xu_ly ? HUONG_XU_LY_LABELS[u.huong_xu_ly] || u.huong_xu_ly : "—"}</td>}
+                      {!simple && (
+                        <td className="whitespace-nowrap">
+                          <Badge tone={u.loai_doi_tru === "tru_cong_no" ? "violet" : "blue"}>{LOAI_DOI_TRU_LABELS[u.loai_doi_tru || "doi_tra"]}</Badge>
+                        </td>
+                      )}
+                      {!simple && <td className="whitespace-nowrap text-xs">{[kq, u.xu_ly_xac ? `Xác: ${XU_LY_XAC_LABELS[u.xu_ly_xac] || u.xu_ly_xac}` : null].filter(Boolean).join(" · ") || "—"}</td>}
                       <td className="max-w-[200px]">
                         <div className="truncate text-xs" title={[u.case_id, u.case_khach_hang || u.ten_khach_hang].filter(Boolean).join(" · ")}>
                           <span className="font-mono">{u.case_id || "—"}</span>
@@ -276,8 +342,8 @@ export function ReturnUnitTable({
                       <td className="max-w-[240px]">
                         <div className="truncate text-xs text-[var(--ink-soft)]" title={u.mo_ta_loi || ""}>{u.mo_ta_loi || "—"}</div>
                       </td>
-                      <td><MienBadge mien={u.mien} short /></td>
-                      <td><SlaBadge since={u.updated_at} /></td>
+                      {!simple && <td><MienBadge mien={u.mien} short /></td>}
+                      {!simple && <td><SlaBadge since={u.updated_at} /></td>}
                     </tr>
                   );
                 })}

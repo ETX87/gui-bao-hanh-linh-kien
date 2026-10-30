@@ -61,9 +61,8 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
       <section>
         <h2 className="mb-2 flex items-baseline gap-2 text-lg font-bold text-[var(--ink)]">
           {tongViec > 0 ? "🔥 Việc cần làm" : "✨ Không có việc nào đang chờ bạn"}
-          <span className="text-xs font-normal text-[var(--ink-faint)]">Chào {user.ten || user.email}</span>
         </h2>
-        <div className="grid gap-2.5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {canBoSung.map((d) => (
             <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} onBoSung={setBoSung} />
           ))}
@@ -112,7 +111,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
         {theoDoi.length === 0 ? (
           <p className="rounded-xl bg-[var(--surface-2)] py-6 text-center text-sm text-[var(--ink-faint)]">Không có đơn nào đang trên đường hoặc đang xử lý.</p>
         ) : (
-          <div className="grid gap-2.5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {theoDoi.map((d) => (
               <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} />
             ))}

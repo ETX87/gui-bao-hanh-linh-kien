@@ -37,7 +37,7 @@ export function KtvNhanHangScreen({ user, initialDetailId }: { user: AppUser; in
       ) : rows.length === 0 ? (
         <p className="rounded-xl bg-[var(--surface-2)] py-8 text-center text-sm text-[var(--ink-faint)]">{q ? "Không có phiếu nào khớp." : "Chưa có hàng nào đang trả về cho bạn."}</p>
       ) : (
-        <div className="grid gap-2.5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {rows.map((r) => (
             <KtvPhieuTraCard key={r.id} pt={r} onDone={after} onOpen={() => setDetailId(r.id)} />
           ))}

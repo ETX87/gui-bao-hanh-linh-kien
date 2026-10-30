@@ -375,9 +375,14 @@ function UserFilterBar({ value, onChange, soLoc }: { value: UserLoc; onChange: (
   const set = (k: keyof UserLoc, v: string) => onChange({ ...value, [k]: v });
   const cell = "flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0";
   const lab = "shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap";
+  // 31/10/2026: dien thoai - 5 o loc thu vao nut "Lọc".
+  const [mo, setMo] = useState(false);
   return (
     <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5 items-center">
+      <button type="button" className="md:hidden rounded-lg border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-body)]" onClick={() => setMo((v) => !v)}>
+        ⚙ Lọc{soLoc > 0 ? ` (${soLoc})` : ""} {mo ? "▴" : "▾"}
+      </button>
+      <div className={`${mo ? "grid mt-1.5" : "hidden"} md:grid md:mt-0 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5 items-center`}>
         <div className={cell}>
           <span className={lab}>Duyệt</span>
           <Select value={value.trang_thai} onChange={(e) => set("trang_thai", e.target.value)}>

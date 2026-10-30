@@ -321,10 +321,10 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               isNhap ? (
                 <>
                   <Btn size="sm" onClick={() => setOdooOpen(true)}>
-                    🧾 Chọn đơn Odoo
+                    🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
                   </Btn>
                   <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
-                    + Thêm đơn
+                    + Thêm<span className="hidden sm:inline"> đơn</span>
                   </Btn>
                 </>
               ) : undefined
@@ -624,10 +624,10 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               isNhap ? (
                 <>
                   <Btn size="sm" onClick={() => setOdooOpen(true)}>
-                    🧾 Chọn đơn Odoo
+                    🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
                   </Btn>
                   <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
-                    + Thêm đơn
+                    + Thêm<span className="hidden sm:inline"> đơn</span>
                   </Btn>
                 </>
               ) : undefined

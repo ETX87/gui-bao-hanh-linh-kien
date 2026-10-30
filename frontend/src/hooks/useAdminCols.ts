@@ -9,16 +9,16 @@ import { useEffect, useState } from "react";
 export type AdminColKey = "trangthai" | "nguon" | "mien" | "khachhang" | "linhkien" | "phanloai" | "mota" | "sla" | "sdt" | "donchacode" | "phieuguicode" | "doitru" | "huongxuly" | "baohanh";
 
 export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number }> = {
-  trangthai: { label: "Trạng thái", width: 150 },
-  nguon: { label: "Nguồn", width: 190 },
+  trangthai: { label: "Trạng thái", width: 140 },
+  nguon: { label: "Nguồn", width: 165 },
   // 11/10/2026: mien cua don (MB / MN / chua khai bao).
-  mien: { label: "Miền", width: 80 },
-  khachhang: { label: "Khách hàng", width: 150 },
+  mien: { label: "Miền", width: 58 },
+  khachhang: { label: "Khách hàng", width: 135 },
   linhkien: { label: "Linh kiện", width: 190 },
   // 05/10/2026: "Phan loai" linh kien lay tu linh-kien-app (cot don_vi da dong bo san).
-  phanloai: { label: "Phân loại LK", width: 130 },
-  mota: { label: "Mô tả lỗi", width: 200 },
-  sla: { label: "SLA", width: 90 },
+  phanloai: { label: "Phân loại LK", width: 105 },
+  mota: { label: "Mô tả lỗi", width: 180 },
+  sla: { label: "SLA", width: 62 },
   sdt: { label: "SĐT khách hàng", width: 120 },
   donchacode: { label: "Mã đơn cha", width: 110 },
   phieuguicode: { label: "Mã phiếu gửi", width: 110 },
@@ -27,7 +27,8 @@ export const ADMIN_COLS_DEF: Record<AdminColKey, { label: string; width: number 
   baohanh: { label: "Tình trạng BH", width: 120 },
 };
 const ALL_KEYS = Object.keys(ADMIN_COLS_DEF) as AdminColKey[];
-const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "nguon", "mien", "khachhang", "linhkien", "phanloai", "mota", "sla"];
+// 31/10/2026: SLA dua len ngay sau Trang thai - man 1440px khong con bi day ra ngoai.
+const DEFAULT_ORDER: AdminColKey[] = ["trangthai", "sla", "nguon", "mien", "khachhang", "linhkien", "phanloai", "mota"];
 const DEFAULT_HIDDEN: AdminColKey[] = ["sdt", "donchacode", "phieuguicode", "doitru", "huongxuly", "baohanh"];
 const STORAGE_KEY = "admin_unified_cols_v1";
 

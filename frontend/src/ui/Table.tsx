@@ -34,16 +34,22 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
           <div
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-card p-3.5 ${onRowClick ? "cursor-pointer active:bg-[var(--accent-soft)]" : ""}`}
+            className={`min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-card p-3 ${onRowClick ? "cursor-pointer active:bg-[var(--accent-soft)]" : ""}`}
           >
-            {head && <div className="font-semibold text-[var(--ink)] text-[15px] mb-2">{head.render(row)}</div>}
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-              {labelled.map((c) => (
-                <div key={c.key} className="contents">
-                  <dt className="text-[var(--ink-soft)] text-xs font-semibold pt-0.5">{c.header}</dt>
-                  <dd className="text-[var(--ink-body)] min-w-0 break-words">{c.render(row)}</dd>
-                </div>
-              ))}
+            {head && <div className="font-semibold text-[var(--ink)] text-[15px] mb-1.5">{head.render(row)}</div>}
+            {/* 31/10/2026: the gon - 2 cap nhan/gia tri moi hang, bo o trong ("—"); the cu 1 cap/dong dai
+                ~320px, 20 dong = 6.600px tren dien thoai. */}
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              {labelled.map((c) => {
+                const v = c.render(row);
+                if (v === null || v === undefined || v === "" || v === "—") return null;
+                return (
+                  <div key={c.key} className="min-w-0">
+                    <dt className="text-[11px] font-semibold text-[var(--ink-faint)]">{c.header}</dt>
+                    <dd className="text-[13px] leading-snug text-[var(--ink-body)] min-w-0 break-words line-clamp-2">{v}</dd>
+                  </div>
+                );
+              })}
             </dl>
             {actionCols.some((c) => c.render(row)) && (
               <div className="flex flex-wrap gap-2 mt-2.5 pt-2.5 border-t border-[var(--line)]">

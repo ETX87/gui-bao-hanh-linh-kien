@@ -313,14 +313,14 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
     const isKhachLe = !u.phieu_gui_id;
     if (u.trang_thai === "cho_bo_sung_tt") return <p className="text-xs text-[var(--ink-soft)]">Lý do: {formatLyDoBoSung(u.ly_do_bo_sung)}</p>;
     return (
-      <div className="flex flex-wrap gap-2">
-        <Btn variant="primary" onClick={() => onOpenPhanLoai(u)}>
+      <div className="flex flex-wrap gap-1.5">
+        <Btn size="sm" className="!py-2 !text-[13px]" variant="primary" onClick={() => onOpenPhanLoai(u)}>
           {u.trang_thai === "admin_can_xem_lai" ? "Phân loại lại" : "Phân loại"}
         </Btn>
-        <Btn onClick={() => onOpenFast(u)}>⚡ Xử lý nhanh</Btn>
-        {!isKhachLe && u.trang_thai === "cho_phan_loai" && <Btn onClick={() => onOpenBoSung(u.parent_id)}>Yêu cầu bổ sung</Btn>}
+        <Btn size="sm" className="!py-2 !text-[13px]" onClick={() => onOpenFast(u)}>⚡ Nhanh</Btn>
+        {!isKhachLe && u.trang_thai === "cho_phan_loai" && <Btn size="sm" className="!py-2 !text-[13px]" onClick={() => onOpenBoSung(u.parent_id)}>Bổ sung</Btn>}
         {!isKhachLe && (
-          <Btn onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
+          <Btn size="sm" className="!py-2 !text-[13px]" onClick={() => onOpenBaoCaoSai(u.parent_id)} title="Ghi nhận KTV báo cáo sai thông tin">
             🐞
           </Btn>
         )}

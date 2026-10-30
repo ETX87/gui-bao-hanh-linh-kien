@@ -76,6 +76,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
   const cell = "flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5 min-w-0 [&>*:last-child]:flex-1 [&>*:last-child]:min-w-0";
   const lab = "shrink-0 text-[11px] font-semibold text-[var(--ink-soft)] whitespace-nowrap";
 
+  const [moLoc, setMoLoc] = useState(false);
   return (
     <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
       <div className="mb-1.5">
@@ -86,7 +87,11 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
           placeholder="🔍 Tìm mã đơn / case / phiếu gửi, khách hàng, serial, linh kiện, KTV, mô tả lỗi…"
         />
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5">
+      {/* 31/10/2026: tren dien thoai 7 o loc chiem gan 1 man hinh -> thu vao nut "Lọc". */}
+      <button type="button" className="md:hidden mb-1 rounded-lg border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-body)]" onClick={() => setMoLoc((v) => !v)}>
+        ⚙ Lọc{active > 0 ? ` (${active})` : ""} {moLoc ? "▴" : "▾"}
+      </button>
+      <div className={`${moLoc ? "grid" : "hidden"} md:grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5`}>
         <FilterSelect label="Trạng thái" value={value.tt} onChange={(v) => set("tt", v)} options={TT_OPTIONS} />
         <div className={cell}>
           <span className={lab}>Người gửi</span>
