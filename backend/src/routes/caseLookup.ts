@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
-import { lookupCase } from "../lib/caseLookupClient";
+import { lookupCase, lookupCaseEx } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
 import { nowVN } from "../lib/vnTime";
 
@@ -32,10 +32,12 @@ async function computeKhopKtv(db: D1Database, kyThuatVien: string | null, ktvEma
 caseLookup.get("/", async (c) => {
   const id = (c.req.query("id") || "").trim();
   if (!id) return c.json({ error: "MISSING_ID" }, 400);
-  const preview = await lookupCase(id, c.env);
+  const r = await lookupCaseEx(id, c.env);
+  const preview = r.status === "found" ? r.preview : null;
   const ktvEmail = (c.req.query("ktv_email") || "").trim();
   const khopKtv = preview && ktvEmail ? await computeKhopKtv(c.env.DB, preview.ky_thuat_vien, ktvEmail) : null;
-  return c.json({ found: !!preview, preview, khopKtv });
+  // loi_dvbh (30/10/2026): DVBH loi/khong phan hoi - khac "khong tim thay" (cho tao don chua xac minh).
+  return c.json({ found: !!preview, preview, khopKtv, loi_dvbh: r.status === "error" });
 });
 
 // Khoang cach toi thieu giua 2 lan Admin bao hanh bam "Dong bo lai" tren 1 case (tranh spam API doi

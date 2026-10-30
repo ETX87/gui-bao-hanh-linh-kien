@@ -37,7 +37,14 @@ export interface CaseLookupPreview {
   ly_do_qua_han: string | null;
 }
 
-export async function lookupCase(id: string, env: Env): Promise<CaseLookupPreview | null> {
+// 30/10/2026: tach "khong tim thay case" (dvbh tra loi found=false) voi "dvbh loi / khong phan hoi"
+// (loi mang, HTTP loi, gioi han tan suat) - de cong ma case chi chan cung o truong hop that su khong co.
+export type CaseLookupResult =
+  | { status: "found"; preview: CaseLookupPreview }
+  | { status: "not_found" }
+  | { status: "error" };
+
+export async function lookupCaseEx(id: string, env: Env): Promise<CaseLookupResult> {
   const url = `${env.CASE_LOOKUP_BASE_URL.replace(/\/$/, "")}/api/partner/case-lookup?id=${encodeURIComponent(id)}`;
   try {
     // Service Binding (khong fetch() thang URL) - 2 Worker cung 1 tai khoan Cloudflare bi chan loi
@@ -45,12 +52,17 @@ export async function lookupCase(id: string, env: Env): Promise<CaseLookupPrevie
     const res = await env.CASE_LOOKUP_SERVICE.fetch(url, { headers: { "X-API-Key": env.CASE_LOOKUP_API_KEY } });
     if (!res.ok || !(res.headers.get("Content-Type") ?? "").includes("application/json")) {
       console.error("[caseLookup] fetch that bai", res.status, res.headers.get("Content-Type"));
-      return null;
+      return { status: "error" };
     }
     const body = await res.json<{ found: boolean; preview: CaseLookupPreview | null }>();
-    return body.found ? body.preview : null;
+    return body.found && body.preview ? { status: "found", preview: body.preview } : { status: "not_found" };
   } catch (err) {
     console.error("[caseLookup] exception", err instanceof Error ? err.message : err);
-    return null;
+    return { status: "error" };
   }
+}
+
+export async function lookupCase(id: string, env: Env): Promise<CaseLookupPreview | null> {
+  const r = await lookupCaseEx(id, env);
+  return r.status === "found" ? r.preview : null;
 }

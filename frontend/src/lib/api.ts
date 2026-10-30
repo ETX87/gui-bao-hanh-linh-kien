@@ -102,6 +102,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   // Them 05/09/2026 - "tạo hộ đơn bảo hành" (muc 1) + "mã sự cố bắt buộc, phải đúng của KTV đó" (muc 2).
   MISSING_CASE_ID: "Vui lòng nhập mã sự cố (mã case).",
   CASE_NOT_FOUND: "Không tìm thấy mã sự cố này bên hệ DVBH.",
+  DVBH_KHONG_PHAN_HOI: "Hệ DVBH đang không phản hồi — tích “Vẫn tạo đơn” để tạo trước, hệ thống sẽ tự xác minh mã case sau.",
   CASE_KTV_MISMATCH: "Sai mã sự vụ — mã này không thuộc về KTV đang tạo đơn.",
   KTV_NOT_FOUND: "Không tìm thấy KTV này trong danh bạ.",
   OUT_OF_KHU_VUC: "KTV này không thuộc Khu vực bạn phụ trách.",

@@ -56,12 +56,25 @@ export function CaseLookupPreviewCard({
       onValidityChange(true);
       return;
     }
-    onValidityChange(status === "found" && (khopKtv === true || (!!allowOverride && !!override)));
+    // dvbh_down (30/10/2026): DVBH loi -> tich "Vẫn tạo đơn" la hop le (dung chung o override).
+    onValidityChange((status === "found" && (khopKtv === true || (!!allowOverride && !!override))) || (status === "dvbh_down" && !!override));
   }, [ktvEmail, status, khopKtv, allowOverride, override, onValidityChange]);
 
   if (!caseId.trim()) return null;
   if (status === "idle") return <p className="text-xs text-[var(--ink-soft)]">Bấm “Kiểm tra” (hoặc Enter) để tra cứu mã case bên hệ DVBH.</p>;
   if (status === "loading") return <p className="text-xs text-[var(--ink-soft)]">Đang tra cứu case…</p>;
+  if (status === "dvbh_down") {
+    if (!ktvEmail) return <p className="text-xs text-[var(--amber-800)]">Hệ DVBH đang không phản hồi, chưa tra cứu được case — có thể thử “Kiểm tra” lại sau.</p>;
+    return (
+      <div className="rounded px-2 py-1.5 bg-[var(--amber-100)] border border-[var(--amber-200)] space-y-1.5">
+        <p className="text-xs font-bold text-[var(--amber-800)]">⚠ Hệ DVBH đang không phản hồi — chưa kiểm tra được mã case này. Có thể bấm “Kiểm tra” lại, hoặc vẫn tạo đơn trước.</p>
+        <label className="flex items-start gap-2 text-xs font-semibold text-[var(--ink)] cursor-pointer">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--accent)]" checked={!!override} onChange={(e) => onOverrideChange?.(e.target.checked)} />
+          Vẫn tạo đơn — hệ thống sẽ tự xác minh mã case khi DVBH hoạt động lại (sai mã sẽ báo Admin bảo hành)
+        </label>
+      </div>
+    );
+  }
   if (status === "error") return <p className="text-xs text-[var(--red-600)]">Không tra cứu được case lúc này (có thể do mất kết nối tới hệ DVBH) — thử bấm “Kiểm tra” lại.</p>;
   if (status === "not_found") {
     return ktvEmail ? (
@@ -145,6 +158,11 @@ export function CaseIdField({
   onOverrideChange?: (v: boolean) => void;
 }) {
   const lookup = useCaseLookup(caseId, ktvEmail);
+  // Ket qua tra cuu doi (VD tu "DVBH loi" sang "tim thay") -> bo tich xac nhan cu, bat chon lai.
+  useEffect(() => {
+    onOverrideChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lookup.status]);
   const canCheck = !!caseId.trim() && lookup.status !== "loading";
   return (
     <>

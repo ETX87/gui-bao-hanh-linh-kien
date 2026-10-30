@@ -9,7 +9,7 @@ import { addLog } from "../lib/logs";
 import { computeEmailGs } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
 import { mienOfKtv } from "../lib/mien";
-import { lookupCase } from "../lib/caseLookupClient";
+import { lookupCaseEx } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
 import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
@@ -307,6 +307,8 @@ interface AddDonBody {
   anh?: string[];
   // 05/10/2026 muc 9: Admin BH / Giam sat (/qtri) tao don HO xac nhan tao don du case thuoc KTV khac.
   xac_nhan_khac_ktv?: boolean;
+  // 30/10/2026: he DVBH loi/khong phan hoi -> nguoi tao tich "van tao, xac minh sau" (cron xac minh lai).
+  xac_nhan_chua_xac_minh?: boolean;
 }
 
 // POST /api/phieu-gui/:id/don - them 1 don (phieu_sua_chua_bh) vao phieu gui, port dung
@@ -331,11 +333,19 @@ phieuGui.post("/:id/don", async (c) => {
   const caseId = body.case_id?.trim();
   if (!caseId) return c.json({ error: "MISSING_CASE_ID" }, 400);
 
-  const casePreview = await lookupCase(caseId, c.env);
-  if (!casePreview) return c.json({ error: "CASE_NOT_FOUND" }, 400);
-  const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
-  const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
-  const lechKtv = !maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase;
+  // 30/10/2026: tach "khong tim thay case" (chan cung) voi "DVBH loi / khong phan hoi" (cho tao neu nguoi
+  // dung tich xac nhan, gan co case_xac_minh = 1, cron xac minh lai - lib/caseSnapshot.ts verifyPendingCases).
+  const lk = await lookupCaseEx(caseId, c.env);
+  if (lk.status === "not_found") return c.json({ error: "CASE_NOT_FOUND" }, 400);
+  const chuaXacMinh = lk.status === "error";
+  if (chuaXacMinh && body.xac_nhan_chua_xac_minh !== true) return c.json({ error: "DVBH_KHONG_PHAN_HOI" }, 400);
+  const casePreview = lk.status === "found" ? lk.preview : null;
+  let lechKtv = false;
+  if (casePreview) {
+    const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
+    const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
+    lechKtv = !maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase;
+  }
   // Chi nguoi tao HO (khong phai chinh KTV so huu thung) co quyen tao ho moi duoc xac nhan vuot qua.
   const duocVuot = (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== g.nguoi_tao;
   if (lechKtv && !(duocVuot && body.xac_nhan_khac_ktv === true)) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
@@ -348,22 +358,27 @@ phieuGui.post("/:id/don", async (c) => {
   // dung user.email se luon tra ve NULL - da sua tan goc, khong chi vá luc them "tao ho".
   const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at, mien)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?))`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at, mien, case_xac_minh)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?), ?)`,
   )
-    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview.ky_thuat_vien ?? null, nowVN(), guiId)
+    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview?.ky_thuat_vien ?? null, nowVN(), guiId, chuaXacMinh ? 1 : 0)
     .run();
   if (xacNhanKhac) {
-    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview.ky_thuat_vien || "không xác định"})`);
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview?.ky_thuat_vien || "không xác định"})`);
+  }
+  if (chuaXacMinh) {
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Tạo đơn khi hệ DVBH không phản hồi — mã case ${caseId} CHƯA được xác minh, hệ thống sẽ tự xác minh lại`);
   }
   // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
   // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai
   // duoc, va Admin BH bam "dong bo lai" (POST /case-lookup/detail/:id/sync) lam moi duoc cho ca nhom.
-  await c.env.DB.prepare(
-    "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
-  )
-    .bind(caseId, JSON.stringify(casePreview), nowVN())
-    .run();
+  if (casePreview) {
+    await c.env.DB.prepare(
+      "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
+    )
+      .bind(caseId, JSON.stringify(casePreview), nowVN())
+      .run();
+  }
   const anhUrls = (body.anh || []).filter((u) => u && u.trim());
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));

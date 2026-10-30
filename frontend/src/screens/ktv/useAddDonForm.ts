@@ -49,6 +49,8 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
         loai_doi_tru_de_xuat: loaiDoiTru,
         anh,
         xac_nhan_khac_ktv: allowOverride && override,
+        // 30/10/2026: cung o tich "override" dung cho truong hop DVBH khong phan hoi (backend chi xet khi DVBH loi).
+        xac_nhan_chua_xac_minh: override,
       });
       toast("Đã thêm đơn vào phiếu.", "ok");
       onDone();

@@ -13,6 +13,8 @@ import { nhanHoThung } from "../lib/nhanHo";
 import { eqFilters, distinctOpts } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
+import { pushBoxDoneToKhovan } from "../lib/khovanPushClient";
+import { lanTruocSql } from "../lib/lanTruoc";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
 // xac nhan so luong (tach don vi con), phan loai (don le + hang loat), yeu cau bo sung, bao cao sai,
@@ -52,6 +54,8 @@ adminBH.get("/phieu-gui", async (c) => {
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
 });
 
+const KHOVAN_NOTE_NOI_BO = "Kho đã bàn giao, Admin bảo hành đã tiếp nhận — đã xử lý, kết thúc bên kho";
+
 // Tiep nhan noi bo 1 thung - dung chung cho don le + hang loat (12/10/2026, de xuat #10 ra soat Admin BH).
 async function tiepNhanNoiBo(db: D1Database, id: string, lyDoCham: string | undefined, actor: string): Promise<{ error: string } | { ok: true }> {
   const g = await db.prepare("SELECT trang_thai, admin_tiep_nhan, thoi_gian_nhan_kho FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ trang_thai: string; admin_tiep_nhan: number; thoi_gian_nhan_kho: string | null }>();
@@ -75,7 +79,7 @@ adminBH.post("/phieu-gui/tiep-nhan-noi-bo-hang-loat", async (c) => {
   for (const id of ids) {
     const r = await tiepNhanNoiBo(c.env.DB, id, body.ly_do_cham, user.email);
     if ("error" in r) loi.push({ id, error: r.error });
-    else ok++;
+    else { ok++; c.executionCtx.waitUntil(pushBoxDoneToKhovan(c.env, id, KHOVAN_NOTE_NOI_BO)); }
   }
   return c.json({ ok, loi });
 });
@@ -86,6 +90,7 @@ adminBH.post("/phieu-gui/:id/tiep-nhan-noi-bo", async (c) => {
   const body = await c.req.json<{ ly_do_cham?: string }>().catch(() => ({}) as { ly_do_cham?: string });
   const r = await tiepNhanNoiBo(c.env.DB, c.req.param("id"), body.ly_do_cham, user.email);
   if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
+  c.executionCtx.waitUntil(pushBoxDoneToKhovan(c.env, c.req.param("id"), KHOVAN_NOTE_NOI_BO));
   return c.json({ ok: true });
 });
 
@@ -100,6 +105,7 @@ adminBH.post("/phieu-gui/:id/nhan-ho-kho", async (c) => {
     ghiChu: "Admin BH nhận hộ Kho (hàng đã về tay Admin)" + (body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim() : ""),
   });
   if ("error" in r) return c.json(r, r.error === "NOT_FOUND" ? 404 : 400);
+  c.executionCtx.waitUntil(pushBoxDoneToKhovan(c.env, c.req.param("id"), "Admin bảo hành đã nhận trực tiếp thùng (KTV giao tận tay) — đã xử lý, Kho không cần nhận nữa"));
   return c.json(r);
 });
 
@@ -214,7 +220,7 @@ adminBH.get("/don-cha", async (c) => {
   const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, ${lanTruocSql("p", "p.ma_lk")} AS lan_truoc, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai, ...loc.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_cha: results, total: totalRow?.cnt ?? 0 });
@@ -294,7 +300,7 @@ adminBH.get("/don-vi", async (c) => {
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
        AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const B = loc.binds;
-  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan`;
+  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
   // trang theo DON CHA (moi trang toi da `limit` don cha + du moi don vi cua chung) - bang thong nhat
@@ -948,6 +954,12 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
     actor,
   );
   if ("error" in result) return result;
+  // 30/10/2026: FAST chot luon LK thuc te gui ve (B) = LK KTV chon (A) neu B con trong - Admin chi sua
+  // lai (✎ Sua linh kien trong chi tiet don) khi thay sai.
+  await db
+    .prepare("UPDATE phieu_sua_chua_bh_ct SET ma_lk_nhan = (SELECT p.ma_lk FROM phieu_sua_chua_bh p WHERE p.id = phieu_sua_chua_bh_ct.parent_id) WHERE id = ? AND ma_lk_nhan IS NULL")
+    .bind(unit.id)
+    .run();
 
   let phieuTraId: string | null = null;
   if (meta.huong && HUONG_TAO_PHIEU_TRA.includes(meta.huong)) {

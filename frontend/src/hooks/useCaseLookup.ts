@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { CaseLookupPreview } from "../lib/types";
 
-export type CaseLookupStatus = "idle" | "loading" | "found" | "not_found" | "error";
+export type CaseLookupStatus = "idle" | "loading" | "found" | "not_found" | "error" | "dvbh_down";
 
 export interface CaseLookupResult {
   preview: CaseLookupPreview | null;
@@ -35,10 +35,10 @@ export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): 
       try {
         const qs = new URLSearchParams({ id });
         if (ktvEmail) qs.set("ktv_email", ktvEmail);
-        const r = await api.get<{ found: boolean; preview: CaseLookupPreview | null; khopKtv: boolean | null }>(`/case-lookup?${qs.toString()}`);
+        const r = await api.get<{ found: boolean; preview: CaseLookupPreview | null; khopKtv: boolean | null; loi_dvbh?: boolean }>(`/case-lookup?${qs.toString()}`);
         if (seq.current !== mySeq) return;
         setPreview(r.preview);
-        setStatus(r.found ? "found" : "not_found");
+        setStatus(r.found ? "found" : r.loi_dvbh ? "dvbh_down" : "not_found");
         setKhopKtv(r.khopKtv ?? null);
       } catch {
         if (seq.current !== mySeq) return;

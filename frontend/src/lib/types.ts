@@ -87,6 +87,11 @@ export interface DonCha {
   // vu khach le, khong thuoc phieu gui nao).
   ktv?: string | null;
   // Lay tu "bang chung case" da luu (case_lookup_snapshot) - 12/10/2026 de xuat #13/#14 ra soat Admin BH.
+  // 30/10/2026: 0 = binh thuong, 1 = case chua xac minh (tao luc DVBH loi), 2 = xac minh that bai.
+  case_xac_minh?: number | null;
+  case_xac_minh_loi?: string | null;
+  // 30/10/2026: so lan san pham (cung case + cung LK) da bao hanh xong trong 90 ngay truoc.
+  lan_truoc?: number | null;
   case_khach_hang?: string | null;
   case_ngay_mua?: string | null;
   case_tiep_nhan?: string | null;
@@ -132,6 +137,11 @@ export interface DonVi {
   ngay_gui_xe?: string | null;
   mien?: Mien | null;
   // Lay tu "bang chung case" da luu (case_lookup_snapshot) - 12/10/2026 de xuat #13/#14 ra soat Admin BH.
+  // 30/10/2026: 0 = binh thuong, 1 = case chua xac minh (tao luc DVBH loi), 2 = xac minh that bai.
+  case_xac_minh?: number | null;
+  case_xac_minh_loi?: string | null;
+  // 30/10/2026: so lan san pham (cung case + cung LK) da bao hanh xong trong 90 ngay truoc.
+  lan_truoc?: number | null;
   case_khach_hang?: string | null;
   case_ngay_mua?: string | null;
   case_tiep_nhan?: string | null;

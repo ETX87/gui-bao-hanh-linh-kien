@@ -1,5 +1,7 @@
 import type { Env } from "../types";
-import { lookupCase } from "./caseLookupClient";
+import { lookupCase, lookupCaseEx } from "./caseLookupClient";
+import { extractMaKtv } from "./ktvCode";
+import { addLog } from "./logs";
 import { nowVN } from "./vnTime";
 
 // 20/10/2026 ("Khi đơn được tạo, tự đồng bộ data từ dvbh đẩy vào case"): luu "bang chung" case
@@ -52,4 +54,41 @@ export async function backfillCaseSnapshots(env: Env, max = 40): Promise<{ hoi: 
     .bind(JSON.stringify(miss), nowVN())
     .run();
   return { hoi: todo.length, luu };
+}
+
+// 30/10/2026: xac minh lai cac don tao luc he DVBH loi (case_xac_minh = 1, xem POST /phieu-gui/:id/don).
+// Khop dung KTV so huu thung -> 0 + luu bang chung; khong tim thay case / lech KTV -> 2 + ly do, ghi nhat
+// ky (Admin BH thay canh bao o bang xu ly + UI chi tiet). DVBH van loi -> giu nguyen 1, lan cron sau hoi lai.
+export async function verifyPendingCases(env: Env, max = 30): Promise<{ hoi: number; ok: number; sai: number }> {
+  const { results } = await env.DB.prepare(
+    `SELECT p.id, p.case_id, p.trang_thai_cha, g.nguoi_tao FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE p.case_xac_minh = 1 ORDER BY p.created_at LIMIT ?`,
+  )
+    .bind(max)
+    .all<{ id: string; case_id: string; trang_thai_cha: string; nguoi_tao: string }>();
+  let ok = 0;
+  let sai = 0;
+  for (const r of results) {
+    const res = await lookupCaseEx(r.case_id, env);
+    if (res.status === "error") break; // DVBH van loi - thu lai lan sau
+    let loi: string | null = null;
+    if (res.status === "not_found") loi = "Không tìm thấy case này bên hệ DVBH";
+    else {
+      const maKtvCase = extractMaKtv(res.preview.ky_thuat_vien);
+      const ktvRow = await env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(r.nguoi_tao).first<{ ma_ktv: string }>();
+      if (!maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase) loi = `Case không thuộc KTV gửi hàng (KTV trên case: ${res.preview.ky_thuat_vien || "không xác định"})`;
+      await env.DB.prepare(
+        "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
+      )
+        .bind(r.case_id, JSON.stringify(res.preview), nowVN())
+        .run();
+    }
+    await env.DB.prepare("UPDATE phieu_sua_chua_bh SET case_xac_minh = ?, case_xac_minh_loi = ?, ktv_tren_case = COALESCE(?, ktv_tren_case) WHERE id = ?")
+      .bind(loi ? 2 : 0, loi, res.status === "found" ? res.preview.ky_thuat_vien : null, r.id)
+      .run();
+    await addLog(env.DB, "phieu_sc", r.id, r.trang_thai_cha, r.trang_thai_cha, "Hệ thống", loi ? `⚠ Xác minh mã case ${r.case_id} THẤT BẠI: ${loi}` : `Đã xác minh mã case ${r.case_id} (đúng KTV)`);
+    if (loi) sai++;
+    else ok++;
+  }
+  return { hoi: results.length, ok, sai };
 }

@@ -63,6 +63,26 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
         <Badge tone="red" className="ml-1">Hết BH</Badge>
       </span>
     ) : null;
+  // 30/10/2026: canh bao ma case chua xac minh / xac minh that bai + san pham bao hanh lai lan N.
+  const caseBadges = (r: { case_xac_minh?: number | null; case_xac_minh_loi?: string | null; lan_truoc?: number | null }) => (
+    <>
+      {r.case_xac_minh === 1 && (
+        <span title="Đơn tạo lúc hệ DVBH không phản hồi — mã case chưa được xác minh, hệ thống sẽ tự kiểm tra lại">
+          <Badge tone="amber" className="ml-1">Case chưa xác minh</Badge>
+        </span>
+      )}
+      {r.case_xac_minh === 2 && (
+        <span title={r.case_xac_minh_loi || "Xác minh mã case thất bại"}>
+          <Badge tone="red" className="ml-1">Sai case</Badge>
+        </span>
+      )}
+      {!!r.lan_truoc && (
+        <span title={`Sản phẩm này (cùng case, cùng linh kiện) đã bảo hành xong ${r.lan_truoc} lần trong 90 ngày trước — kiểm tra sửa lại`}>
+          <Badge tone="orange" className="ml-1">Lần {r.lan_truoc + 1}</Badge>
+        </span>
+      )}
+    </>
+  );
   const { order, hidden, visibleCols, colWidth, reorder, toggleHidden, commitWidth, reset } = useAdminCols();
   const [colSettingsOpen, setColSettingsOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -131,6 +151,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
           <>
             {lkName(p.ma_lk)}
             {hetBhBadge(warranty(p, p.ma_lk))}
+            {caseBadges(p)}
           </>
         }
         title={lkName(p.ma_lk)}
@@ -175,6 +196,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
             <>
               {lkName(effLk)} {daDoiLk && <Badge tone="amber" className="ml-1">≠ KTV chọn</Badge>}
               {hetBhBadge(w)}
+              {caseBadges(u)}
             </>
           }
           title={lkName(effLk)}

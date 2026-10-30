@@ -36,3 +36,25 @@ export async function pushBoxToKhovan(
     console.error("[khovanPush] exception", err instanceof Error ? err.message : err);
   }
 }
+
+// 30/10/2026 ("Admin bh tiếp nhận thì bắn sang kho vận trạng thái admin đã xử lý (kết thúc luôn, kho ko
+// cần xử lý nữa)"): bao khovan 1 thung da ket thuc ben nay. Dung API san co cua khovan
+// POST /api/v1/inbound/orders/:code/status voi box_status "handed_over" ("Đã bàn giao") + ghi chu -
+// khong can sua/deploy khovan. Thung chua tung bao sang khovan (VD Admin tao ho) -> khovan tra 404, bo qua.
+// Best-effort: loi khong chan thao tac.
+export async function pushBoxDoneToKhovan(env: Env, orderCode: string, note: string): Promise<void> {
+  const url = `${env.KHOVAN_PUSH_BASE_URL.replace(/\/$/, "")}/api/v1/inbound/orders/${encodeURIComponent(orderCode)}/status`;
+  try {
+    const res = await env.KHOVAN_PUSH_SERVICE.fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Api-Key": env.KHOVAN_PUSH_API_KEY },
+      body: JSON.stringify({ box_status: "handed_over", note }),
+    });
+    if (!res.ok && res.status !== 404) {
+      const text = await res.text().catch(() => "");
+      console.error("[khovanStatus] that bai", res.status, text.slice(0, 200));
+    }
+  } catch (err) {
+    console.error("[khovanStatus] exception", err instanceof Error ? err.message : err);
+  }
+}
