@@ -5652,3 +5652,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 - API `don-cua-toi`: Đang xử lý 5 (gồm thùng nháp + thùng trên xe), Đã xong 1; KTV bổ sung qua API → đơn hết "cần bổ sung".
 - Giao diện 375×812: Việc của tôi hiện đúng thứ tự 4 nhóm việc + Đang theo dõi; Đơn của tôi đủ 2 tab + tiến trình; Gửi hàng 2 tab, menu ⋯; chi tiết thùng đơn lên đầu, vận chuyển 1 dòng; Nhận hàng bấm "Đã nhận" → phiếu biến mất, Đã xong 1 → 2; Thêm đơn hiện 3 chip case, bấm chip tự điền + tự kiểm tra.
 - Chưa kiểm được bằng mắt: modal bổ sung mở từ thẻ (trình duyệt kiểm thử bị kẹt sau khi server local chết), giao diện desktop của các màn KTV mới.
+
+**Deploy (30/10/2026):** `npm run deploy` thành công (Version ID `de278e2d`), không có migration mới.
