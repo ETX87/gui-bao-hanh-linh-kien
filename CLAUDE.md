@@ -5674,3 +5674,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 **(c) Vấn đề trong lúc làm:** `wrangler dev` local tự chết sau ~5 phút (lỗi proxy nội bộ wrangler 4.129) và khi khởi động lại còn tiến trình `workerd` / node cũ giữ cổng → phải tắt hết rồi chạy lại. Git Bash đổi đường dẫn `/home` thành `C:/Program Files/Git/home` khi truyền làm tham số → dùng `MSYS_NO_PATHCONV=1`.
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Chụp lại sau sửa: 12 màn KTV + 12 màn đủ vai trò ở 2 khổ — mọi trang `scrollWidth` = bề rộng khung (375 / 1440), không phần tử nào tràn; xem ảnh từng màn đã sửa. Chưa kiểm: màn Kế toán / Kho đóng gói / Đề xuất linh kiện khi có nhiều dữ liệu hơn (dữ liệu mẫu ít dòng), máy tính bảng 768–1024px.
+
+**Deploy (31/10/2026):** `npm run deploy` thành công (Version ID `808a0447`), không có migration mới.
