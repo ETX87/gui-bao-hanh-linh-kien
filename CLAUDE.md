@@ -5591,3 +5591,5 @@ rồi trả lại nguyên trạng.
 - Các bản chưa bấm thử: v1.037 KTV đang sửa (+ `loc_only`), v1.042 tab Kế toán "Đã xử lý" (+ `loc_only`), v1.043 `/etx/status`, v1.046 sửa linh kiện B/C, tra cứu mọi giai đoạn, tự động gộp → gửi duyệt không MISA → KT duyệt, 7 endpoint `loc_only` / workload / cảnh báo — đều đạt.
 - Giao diện (trình duyệt): KTV gõ mã case → khung vàng + ô tích, nút "Thêm vào phiếu" khoá tới khi tích → tạo được đơn, dòng đơn hiện "⏳ Mã case chưa xác minh"; bảng Admin BH hiện "Case chưa xác minh" và "Lần 3" (tooltip đúng).
 - Chưa kiểm được: cron xác minh lại với DVBH thật, và khovan thật nhận `handed_over` (local không có 2 Worker này).
+
+**Deploy (30/10/2026):** áp migration 0019 lên D1 production và `npm run deploy` (Version ID `0d59c322`).
