@@ -275,7 +275,20 @@ phieuTra.get("/", async (c) => {
       .bind(...binds)
       .first<{ cnt: number }>(),
   ]);
-  return c.json({ phieu_tra: results, total: totalRow?.cnt ?? 0 });
+  // 30/10/2026 (UX mobile KTV): kem_don=1 -> kem danh sach don ben trong (linh kien, khach) de the "Nhan hang"
+  // cua KTV hien ngay phieu co gi, khong phai mo bang chi tiet.
+  let rows = results as Record<string, unknown>[];
+  if (c.req.query("kem_don") && rows.length) {
+    const ids = rows.map((r) => r.id as string);
+    const { results: us } = await c.env.DB.prepare(
+      `SELECT u.id, u.phieu_tra_id, u.huong_xu_ly, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.case_id, p.mo_ta_loi,
+         (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS khach_hang
+       FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE u.phieu_tra_id IN (${ids.map(() => "?").join(",")}) ORDER BY u.id`,
+    ).bind(...ids).all<Record<string, unknown>>();
+    rows = rows.map((r) => ({ ...r, don: us.filter((u) => u.phieu_tra_id === r.id) }));
+  }
+  return c.json({ phieu_tra: rows, total: totalRow?.cnt ?? 0 });
 });
 
 phieuTra.get("/:id", async (c) => {

@@ -1,3 +1,4 @@
+import { isPureKtv } from "../../layout/routes";
 import { useEffect, useState } from "react";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
@@ -380,7 +381,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 {coMa || !khoChoGui ? (
                   <KvGrid>
                     <Kv k="Mã đơn hàng" v={t.ma_don_hang || "—"} />
-                    <Kv k="Mã MISA" v={t.ma_misa || "—"} />
+                    {!(user && isPureKtv(user)) && <Kv k="Mã MISA" v={t.ma_misa || "—"} />}
                     {!khoChoGui && <Kv k="Mã vận đơn" v={t.ma_van_don || "—"} />}
                   </KvGrid>
                 ) : null}

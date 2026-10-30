@@ -76,7 +76,7 @@ tôi cần làm cái gì, đã làm cái gì, nhanh chóng quản lý được c
   cách đã làm `AddDonMobileSheet`), không sửa thẳng component chung.
 - **Ngoài phạm vi:** chế độ offline thật (lưu thao tác khi mất mạng) cần đánh giá riêng, không gộp vào vòng này.
 
-## Hướng đề xuất (chưa làm, chờ chốt)
+## Hướng đề xuất — ĐÃ LÀM ĐỦ 7 ở v1.048 (30/10/2026)
 
 1. **Trang chủ KTV = "Việc của tôi"**: 1 danh sách thẻ xếp theo độ gấp.
    - Thứ tự: cần bổ sung → hàng về chờ nhận → thùng nháp chưa gửi → đơn Odoo mới.

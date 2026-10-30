@@ -70,10 +70,50 @@ phieuGui.get("/", async (c) => {
   const w = `FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}${f.sql}`;
   const b = [user.email, ...kw.binds, ...f.binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).bind(...b).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
+});
+
+// GET /api/phieu-gui/don-cua-toi?nhom=dang|xong&q=&limit=&offset= (30/10/2026, ra soat UX mobile KTV):
+// "Đơn của tôi" - 1 dong / don cha cua KTV, GOM CA don trong thung nhap / thung dang tren xe (chua duoc
+// Admin tach don vi) - truoc day man Tien do chi tra don vi da tach nen don vua gui "bien mat".
+// "xong" = don da tach va moi don vi da ket thuc (huy / chuyen kho / phieu tra KTV da nhan / gui that bai).
+const DON_VI_KET_THUC = "(u2.trang_thai IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho') OR EXISTS (SELECT 1 FROM phieu_tra_bh t2 WHERE t2.id = u2.phieu_tra_id AND t2.trang_thai IN ('ktv_da_nhan','gui_that_bai')))";
+const DON_XONG_SQL = `(EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id) AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id AND NOT ${DON_VI_KET_THUC}))`;
+phieuGui.get("/don-cua-toi", async (c) => {
+  const user = c.get("user");
+  if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const { limit, offset } = parsePage(c);
+  const xong = c.req.query("nhom") === "xong";
+  const base = "FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE g.nguoi_tao = ?";
+  const kw = kwClause(c.req.query("q"), [
+    "p.id", "p.case_id", "p.ma_lk", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("p.ma_lk"),
+    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)",
+    "(SELECT group_concat(u3.id, ' ') FROM phieu_sua_chua_bh_ct u3 WHERE u3.parent_id = p.id)",
+  ]);
+  const w = `${base} AND ${xong ? "" : "NOT "}${DON_XONG_SQL}${kw.sql}`;
+  const b = [user.email, ...kw.binds];
+  const CAN_BO_SUNG = "EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u4 WHERE u4.parent_id = p.id AND u4.trang_thai = 'cho_bo_sung_tt')";
+  const [{ results }, totalRow, dangRow, xongRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT p.id, p.case_id, p.ma_lk, p.mo_ta_loi, p.so_luong_khai, p.phieu_gui_id, p.odoo_id, p.created_at, p.case_xac_minh,
+         g.trang_thai AS gui_trang_thai, g.ngay_gui_xe, g.updated_at AS gui_updated_at,
+         (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS khach_hang,
+         (SELECT json_group_array(json_object('id', u.id, 'trang_thai', u.trang_thai, 'huong_xu_ly', u.huong_xu_ly, 'ly_do_bo_sung', u.ly_do_bo_sung,
+            'updated_at', u.updated_at, 'ma_lk_nhan', u.ma_lk_nhan, 'ma_lk_thuc_te', u.ma_lk_thuc_te, 'phieu_tra_id', u.phieu_tra_id, 'tra_trang_thai', t.trang_thai))
+          FROM phieu_sua_chua_bh_ct u LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id WHERE u.parent_id = p.id) AS don_vi_json,
+         ${CAN_BO_SUNG} AS can_bo_sung,
+         COALESCE((SELECT MAX(u5.updated_at) FROM phieu_sua_chua_bh_ct u5 WHERE u5.parent_id = p.id), g.updated_at) AS cap_nhat
+       ${w} ORDER BY can_bo_sung DESC, cap_nhat DESC LIMIT ? OFFSET ?`,
+    ).bind(...b, limit, offset).all<Record<string, unknown>>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${w}`).bind(...b).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND NOT ${DON_XONG_SQL}`).bind(user.email).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_XONG_SQL}`).bind(user.email).first<{ cnt: number }>(),
+  ]);
+  const don = results.map(({ don_vi_json, ...r }) => ({ ...r, don_vi: JSON.parse((don_vi_json as string) || "[]") }));
+  return c.json({ don, total: totalRow?.cnt ?? 0, so_dang: dangRow?.cnt ?? 0, so_xong: xongRow?.cnt ?? 0 });
 });
 
 interface CreatePhieuBody {

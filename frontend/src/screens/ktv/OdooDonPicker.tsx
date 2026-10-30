@@ -1,4 +1,4 @@
-import { lkLabel } from "../../hooks/useLinhKien";
+import { lkLabel, useLkName } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { Btn, Badge, Spinner, Field, Textarea, Input } from "../../ui/primitives";
@@ -59,10 +59,11 @@ export function OdooDonList({
   // 20/10/2026: "bổ sung công cụ tìm kiếm ở danh sách chọn đơn bh (khi tạo thùng có thể tìm trong danh
   // sách các đơn odoo)" - loc tren may (khong dau, nhieu tu, khong can dung thu tu).
   const [q, setQ] = useState("");
+  const { nameOf } = useLkName();
   const words = normalizeVi(q.trim()).split(/\s+/).filter(Boolean);
   const shown = words.length
     ? don.filter((d) => {
-        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.ma_linh_kien, d.ten_linh_kien, d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" "));
+        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.khach_hang, d.ma_linh_kien, d.ten_linh_kien, d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" "));
         return words.every((w) => hay.includes(w));
       })
     : don;
@@ -96,37 +97,62 @@ export function OdooDonList({
         >
           <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)] lg:h-4 lg:w-4" checked={selected.has(d.odoo_id)} onChange={() => onToggle(d.odoo_id)} />
           <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.ma_don ?? `#${d.odoo_id}`}</span>
-              <span className="font-mono text-xs text-[var(--ink-soft)]">{d.case_id}</span>
-              <Badge tone={d.trang_thai === "repairing" ? "blue" : "amber"}>{ODOO_TT_LABELS[d.trang_thai || ""] || d.trang_thai}</Badge>
-              <span className="text-xs text-[var(--ink-soft)]">SL {d.so_luong ?? 1}</span>
-              <span className="min-w-0 truncate text-[13px] font-medium text-[var(--ink-body)]">{lkLabel(d.ten_linh_kien, d.ma_linh_kien) || "—"}</span>
+            {/* 30/10/2026 (UX mobile KTV): ten khach + linh kien truoc, ma don / ma case xuong dong phu. */}
+            <span className="block truncate text-[14px] font-semibold text-[var(--ink)]">
+              {d.ten_linh_kien ? lkLabel(d.ten_linh_kien, d.ma_linh_kien) : nameOf(d.ma_linh_kien)}
+              {(d.so_luong ?? 1) > 1 && <span className="font-bold"> × {d.so_luong}</span>}
             </span>
+            {d.khach_hang && <span className="block truncate text-[13px] text-[var(--ink-body)]">👤 {d.khach_hang}</span>}
             <span className="block truncate text-xs text-[var(--ink-soft)]" title={[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ")}>
               {[d.tinh_trang_loi, d.ghi_chu].filter(Boolean).join(" — ") || "—"}
-              {d.ngay_tao && <span className="text-[11px] text-[var(--ink-faint)]"> · Tạo trên Odoo {fmtDate(d.ngay_tao)}</span>}
+            </span>
+            <span className="block truncate text-[11px] text-[var(--ink-faint)]">
+              <span className="font-mono">{d.ma_don ?? `#${d.odoo_id}`}</span> · <span className="font-mono">{d.case_id}</span>
+              {d.trang_thai === "repairing" && " · đang sửa trên Odoo"}
+              {d.ngay_tao && ` · ${fmtDate(d.ngay_tao)}`}
             </span>
           </span>
-          {onKhongGui && (
-            <Btn
-              size="sm"
-              variant="ghost"
-              className="shrink-0 !text-[var(--red-700)]"
-              title="Đơn lỗi / tạo nhầm trên Odoo, không cần gửi bảo hành"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onKhongGui(d);
-              }}
-            >
-              🗑 Hủy đơn lỗi
-            </Btn>
-          )}
+          {onKhongGui && <OdooMoreMenu onHuy={() => onKhongGui(d)} />}
         </label>
       ))}
       <Pagination page={pg.page} pageCount={pg.pageCount} total={pg.total} onChange={pg.setPage} />
     </div>
+  );
+}
+
+// Menu "⋯" tren the don Odoo - "Hủy đơn lỗi" la thao tac hiem, khong de nut do o moi the (30/10/2026).
+function OdooMoreMenu({ onHuy }: { onHuy: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="relative shrink-0"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <button type="button" aria-label="Thao tác khác" className="focus-ring flex h-9 w-9 items-center justify-center rounded-lg text-lg text-[var(--ink-soft)] hover:bg-[var(--surface-2)]" onClick={() => setOpen((v) => !v)}>
+        ⋯
+      </button>
+      {open && (
+        <>
+          <span className="fixed inset-0 z-[5]" onClick={() => setOpen(false)} />
+          <span className="absolute right-0 top-9 z-10 w-48 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 shadow-pop">
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-2.5 text-left text-sm font-semibold text-[var(--red-700)] hover:bg-[var(--red-50)]"
+              title="Đơn lỗi / tạo nhầm trên Odoo, không cần gửi bảo hành"
+              onClick={() => {
+                setOpen(false);
+                onHuy();
+              }}
+            >
+              🗑 Hủy đơn lỗi
+            </button>
+          </span>
+        </>
+      )}
+    </span>
   );
 }
 
@@ -274,10 +300,11 @@ export function OdooHuyList({ items, ktvEmail, onChanged }: { items: OdooDon[]; 
   const [busyId, setBusyId] = useState<number | null>(null);
   // 21/10/2026: tim trong danh sach don da huy (tren may, khong dau, nhieu tu).
   const [q, setQ] = useState("");
+  const { nameOf } = useLkName();
   const words = normalizeVi(q.trim()).split(/\s+/).filter(Boolean);
   const shown = words.length
     ? items.filter((d) => {
-        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.ma_linh_kien, d.ten_linh_kien, d.khong_gui_ly_do, d.khong_gui_boi, d.khong_gui_boi ? displayName(d.khong_gui_boi) : ""].filter(Boolean).join(" "));
+        const hay = normalizeVi([d.ma_don, d.odoo_id, d.case_id, d.khach_hang, d.ma_linh_kien, d.ten_linh_kien, d.khong_gui_ly_do, d.khong_gui_boi, d.khong_gui_boi ? displayName(d.khong_gui_boi) : ""].filter(Boolean).join(" "));
         return words.every((w) => hay.includes(w));
       })
     : items;

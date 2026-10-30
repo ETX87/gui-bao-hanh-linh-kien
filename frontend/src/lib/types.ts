@@ -330,4 +330,5 @@ export interface OdooDon {
   khong_gui_boi?: string | null;
   khong_gui_luc?: string | null;
   khong_gui_ly_do?: string | null;
+  khach_hang?: string | null;
 }

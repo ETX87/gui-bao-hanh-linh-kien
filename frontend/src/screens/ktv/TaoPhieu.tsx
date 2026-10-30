@@ -15,6 +15,8 @@ import { PickKtvModal } from "./PickKtvModal";
 import { OdooDonList, useOdooChoGui, useSelection, KhongGuiModal, OdooHuyList, OdooDaGuiList } from "./OdooDonPicker";
 import type { AppUser, OdooDon, PhieuGui } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
+import { ktvGuiStage } from "../../lib/ktvStage";
+import { StageBadge } from "./KtvCards";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
 // tao phieu nhap moi, mo chi tiet de them don/xac nhan gui. Phan trang that (server LIMIT/OFFSET, xem
@@ -49,6 +51,10 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   // 3 muc cho KTV quan ly don Odoo (09/10/2026): Chua gui / Da gui / Huy bo - moi muc 20 don/trang.
   const [odooTab, setOdooTab] = useState<"chua_gui" | "da_gui" | "huy">("chua_gui");
   const [daGuiKey, setDaGuiKey] = useState(0);
+  // 30/10/2026 (UX mobile KTV, de xuat 3): KTV thay 2 tab "Đơn Odoo mới" / "Thùng của tôi" thay vi 2 danh
+  // sach chong len nhau. Mac dinh mo tab Odoo neu con don chua gui, khong thi tab Thung.
+  const [mainTab, setMainTab] = useState<"odoo" | "thung" | null>(null);
+  const tab = !isSelfKtv ? "thung" : mainTab ?? (odoo.don && odoo.don.length > 0 ? "odoo" : "thung");
   const reloadOdoo = () => {
     odoo.reload();
     setDaGuiKey((k) => k + 1);
@@ -93,18 +99,44 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
 
   if (loading && rows.length === 0 && !flt.active) return <Spinner />;
 
+  const soDonOf = (r: PhieuGui) => (r as PhieuGui & { so_don?: number }).so_don ?? 0;
+  const buocTiep = (r: PhieuGui) =>
+    r.trang_thai !== "nhap" ? (r.trang_thai === "da_gui" ? "Chờ Kho nhận" : "Kho đã nhận — xem ở Đơn của tôi") : soDonOf(r) === 0 ? "Thêm đơn vào thùng" : "Còn 1 bước: xác nhận đã gửi xe";
   const cols: Column<PhieuGui>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
-    { key: "st", header: "Trạng thái", render: (r) => <StatusBadge kind="gui" value={r.trang_thai} /> },
+    { key: "st", header: "Trạng thái", render: (r) => (isSelfKtv ? <StageBadge stage={ktvGuiStage(r.trang_thai)} /> : <StatusBadge kind="gui" value={r.trang_thai} />) },
+    { key: "sodon", header: "Số đơn", render: (r) => soDonOf(r) },
+    ...(isSelfKtv ? [{ key: "buoc", header: "Bước tiếp", render: (r: PhieuGui) => <span className={r.trang_thai === "nhap" ? "font-semibold text-[var(--amber-700)]" : "text-[var(--ink-soft)]"}>{buocTiep(r)}{!!r.su_co_tiep_nhan && <b className="text-[var(--red-700)]"> · ⚠ Kho báo sự cố</b>}</span> } as Column<PhieuGui>] : []),
     ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <UserName email={r.nguoi_tao} className="text-xs" /> } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },
     { key: "hinhthuc", header: "Hình thức gửi", render: (r) => (r.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[r.hinh_thuc_gui] || r.hinh_thuc_gui : "—") },
-    { key: "sucos", header: "Sự cố", render: (r) => (r.su_co_tiep_nhan ? <Badge tone="red">⚠ Có</Badge> : "—") },
+    ...(isSelfKtv ? [] : [{ key: "sucos", header: "Sự cố", render: (r: PhieuGui) => (r.su_co_tiep_nhan ? <Badge tone="red">⚠ Có</Badge> : "—") } as Column<PhieuGui>]),
   ];
 
   return (
     <div className="space-y-3">
-    {isSelfKtv && odoo.don && (odoo.don.length > 0 || odoo.khongGui.length > 0 || odoo.soDaGui > 0) && (
+    {isSelfKtv && (
+      <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1" role="tablist">
+        {(
+          [
+            ["odoo", "🧾 Đơn Odoo mới", odoo.don?.length ?? 0],
+            ["thung", "📦 Thùng của tôi", total],
+          ] as const
+        ).map(([k, label, n]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={tab === k}
+            onClick={() => setMainTab(k)}
+            className={`focus-ring flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${tab === k ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-card" : "text-[var(--ink-soft)]"}`}
+          >
+            {label}
+            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] ${tab === k ? "bg-[var(--accent-soft)]" : "bg-[var(--line)]"}`}>{n}</span>
+          </button>
+        ))}
+      </div>
+    )}
+    {isSelfKtv && tab === "odoo" && odoo.don && (
       <Card className="p-3">
         <div className="mb-2 flex flex-col md:flex-row md:items-center gap-2">
           <h3 className="shrink-0 text-[15px] lg:text-sm font-bold text-[var(--ink)]" title="Đơn tạo trên Odoo thuộc bạn phụ trách — chọn đơn chưa gửi để tạo thùng, mã ca / linh kiện / số lượng được điền sẵn.">
@@ -169,14 +201,15 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
         }}
       />
     )}
+    {tab === "thung" && (
     <Card className="p-3">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : "Phiếu gửi hàng của tôi"} ({total})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : isSelfKtv ? "Thùng của tôi" : "Phiếu gửi hàng của tôi"} ({total})</h3>
         <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu())}>
           + Tạo phiếu mới
         </Btn>
       </div>
-      <FilterBar f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar collapsible={isSelfKtv} f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã đơn / case / linh kiện bên trong…" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : hoMode ? "Chưa tạo hộ phiếu nào." : "Chưa có phiếu gửi nào."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && <PhieuGuiDetailModal guiId={detailId} onClose={() => setDetailId(null)} onChanged={afterChange} />}
@@ -190,6 +223,8 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
         />
       )}
     </Card>
+    )}
+    {tab !== "thung" && detailId && <PhieuGuiDetailModal guiId={detailId} onClose={() => setDetailId(null)} onChanged={afterChange} />}
     </div>
   );
 }

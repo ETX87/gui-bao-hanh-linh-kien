@@ -36,6 +36,10 @@ interface CatalogItem extends RouteItem {
 }
 
 const isKtv = (u: AppUser) => u.la_ktv_dvbh || u.la_ve_tinh;
+// 30/10/2026 (UX mobile KTV): tai khoan CHI la KTV/Ve tinh (khong kem vai tro xu ly nao) -> Trang chu
+// "Việc của tôi" rieng + thanh duoi 4 tab (Việc của tôi · Gửi hàng · Đơn của tôi · Nhận hàng).
+export const isPureKtv = (u: AppUser) =>
+  isKtv(u) && !(u.la_kho || u.la_admin_bh || u.la_nv_sua_chua || u.la_ke_toan || u.la_giam_sat || u.la_view || u.la_qtri);
 
 export const ROLE_GROUP = {
   theoDoi: "Giám sát · Theo dõi",
@@ -58,7 +62,7 @@ const CATALOG: CatalogItem[] = [
   { hash: "/ktv/tao-phieu", label: "Tạo hộ đơn cho KTV", short: "Tạo hộ", icon: "📦", group: G.theoDoi, desc: "Thùng nháp đang tạo hộ KTV", countKeys: ["ktv_phieu_nhap"], show: (u) => !isKtv(u) && u.la_giam_sat && !u.la_admin_bh && !u.la_qtri },
 
   { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", short: "Gửi hàng", icon: "📦", group: G.ktv, desc: "Thùng nháp + đơn Odoo chờ gửi", countKeys: ["ktv_phieu_nhap", "ktv_odoo_cho_gui"], show: isKtv },
-  { hash: "/ktv/tra-cuu", label: "Tiến độ đơn của tôi", short: "Tiến độ", icon: "🔍", group: G.ktv, desc: "Đơn Admin yêu cầu bổ sung", countKeys: ["ktv_cho_bo_sung"], show: isKtv },
+  { hash: "/ktv/tra-cuu", label: "Đơn của tôi", short: "Đơn của tôi", icon: "📋", group: G.ktv, desc: "Mọi đơn đã gửi (cả thùng chưa về Kho) + đơn cần bổ sung", countKeys: ["ktv_cho_bo_sung"], show: isKtv },
   { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", short: "Nhận hàng", icon: "📬", group: G.ktv, desc: "Xác nhận đã nhận hàng trả về", countKeys: ["ktv_nhan_hang"], show: isKtv },
 
   { hash: "/kho/tiep-nhan", label: "Tiếp nhận thùng", short: "Tiếp nhận", icon: "📥", group: G.kho, desc: "Thùng chờ nhận + chờ bàn giao Admin", countKeys: ["kho_cho_tiep_nhan", "kho_cho_ban_giao"], show: (u) => u.la_kho || u.la_qtri },
@@ -92,10 +96,13 @@ const CATALOG: CatalogItem[] = [
 export function routesForUser(u: AppUser): RouteItem[] {
   const seen = new Set<string>();
   const out: RouteItem[] = [];
+  const pure = isPureKtv(u);
   for (const { show, ...it } of CATALOG) {
     if (!show(u) || seen.has(it.hash)) continue;
+    // KTV thuan: Lich su Serial/Case nam trong man "Đơn của tôi" (link), khong chiem 1 tab thanh duoi.
+    if (pure && it.hash === "/lich-su") continue;
     seen.add(it.hash);
-    out.push(it);
+    out.push(pure && it.hash === "/home" ? { ...it, label: "Việc của tôi", short: "Việc của tôi", icon: "🔥", desc: "Việc cần làm ngay + đơn đang theo dõi" } : it);
   }
   return out;
 }

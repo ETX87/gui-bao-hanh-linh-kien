@@ -22,6 +22,9 @@ import { DetailGrid, SummaryBox, Section, Kv, Chip, Banner, SectionTitle, DETAIL
 import type { DonCha, LogRow, PhieuGui } from "../../lib/types";
 import { UserName, displayName, useUserNames } from "../../hooks/useUserNames";
 import { readNhaXe, saveNhaXe, sortHinhThuc } from "../../lib/nhaXeCache";
+import { isPureKtv } from "../../layout/routes";
+import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
+import { StageBadge } from "./KtvCards";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -58,6 +61,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [dvvc, setDvvc] = useState("");
   const [maVanDon, setMaVanDon] = useState("");
   const [ngayGuiXe, setNgayGuiXe] = useState("");
+  // 30/10/2026 (UX mobile KTV): khoi van chuyen thu gon 1 dong, bam "Sửa" moi mo form.
+  const [vcOpen, setVcOpen] = useState(false);
   // "" = gui ve kho theo khu vuc cua KTV; "MB"/"MN" = chon tay mien kho nhan (KTV MB gui ra MN sua...).
   const [mienGui, setMienGui] = useState("");
   const [addDonOpen, setAddDonOpen] = useState(false);
@@ -153,6 +158,10 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const isNhap = g.trang_thai === "nhap";
   const canOpenUnit = !nested && !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
+  // 30/10/2026 (ra soat UX mobile KTV, de xuat 4): KTV / dien thoai -> danh sach don len dau, van chuyen
+  // thu gon 1 dong, chi 1 nut luu (o day), nhan trang thai theo goc nhin KTV, an Mien / SLA / doi tru.
+  const ktvView = !!user && isPureKtv(user);
+  const gon = ktvView || isMobile;
 
   const giaoTrucTiep = hinhThuc === "giao_truc_tiep";
   const cache = isNhap ? readNhaXe(g.nguoi_tao) : null;
@@ -216,7 +225,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
         title={g.id}
         onClose={handleClose}
         maxWidthClass={DETAIL_MAX_W}
-        headerActions={<StatusBadge kind="gui" value={g.trang_thai} />}
+        headerActions={ktvView ? <StageBadge stage={ktvGuiStage(g.trang_thai)} /> : <StatusBadge kind="gui" value={g.trang_thai} />}
         footerActions={
           isNhap ? (
             <>
@@ -247,10 +256,12 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                 <p className="text-xs text-[var(--ink-soft)]">Mã QR dán lên thùng — Kho quét để tiếp nhận nhanh.</p>
               </div>
               <GhiChuLogPanel guiId={g.id} />
-              <div>
-                <SectionTitle className="mb-1.5">🕘 Nhật ký phiếu gửi</SectionTitle>
-                <LogTimeline className="lg:max-h-[40vh]" sources={[{ key: "pg", label: "Phiếu gửi", icon: "🚚", logs: data.logs ?? [] }]} />
-              </div>
+              {(data.logs?.length ?? 0) > 0 && (
+                <div>
+                  <SectionTitle className="mb-1.5">🕘 Nhật ký phiếu gửi</SectionTitle>
+                  <LogTimeline className="lg:max-h-[40vh]" sources={[{ key: "pg", label: "Phiếu gửi", icon: "🚚", logs: data.logs ?? [] }]} />
+                </div>
+              )}
             </>
           }
         >
@@ -281,12 +292,15 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   Kho nhận {fmtDate(g.thoi_gian_nhan_kho)}
                 </Chip>
               )}
-              {g.thoi_gian_nhan_kho && <SlaBadge since={g.thoi_gian_nhan_kho} />}
-              <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={load} />
+              {g.thoi_gian_nhan_kho && !ktvView && <SlaBadge since={g.thoi_gian_nhan_kho} />}
+              {!ktvView && <DoiMienBadge kind="phieu-gui" id={g.id} mien={g.mien} ktvEmail={g.nguoi_tao} onDone={load} />}
             </div>
           </SummaryBox>
 
-          {isNhap && data.don_cha.length > 0 && (
+          {isNhap && data.don_cha.length > 0 && ktvView && (
+            <Banner tone="amber">📝 Thùng chưa gửi — Kho chưa thấy. Chỉ bấm “{giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}” khi hàng đã giao cho xe.</Banner>
+          )}
+          {isNhap && data.don_cha.length > 0 && !ktvView && (
             <Banner tone="amber">
               📝 Thùng đang là <b>nháp</b> — Kho chưa thấy thùng này. Nếu chưa gửi hàng thật, bấm “💾 Lưu nháp, gửi sau”; chỉ bấm “
               {giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}” khi hàng đã được giao cho xe / mang tới Kho.
@@ -299,17 +313,99 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             </Banner>
           )}
 
+          {gon ? (
+            <>
+          <Section
+            title={gon ? `📦 Đơn trong thùng (${data.don_cha.length})` : `📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
+            right={
+              isNhap ? (
+                <>
+                  <Btn size="sm" onClick={() => setOdooOpen(true)}>
+                    🧾 Chọn đơn Odoo
+                  </Btn>
+                  <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
+                    + Thêm đơn
+                  </Btn>
+                </>
+              ) : undefined
+            }
+          >
+            {data.don_cha.length === 0 ? (
+              <p className="text-[13px] text-[var(--ink-faint)]">Chưa có đơn nào — bấm “+ Thêm đơn” hoặc “Chọn đơn Odoo” trước khi xác nhận gửi.</p>
+            ) : (
+              <div className="divide-y divide-[var(--line)] -mx-1">
+                {data.don_cha.map((d) => {
+                  const td = tienDoOf(d.id);
+                  const clickable = canOpenUnit && td.length > 0;
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={clickable ? () => setOpenUnit(`${d.id}-1`) : undefined}
+                      className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
+                      title={clickable ? "Mở chi tiết đơn" : undefined}
+                    >
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
+                        <span className="min-w-0 max-w-full truncate font-medium text-[var(--ink)]" title={lkName(d.ma_lk)}>
+                          {lkName(d.ma_lk)}
+                        </span>
+                        <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
+                        {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
+                        {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
+                        {td.map((x) => (
+                          <Badge key={x.trang_thai} tone="gray" className="!font-medium">
+                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+                          </Badge>
+                        ))}
+                        {isNhap && (
+                          <Btn
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              xoaDon(d.id);
+                            }}
+                            disabled={busy}
+                            className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+                          >
+                            ✕ Xoá
+                          </Btn>
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-[var(--ink-soft)]" title={d.mo_ta_loi || ""}>
+                        {d.case_id && <span className="font-mono">{d.case_id} · </span>}
+                        {d.mo_ta_loi}
+                      </p>
+                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (hệ DVBH không phản hồi lúc tạo) — hệ thống sẽ tự kiểm tra lại</p>}
+                      {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
+                      {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
           <Section
             title="🚚 Vận chuyển"
             right={
-              isNhap ? (
+              isNhap && !gon ? (
                 <Btn size="sm" onClick={saveHeader} disabled={busy}>
                   Lưu nháp
+                </Btn>
+              ) : isNhap && gon ? (
+                <Btn size="sm" onClick={() => setVcOpen((v) => !v)}>
+                  {vcOpen ? "Thu gọn" : "✎ Sửa"}
                 </Btn>
               ) : undefined
             }
           >
-            {isNhap ? (
+            {isNhap && gon && !vcOpen ? (
+              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => setVcOpen(true)}>
+                <b>{options.find((o) => o.value === hinhThuc)?.label || "Chưa chọn cách gửi"}</b>
+                {[nguoiGiao, giaoTrucTiep ? "" : dvvc, giaoTrucTiep ? "" : maVanDon, ngayGuiXe && `${giaoTrucTiep ? "giao" : "gửi"} ${ngayGuiXe}`].filter(Boolean).map((x) => ` · ${x}`).join("")}
+                {!giaoTrucTiep && !maXe && <span className="ml-1 font-semibold text-[var(--amber-700)]">· chưa nhập mã xe / tài xế</span>}
+              </button>
+            ) : isNhap ? (
               <>
                 {/* 11/10/2026: hang 1 = Hinh thuc gui + Ngay gui lien nhau; hang 2 = 3 thong tin con lai. */}
                 <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
@@ -331,7 +427,125 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   </div>
                   {/* 21/10/2026: khu vuc gui hang dong - KTV mien nay gui ve kho mien kia sua chua. */}
                   <div className="sm:col-span-2">
-                    <Field label="Gửi về kho miền">
+                    <Field label={ktvView ? "Gửi về kho" : "Gửi về kho miền"}>
+                      <Select value={mienGui} onChange={(e) => setMienGui(e.target.value)} title="Thùng sẽ do Kho / Admin BH của miền này xử lý">
+                        <option value="">Theo khu vực của KTV ({MIEN_TEN(data.mien_ktv)})</option>
+                        {data.mien_ktv !== "MB" && <option value="MB">Miền Bắc (gửi khác khu vực)</option>}
+                        {data.mien_ktv !== "MN" && <option value="MN">Miền Nam (gửi khác khu vực)</option>}
+                      </Select>
+                    </Field>
+                  </div>
+                  <div className={hinhThuc === "giao_truc_tiep" ? "sm:col-span-6" : "sm:col-span-2"}>
+                    <Field label={hinhThuc === "giao_truc_tiep" ? "Người giao hàng" : "Mã xe / Tài xế"}>
+                      {giaoTrucTiep ? (
+                        <Input value={nguoiGiao} readOnly title="Giao trực tiếp: người giao là chính KTV của thùng" />
+                      ) : (
+                        <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
+                      )}
+                    </Field>
+                  </div>
+                  {hinhThuc !== "giao_truc_tiep" && (
+                    <>
+                      <div className="sm:col-span-2">
+                        <Field label="Đơn vị vận chuyển">
+                          <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
+                        </Field>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Field label="Mã vận đơn">
+                          <Input value={maVanDon} onChange={(e) => setMaVanDon(e.target.value)} />
+                        </Field>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Goi y go nhanh tu cac lan gui truoc cua KTV (05/10/2026 muc 4). */}
+                <datalist id="goiy-ma-xe">
+                  {goiYMaXe.map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <datalist id="goiy-dvvc">
+                  {goiYDvvc.map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <p className="mt-1.5 text-[11px] text-[var(--ink-faint)]">Lựa chọn + thông tin lần trước được nhớ trên máy này. Bấm xác nhận sẽ tự lưu toàn bộ thông tin vận chuyển.</p>
+              </>
+            ) : (
+              <dl className="grid grid-cols-2 sm:grid-cols-6 gap-x-4 gap-y-1.5">
+                <div className="sm:col-span-2">
+                  <Kv k="Hình thức gửi" v={HINH_THUC_OPTIONS.find((o) => o.value === g.hinh_thuc_gui)?.label || g.hinh_thuc_gui || "—"} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Kv k={g.hinh_thuc_gui === "giao_truc_tiep" ? "Ngày giao" : "Ngày gửi xe"} v={g.ngay_gui_xe || "—"} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Kv k="Gửi về kho miền" v={MIEN_TEN(g.mien) + (g.mien && data.mien_ktv && g.mien !== data.mien_ktv ? ` (KTV thuộc ${MIEN_TEN(data.mien_ktv)})` : "")} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Kv k={g.hinh_thuc_gui === "giao_truc_tiep" ? "Người giao hàng" : "Mã xe / Tài xế"} v={g.ma_xe_hoac_tai_xe || "—"} />
+                </div>
+                {g.hinh_thuc_gui !== "giao_truc_tiep" && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <Kv k="Đơn vị vận chuyển" v={g.don_vi_van_chuyen || "—"} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Kv k="Mã vận đơn" v={g.ma_van_don || "—"} />
+                    </div>
+                  </>
+                )}
+              </dl>
+            )}
+          </Section>
+
+            </>
+          ) : (
+            <>
+          <Section
+            title="🚚 Vận chuyển"
+            right={
+              isNhap && !gon ? (
+                <Btn size="sm" onClick={saveHeader} disabled={busy}>
+                  Lưu nháp
+                </Btn>
+              ) : isNhap && gon ? (
+                <Btn size="sm" onClick={() => setVcOpen((v) => !v)}>
+                  {vcOpen ? "Thu gọn" : "✎ Sửa"}
+                </Btn>
+              ) : undefined
+            }
+          >
+            {isNhap && gon && !vcOpen ? (
+              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => setVcOpen(true)}>
+                <b>{options.find((o) => o.value === hinhThuc)?.label || "Chưa chọn cách gửi"}</b>
+                {[nguoiGiao, giaoTrucTiep ? "" : dvvc, giaoTrucTiep ? "" : maVanDon, ngayGuiXe && `${giaoTrucTiep ? "giao" : "gửi"} ${ngayGuiXe}`].filter(Boolean).map((x) => ` · ${x}`).join("")}
+                {!giaoTrucTiep && !maXe && <span className="ml-1 font-semibold text-[var(--amber-700)]">· chưa nhập mã xe / tài xế</span>}
+              </button>
+            ) : isNhap ? (
+              <>
+                {/* 11/10/2026: hang 1 = Hinh thuc gui + Ngay gui lien nhau; hang 2 = 3 thong tin con lai. */}
+                <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                  <div className="sm:col-span-2">
+                    <Field label="Hình thức gửi">
+                      <Select value={hinhThuc} onChange={(e) => doiHinhThuc(e.target.value)}>
+                        {options.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Field label={hinhThuc === "giao_truc_tiep" ? "Ngày giao" : "Ngày gửi xe"}>
+                      <Input type="date" value={ngayGuiXe} onChange={(e) => setNgayGuiXe(e.target.value)} />
+                    </Field>
+                  </div>
+                  {/* 21/10/2026: khu vuc gui hang dong - KTV mien nay gui ve kho mien kia sua chua. */}
+                  <div className="sm:col-span-2">
+                    <Field label={ktvView ? "Gửi về kho" : "Gửi về kho miền"}>
                       <Select value={mienGui} onChange={(e) => setMienGui(e.target.value)} title="Thùng sẽ do Kho / Admin BH của miền này xử lý">
                         <option value="">Theo khu vực của KTV ({MIEN_TEN(data.mien_ktv)})</option>
                         {data.mien_ktv !== "MB" && <option value="MB">Miền Bắc (gửi khác khu vực)</option>}
@@ -405,7 +619,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
           </Section>
 
           <Section
-            title={`📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
+            title={gon ? `📦 Đơn trong thùng (${data.don_cha.length})` : `📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
             right={
               isNhap ? (
                 <>
@@ -440,10 +654,10 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                         </span>
                         <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
                         {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
-                        {d.loai_doi_tru_de_xuat && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
+                        {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
                         {td.map((x) => (
                           <Badge key={x.trang_thai} tone="gray" className="!font-medium">
-                            {x.n} {TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
                           </Badge>
                         ))}
                         {isNhap && (
@@ -474,6 +688,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               </div>
             )}
           </Section>
+            </>
+          )}
         </DetailGrid>
       </Modal>
       {odooOpen && (

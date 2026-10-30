@@ -48,7 +48,8 @@ odooDon.get("/cho-gui", async (c) => {
     .first<{ n: number }>();
   const { results } = await c.env.DB.prepare(
     `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.tinh_trang_loi, o.ghi_chu, o.ngay_tao,
-            o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do
+            o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do,
+            (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = o.case_id) AS khach_hang
      FROM don_bh_odoo o
      WHERE o.ma_ktv = ? AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
        AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)

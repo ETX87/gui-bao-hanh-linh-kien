@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useOdooChoGui } from "../ktv/OdooDonPicker";
+import { lkLabel } from "../../hooks/useLinhKien";
 import { useCaseLookup, type CaseLookupResult } from "../../hooks/useCaseLookup";
 import { computeWarranty } from "../../lib/warranty";
 import { Badge, Btn, Field, Input } from "../../ui/primitives";
@@ -164,6 +166,31 @@ export function CaseIdField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lookup.status]);
   const canCheck = !!caseId.trim() && lookup.status !== "loading";
+  // 30/10/2026 (UX mobile KTV, de xuat 6): chon ma case thay vi go tay chuoi ~25 ky tu - goi y tu cac don
+  // Odoo chua gui cua dung KTV + nut "Dán". Chon xong tu bam "Kiểm tra".
+  const odoo = useOdooChoGui(ktvEmail, !!ktvEmail);
+  const goiY = (odoo.don ?? []).filter((d) => d.case_id && d.case_id !== caseId).slice(0, 6);
+  const [autoCheck, setAutoCheck] = useState(false);
+  useEffect(() => {
+    if (autoCheck && caseId.trim()) {
+      setAutoCheck(false);
+      lookup.check();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, autoCheck]);
+  const chon = (v: string) => {
+    setCaseId(v.trim());
+    onOverrideChange?.(false);
+    setAutoCheck(true);
+  };
+  const dan = async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (t.trim()) chon(t);
+    } catch {
+      /* trinh duyet chan quyen doc clipboard - nguoi dung tu dan bang tay */
+    }
+  };
   return (
     <>
       <Field label={label} required={required}>
@@ -183,10 +210,33 @@ export function CaseIdField({
             }}
             placeholder={placeholder}
           />
+          {ktvEmail && !caseId.trim() && typeof navigator !== "undefined" && !!navigator.clipboard?.readText && (
+            <Btn variant="secondary" onClick={dan} className="shrink-0" title="Dán mã case vừa sao chép">
+              📋 Dán
+            </Btn>
+          )}
           <Btn variant={lookup.status === "idle" && caseId.trim() ? "primary" : "secondary"} disabled={!canCheck} onClick={lookup.check} className="shrink-0">
             {lookup.status === "loading" ? "Đang kiểm tra…" : "🔍 Kiểm tra"}
           </Btn>
         </div>
+        {goiY.length > 0 && !caseId.trim() && (
+          <div className="mt-1.5">
+            <p className="mb-1 text-[11px] font-semibold text-[var(--ink-faint)]">Chọn nhanh từ đơn Odoo của KTV:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {goiY.map((d) => (
+                <button
+                  key={d.odoo_id}
+                  type="button"
+                  onClick={() => chon(d.case_id!)}
+                  className="focus-ring max-w-full truncate rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-left text-xs text-[var(--ink-body)] hover:border-[var(--brand-300)]"
+                  title={d.case_id || ""}
+                >
+                  {d.khach_hang || lkLabel(d.ten_linh_kien, d.ma_linh_kien) || d.case_id} · <span className="font-mono text-[var(--ink-faint)]">…{(d.case_id || "").slice(-6)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </Field>
       <CaseLookupPreviewCard
         lookup={lookup}

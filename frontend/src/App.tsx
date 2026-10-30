@@ -9,7 +9,9 @@ import { ToastProvider } from "./ui/Toast";
 import { Shell } from "./layout/Shell";
 import { HomeScreen } from "./screens/Home";
 import { KtvTaoPhieuScreen } from "./screens/ktv/TaoPhieu";
-import { KtvTraCuuScreen } from "./screens/ktv/TraCuu";
+import { KtvDonCuaToiScreen } from "./screens/ktv/DonCuaToi";
+import { KtvHomeScreen } from "./screens/ktv/KtvHome";
+import { isPureKtv } from "./layout/routes";
 import { KtvNhanHangScreen } from "./screens/ktv/NhanHang";
 import { KhoTiepNhanScreen } from "./screens/kho/TiepNhan";
 import { KhoDongGoiScreen } from "./screens/kho/DongGoi";
@@ -37,7 +39,7 @@ import { LinhKienScreen } from "./screens/shared/LinhKienScreen";
 function Routed({ user }: { user: AppUser }) {
   const { path } = useRoute();
 
-  if (path === "/home" || path === "/") return <HomeScreen user={user} />;
+  if (path === "/home" || path === "/") return isPureKtv(user) ? <KtvHomeScreen user={user} /> : <HomeScreen user={user} />;
   if (path === "/lich-su") return <LichSuScreen />;
 
   // la_qtri (Admin he thong) la superuser - phan hoi 04/09/2026 "Vai trò Admin cần nhìn được tất cả
@@ -47,7 +49,7 @@ function Routed({ user }: { user: AppUser }) {
   // GS/Admin bao hanh cung mo duoc man nay de "tao ho" don bao hanh cho 1 KTV (yeu cau 05/09/2026
   // muc 1) - KtvTaoPhieuScreen tu re nhanh giao dien theo vai tro (xem hoMode trong file do).
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri || user.la_giam_sat || user.la_admin_bh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen user={user} />;
-  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvTraCuuScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvDonCuaToiScreen />;
   // Link truy cap truc tiep 1 phieu tra theo ID (them 2026-09-09, vd "#/ktv/nhan-hang/TR-000001") -
   // xem giai thich day du trong lib/deepLink.ts. "/ktv/nhan-hang/TR-000001" khop nhanh nay qua regex
   // (khac "/ktv/nhan-hang" so sanh chinh xac o tren), truyen ID trich duoc lam initialDetailId de

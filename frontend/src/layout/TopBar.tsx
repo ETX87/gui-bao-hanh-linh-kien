@@ -55,7 +55,7 @@ export function TopBar({ user }: { user: AppUser }) {
         </div>
         {testBtn(true)}
         <InstallAppButton onDark />
-        <button onClick={logout} className="focus-ring shrink-0 rounded-lg px-2.5 py-2 text-sm font-semibold text-white/85 hover:bg-white/10">
+        <button onClick={() => window.confirm("Đăng xuất khỏi ứng dụng?") && logout()} className="focus-ring shrink-0 rounded-lg px-2 py-2 text-xs font-medium text-white/70 hover:bg-white/10">
           Thoát
         </button>
       </header>

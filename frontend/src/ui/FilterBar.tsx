@@ -110,7 +110,10 @@ export function FilterSelect({ label, value, onChange, options }: { label: strin
   );
 }
 
-export function FilterBar({ f, defs, placeholder, extra }: { f: ListFilters; defs: FilterDef[]; placeholder: string; extra?: React.ReactNode }) {
+// collapsible (30/10/2026, UX mobile KTV): o loc thu vao 1 nut "Lọc" canh o tim (KTV it don, bo loc kieu
+// may tinh chiem nua man hinh dau). Dang co loc thi tu mo de thay dang loc gi.
+export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: ListFilters; defs: FilterDef[]; placeholder: string; extra?: React.ReactNode; collapsible?: boolean }) {
+  const [open, setOpen] = useState(false);
   useUserNames();
   const { nameOf } = useLkName();
   const optsOf = (d: FilterDef) => {
@@ -132,13 +135,18 @@ export function FilterBar({ f, defs, placeholder, extra }: { f: ListFilters; def
           <Input type="search" value={f.qInput} onChange={(e) => f.setQ(e.target.value)} placeholder={`🔍 ${placeholder}`} />
         </div>
         {extra}
+        {collapsible && visible.length > 0 && (
+          <button type="button" className="shrink-0 self-start md:self-auto rounded-lg border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-body)]" onClick={() => setOpen((v) => !v)}>
+            ⚙ Lọc{f.active > 0 ? ` (${f.active})` : ""} {open ? "▴" : "▾"}
+          </button>
+        )}
         {f.active > 0 && (
           <button type="button" className="shrink-0 text-xs font-semibold text-[var(--link)] hover:underline" onClick={f.clear}>
             ✕ Xoá lọc ({f.active})
           </button>
         )}
       </div>
-      {visible.length > 0 && (
+      {visible.length > 0 && (!collapsible || open) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5 mt-1.5">
           {visible.map((d) => (
             <FilterSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
