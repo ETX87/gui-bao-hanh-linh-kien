@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Badge, Card, Spinner } from "../../ui/primitives";
@@ -16,9 +16,11 @@ import type { AppUser, DonVi } from "../../lib/types";
 
 const DEFS: FilterDef[] = [
   { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
-  { key: "lk", label: "Linh kiện", kind: "lk" },
+  ...LK_ABC_DEFS,
   { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
   { key: "loai_bao_hanh", label: "Loại BH", kind: "map", labels: LOAI_BAO_HANH_LABELS },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
 
 export function NvViecCuaToiScreen({ user }: { user: AppUser }) {

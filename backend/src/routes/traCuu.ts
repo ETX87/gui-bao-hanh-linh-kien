@@ -5,7 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
 import { parsePage } from "../lib/pagination";
 import { slaCutoffVn } from "../lib/sla";
-import { eqFilters, distinctOpts } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
@@ -32,7 +32,7 @@ const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "cho_xac_nhan_so_luo
 function allRowsSql(scopeWhere: string): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
       CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
-      u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
+      u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.ma_lk AS lk_a, COALESCE(u.ma_lk_nhan, p.ma_lk) AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
@@ -40,7 +40,7 @@ function allRowsSql(scopeWhere: string): string {
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
            WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
-      p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
+      p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong
     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND ${scopeWhere}`;
@@ -65,13 +65,13 @@ traCuu.get("/don-vi", async (c) => {
     binds.push(st);
   }
   // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
-  const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk: "x.ma_lk", mien: "x.mien" };
+  const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
-  const f = eqFilters(c, LOC);
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "x.created_at"), slaFilter(c, "x.updated_at"));
   where += f.sql;
   binds.push(...f.binds);
   const kw = kwClause(c.req.query("q"), ["x.id", "x.case_id", "x.ma_lk", tenLkOf("x.ma_lk"), "x.mo_ta_loi", "x.ten_khach_hang", "x.sdt_khach_hang", "x.ktv", tenOf("x.ktv"), "x.phieu_gui_id", "x.phieu_tra_id",
-    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"]);
+    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"], ["(SELECT pt.tim_kiem FROM phieu_sua_chua_bh pt WHERE pt.id = x.parent_id)"]);
   where += kw.sql;
   binds.push(...kw.binds);
   const from = `FROM ${allRowsSql(scopeWhere)} WHERE ${where}`;

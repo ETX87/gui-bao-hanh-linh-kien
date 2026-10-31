@@ -3,6 +3,7 @@ import { lookupCase, lookupCaseEx } from "./caseLookupClient";
 import { extractMaKtv } from "./ktvCode";
 import { addLog } from "./logs";
 import { nowVN } from "./vnTime";
+import { capNhatTimKiem } from "./timKiem";
 
 // 20/10/2026 ("Khi đơn được tạo, tự đồng bộ data từ dvbh đẩy vào case"): luu "bang chung" case
 // (case_lookup_snapshot) NGAY khi don duoc tao o MOI duong tao don - truoc day chi duong "Them don" thu
@@ -25,6 +26,8 @@ export async function syncCaseSnapshots(env: Env, caseIds: (string | null | unde
       /* bo qua */
     }
   }
+  // 31/10/2026: don vua tao (+ bang chung moi) -> tinh ngay chuoi tim kiem khong dau.
+  await capNhatTimKiem(env.DB, null, 100).catch(() => 0);
   return n;
 }
 

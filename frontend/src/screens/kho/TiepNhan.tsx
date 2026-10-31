@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { api } from "../../lib/api";
@@ -30,6 +30,8 @@ const DEFS: FilterDef[] = [
   { key: "tao_ho", label: "Người tạo hộ", kind: "person", noneLabel: "KTV tự tạo" },
   { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
   { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
 
 export function KhoTiepNhanScreen() {
@@ -79,7 +81,7 @@ export function KhoTiepNhanScreen() {
 
   return (
     <div className="space-y-3">
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, KTV, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, KTV, mã case, tên khách, linh kiện bên trong…" />
       <Card className="p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>

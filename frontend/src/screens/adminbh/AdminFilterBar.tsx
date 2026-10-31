@@ -5,7 +5,8 @@ import { Btn, Input, Select } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useLinhKien, lkLabel } from "../../hooks/useLinhKien";
 import { displayName, useUserNames } from "../../hooks/useUserNames";
-import { KHACH_LE_KEY } from "../../lib/constants";
+import { KHACH_LE_KEY, HUONG_XU_LY_LABELS } from "../../lib/constants";
+import { KHOANG_DEF } from "../../ui/FilterBar";
 
 // Bo loc bang thong nhat Admin BH (09/10/2026: "bo sung them cac filter de tim kiem va lap danh sach can
 // xu ly: Trang thai, Nguoi gui, Linh kien gui, linh kien thuc sua, Loai linh kien, trang thai cham").
@@ -21,8 +22,11 @@ export interface AdminFilter {
   pl: string;
   cham: string;
   mien: string;
+  lk_nhan: string;
+  huong: string;
+  khoang: string;
 }
-export const EMPTY_FILTER: AdminFilter = { q: "", tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "", mien: "" };
+export const EMPTY_FILTER: AdminFilter = { q: "", tt: "", ktv: "", lk: "", lk_tt: "", pl: "", cham: "", mien: "", lk_nhan: "", huong: "", khoang: "" };
 
 export function filterQuery(f: AdminFilter): string {
   return (Object.keys(f) as (keyof AdminFilter)[])
@@ -43,6 +47,8 @@ interface Options {
   lk: string[];
   lk_tt: string[];
   phan_loai: string[];
+  lk_nhan?: string[];
+  huong?: string[];
 }
 
 export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFilter; onChange: (f: AdminFilter) => void; reloadKey: number }) {
@@ -91,20 +97,30 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
       <button type="button" className="md:hidden mb-1 rounded-lg border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-body)]" onClick={() => setMoLoc((v) => !v)}>
         ⚙ Lọc{active > 0 ? ` (${active})` : ""} {moLoc ? "▴" : "▾"}
       </button>
-      <div className={`${moLoc ? "grid" : "hidden"} md:grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-1.5`}>
+      <div className={`${moLoc ? "grid" : "hidden"} md:grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5`}>
         <FilterSelect label="Trạng thái" value={value.tt} onChange={(v) => set("tt", v)} options={TT_OPTIONS} />
         <div className={cell}>
           <span className={lab}>Người gửi</span>
           <SearchableSelect options={ktvOptions} value={value.ktv} onChange={(v) => set("ktv", v)} placeholder="Tất cả" />
         </div>
         <div className={cell}>
-          <span className={lab}>LK gửi</span>
+          <span className={lab}>LK KTV chọn (A)</span>
           <SearchableSelect options={lkOpts(opts.lk)} value={value.lk} onChange={(v) => set("lk", v)} placeholder="Tất cả" />
         </div>
         <div className={cell}>
-          <span className={lab}>LK thực sửa</span>
+          <span className={lab}>LK gửi về (B)</span>
+          <SearchableSelect options={lkOpts(opts.lk_nhan || [])} value={value.lk_nhan} onChange={(v) => set("lk_nhan", v)} placeholder="Tất cả" />
+        </div>
+        <div className={cell}>
+          <span className={lab}>LK đổi mới (C)</span>
           <SearchableSelect options={lkOpts(opts.lk_tt)} value={value.lk_tt} onChange={(v) => set("lk_tt", v)} placeholder="Tất cả" />
         </div>
+        <FilterSelect
+          label="Hướng xử lý"
+          value={value.huong}
+          onChange={(v) => set("huong", v)}
+          options={(opts.huong || []).map((v) => (v ? { value: v, label: HUONG_XU_LY_LABELS[v] || v } : { value: "__none__", label: "(Chưa phân loại)" }))}
+        />
         <FilterSelect
           label="Loại LK"
           value={value.pl}
@@ -121,8 +137,9 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
           <span className={lab}>SLA</span>
           <Select value={value.cham} onChange={(e) => set("cham", e.target.value)}>
             <option value="">Tất cả</option>
-            <option value="qua_han">🔴 Quá hạn SLA 24h</option>
             <option value="dung_han">🟢 Còn trong hạn</option>
+            <option value="qua_han">🟡 Quá hạn SLA 24h</option>
+            <option value="nguy_hiem">🔴 Quá 72h (nguy hiểm)</option>
           </Select>
         </div>
         <div className={cell}>
@@ -134,6 +151,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
             <option value="__none__">Chưa khai báo</option>
           </Select>
         </div>
+        <FilterSelect label="Thời gian" value={value.khoang} onChange={(v) => set("khoang", v)} options={KHOANG_DEF.static || []} />
       </div>
       {active > 0 && (
         <div className="mt-1.5 flex items-center gap-2">

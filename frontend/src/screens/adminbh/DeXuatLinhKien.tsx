@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Badge, Btn, Card, Spinner } from "../../ui/primitives";
@@ -29,7 +29,11 @@ const DEFS: FilterDef[] = [
   { key: "nv", label: "NV sửa chữa", kind: "person" },
   { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
   { key: "lk", label: "Linh kiện xin", kind: "lk" },
+  LK_A_DEF,
+  LK_B_DEF,
   { key: "nguoi_xu_ly", label: "Người xử lý", kind: "person", noneLabel: "Chưa xử lý" },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
 
 export function AdminDeXuatScreen({ user }: { user: AppUser }) {

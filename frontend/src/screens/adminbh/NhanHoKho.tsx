@@ -10,7 +10,7 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { UserName } from "../../hooks/useUserNames";
 import type { PhieuGui } from "../../lib/types";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 
 // 21/10/2026: "bổ sung tìm kiếm ở các danh sách table" - loc + tim cho danh sach thung (Admin BH).
 export const THUNG_DEFS: FilterDef[] = [
@@ -18,8 +18,10 @@ export const THUNG_DEFS: FilterDef[] = [
   { key: "kho", label: "Kho nhận", kind: "person" },
   { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
   { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
-export const THUNG_PLACEHOLDER = "Tìm mã thùng, vận đơn, nhà xe, KTV, mã đơn / case / linh kiện bên trong…";
+export const THUNG_PLACEHOLDER = "Tìm mã thùng, vận đơn, nhà xe, KTV, mã case, tên khách, linh kiện bên trong…";
 
 
 // 20/10/2026: "admin bh có thể tự xác nhận hộ cho kho nếu thực tế hàng đã về đế tay admin bh (Ktv giao

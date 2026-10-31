@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
@@ -36,6 +36,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
     ...(hoMode ? [{ key: "ktv", label: "KTV", kind: "person" as const }] : []),
     { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+    KHOANG_DEF,
   ];
   const flt = useListFilters("/phieu-gui", LOC_DEFS.map((d) => d.key));
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<PhieuGui>(withQuery("/phieu-gui", flt.query), "phieu_gui");
@@ -215,7 +216,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
           {isSelfKtv ? "+ Tạo thùng mới" : "+ Tạo phiếu mới"}
         </Btn>
       </div>
-      <FilterBar collapsible={isSelfKtv} f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar collapsible={isSelfKtv} f={flt} defs={LOC_DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, mã case, tên khách, linh kiện bên trong…" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : hoMode ? "Chưa tạo hộ phiếu nào." : "Chưa có phiếu gửi nào."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && <PhieuGuiDetailModal guiId={detailId} onClose={() => setDetailId(null)} onChanged={afterChange} />}

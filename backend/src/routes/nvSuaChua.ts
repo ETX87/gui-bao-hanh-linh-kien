@@ -6,7 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { LBL, KHACH_LE_KEY, KET_QUA_NV_VALUES, KET_QUA_NV_TO_CU, type KetQuaNv } from "../lib/constants";
-import { eqFilters, distinctOpts } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { parsePage } from "../lib/pagination";
 import { nextSequentialId } from "../lib/idCounter";
@@ -34,15 +34,15 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   // loi" - dung y het cach GET /admin/don-vi da JOIN.
   const kw = kwClause(c.req.query("q"), ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", "p.ten_khach_hang", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"),
     "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", tenOf("(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)"),
-    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
+    "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"], ["p.tim_kiem"]);
   // 21/10/2026: loc KTV gui / linh kien / huong xu ly / bao hanh.
-  const LOC = { ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly", loai_bao_hanh: "u.loai_bao_hanh" };
+  const LOC = { ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", lk_a: "p.ma_lk", lk_b: "COALESCE(u.ma_lk_nhan, p.ma_lk)", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", huong_xu_ly: "u.huong_xu_ly", loai_bao_hanh: "u.loai_bao_hanh" };
   if (c.req.query("loc_only")) {
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?", [user.email]) });
   }
-  const f = eqFilters(c, LOC);
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"));
   kw.sql += f.sql;
-  kw.binds.push(...f.binds);
+  kw.binds.push(...(f.binds as string[]));
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id,

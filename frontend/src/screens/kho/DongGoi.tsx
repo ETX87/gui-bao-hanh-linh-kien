@@ -57,7 +57,7 @@ export function KhoDongGoiScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-3">
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, vận đơn, KTV, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, vận đơn, KTV, mã case, tên khách, linh kiện bên trong…" />
       {khieuNaiTotal > 0 && (
         <Card className="p-3 border-[var(--red-500)]">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--red-700)] mb-1">⚠ KTV báo không nhận được hàng — cần Kho đánh giá ({khieuNaiTotal})</h3>

@@ -1,4 +1,6 @@
-import { eqFilters, distinctOpts } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, joinF } from "../lib/filters";
+import { tkPhieuTraOf } from "../lib/search";
+import { normVi } from "../lib/timKiem";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -227,7 +229,7 @@ phieuTra.get("/", async (c) => {
     loc.nv = nvRows.results.map((r) => r.v);
     return c.json({ loc });
   }
-  const f = eqFilters(c, { nguoi_tao: "nguoi_tao" });
+  const f = joinF(eqFilters(c, { nguoi_tao: "nguoi_tao" }), timeFilter(c, "created_at"));
   where += f.sql;
   binds.push(...f.binds);
   const nvF = c.req.query("nv");
@@ -259,8 +261,10 @@ phieuTra.get("/", async (c) => {
       OR ktv_nhan IN (SELECT email_dang_nhap FROM ktv_lien_he_bh WHERE LOWER(COALESCE(ten_hien_thi,'')) LIKE ? OR LOWER(ma_ktv) LIKE ?)
       OR ktv_nhan IN (SELECT email FROM users WHERE LOWER(COALESCE(ten,'')) LIKE ?)
       OR id IN (SELECT u.phieu_tra_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-                WHERE u.phieu_tra_id IS NOT NULL AND (LOWER(u.id) LIKE ? OR LOWER(COALESCE(p.case_id,'')) LIKE ? OR LOWER(COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk, '')) LIKE ?)))`;
-    binds.push(kw, kw, kw, kw, kw, kw, kw, kw, kw, kw, kw);
+                WHERE u.phieu_tra_id IS NOT NULL AND (LOWER(u.id) LIKE ? OR LOWER(COALESCE(p.case_id,'')) LIKE ? OR LOWER(COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk, '')) LIKE ?))
+      OR COALESCE(${tkPhieuTraOf("phieu_tra_bh.id")},'') LIKE ?)`;
+    // 31/10/2026: kem tim KHONG DAU theo ten khach / ten linh kien / case cua don ben trong.
+    binds.push(kw, kw, kw, kw, kw, kw, kw, kw, kw, kw, kw, `%${normVi(q)}%`);
   }
   const [{ results }, totalRow] = await Promise.all([
     // so_don (12/10/2026, de xuat #16): so don vi trong phieu, hien cot "Số đơn" o cac danh sach.

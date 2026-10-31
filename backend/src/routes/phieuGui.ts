@@ -11,8 +11,9 @@ import { parsePage } from "../lib/pagination";
 import { mienOfKtv } from "../lib/mien";
 import { lookupCaseEx } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
-import { eqFilters, distinctOpts } from "../lib/filters";
-import { kwClause, tenOf, tenLkOf } from "../lib/search";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
+import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
+import { capNhatTimKiem } from "../lib/timKiem";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { nhanHoThung } from "../lib/nhanHo";
@@ -60,13 +61,13 @@ phieuGui.get("/", async (c) => {
   const kw = kwClause(c.req.query("q"), [
     "id", "ma_van_don", "ma_xe_hoac_tai_xe", "don_vi_van_chuyen", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
     "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,'') || ' ' || COALESCE(p.mo_ta_loi,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)",
-  ]);
+  ], [tkThungOf("phieu_gui_bh.id")]);
   // 21/10/2026: bo loc trang thai / hinh thuc gui / KTV (khi tao ho) / mien.
   const LOC = { trang_thai: "trang_thai", hinh_thuc_gui: "hinh_thuc_gui", ktv: "nguoi_tao", mien: "mien" };
   if (c.req.query("loc_only")) {
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${col} = ?`, [user.email]) });
   }
-  const f = eqFilters(c, LOC);
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "created_at"));
   const w = `FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}${f.sql}`;
   const b = [user.email, ...kw.binds, ...f.binds];
   const [{ results }, totalRow] = await Promise.all([
@@ -92,9 +93,10 @@ phieuGui.get("/don-cua-toi", async (c) => {
     "p.id", "p.case_id", "p.ma_lk", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("p.ma_lk"),
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)",
     "(SELECT group_concat(u3.id, ' ') FROM phieu_sua_chua_bh_ct u3 WHERE u3.parent_id = p.id)",
-  ]);
-  const w = `${base} AND ${xong ? "" : "NOT "}${DON_XONG_SQL}${kw.sql}`;
-  const b = [user.email, ...kw.binds];
+  ], ["p.tim_kiem"]);
+  const f = joinF(eqFilters(c, { lk: "p.ma_lk" }), timeFilter(c, "p.created_at"));
+  const w = `${base} AND ${xong ? "" : "NOT "}${DON_XONG_SQL}${kw.sql}${f.sql}`;
+  const b = [user.email, ...kw.binds, ...f.binds];
   const CAN_BO_SUNG = "EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u4 WHERE u4.parent_id = p.id AND u4.trang_thai = 'cho_bo_sung_tt')";
   const [{ results }, totalRow, dangRow, xongRow] = await Promise.all([
     c.env.DB.prepare(
@@ -423,6 +425,7 @@ phieuGui.post("/:id/don", async (c) => {
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
   }
+  c.executionCtx.waitUntil(capNhatTimKiem(c.env.DB, [id]).catch(() => 0));
   return c.json({ id }, 201);
 });
 
@@ -549,10 +552,10 @@ phieuGui.get("/don-vi/tra-cuu", async (c) => {
      JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE g.nguoi_tao = ?`;
   // 21/10/2026: loc trang thai / huong xu ly / linh kien / thung.
-  const LOC = { trang_thai: "u.trang_thai", huong_xu_ly: "u.huong_xu_ly", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", phieu_gui: "p.phieu_gui_id" };
+  const LOC = { trang_thai: "u.trang_thai", huong_xu_ly: "u.huong_xu_ly", lk_a: "p.ma_lk", lk_b: "COALESCE(u.ma_lk_nhan, p.ma_lk)", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", phieu_gui: "p.phieu_gui_id" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFrom, [user.email]) });
-  const kwc = kwClause(kw, ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"]);
-  const f = eqFilters(c, LOC);
+  const kwc = kwClause(kw, ["u.id", "p.id", "p.case_id", "p.ma_lk", "u.ma_lk_thuc_te", "u.ma_lk_nhan", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)"), "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = p.case_id)"], ["p.tim_kiem"]);
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"));
   const binds: unknown[] = [user.email, ...kwc.binds, ...f.binds];
   const fromWhere = baseFrom + kwc.sql + f.sql;
   const [{ results }, totalRow] = await Promise.all([

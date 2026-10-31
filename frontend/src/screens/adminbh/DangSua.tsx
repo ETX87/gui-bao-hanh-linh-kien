@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -22,8 +22,10 @@ type Row = DonVi & { ktv?: string | null; mo_ta_loi?: string | null; ten_khach_h
 
 const DEFS: FilterDef[] = [
   { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
-  { key: "lk", label: "Linh kiện", kind: "lk" },
+  ...LK_ABC_DEFS,
   { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
 
 export function AdminDangSuaScreen({ user }: { user: AppUser }) {

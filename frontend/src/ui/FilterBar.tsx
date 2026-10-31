@@ -24,6 +24,36 @@ export interface FilterDef {
   fmt?: (v: string) => string; // nhan tuy bien (uu tien hon kind)
 }
 
+// 31/10/2026 ("bổ sung thêm các công cụ filter theo các dạng trạng thái, cảnh báo, thời gian, linh kiện A, B,
+// C..."): cac o loc dung chung cho moi danh sach. Backend: lib/filters.ts slaFilter / timeFilter.
+export const CANH_BAO_DEF: FilterDef = {
+  key: "canh_bao",
+  label: "Cảnh báo",
+  static: [
+    { value: "trong_han", label: "🟢 Trong hạn 24h" },
+    { value: "qua_han", label: "🟡 Quá hạn 24h" },
+    { value: "qua_han_24_72", label: "🟠 Quá 24–72h" },
+    { value: "nguy_hiem", label: "🔴 Quá 72h (nguy hiểm)" },
+  ],
+};
+export const KHOANG_DEF: FilterDef = {
+  key: "khoang",
+  label: "Thời gian tạo",
+  static: [
+    { value: "hom_nay", label: "Hôm nay" },
+    { value: "7n", label: "7 ngày qua" },
+    { value: "30n", label: "30 ngày qua" },
+    { value: "thang_nay", label: "Tháng này" },
+    { value: "thang_truoc", label: "Tháng trước" },
+    { value: "cu_hon_30n", label: "Cũ hơn 30 ngày" },
+  ],
+};
+// Linh kien A = KTV chon, B = thuc te gui ve (Admin xac nhan), C = doi moi (lk = C, khong co thi B, A).
+export const LK_A_DEF: FilterDef = { key: "lk_a", label: "LK KTV chọn (A)", kind: "lk" };
+export const LK_B_DEF: FilterDef = { key: "lk_b", label: "LK gửi về (B)", kind: "lk" };
+export const LK_C_DEF: FilterDef = { key: "lk", label: "LK đổi mới (C)", kind: "lk" };
+export const LK_ABC_DEFS: FilterDef[] = [LK_A_DEF, LK_B_DEF, LK_C_DEF];
+
 export interface ListFilters {
   q: string;
   setQ: (v: string) => void;

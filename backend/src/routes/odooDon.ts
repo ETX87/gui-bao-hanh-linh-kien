@@ -73,7 +73,7 @@ odooDon.get("/da-gui", async (c) => {
   const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
   if ("error" in t) return c.json({ error: t.error }, t.status);
   const { limit, offset } = parsePage(c);
-  const kw = kwClause(c.req.query("q"), ["o.ma_don", "o.case_id", "o.ma_linh_kien", "o.ten_linh_kien", "p.id", "p.phieu_gui_id"]);
+  const kw = kwClause(c.req.query("q"), ["o.ma_don", "o.case_id", "o.ma_linh_kien", "o.ten_linh_kien", "p.id", "p.phieu_gui_id"], ["p.tim_kiem"]);
   const [rows, cnt] = await Promise.all([
     c.env.DB.prepare(
       `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, o.trang_thai, o.ngay_tao,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { displayName } from "../../hooks/useUserNames";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useRoute } from "../../router/Router";
@@ -39,8 +39,10 @@ const DEFS: FilterDef[] = [
   { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" },
   { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" },
   { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" },
-  { key: "lk", label: "Linh kiện", kind: "lk" },
+  ...LK_ABC_DEFS,
   { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  CANH_BAO_DEF,
+  KHOANG_DEF,
 ];
 
 // "Tra cuu moi don hang trong pham vi" (Giam sat/View) - THUAN CHI XEM. Phan trang that.

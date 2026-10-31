@@ -1,4 +1,4 @@
-import type { FilterDef } from "../../ui/FilterBar";
+import { KHOANG_DEF, type FilterDef } from "../../ui/FilterBar";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, isDoiTacKey, doiTacNameFromKey } from "../../lib/constants";
 import { displayName } from "../../hooks/useUserNames";
 
@@ -14,6 +14,7 @@ export function phieuTraDefs(opts: { nguoiNhan?: boolean; trangThai?: boolean } 
     { key: "nguoi_tao", label: "Người tạo phiếu", kind: "person" },
     { key: "nv", label: "NV sửa chữa", kind: "person" },
     { key: "mien", label: "Miền", static: [{ value: "MB", label: "Miền Bắc" }, { value: "MN", label: "Miền Nam" }, { value: "none", label: "Chưa khai báo" }] },
+    KHOANG_DEF,
   );
   return d;
 }

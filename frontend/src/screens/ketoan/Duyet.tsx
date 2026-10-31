@@ -80,7 +80,7 @@ function ChoDuyetList({ user }: { user: AppUser }) {
   if (loading && rows.length === 0 && !flt.active) return <Spinner />;
   return (
     <>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã case, tên khách, linh kiện bên trong…" />
       <Table columns={baseCols()} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : "Không có phiếu trả nào chờ duyệt."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
@@ -121,7 +121,7 @@ function DaXuLyList({ user }: { user: AppUser }) {
   ];
   return (
     <>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã case, tên khách, linh kiện bên trong…" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : "Chưa có phiếu nào Kế toán đã xử lý."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
