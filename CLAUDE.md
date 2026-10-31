@@ -5755,3 +5755,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 **(c) Vấn đề / ghi nhận (chưa sửa):** ở khổ 390px nút "Kiểm tra" trong form thêm đơn bị cắt chữ; form "Bổ sung" của KTV không có ô tải ảnh dù Admin hay yêu cầu chụp lại ảnh; thùng đầu tiên tạo từ đơn Odoo tự điền vận chuyển của thùng đã gửi gần nhất (đúng thiết kế "nhớ nhà xe", nhưng KTV cần kiểm tra lại). Kỹ thuật chụp: sheet "Thêm đơn" trên điện thoại render bằng portal riêng (không có `data-modal-overlay`), ô nhập có placeholder thì phải khớp theo cả value.
 
 **(d) Kiểm thử:** chụp bằng puppeteer-core + Chrome trên `wrangler dev` local (config tạm `wrangler.qa.jsonc`, D1 `.wrangler/hdktv`, case lookup stub tạm) — đã xoá config / dữ liệu, `caseLookupClient.ts` đã hoàn tác. Typecheck 0 lỗi. Xem lại từng trang PDF (xuất bằng Word, render PyMuPDF): ảnh không bị cắt, chữ đọc được. Bản sửa `tien_do` đã kiểm bằng mắt trên chi tiết thùng BH-000003 (đơn đã trả hiện "Đang trả về bạn" / "Đã nhận lại").
+
+**Deploy (31/10/2026):** `npm run deploy` (Version ID `d09fea7e`), không có migration mới.
