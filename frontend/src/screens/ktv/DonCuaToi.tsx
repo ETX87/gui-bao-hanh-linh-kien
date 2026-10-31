@@ -4,17 +4,18 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { useWorkload } from "../../hooks/useWorkload";
 import { Input, Spinner } from "../../ui/primitives";
 import { Pagination } from "../../ui/Pagination";
-import { KtvDonCard, type KtvDon } from "./KtvCards";
+import { KtvDonCard, openKtvDon, ChonPhieuTraModal, type KtvDon } from "./KtvCards";
 import { KtvBoSungModal } from "./KtvBoSungModal";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
-import type { DonVi } from "../../lib/types";
+import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
+import type { AppUser, DonVi } from "../../lib/types";
 
 // 30/10/2026 (ra soat UX mobile KTV, de xuat 2): "Đơn của tôi" thay man "Tiến độ" cu - 1 the / don cha,
 // GOM CA don trong thung nhap va thung dang tren xe (truoc day chi hien don Admin da tach nen don vua
 // gui "bien mat"). 2 tab Đang xử lý / Đã xong; don can bo sung luon len dau; o tim thay luon cho man
 // Lich su Serial / Case (van mo duoc qua link).
 
-export function KtvDonCuaToiScreen() {
+export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
   const { nav } = useRoute();
   const { refresh } = useWorkload();
   const [nhom, setNhom] = useState<"dang" | "xong">("dang");
@@ -29,6 +30,8 @@ export function KtvDonCuaToiScreen() {
   const r = raw as { so_dang?: number; so_xong?: number } | null;
   const [boSung, setBoSung] = useState<DonVi | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
+  const [traId, setTraId] = useState<string | null>(null);
+  const [chon, setChon] = useState<{ id: string; n: number }[] | null>(null);
   const after = () => {
     reload();
     refresh();
@@ -70,7 +73,7 @@ export function KtvDonCuaToiScreen() {
       ) : (
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {items.map((d) => (
-            <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} onBoSung={setBoSung} />
+            <KtvDonCard key={d.id} don={d} onOpen={() => openKtvDon(d, { gui: setGuiId, tra: setTraId, chon: setChon })} onBoSung={setBoSung} />
           ))}
         </div>
       )}
@@ -86,6 +89,8 @@ export function KtvDonCuaToiScreen() {
         />
       )}
       {guiId && <PhieuGuiDetailModal guiId={guiId} onClose={() => setGuiId(null)} onChanged={after} />}
+      {chon && <ChonPhieuTraModal list={chon} onClose={() => setChon(null)} onPick={(id) => { setChon(null); setTraId(id); }} />}
+      {traId && <PhieuTraDetailModal traId={traId} user={user} onClose={() => setTraId(null)} onChanged={after} />}
     </div>
   );
 }

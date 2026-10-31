@@ -46,7 +46,7 @@ function Routed({ user }: { user: AppUser }) {
   // KTV: 3 man rieng (toi uu dien thoai, v1.048). Giam sat / Admin "tao ho" dung tab "Thùng nháp" cua man
   // Thùng hàng (cung component KtvTaoPhieuScreen).
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri || user.la_giam_sat || user.la_admin_bh) && path === "/ktv/tao-phieu") return <KtvTaoPhieuScreen user={user} />;
-  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvDonCuaToiScreen />;
+  if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && path === "/ktv/tra-cuu") return <KtvDonCuaToiScreen user={user} />;
   // Link truy cap truc tiep 1 phieu tra theo ID (#/ktv/nhan-hang/TR-000001) - xem lib/deepLink.ts.
   const nhanHangIdMatch = path.match(/^\/ktv\/nhan-hang\/(TR-\d+)$/i);
   if ((user.la_ktv_dvbh || user.la_ve_tinh || user.la_qtri) && (path === "/ktv/nhan-hang" || nhanHangIdMatch)) {

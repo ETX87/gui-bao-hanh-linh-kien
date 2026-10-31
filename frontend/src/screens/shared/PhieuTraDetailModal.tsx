@@ -11,6 +11,7 @@ import { Btn, Field, Input, Textarea, Badge, Spinner } from "../../ui/primitives
 import { LOAI_DOI_TRU_LABELS, isDoiTacKey } from "../../lib/constants";
 import { useLinhKien, useLkName, lkOptions } from "../../hooks/useLinhKien";
 import { SearchableSelect } from "../../ui/SearchableSelect";
+import { ChonMonThieu } from "./ChonMonThieu";
 import { ReturnUnitTable, UnitFilterBar, useFilteredUnits, EMPTY_LOC, type ReturnUnit, type UnitLoc } from "../adminbh/ReturnUnitTable";
 import { LogTimeline } from "./LogTimeline";
 import { UnitDetailModal } from "./UnitDetailModal";
@@ -45,6 +46,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
   const [danhGia, setDanhGia] = useState("");
   const [khieuNai, setKhieuNai] = useState("");
+  const [thieu, setThieu] = useState<string[]>([]);
   const [showTuChoi, setShowTuChoi] = useState(false);
   const [showKhieuNai, setShowKhieuNai] = useState(false);
   // Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026): thanh_cong | that_bai.
@@ -139,7 +141,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const gui = () => run(async () => { await api.post(`/phieu-tra/${traId}/gui`, { ma_van_don: maVanDon }); toast("Đã gửi hàng.", "ok"); });
   const khoXacNhanKetThuc = () => run(async () => { await api.post(`/phieu-tra/${traId}/kho-xac-nhan-ket-thuc`); toast("Đã xác nhận kết thúc (dự phòng).", "ok"); });
   const ktvXacNhanNhan = () => run(async () => { await api.post(`/phieu-tra/${traId}/ktv-xac-nhan-nhan`, { danh_gia: danhGia }); toast("Đã xác nhận nhận hàng.", "ok"); });
-  const guiKhieuNai = () => run(async () => { await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: khieuNai }); toast("Đã gửi khiếu nại.", "ok"); setShowKhieuNai(false); });
+  const guiKhieuNai = () => run(async () => { await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: khieuNai, thieu_ids: thieu }); toast("Đã báo Kho.", "ok"); setShowKhieuNai(false); setThieu([]); });
 
   const guiDanhGiaKN = () =>
     run(async () => {
@@ -148,6 +150,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
       setDanhGiaKN(null);
     });
   const khoDanhGiaKN = (user.la_kho || user.la_qtri) && t.trang_thai === "khieu_nai_van_chuyen";
+  const monThieu = data.don_vi.filter((u) => u.ktv_thieu);
 
   const ktvNhanDuocXacNhan = (user.la_ktv_dvbh || user.la_ve_tinh) && t.ktv_nhan === user.email && t.trang_thai === "da_gui";
   const coMa = !!(t.ma_don_hang || t.ma_misa || t.ma_van_don);
@@ -300,12 +303,13 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           )}
           {showKhieuNai && (
             <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3 space-y-2">
+              <ChonMonThieu units={data.don_vi.map((u) => ({ id: u.id, ma_lk: u.ma_lk_thuc_te || u.ma_lk_nhan || u.ma_lk, khach: u.case_khach_hang || u.ten_khach_hang }))} value={thieu} onChange={setThieu} />
               <Field label="Nội dung khiếu nại" required>
                 <Textarea rows={2} value={khieuNai} onChange={(e) => setKhieuNai(e.target.value)} placeholder="Mô tả sự cố không nhận được hàng..." autoFocus />
               </Field>
               <div className="flex justify-end gap-2">
                 <Btn onClick={() => setShowKhieuNai(false)}>Huỷ</Btn>
-                <Btn variant="danger" disabled={!khieuNai.trim() || busy} onClick={guiKhieuNai}>
+                <Btn variant="danger" disabled={!khieuNai.trim() || thieu.length === 0 || busy} onClick={guiKhieuNai}>
                   Gửi khiếu nại
                 </Btn>
               </div>
@@ -344,7 +348,21 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
           {canEdit && t.trang_thai === "cho_ke_toan_duyet" && (
             <Banner tone="blue">Phiếu đang chờ Kế toán duyệt — vẫn sửa được (thêm / bớt đơn, đổi linh kiện, sửa mã); mọi thay đổi được ghi vào nhật ký để Kế toán thấy.</Banner>
           )}
-          {t.khong_nhan_duoc_ghi_chu && <Banner tone="red">⚠ KTV báo không nhận được hàng: {t.khong_nhan_duoc_ghi_chu}</Banner>}
+          {t.khong_nhan_duoc_ghi_chu && (
+            <Banner tone="red">
+              ⚠ {monThieu.length > 0 && monThieu.length < data.don_vi.length ? `KTV báo thiếu ${monThieu.length}/${data.don_vi.length} món` : "KTV báo không nhận được hàng"}: {t.khong_nhan_duoc_ghi_chu}
+              {monThieu.length > 0 && monThieu.length < data.don_vi.length && (
+                <ul className="mt-1 list-disc pl-5">
+                  {monThieu.map((u) => (
+                    <li key={u.id}>
+                      {nameOf(u.ma_lk_thuc_te || u.ma_lk_nhan || u.ma_lk)} · {u.id}
+                      {u.that_lac ? " — THẤT LẠC" : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Banner>
+          )}
           {t.kq_khieu_nai && (
             <Banner tone={t.kq_khieu_nai === "that_bai" ? "red" : "green"}>
               Kho đánh giá: {t.kq_khieu_nai === "that_bai" ? "gửi THẤT BẠI (thất lạc)" : "gửi thành công"}

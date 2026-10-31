@@ -5,7 +5,7 @@ import { useWorkload } from "../../hooks/useWorkload";
 import { Btn, Spinner } from "../../ui/primitives";
 import { fmtDateOnly, hoursSince } from "../../lib/format";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
-import { KtvDonCard, KtvPhieuTraCard, type KtvDon, type KtvPhieuTra } from "./KtvCards";
+import { KtvDonCard, KtvPhieuTraCard, openKtvDon, ChonPhieuTraModal, type KtvDon, type KtvPhieuTra } from "./KtvCards";
 import { KtvBoSungModal } from "./KtvBoSungModal";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
@@ -28,6 +28,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
   const [boSung, setBoSung] = useState<DonVi | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
   const [traId, setTraId] = useState<string | null>(null);
+  const [chon, setChon] = useState<{ id: string; n: number }[] | null>(null);
 
   const load = useCallback(() => {
     Promise.all([
@@ -64,7 +65,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
         </h2>
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {canBoSung.map((d) => (
-            <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} onBoSung={setBoSung} />
+            <KtvDonCard key={d.id} don={d} onOpen={() => openKtvDon(d, { gui: setGuiId, tra: setTraId, chon: setChon })} onBoSung={setBoSung} />
           ))}
           {tra.map((t) => (
             <KtvPhieuTraCard key={t.id} pt={t} onDone={after} onOpen={() => setTraId(t.id)} />
@@ -113,7 +114,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
         ) : (
           <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {theoDoi.map((d) => (
-              <KtvDonCard key={d.id} don={d} onOpen={() => setGuiId(d.phieu_gui_id)} />
+              <KtvDonCard key={d.id} don={d} onOpen={() => openKtvDon(d, { gui: setGuiId, tra: setTraId, chon: setChon })} />
             ))}
           </div>
         )}
@@ -130,6 +131,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
         />
       )}
       {guiId && <PhieuGuiDetailModal guiId={guiId} onClose={() => setGuiId(null)} onChanged={after} />}
+      {chon && <ChonPhieuTraModal list={chon} onClose={() => setChon(null)} onPick={(id) => { setChon(null); setTraId(id); }} />}
       {traId && <PhieuTraDetailModal traId={traId} user={user} onClose={() => setTraId(null)} onChanged={after} />}
     </div>
   );

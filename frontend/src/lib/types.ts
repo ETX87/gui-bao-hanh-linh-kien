@@ -98,6 +98,8 @@ export interface DonCha {
 }
 
 export interface DonVi {
+  ktv_thieu?: number; // 31/10/2026: KTV bao khong nhan duoc mon nay
+  that_lac?: number; // Kho danh gia mon nay that lac
   id: string;
   parent_id: string;
   so_thu_tu: number;

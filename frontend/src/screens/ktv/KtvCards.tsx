@@ -10,6 +10,7 @@ import { KTV_STEPS, ktvDonStage, type KtvStage, type KtvUnitLite } from "../../l
 import { Modal } from "../../ui/Modal";
 import { Textarea } from "../../ui/primitives";
 import type { DonVi, PhieuTra } from "../../lib/types";
+import { ChonMonThieu, type MonTra } from "../shared/ChonMonThieu";
 
 // 30/10/2026 (ra soat UX mobile KTV): the dung chung cho cac man KTV - 1 the = 1 viec, ten khach /
 // linh kien truoc ma, trang thai bang loi cua KTV + dong tien trinh 5 buoc, 1 nut lam ngay tren the.
@@ -30,6 +31,39 @@ export interface KtvDon {
   can_bo_sung: number;
   cap_nhat: string;
   don_vi: (KtvUnitLite & { ly_do_bo_sung?: string | null; updated_at?: string; ma_lk_nhan?: string | null; ma_lk_thuc_te?: string | null; phieu_tra_id?: string | null })[];
+}
+
+// 31/10/2026: cac phieu tra dang tren duong ve KTV cua 1 don (1 don nhieu mon co the tach thanh nhieu phieu
+// tra, gui ve nhieu lan) -> bam the mo thang phieu tra (co nut "Xac nhan da nhan" / "Khong nhan duoc"),
+// nhieu phieu thi cho KTV chon.
+export function phieuTraDangVe(d: KtvDon): { id: string; n: number }[] {
+  const m = new Map<string, number>();
+  for (const u of d.don_vi) if (u.tra_trang_thai === "da_gui" && u.phieu_tra_id) m.set(u.phieu_tra_id, (m.get(u.phieu_tra_id) ?? 0) + 1);
+  return [...m].map(([id, n]) => ({ id, n }));
+}
+
+// Mo 1 the don: 1 phieu tra dang ve -> mo phieu tra; nhieu phieu -> hien danh sach chon; khong co -> mo thung gui.
+export function openKtvDon(d: KtvDon, o: { gui: (id: string) => void; tra: (id: string) => void; chon: (l: { id: string; n: number }[]) => void }) {
+  const l = phieuTraDangVe(d);
+  if (l.length === 1) o.tra(l[0].id);
+  else if (l.length > 1) o.chon(l);
+  else o.gui(d.phieu_gui_id);
+}
+
+export function ChonPhieuTraModal({ list, onPick, onClose }: { list: { id: string; n: number }[]; onPick: (id: string) => void; onClose: () => void }) {
+  return (
+    <Modal title="Đơn này về theo nhiều lần" onClose={onClose} maxWidthClass="max-w-sm">
+      <p className="mb-2 text-sm text-[var(--ink-soft)]">Chọn lần hàng trả về để xác nhận:</p>
+      <div className="space-y-2">
+        {list.map((t) => (
+          <Btn key={t.id} variant="secondary" size="touch" className="w-full justify-between" onClick={() => onPick(t.id)}>
+            <span className="font-mono">{t.id}</span>
+            <span>{t.n} món ›</span>
+          </Btn>
+        ))}
+      </div>
+    </Modal>
+  );
 }
 
 export function StageBadge({ stage }: { stage: KtvStage }) {
@@ -66,6 +100,9 @@ export function KtvDonCard({ don, onOpen, onBoSung }: { don: KtvDon; onOpen?: ()
   const boSung = don.don_vi.find((u) => u.trang_thai === "cho_bo_sung_tt");
   const quaHan = boSung && hoursSince(boSung.updated_at) > 24;
   const nDv = don.don_vi.length;
+  const veList = phieuTraDangVe(don);
+  const dangVe = veList.reduce((t, x) => t + x.n, 0);
+  const nPhieuVe = veList.length;
   const nXong = don.don_vi.filter((u) => ["da_nhan", "huy", "that_lac"].includes(ktvDonStage("", [u]).key)).length;
   return (
     <div
@@ -87,6 +124,16 @@ export function KtvDonCard({ don, onOpen, onBoSung }: { don: KtvDon; onOpen?: ()
       <div className="mt-2">
         <MiniProgress stage={stage} />
       </div>
+      {dangVe > 0 && stage.key !== "dang_tra" && (
+        <div className="mt-2 rounded-lg bg-[var(--blue-50)] px-2.5 py-1.5 text-xs font-semibold text-[var(--blue-700)]">
+          📬 {dangVe}/{nDv} món đang trả về bạn — bấm để xác nhận đã nhận
+        </div>
+      )}
+      {stage.key === "dang_tra" && nPhieuVe > 1 && (
+        <div className="mt-2 rounded-lg bg-[var(--blue-50)] px-2.5 py-1.5 text-xs font-semibold text-[var(--blue-700)]">
+          📬 Hàng về theo {nPhieuVe} lần — bấm để chọn lần cần xác nhận
+        </div>
+      )}
       {boSung && (
         <div className="mt-2 rounded-lg bg-[var(--red-50)] px-2.5 py-1.5 text-xs text-[var(--red-700)]">
           <b>Admin cần bạn bổ sung:</b> {formatLyDoBoSung(boSung.ly_do_bo_sung) || "xem chi tiết"}
@@ -189,20 +236,21 @@ export function KtvPhieuTraCard({ pt, onDone, onOpen }: { pt: KtvPhieuTra; onDon
           Không nhận được
         </Btn>
       </div>
-      {khieuNai && <KhieuNaiModal traId={pt.id} onClose={() => setKhieuNai(false)} onDone={() => { setKhieuNai(false); onDone(); }} />}
+      {khieuNai && <KhieuNaiModal traId={pt.id} units={don.map((d) => ({ id: d.id, ma_lk: d.ma_lk, khach: d.khach_hang }))} onClose={() => setKhieuNai(false)} onDone={() => { setKhieuNai(false); onDone(); }} />}
     </div>
   );
 }
 
-function KhieuNaiModal({ traId, onClose, onDone }: { traId: string; onClose: () => void; onDone: () => void }) {
+function KhieuNaiModal({ traId, units, onClose, onDone }: { traId: string; units: MonTra[]; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const [ghiChu, setGhiChu] = useState("");
+  const [thieu, setThieu] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true);
     try {
-      await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: ghiChu.trim() });
-      toast("Đã báo Kho: chưa nhận được hàng.", "ok");
+      await api.post(`/phieu-tra/${traId}/khieu-nai`, { ghi_chu: ghiChu.trim(), thieu_ids: thieu });
+      toast(thieu.length === units.length ? "Đã báo Kho: chưa nhận được hàng." : `Đã báo Kho thiếu ${thieu.length} món, các món còn lại đã nhận.`, "ok");
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -212,7 +260,7 @@ function KhieuNaiModal({ traId, onClose, onDone }: { traId: string; onClose: () 
   };
   return (
     <Modal
-      title="Báo chưa nhận được hàng"
+      title="Báo thiếu / không nhận được hàng"
       onClose={onClose}
       maxWidthClass="max-w-md"
       footerActions={
@@ -220,12 +268,17 @@ function KhieuNaiModal({ traId, onClose, onDone }: { traId: string; onClose: () 
           <Btn variant="secondary" onClick={onClose}>
             Quay lại
           </Btn>
-          <Btn variant="danger" disabled={busy || !ghiChu.trim()} onClick={submit}>
+          <Btn variant="danger" disabled={busy || !ghiChu.trim() || thieu.length === 0} onClick={submit}>
             Gửi cho Kho
           </Btn>
         </>
       }
     >
+      {units.length > 0 && (
+        <div className="mb-3">
+          <ChonMonThieu units={units} value={thieu} onChange={setThieu} />
+        </div>
+      )}
       <p className="mb-2 text-sm text-[var(--ink-soft)]">Kho sẽ kiểm tra lại với nhà xe và báo kết quả cho bạn.</p>
       <Textarea rows={3} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} placeholder="VD: Nhà xe báo đã giao nhưng tôi chưa nhận được, thiếu 1 món…" />
     </Modal>

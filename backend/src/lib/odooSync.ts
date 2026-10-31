@@ -159,10 +159,11 @@ async function resolveMissingImportId(env: Env): Promise<number> {
 const STAGE_ORDER = ["cho_gui", "dang_gui", "kho_da_nhan", "dang_xu_ly", "cho_tra", "dang_tra"] as const;
 const TERMINAL = new Set(["hoan_tat", "tu_choi"]);
 
-function unitStage(unitTt: string, traTt: string | null): string {
+function unitStage(unitTt: string, traTt: string | null, thatLac = 0): string {
   if (unitTt === "ket_thuc_tu_choi" || unitTt === "ket_thuc_chuyen_kho") return "tu_choi";
   if (unitTt !== "san_sang_gom_phieu_tra") return "dang_xu_ly";
-  if (traTt === "ktv_da_nhan") return "hoan_tat";
+  // 31/10/2026: mon that lac (bao thieu theo mon) - chua hoan tat voi khach.
+  if (traTt === "ktv_da_nhan") return thatLac ? "dang_tra" : "hoan_tat";
   // gui_that_bai (12/10/2026, Kho danh gia hang that lac): chua hoan tat voi khach -> van bao "dang_tra".
   if (traTt === "da_gui" || traTt === "khieu_nai_van_chuyen" || traTt === "gui_that_bai") return "dang_tra";
   return "cho_tra";
@@ -189,20 +190,20 @@ export async function computeDerivedStatuses(db: D1Database): Promise<DerivedSta
     .all<{ odoo_id: number; don_id: string; phieu_gui_id: string | null; trang_thai_cha: string; gui_tt: string | null }>();
   if (parents.length === 0) return [];
 
-  const units = new Map<string, { tt: string; tra: string | null }[]>();
+  const units = new Map<string, { tt: string; tra: string | null; lac: number }[]>();
   const ids = parents.map((p) => p.don_id);
   for (let i = 0; i < ids.length; i += 90) {
     const chunk = ids.slice(i, i + 90);
     const { results } = await db
       .prepare(
-        `SELECT c.parent_id, c.trang_thai, t.trang_thai AS tra_tt FROM phieu_sua_chua_bh_ct c
+        `SELECT c.parent_id, c.trang_thai, c.that_lac, t.trang_thai AS tra_tt FROM phieu_sua_chua_bh_ct c
          LEFT JOIN phieu_tra_bh t ON t.id = c.phieu_tra_id WHERE c.parent_id IN (${chunk.map(() => "?").join(",")})`,
       )
       .bind(...chunk)
-      .all<{ parent_id: string; trang_thai: string; tra_tt: string | null }>();
+      .all<{ parent_id: string; trang_thai: string; that_lac: number; tra_tt: string | null }>();
     for (const r of results) {
       const arr = units.get(r.parent_id) ?? [];
-      arr.push({ tt: r.trang_thai, tra: r.tra_tt });
+      arr.push({ tt: r.trang_thai, tra: r.tra_tt, lac: r.that_lac });
       units.set(r.parent_id, arr);
     }
   }
@@ -214,7 +215,7 @@ export async function computeDerivedStatuses(db: D1Database): Promise<DerivedSta
       const status = p.gui_tt === "da_tiep_nhan" ? "kho_da_nhan" : p.gui_tt === "da_gui" ? "dang_gui" : "cho_gui";
       return { odoo_id: p.odoo_id, status, detail: null, ma_phieu: maPhieu };
     }
-    const stages = us.map((u) => unitStage(u.tt, u.tra));
+    const stages = us.map((u) => unitStage(u.tt, u.tra, u.lac));
     const open = stages.filter((s) => !TERMINAL.has(s));
     const done = stages.filter((s) => s === "hoan_tat").length;
     const status = open.length > 0 ? STAGE_ORDER.find((s) => open.includes(s))! : done > 0 ? "hoan_tat" : "tu_choi";

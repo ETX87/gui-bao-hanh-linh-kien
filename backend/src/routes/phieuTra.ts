@@ -56,7 +56,7 @@ const DOI_TAC_PREFIX = "__doi_tac__:";
 
 // Cot hien thi cua 1 don vi "cho tao phieu tra" / "trong phieu tra" (19/10/2026, danh sach dang bang).
 const UNIT_COLS = `u.id, u.parent_id, u.so_thu_tu, u.trang_thai, u.loai_doi_tru, u.loai_bao_hanh, u.huong_xu_ly, u.ma_lk_thuc_te, u.ma_lk_nhan,
-  u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.nguoi_sua_chua, u.updated_at, u.phieu_tra_id,
+  u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.nguoi_sua_chua, u.updated_at, u.phieu_tra_id, u.ktv_thieu, u.that_lac,
   p.case_id, p.ma_lk, p.mo_ta_loi, p.mien, p.phieu_gui_id, p.odoo_id, p.nguon_tao, p.ten_khach_hang,
   (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang`;
 
@@ -662,11 +662,23 @@ phieuTra.post("/:id/khieu-nai", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.ktv_nhan !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
   if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
-  const body = await c.req.json<{ ghi_chu?: string }>().catch(() => ({}) as { ghi_chu?: string });
+  // 31/10/2026: bao thieu THEO TUNG MON - thieu_ids = cac don vi KTV khong nhan duoc (khong gui = thieu ca phieu).
+  // Mon khong bao thieu coi nhu KTV da nhan.
+  const body = await c.req.json<{ ghi_chu?: string; thieu_ids?: string[] }>().catch(() => ({}) as { ghi_chu?: string; thieu_ids?: string[] });
   if (!body.ghi_chu?.trim()) return c.json({ error: "MISSING_GHI_CHU" }, 400);
-  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'khieu_nai_van_chuyen', khong_nhan_duoc_ghi_chu = ?, updated_at = ? WHERE id = ?").bind(body.ghi_chu.trim(), nowVN(), id).run();
-  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "khieu_nai_van_chuyen", user.email, "KTV mở khiếu nại vận chuyển: " + body.ghi_chu.trim());
-  return c.json({ ok: true });
+  const { results: us } = await c.env.DB.prepare("SELECT id FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).all<{ id: string }>();
+  const all = us.map((u) => u.id);
+  const thieu = Array.isArray(body.thieu_ids) ? all.filter((x) => body.thieu_ids!.includes(x)) : all;
+  if (thieu.length === 0) return c.json({ error: "MISSING_THIEU" }, 400);
+  const now = nowVN();
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ktv_thieu = 0 WHERE phieu_tra_id = ?").bind(id),
+    ...thieu.map((x) => c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ktv_thieu = 1 WHERE id = ?").bind(x)),
+    c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'khieu_nai_van_chuyen', khong_nhan_duoc_ghi_chu = ?, updated_at = ? WHERE id = ?").bind(body.ghi_chu.trim(), now, id),
+  ]);
+  const phan = thieu.length === all.length ? "không nhận được cả phiếu" : `thiếu ${thieu.length}/${all.length} món (${thieu.join(", ")})`;
+  await addLog(c.env.DB, "phieu_tra", id, "da_gui", "khieu_nai_van_chuyen", user.email, `KTV báo ${phan}: ` + body.ghi_chu.trim());
+  return c.json({ ok: true, thieu: thieu.length, tong: all.length });
 });
 
 // Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026, dinh nghia "that lac tren duong tra" da
@@ -684,11 +696,20 @@ phieuTra.post("/:id/danh-gia-khieu-nai", async (c) => {
   const ghiChu = body.ghi_chu?.trim() || "";
   // That bai: Kho bat buoc ghi PHUONG AN XU LY (xu ly ngoai he thong - chot 12/10/2026).
   if (body.ket_qua === "that_bai" && !ghiChu) return c.json({ error: "MISSING_GHI_CHU" }, 400);
-  const den = body.ket_qua === "thanh_cong" ? "ktv_da_nhan" : "gui_that_bai";
+  // 31/10/2026: chi cac mon KTV bao thieu moi bi danh dau that lac. Thieu ca phieu -> 'gui_that_bai' nhu cu;
+  // thieu 1 phan -> phieu 'ktv_da_nhan' (KTV da nhan phan con lai), mon thieu mang that_lac = 1.
+  const cnt = await c.env.DB.prepare("SELECT COUNT(*) AS n, SUM(ktv_thieu) AS thieu FROM phieu_sua_chua_bh_ct WHERE phieu_tra_id = ?").bind(id).first<{ n: number; thieu: number | null }>();
+  const nThieu = cnt?.thieu || cnt?.n || 0;
+  const caPhieu = !cnt || nThieu >= cnt.n;
+  const den = body.ket_qua === "thanh_cong" || !caPhieu ? "ktv_da_nhan" : "gui_that_bai";
   const now = nowVN();
-  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = ?, kq_khieu_nai = ?, kq_khieu_nai_ghi_chu = ?, kq_khieu_nai_boi = ?, kq_khieu_nai_luc = ?, updated_at = ? WHERE id = ?")
-    .bind(den, body.ket_qua, ghiChu || null, user.email, now, now, id)
-    .run();
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = ?, kq_khieu_nai = ?, kq_khieu_nai_ghi_chu = ?, kq_khieu_nai_boi = ?, kq_khieu_nai_luc = ?, updated_at = ? WHERE id = ?")
+      .bind(den, body.ket_qua, ghiChu || null, user.email, now, now, id),
+    body.ket_qua === "that_bai"
+      ? c.env.DB.prepare(caPhieu ? "UPDATE phieu_sua_chua_bh_ct SET that_lac = 1, ktv_thieu = 1 WHERE phieu_tra_id = ?" : "UPDATE phieu_sua_chua_bh_ct SET that_lac = 1 WHERE phieu_tra_id = ? AND ktv_thieu = 1").bind(id)
+      : c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET that_lac = 0, ktv_thieu = 0 WHERE phieu_tra_id = ?").bind(id),
+  ]);
   await addLog(
     c.env.DB,
     "phieu_tra",
@@ -696,7 +717,7 @@ phieuTra.post("/:id/danh-gia-khieu-nai", async (c) => {
     "khieu_nai_van_chuyen",
     den,
     user.email,
-    (body.ket_qua === "thanh_cong" ? "Kho đánh giá khiếu nại: gửi THÀNH CÔNG (hàng đã tới nơi)" : "Kho đánh giá khiếu nại: gửi THẤT BẠI (thất lạc)") + (ghiChu ? (body.ket_qua === "that_bai" ? " | Phương án xử lý: " : " | ") + ghiChu : ""),
+    (body.ket_qua === "thanh_cong" ? "Kho đánh giá khiếu nại: gửi THÀNH CÔNG (hàng đã tới nơi)" : caPhieu ? "Kho đánh giá khiếu nại: gửi THẤT BẠI (thất lạc cả phiếu)" : `Kho đánh giá khiếu nại: THẤT LẠC ${nThieu}/${cnt?.n} món KTV báo thiếu, phần còn lại KTV đã nhận`) + (ghiChu ? (body.ket_qua === "that_bai" ? " | Phương án xử lý: " : " | ") + ghiChu : ""),
   );
   return c.json({ ok: true });
 });

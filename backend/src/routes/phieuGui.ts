@@ -104,7 +104,7 @@ phieuGui.get("/don-cua-toi", async (c) => {
          g.trang_thai AS gui_trang_thai, g.ngay_gui_xe, g.updated_at AS gui_updated_at,
          (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS khach_hang,
          (SELECT json_group_array(json_object('id', u.id, 'trang_thai', u.trang_thai, 'huong_xu_ly', u.huong_xu_ly, 'ly_do_bo_sung', u.ly_do_bo_sung,
-            'updated_at', u.updated_at, 'ma_lk_nhan', u.ma_lk_nhan, 'ma_lk_thuc_te', u.ma_lk_thuc_te, 'phieu_tra_id', u.phieu_tra_id, 'tra_trang_thai', t.trang_thai))
+            'updated_at', u.updated_at, 'ma_lk_nhan', u.ma_lk_nhan, 'ma_lk_thuc_te', u.ma_lk_thuc_te, 'phieu_tra_id', u.phieu_tra_id, 'tra_trang_thai', t.trang_thai, 'ktv_thieu', u.ktv_thieu, 'that_lac', u.that_lac))
           FROM phieu_sua_chua_bh_ct u LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id WHERE u.parent_id = p.id) AS don_vi_json,
          ${CAN_BO_SUNG} AS can_bo_sung,
          COALESCE((SELECT MAX(u5.updated_at) FROM phieu_sua_chua_bh_ct u5 WHERE u5.parent_id = p.id), g.updated_at) AS cap_nhat

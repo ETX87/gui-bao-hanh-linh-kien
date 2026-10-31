@@ -44,6 +44,8 @@ export interface KtvUnitLite {
   id: string;
   trang_thai: string;
   tra_trang_thai?: string | null;
+  ktv_thieu?: number;
+  that_lac?: number;
 }
 
 export function ktvUnitStage(u: KtvUnitLite): KtvStage {
@@ -53,11 +55,12 @@ export function ktvUnitStage(u: KtvUnitLite): KtvStage {
     case "da_gui":
       return S.dang_tra;
     case "ktv_da_nhan":
-      return S.da_nhan;
+      return u.that_lac ? S.that_lac : S.da_nhan;
     case "gui_that_bai":
       return S.that_lac;
     case "khieu_nai_van_chuyen":
-      return S.khieu_nai;
+      // 31/10/2026: bao thieu theo mon - mon KTV khong bao thieu la da nhan.
+      return u.ktv_thieu === 0 ? S.da_nhan : S.khieu_nai;
     case "nhap":
     case "cho_ke_toan_duyet":
     case "da_duyet_ke_toan":
