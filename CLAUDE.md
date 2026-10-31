@@ -5739,3 +5739,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (`wrangler.qa.jsonc` tạm, D1 `.wrangler/qa3110`, đã xoá config), puppeteer 2 khổ 1440 / 375 cho 6 tài khoản (Admin đủ vai trò, Kho, Kế toán, NV, View, Giám sát): 4 màn mở đúng tab mặc định theo vai trò (Kho → Đang gửi về Kho, Kế toán → Chờ KT duyệt, NV → Việc sửa của tôi, View → Mọi giai đoạn, Giám sát → Thùng nháp); màn không có quyền báo "Không tìm thấy" khớp menu; link cũ chuyển đúng (`#/admin/phan-loai` → `#/don?tab=xu_ly`, `#/ketoan/duyet` → `#/phieu-tra?tab=cho_kt`, `#/quanly/tra-cuu?trang_thai=qua_han` → `#/don?tab=tat_ca&trang_thai=qua_han` lọc 24 đơn); không lỗi console, không tràn ngang. Bấm thật: tiếp nhận nội bộ 1 thùng từ tab mới → `admin_tiep_nhan = 1`, số tab 4 → 2; thùng quá hạn thì nút xác nhận khoá tới khi chọn lý do chậm (đúng); mở chi tiết phiếu trả từ tab Chờ KT duyệt hiện đủ nút Duyệt / Từ chối / Lưu mã / Thêm đơn.
 
+
+**Deploy (31/10/2026):** `npm run deploy` (Version ID `16bcac72`), không có migration mới.
