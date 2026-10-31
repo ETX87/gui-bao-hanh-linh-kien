@@ -5773,3 +5773,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 - tạo thùng mới → có lời nhắc tự điền; bấm "✎ Sửa" → lời nhắc ẩn;
 - sheet "Thêm đơn": nút "📋" rộng 41px, "🔍 Kiểm tra" 103px, chữ không bị cắt (`scrollWidth ≤ clientWidth`);
 - "Bổ sung ngay" → form có ô ảnh, chọn 1 ảnh → hiện ảnh xem trước → "Gửi bổ sung" → PATCH 200; D1 có 1 dòng `phieu_sua_chua_bh_anh` cho DH-000004, nhật ký "KTV đã bổ sung thông tin (kèm 1 ảnh)".
+
+**Deploy (31/10/2026):** `npm run deploy` (Version ID `887dc052`), không có migration mới.
