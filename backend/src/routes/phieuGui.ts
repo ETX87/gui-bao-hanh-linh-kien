@@ -574,6 +574,7 @@ phieuGui.get("/don-vi/tra-cuu", async (c) => {
 interface BoSungBody {
   mo_ta_loi?: string;
   ma_lk?: string;
+  anh?: string[]; // 31/10/2026: KTV gui kem anh chup lai khi Admin yeu cau (gan vao don cha)
 }
 
 // PATCH /api/phieu-gui/don-vi/:id/bo-sung - KTV sua lai mo ta loi/linh kien khi bi Admin BH yeu cau
@@ -599,8 +600,12 @@ phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
   const now = nowVN();
   if (body.mo_ta_loi !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET mo_ta_loi = ? WHERE id = ?").bind(body.mo_ta_loi.trim(), u.parent_id).run();
   if (body.ma_lk !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET ma_lk = ? WHERE id = ?").bind(body.ma_lk, u.parent_id).run();
+  const anhUrls = (Array.isArray(body.anh) ? body.anh : []).filter((x) => typeof x === "string" && x.startsWith("data:image/")).slice(0, 10);
+  if (anhUrls.length > 0) {
+    await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(u.parent_id, url)));
+  }
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_phan_loai', updated_at = ? WHERE id = ?").bind(now, id).run();
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, "KTV đã bổ sung thông tin");
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, anhUrls.length > 0 ? `KTV đã bổ sung thông tin (kèm ${anhUrls.length} ảnh)` : "KTV đã bổ sung thông tin");
   return c.json({ ok: true });
 });
 

@@ -4,6 +4,8 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
+import { ImagePicker } from "../../ui/ImagePicker";
+import { fileToDataUrl } from "../../lib/format";
 import { useLinhKien, lkOptions } from "../../hooks/useLinhKien";
 import { LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
 import type { DonVi } from "../../lib/types";
@@ -16,6 +18,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
   const { items: linhKien } = useLinhKien();
   const [moTa, setMoTa] = useState(unit.mo_ta_loi || "");
   const [maLk, setMaLk] = useState(unit.ma_lk || "");
+  const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
 
   const lyDoRaw = unit.ly_do_bo_sung || "";
@@ -25,7 +28,8 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
   const submit = async () => {
     setBusy(true);
     try {
-      await api.patch(`/phieu-gui/don-vi/${unit.id}/bo-sung`, { mo_ta_loi: moTa, ma_lk: maLk });
+      const anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
+      await api.patch(`/phieu-gui/don-vi/${unit.id}/bo-sung`, { mo_ta_loi: moTa, ma_lk: maLk, anh });
       toast("Đã gửi bổ sung.", "ok");
       onDone();
     } catch (e) {
@@ -56,6 +60,9 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
         </Field>
         <Field label="Mô tả lỗi" required>
           <Textarea rows={3} value={moTa} onChange={(e) => setMoTa(e.target.value)} />
+        </Field>
+        <Field label="Ảnh chụp lại (tuỳ chọn)">
+          <ImagePicker onChange={setAnhFiles} compact />
         </Field>
       </div>
     </Modal>

@@ -196,7 +196,7 @@ export function CaseIdField({
       <Field label={label} required={required}>
         <div className="flex gap-2">
           <Input
-            className="flex-1 min-w-0"
+            className="flex-1 min-w-[8rem]"
             value={caseId}
             onChange={(e) => {
               setCaseId(e.target.value);
@@ -211,12 +211,12 @@ export function CaseIdField({
             placeholder={placeholder}
           />
           {ktvEmail && !caseId.trim() && typeof navigator !== "undefined" && !!navigator.clipboard?.readText && (
-            <Btn variant="secondary" onClick={dan} className="shrink-0" title="Dán mã case vừa sao chép">
-              📋 Dán
+            <Btn variant="secondary" onClick={dan} className="shrink-0 whitespace-nowrap !px-2.5 sm:!px-3" title="Dán mã case vừa sao chép">
+              📋<span className="hidden sm:inline"> Dán</span>
             </Btn>
           )}
-          <Btn variant={lookup.status === "idle" && caseId.trim() ? "primary" : "secondary"} disabled={!canCheck} onClick={lookup.check} className="shrink-0">
-            {lookup.status === "loading" ? "Đang kiểm tra…" : "🔍 Kiểm tra"}
+          <Btn variant={lookup.status === "idle" && caseId.trim() ? "primary" : "secondary"} disabled={!canCheck} onClick={lookup.check} className="shrink-0 whitespace-nowrap">
+            {lookup.status === "loading" ? "Đang…" : "🔍 Kiểm tra"}
           </Btn>
         </div>
         {goiY.length > 0 && !caseId.trim() && (

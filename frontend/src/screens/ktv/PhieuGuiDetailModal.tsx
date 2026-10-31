@@ -63,6 +63,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [ngayGuiXe, setNgayGuiXe] = useState("");
   // 30/10/2026 (UX mobile KTV): khoi van chuyen thu gon 1 dong, bam "Sửa" moi mo form.
   const [vcOpen, setVcOpen] = useState(false);
+  // 31/10/2026: thong tin xe tu dien tu lan gui truoc -> nhac KTV kiem tra lai cho toi khi mo sua / doi.
+  const [vcChecked, setVcChecked] = useState(false);
   // "" = gui ve kho theo khu vuc cua KTV; "MB"/"MN" = chon tay mien kho nhan (KTV MB gui ra MN sua...).
   const [mienGui, setMienGui] = useState("");
   const [addDonOpen, setAddDonOpen] = useState(false);
@@ -174,6 +176,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   // Doi hinh thuc gui: lay lai thong tin da nhap rieng cho hinh thuc do (neu co tren may nay).
   const doiHinhThuc = (v: string) => {
     const prev = hinhThuc;
+    setVcChecked(true);
     setHinhThuc(v);
     if (v === "giao_truc_tiep") return;
     const c = cache?.by[v];
@@ -184,8 +187,15 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
       setMaXe("");
     }
   };
+  const tuDienNote =
+    isNhap && !vcChecked && !giaoTrucTiep && (maXe || dvvc) ? (
+      <p className="mb-2 rounded-lg bg-[var(--amber-100)] px-3 py-1.5 text-xs font-semibold text-[var(--amber-800)]">
+        ↺ Thông tin xe được tự điền theo lần gửi trước — kiểm tra lại đúng xe / nhà xe hôm nay trước khi gửi.
+      </p>
+    ) : null;
   const saveHeader = () =>
     run(async () => {
+      setVcChecked(true);
       await api.patch(`/phieu-gui/${g.id}`, header);
       nhoCache();
       toast("Đã lưu.", "ok");
@@ -393,14 +403,15 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   Lưu nháp
                 </Btn>
               ) : isNhap && gon ? (
-                <Btn size="sm" onClick={() => setVcOpen((v) => !v)}>
+                <Btn size="sm" onClick={() => { setVcOpen((v) => !v); setVcChecked(true); }}>
                   {vcOpen ? "Thu gọn" : "✎ Sửa"}
                 </Btn>
               ) : undefined
             }
           >
+            {tuDienNote}
             {isNhap && gon && !vcOpen ? (
-              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => setVcOpen(true)}>
+              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => { setVcOpen(true); setVcChecked(true); }}>
                 <b>{options.find((o) => o.value === hinhThuc)?.label || "Chưa chọn cách gửi"}</b>
                 {[nguoiGiao, giaoTrucTiep ? "" : dvvc, giaoTrucTiep ? "" : maVanDon, ngayGuiXe && `${giaoTrucTiep ? "giao" : "gửi"} ${ngayGuiXe}`].filter(Boolean).map((x) => ` · ${x}`).join("")}
                 {!giaoTrucTiep && !maXe && <span className="ml-1 font-semibold text-[var(--amber-700)]">· chưa nhập mã xe / tài xế</span>}
@@ -440,7 +451,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                       {giaoTrucTiep ? (
                         <Input value={nguoiGiao} readOnly title="Giao trực tiếp: người giao là chính KTV của thùng" />
                       ) : (
-                        <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
+                        <Input value={maXe} onChange={(e) => { setMaXe(e.target.value); setVcChecked(true); }} list="goiy-ma-xe" autoComplete="off" />
                       )}
                     </Field>
                   </div>
@@ -448,7 +459,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                     <>
                       <div className="sm:col-span-2">
                         <Field label="Đơn vị vận chuyển">
-                          <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
+                          <Input value={dvvc} onChange={(e) => { setDvvc(e.target.value); setVcChecked(true); }} list="goiy-dvvc" autoComplete="off" />
                         </Field>
                       </div>
                       <div className="sm:col-span-2">
@@ -511,14 +522,15 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   Lưu nháp
                 </Btn>
               ) : isNhap && gon ? (
-                <Btn size="sm" onClick={() => setVcOpen((v) => !v)}>
+                <Btn size="sm" onClick={() => { setVcOpen((v) => !v); setVcChecked(true); }}>
                   {vcOpen ? "Thu gọn" : "✎ Sửa"}
                 </Btn>
               ) : undefined
             }
           >
+            {tuDienNote}
             {isNhap && gon && !vcOpen ? (
-              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => setVcOpen(true)}>
+              <button type="button" className="w-full text-left text-[13px] text-[var(--ink-body)]" onClick={() => { setVcOpen(true); setVcChecked(true); }}>
                 <b>{options.find((o) => o.value === hinhThuc)?.label || "Chưa chọn cách gửi"}</b>
                 {[nguoiGiao, giaoTrucTiep ? "" : dvvc, giaoTrucTiep ? "" : maVanDon, ngayGuiXe && `${giaoTrucTiep ? "giao" : "gửi"} ${ngayGuiXe}`].filter(Boolean).map((x) => ` · ${x}`).join("")}
                 {!giaoTrucTiep && !maXe && <span className="ml-1 font-semibold text-[var(--amber-700)]">· chưa nhập mã xe / tài xế</span>}
@@ -558,7 +570,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                       {giaoTrucTiep ? (
                         <Input value={nguoiGiao} readOnly title="Giao trực tiếp: người giao là chính KTV của thùng" />
                       ) : (
-                        <Input value={maXe} onChange={(e) => setMaXe(e.target.value)} list="goiy-ma-xe" autoComplete="off" />
+                        <Input value={maXe} onChange={(e) => { setMaXe(e.target.value); setVcChecked(true); }} list="goiy-ma-xe" autoComplete="off" />
                       )}
                     </Field>
                   </div>
@@ -566,7 +578,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                     <>
                       <div className="sm:col-span-2">
                         <Field label="Đơn vị vận chuyển">
-                          <Input value={dvvc} onChange={(e) => setDvvc(e.target.value)} list="goiy-dvvc" autoComplete="off" />
+                          <Input value={dvvc} onChange={(e) => { setDvvc(e.target.value); setVcChecked(true); }} list="goiy-dvvc" autoComplete="off" />
                         </Field>
                       </div>
                       <div className="sm:col-span-2">
