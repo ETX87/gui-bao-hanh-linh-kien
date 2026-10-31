@@ -5804,3 +5804,5 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Bản chạy thử tạm trên máy (đã xoá sau): tạo thùng từ đơn Odoo → PATCH đổi linh kiện + số lượng 3 + loại Trừ công nợ + mô tả → lưu đúng 4 trường; linh kiện không tồn tại / số lượng 0 bị chặn; đơn thùng đã gửi → `NOT_DRAFT`. Giao diện: bấm đơn mở form điền sẵn, bấm + rồi Lưu → dòng đơn thành ×4.
+
+**Deploy (31/10/2026):** `npm run deploy` (Version ID `1dac4eb5`), không có migration mới (đã kiểm `migrations list` trước: không còn migration chờ). Bundle production mang 1.055.
