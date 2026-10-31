@@ -5701,3 +5701,20 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 **(c) Vấn đề:** heredoc Python dài trong Bash lại lỗi EOF → viết file bằng Write. `/__scheduled` của `wrangler dev --test-scheduled` bị asset SPA chặn (chỉ `/api/*` chạy worker trước) → thêm tạm `/__scheduled` vào `run_worker_first` của config QA. `joinF` trả `binds: unknown[]` → ép kiểu ở `nvSuaChua.ts`.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (`wrangler.qa.jsonc` tạm, D1 `.wrangler/qa3110`, đã xoá config): migration 0020 áp OK; cron điền `tim_kiem` cho 29/29 đơn (VD "dh-000001 … khong len nguon … bom tang ap karofi 24v … tran thi mai … nguyen van an anv.dvkh"). 43 lời gọi API (Admin + KTV) đều 200: "tran thi mai" / "Trần Thị Mai" / "bom tang ap" ra đúng đơn ở bảng Admin, Tra cứu (7), Đơn của tôi, Gửi hàng; "van dien tu" / "bom tang ap" ra đúng phiếu trả; "cam bien" ra đúng thùng ở Kho + Admin; `cham=nguy_hiem` 4, `canh_bao=nguy_hiem` ở Tra cứu 6, `lk_a` / `lk_nhan` / `khoang` lọc đúng; `loc_only` trả thêm `lk_a`, `lk_b`. Ảnh 375px + 1440px của Admin BH, Tra cứu, KTV đang sửa, Kho tiếp nhận: không tràn ngang, đủ ô lọc mới.
+
+**Deploy (31/10/2026):** áp migration 0020 lên D1 production và `npm run deploy` (Version ID `f26f9081`). Chuỗi `tim_kiem` của đơn cũ sẽ được cron 15 phút tính dần, mỗi lần tối đa 400 đơn.
+
+## Gộp các màn hình trùng chức năng — phương án (31/10/2026), CHƯA sửa code
+
+**(a) Nguyên văn:** *"tôi thấy có rất nhiều giao diện có chức năng tương tự nhau nhưng đang bị phân thành nhiều màn hình cho nhiều vai trò, xác định các màn có chức năng tượng tự, gộp chúng lại giảm việc xây dựng quá nhiều giao diện => chỉ tập trung vào 1 số giao diện chính và tái sử dụng chon các vai trò"*
+
+**(b) Phương án:** xem `du an sua chua bao hanh/Gop-Man-Hinh_31-10-2026.md`.
+- Thực chất chỉ có 3 loại danh sách: Phiếu trả (5 màn, cùng 1 API), Đơn bảo hành (5 màn), Thùng hàng (3 nơi).
+- Gộp thành 5 màn chung: Thùng hàng / Đơn bảo hành / Phiếu trả / Trang chủ / Quản trị. Mỗi màn có tab theo giai đoạn và mở mặc định ở tab việc của vai trò.
+- Giữ riêng: Cấp linh kiện, Lịch sử, 3 màn mobile của KTV.
+- Menu Admin từ 19 xuống 7 mục.
+- Làm 3 đợt: Phiếu trả → Thùng hàng + Trang chủ → Đơn bảo hành + Quản trị.
+- Quyền dữ liệu vẫn lọc ở backend. Link cũ phải chuyển tiếp sang màn mới.
+
+**Câu hỏi mở:** người dùng duyệt phương án / thứ tự trước khi sửa code.
+
