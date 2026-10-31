@@ -325,8 +325,10 @@ phieuGui.get("/:id", async (c) => {
   const [{ results: logs }, { results: tienDo }] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_gui' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
     c.env.DB.prepare(
-      `SELECT u.parent_id, u.trang_thai, COUNT(*) AS n FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-       WHERE p.phieu_gui_id = ? GROUP BY u.parent_id, u.trang_thai`,
+      // 31/10/2026: kem trang thai phieu tra - don da tra / KTV da nhan khong con hien "dang chuan bi tra".
+      `SELECT u.parent_id, u.trang_thai, t.trang_thai AS tra_trang_thai, COUNT(*) AS n FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
+       WHERE p.phieu_gui_id = ? GROUP BY u.parent_id, u.trang_thai, t.trang_thai`,
     )
       .bind(id)
       .all(),

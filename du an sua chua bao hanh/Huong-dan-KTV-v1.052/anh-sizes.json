@@ -1,0 +1,142 @@
+{
+ "logo.png": [
+  192,
+  192
+ ],
+ "s01_dang_nhap.jpg": [
+  780,
+  1688
+ ],
+ "s02a_trang_chu.jpg": [
+  780,
+  1688
+ ],
+ "s02b_trang_chu_duoi.jpg": [
+  780,
+  1688
+ ],
+ "s10_don_odoo.jpg": [
+  780,
+  1688
+ ],
+ "s11_chon_don.jpg": [
+  780,
+  1688
+ ],
+ "s12_thung_vua_tao.jpg": [
+  780,
+  1688
+ ],
+ "s13_van_chuyen.jpg": [
+  780,
+  1688
+ ],
+ "s14_giao_truc_tiep.jpg": [
+  780,
+  1688
+ ],
+ "s15_qr.jpg": [
+  780,
+  1688
+ ],
+ "s16_sau_xac_nhan.jpg": [
+  780,
+  1688
+ ],
+ "s17_thung_cua_toi.jpg": [
+  780,
+  1688
+ ],
+ "s20_thung_trong.jpg": [
+  780,
+  1688
+ ],
+ "s21_ma_case_dung.jpg": [
+  780,
+  1688
+ ],
+ "s22_chon_linh_kien.jpg": [
+  780,
+  1688
+ ],
+ "s23_dien_don.jpg": [
+  780,
+  1688
+ ],
+ "s24_thung_co_don.jpg": [
+  780,
+  1688
+ ],
+ "s25_ma_case_sai.jpg": [
+  780,
+  1688
+ ],
+ "s26_trao_doi.jpg": [
+  780,
+  1688
+ ],
+ "s27_thung_nhap_tren_trang_chu.jpg": [
+  780,
+  1688
+ ],
+ "s30_don_cua_toi.jpg": [
+  780,
+  1688
+ ],
+ "s31_the_don.jpg": [
+  780,
+  406
+ ],
+ "s32_chi_tiet_thung.jpg": [
+  780,
+  1688
+ ],
+ "s33_bo_sung.jpg": [
+  780,
+  1688
+ ],
+ "s34_da_xong.jpg": [
+  780,
+  1688
+ ],
+ "s35_odoo_da_gui.jpg": [
+  780,
+  1688
+ ],
+ "s40_nhan_hang.jpg": [
+  780,
+  1688
+ ],
+ "s41_khong_nhan_duoc.jpg": [
+  780,
+  1688
+ ],
+ "s42_sau_da_nhan.jpg": [
+  780,
+  1688
+ ],
+ "s43_da_xong_sau_nhan.jpg": [
+  780,
+  1688
+ ],
+ "s50_menu_huy.jpg": [
+  780,
+  1688
+ ],
+ "s51_xac_nhan_huy.jpg": [
+  780,
+  1688
+ ],
+ "s52_huy_bo_mo_lai.jpg": [
+  780,
+  1688
+ ],
+ "s53_cai_app.jpg": [
+  780,
+  1688
+ ],
+ "s54_lich_su.jpg": [
+  780,
+  1688
+ ]
+}

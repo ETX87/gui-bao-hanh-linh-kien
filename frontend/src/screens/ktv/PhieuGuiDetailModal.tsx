@@ -33,7 +33,7 @@ interface DetailResponse {
   don_cha: DonCha[];
   goi_y?: { ma_xe: string[]; dvvc: string[] };
   logs?: LogRow[];
-  tien_do?: { parent_id: string; trang_thai: string; n: number }[];
+  tien_do?: { parent_id: string; trang_thai: string; tra_trang_thai?: string | null; n: number }[];
   mien_ktv?: string | null;
 }
 const MIEN_TEN = (m: string | null | undefined) => (m === "MB" ? "Miền Bắc" : m === "MN" ? "Miền Nam" : "Chưa khai báo");
@@ -354,7 +354,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                         {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
                         {td.map((x) => (
                           <Badge key={x.trang_thai} tone="gray" className="!font-medium">
-                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
                           </Badge>
                         ))}
                         {isNhap && (
@@ -657,7 +657,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                         {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
                         {td.map((x) => (
                           <Badge key={x.trang_thai} tone="gray" className="!font-medium">
-                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
                           </Badge>
                         ))}
                         {isNhap && (
