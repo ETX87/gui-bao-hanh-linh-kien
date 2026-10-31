@@ -16,7 +16,7 @@
   ],
   "shortcuts": [
     { "name": "Gửi hàng bảo hành", "short_name": "Gửi hàng", "url": "/#/ktv/tao-phieu", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Tiếp nhận (Kho)", "short_name": "Tiếp nhận", "url": "/#/kho/tiep-nhan", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Xử lý đơn bảo hành", "short_name": "Xử lý đơn", "url": "/#/admin/phan-loai", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Thùng hàng", "short_name": "Thùng hàng", "url": "/#/thung", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Đơn bảo hành", "short_name": "Đơn BH", "url": "/#/don", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }

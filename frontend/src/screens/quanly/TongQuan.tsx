@@ -11,7 +11,7 @@ import { GIAI_DOAN } from "../../lib/constants";
 // Phat hien 12 vong ra soat UX: them khoi "Qua han SLA" noi bat + bam moi o dem -> sang man tra cuu
 // DA LOC SAN theo trang thai do (truoc day bam chi sang tra cuu khong loc gi).
 
-export function QuanLyTongQuanScreen() {
+export function QuanLyTongQuanScreen({ hideCanhBao }: { hideCanhBao?: boolean } = {}) {
   const { nav } = useRoute();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [quaHan, setQuaHan] = useState(0);
@@ -30,7 +30,7 @@ export function QuanLyTongQuanScreen() {
   if (loading) return <Spinner />;
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const goto = (st: string) => nav(`/quanly/tra-cuu?trang_thai=${st}`);
+  const goto = (st: string) => nav(`/don?tab=tat_ca&trang_thai=${st}`);
 
   return (
     <div className="space-y-3">
@@ -50,7 +50,7 @@ export function QuanLyTongQuanScreen() {
         </button>
       </Card>
 
-      <CanhBaoTonDon />
+      {!hideCanhBao && <CanhBaoTonDon />}
 
       <Card className="p-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn theo giai đoạn (cả thùng chưa về)</h3>

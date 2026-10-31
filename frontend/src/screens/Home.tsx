@@ -6,6 +6,7 @@ import { routesForUser } from "../layout/routes";
 import { Card, StatCard } from "../ui/primitives";
 import type { AppUser } from "../lib/types";
 import { CanhBaoTonDon } from "./shared/CanhBaoTonDon";
+import { QuanLyTongQuanScreen } from "./quanly/TongQuan";
 
 // Trang chu - "Viec cua toi" (chi hien muc co viec, tone coral, port dung MyWorkloadStrip) + luoi
 // StatCard day du moi hang doi theo dung vai tro dang dang nhap (ke ca muc =0, lam mo - nguyen tac
@@ -36,19 +37,19 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   ktv_odoo_cho_gui: "/ktv/tao-phieu",
   ktv_cho_bo_sung: "/ktv/tra-cuu",
   ktv_nhan_hang: "/ktv/nhan-hang",
-  kho_cho_tiep_nhan: "/kho/tiep-nhan",
-  kho_cho_dong_goi: "/kho/dong-goi",
-  kho_cho_ban_giao: "/kho/tiep-nhan",
-  kho_khieu_nai: "/kho/dong-goi",
-  admin_cho_tiep_nhan_noi_bo: "/admin/phan-loai",
-  admin_cho_xac_nhan_sl: "/admin/phan-loai",
-  admin_cho_phan_loai: "/admin/phan-loai",
-  admin_cho_xac_nhan_hoan_tat: "/admin/xac-nhan",
-  admin_san_sang_gom: "/admin/phieu-tra",
+  kho_cho_tiep_nhan: "/thung?tab=dang_gui",
+  kho_cho_dong_goi: "/phieu-tra?tab=cho_kho",
+  kho_cho_ban_giao: "/thung?tab=cho_admin",
+  kho_khieu_nai: "/phieu-tra?tab=khieu_nai",
+  admin_cho_tiep_nhan_noi_bo: "/thung?tab=cho_admin",
+  admin_cho_xac_nhan_sl: "/don?tab=xu_ly",
+  admin_cho_phan_loai: "/don?tab=xu_ly",
+  admin_cho_xac_nhan_hoan_tat: "/don?tab=hoan_tat",
+  admin_san_sang_gom: "/phieu-tra?tab=cho_tao",
   admin_de_xuat_cho_cap: "/admin/de-xuat",
-  admin_phieu_tra_tu_choi: "/admin/phieu-tra-ke-toan",
-  nv_cho_chan_doan: "/nv/viec-cua-toi",
-  ketoan_cho_duyet: "/ketoan/duyet",
+  admin_phieu_tra_tu_choi: "/phieu-tra?tab=tu_choi_kt",
+  nv_cho_chan_doan: "/don?tab=nv",
+  ketoan_cho_duyet: "/phieu-tra?tab=cho_kt",
 };
 
 const ICON_OF: Record<keyof WorkloadCounts, string> = {
@@ -103,7 +104,7 @@ export function HomeScreen({ user }: { user: AppUser }) {
   const routeHashes = new Set(routesForUser(user).map((r) => r.hash));
   // "Don Odoo cho gui sua" chi dem don cua chinh KTV that - an voi nguoi "tao ho" (GS/Admin BH/qtri).
   const isRealKtv = user.la_ktv_dvbh || user.la_ve_tinh;
-  const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!) && (k !== "ktv_odoo_cho_gui" || isRealKtv));
+  const relevantKeys = (Object.keys(LABELS) as (keyof WorkloadCounts)[]).filter((k) => HASH_OF[k] && routeHashes.has(HASH_OF[k]!.split("?")[0]) && (k !== "ktv_odoo_cho_gui" || isRealKtv));
   const myWork = relevantKeys.filter((k) => counts[k] > 0).sort((a, b) => counts[b] - counts[a]);
   const total = myWork.reduce((s, k) => s + counts[k], 0);
   // DESIGN_SYSTEM.md §8.4: danh sach dai tren mobile chi hien vai muc dau + "Xem them".
@@ -144,6 +145,9 @@ export function HomeScreen({ user }: { user: AppUser }) {
 
       {/* 12/10/2026: canh bao don ton + thoi gian xu ly TB theo vai tro. */}
       <CanhBaoTonDon canTinhLai={user.la_admin_bh || user.la_qtri} />
+
+      {/* 31/10/2026: gop man "Tổng quan hệ thống" vao Trang chu (vai tro theo doi + Admin). */}
+      {(user.la_giam_sat || user.la_view || user.la_admin_bh || user.la_qtri) && <QuanLyTongQuanScreen hideCanhBao />}
 
       {/* Dien thoai: hero da liet ke du viec dang cho -> an luoi KPI (lap thong tin, dai 1,5 man hinh). */}
       <div className="hidden md:block">

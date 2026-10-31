@@ -27,13 +27,13 @@ export const THUNG_PLACEHOLDER = "Tìm mã thùng, vận đơn, nhà xe, KTV, m�
 // 20/10/2026: "admin bh có thể tự xác nhận hộ cho kho nếu thực tế hàng đã về đế tay admin bh (Ktv giao
 // trực tiếp)" - thung dang gui ve Kho (da_gui), Admin bam "Nhan ho Kho" -> bo qua Kho tiep nhan + tiep
 // nhan noi bo (POST /admin/phieu-gui/:id/nhan-ho-kho).
-export function ThungDangGuiCard({ onDone, reloadKey }: { onDone: () => void; reloadKey: number }) {
+export function ThungDangGuiCard({ onDone, reloadKey, alwaysOpen }: { onDone: () => void; reloadKey: number; alwaysOpen?: boolean }) {
   const flt = useListFilters("/admin/phieu-gui?trang_thai=da_gui", THUNG_DEFS.map((d) => d.key));
   const { items, total, page, pageCount, setPage, reload } = usePagedApi<PhieuGui>(withQuery(`/admin/phieu-gui?trang_thai=da_gui&_k=${reloadKey}`, flt.query), "phieu_gui");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!alwaysOpen);
   const [pick, setPick] = useState<PhieuGui | null>(null);
   const [view, setView] = useState<PhieuGui | null>(null);
-  if (total === 0 && !flt.active) return null;
+  if (total === 0 && !flt.active && !alwaysOpen) return null;
   return (
     <Card className="px-3 py-2">
       <button type="button" className="flex items-center gap-2 text-left w-full" onClick={() => setOpen((o) => !o)}>

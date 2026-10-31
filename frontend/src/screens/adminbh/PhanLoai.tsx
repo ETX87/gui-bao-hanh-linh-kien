@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
@@ -10,9 +9,7 @@ import { XacNhanSoLuongModal } from "./XacNhanSoLuongModal";
 import { DonDichVuModal } from "./DonDichVuModal";
 import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
-import { TiepNhanNoiBoModal } from "./TiepNhanNoiBoModal";
-import { ThungDangGuiCard, THUNG_DEFS, THUNG_PLACEHOLDER } from "./NhanHoKho";
-import { FilterBar, useListFilters, withQuery } from "../../ui/FilterBar";
+import { ThungChoNhanLink } from "./ThungNoiBo";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
@@ -20,8 +17,7 @@ import { FastActionsModal } from "../shared/FastActionsModal";
 import { YeuCauBoSungModal } from "../shared/YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
 import { OdooImportExportModal } from "../shared/OdooImportExportModal";
-import type { AppUser, DonCha, DonVi, PhieuGui } from "../../lib/types";
-import { UserName } from "../../hooks/useUserNames";
+import type { AppUser, DonCha, DonVi } from "../../lib/types";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
 // 1) Thung cho xac nhan tiep nhan noi bo tu Kho, 2) Bang thong nhat GOP ca don cha (cho xac nhan SL)
@@ -41,16 +37,6 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [optsKey, setOptsKey] = useState(0);
   const [bulkSlOpen, setBulkSlOpen] = useState(false);
   const { refresh } = useWorkload();
-  const thungFlt = useListFilters("/admin/phieu-gui", THUNG_DEFS.map((d) => d.key));
-  const {
-    items: phieuGui,
-    total: phieuGuiTotal,
-    page: phieuGuiPage,
-    pageCount: phieuGuiPageCount,
-    setPage: setPhieuGuiPage,
-    loading: loadingPhieuGui,
-    reload: reloadPhieuGui,
-  } = usePagedApi<PhieuGui>(withQuery("/admin/phieu-gui", thungFlt.query), "phieu_gui");
   const {
     items: donCha,
     total: donChaTotal,
@@ -86,24 +72,12 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const [baoCaoSaiFor, setBaoCaoSaiFor] = useState<string | null>(null);
 
   const afterChange = () => {
-    reloadPhieuGui();
     reloadDonCha();
     reloadDonVi();
     setOptsKey((k) => k + 1);
     refresh();
   };
 
-  // Tiep nhan noi bo 1 hoac nhieu thung (12/10/2026) - qua modal de hoi ly do cham khi qua han.
-  const [thungChon, setThungChon] = useState<Set<string>>(new Set());
-  const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui[] | null>(null);
-  const [viewThung, setViewThung] = useState<PhieuGui | null>(null);
-  useEffect(() => setThungChon(new Set()), [phieuGuiPage]);
-  const toggleThung = (id: string, on: boolean) =>
-    setThungChon((prev) => {
-      const n = new Set(prev);
-      on ? n.add(id) : n.delete(id);
-      return n;
-    });
 
   const toggleAll = (ids: string[], checked: boolean) =>
     setSelected((prev) => {
@@ -121,61 +95,11 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     });
   };
 
-  if ((loadingPhieuGui && phieuGui.length === 0 && phieuGuiTotal === 0) || (loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0 && !qs)) return <Spinner />;
+  if ((loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0 && !qs)) return <Spinner />;
 
   return (
     <div className="space-y-3">
-      {(phieuGuiTotal > 0 || thungFlt.active > 0) && (
-        <Card className="px-3 py-2">
-          {(phieuGuiTotal > 5 || thungFlt.active > 0) && <FilterBar f={thungFlt} defs={THUNG_DEFS} placeholder={THUNG_PLACEHOLDER} />}
-          <div className="flex flex-col md:flex-row md:items-start gap-2">
-            <div className="shrink-0 flex flex-wrap items-center gap-2 md:pt-0.5">
-              <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Thùng chờ tiếp nhận nội bộ ({phieuGuiTotal})</h3>
-              <label className="flex items-center gap-1 text-xs text-[var(--ink-soft)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={phieuGui.length > 0 && phieuGui.every((g) => thungChon.has(g.id))}
-                  onChange={(e) => setThungChon(e.target.checked ? new Set(phieuGui.map((g) => g.id)) : new Set())}
-                />
-                Chọn tất cả
-              </label>
-              {thungChon.size > 0 && (
-                <Btn variant="primary" size="sm" onClick={() => setTiepNhanFor(phieuGui.filter((g) => thungChon.has(g.id)))}>
-                  Xác nhận đã nhận {thungChon.size} thùng
-                </Btn>
-              )}
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col md:flex-row md:flex-wrap gap-1.5 md:max-h-[72px] md:overflow-y-auto scrollbar-thin">
-              {phieuGui.map((g) => (
-                <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pl-2 pr-1 py-0.5 flex items-center gap-2 text-[13px] cursor-pointer hover:bg-[var(--surface)]" onClick={() => setViewThung(g)} title="Bấm để mở thùng xem bên trong">
-                  <input type="checkbox" checked={thungChon.has(g.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleThung(g.id, e.target.checked)} aria-label={`Chọn thùng ${g.id}`} />
-                  <span className="font-mono text-xs font-semibold text-[var(--link)] shrink-0">{g.id}</span>
-                  <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate max-w-[180px]" />
-                  <span className="text-xs text-[var(--ink-soft)] shrink-0">{g.so_don ?? 0} đơn</span>
-                  {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Sự cố</Badge>}
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
-                  </span>
-                  <Btn
-                    variant="primary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTiepNhanFor([g]);
-                    }}
-                    className="ml-auto shrink-0"
-                  >
-                    Xác nhận đã nhận
-                  </Btn>
-                </div>
-              ))}
-            </div>
-          </div>
-          <Pagination page={phieuGuiPage} pageCount={phieuGuiPageCount} total={phieuGuiTotal} onChange={setPhieuGuiPage} />
-        </Card>
-      )}
-
-      <ThungDangGuiCard onDone={afterChange} reloadKey={optsKey} />
+      <ThungChoNhanLink />
 
       <Card className="p-3">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -240,30 +164,6 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onClose={() => setXacNhanSlFor(null)}
           onDone={() => {
             setXacNhanSlFor(null);
-            afterChange();
-          }}
-        />
-      )}
-      {viewThung && (
-        <PhieuGuiDetailModal
-          guiId={viewThung.id}
-          onClose={() => setViewThung(null)}
-          onChanged={afterChange}
-          actions={
-            <Btn variant="primary" onClick={() => setTiepNhanFor([viewThung])}>
-              ✔ Xác nhận đã nhận
-            </Btn>
-          }
-        />
-      )}
-      {tiepNhanFor && (
-        <TiepNhanNoiBoModal
-          thung={tiepNhanFor}
-          onClose={() => setTiepNhanFor(null)}
-          onDone={() => {
-            setTiepNhanFor(null);
-            setViewThung(null);
-            setThungChon(new Set());
             afterChange();
           }}
         />

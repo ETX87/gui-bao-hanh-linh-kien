@@ -23,7 +23,7 @@ export interface TtTab {
   label: string;
 }
 
-export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { user: AppUser; title: string; tabs: TtTab[]; reloadKey?: number; onChanged?: () => void }) {
+export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extraCols, emptyText }: { user: AppUser; title: string; tabs: TtTab[]; reloadKey?: number; onChanged?: () => void; extraCols?: Column<PhieuTra>[]; emptyText?: string }) {
   const { refresh } = useWorkload();
   const [tab, setTab] = useState(tabs[0].value);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -66,6 +66,7 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { 
           ""
         ),
     },
+    ...(extraCols ?? []),
   ];
 
   return (
@@ -74,7 +75,7 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { 
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">
           {title} ({total})
         </h3>
-        <div className="flex flex-wrap gap-1">
+        {tabs.length > 1 && <div className="flex flex-wrap gap-1">
           {tabs.map((t) => (
             <button
               key={t.value}
@@ -85,10 +86,10 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged }: { 
               {t.label}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, vận đơn, KTV, mã đơn, case, linh kiện…" />
-      <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={soLoc ? "Không có phiếu trả nào khớp bộ lọc." : "Không có phiếu trả nào."} />
+      <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={soLoc ? "Không có phiếu trả nào khớp bộ lọc." : emptyText || "Không có phiếu trả nào."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <PhieuTraDetailModal
@@ -120,26 +121,6 @@ export function LocSelect({ label, value, onChange, options }: { label: string; 
           </option>
         ))}
       </Select>
-    </div>
-  );
-}
-
-// Man rieng "Phieu da gui ke toan" (#/admin/phieu-tra-ke-toan).
-export function AdminPhieuTraKeToanScreen({ user }: { user: AppUser }) {
-  return (
-    <div className="space-y-3">
-      <PhieuTraListCard
-        user={user}
-        title="Phiếu trả đã gửi kế toán"
-        tabs={[
-          { value: "cho_ke_toan_duyet", label: "Chờ KT duyệt" },
-          { value: "tu_choi_kt", label: "↩ KT từ chối" },
-          { value: "da_duyet_ke_toan", label: "KT đã duyệt — chờ Kho" },
-          { value: "da_gui,khieu_nai_van_chuyen", label: "Đang gửi KTV" },
-          { value: "ktv_da_nhan,gui_that_bai,ket_thuc_khong_gui", label: "Đã kết thúc" },
-          { value: "cho_ke_toan_duyet,da_duyet_ke_toan,da_gui,khieu_nai_van_chuyen,ktv_da_nhan,gui_that_bai,ket_thuc_khong_gui", label: "Tất cả" },
-        ]}
-      />
     </div>
   );
 }

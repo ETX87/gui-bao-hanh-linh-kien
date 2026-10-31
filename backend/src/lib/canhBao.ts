@@ -52,7 +52,7 @@ export const STAGES: StageDef[] = [
     since: `COALESCE((SELECT MAX(l.thoi_gian) FROM logs_bh l WHERE l.entity_type = 'phieu_gui' AND l.entity_id = g.id AND l.den_trang_thai = 'da_gui'), g.updated_at)`,
     ktvCol: "g.nguoi_tao",
     mienAlias: "g",
-    hash: { kho: "/kho/tiep-nhan", theo_doi: "/quanly/tong-quan" },
+    hash: { kho: "/thung?tab=dang_gui", theo_doi: "/don?tab=tat_ca" },
   },
   {
     key: "ban_giao",
@@ -63,7 +63,7 @@ export const STAGES: StageDef[] = [
     since: "COALESCE(g.thoi_gian_nhan_kho, g.updated_at)",
     ktvCol: "g.nguoi_tao",
     mienAlias: "g",
-    hash: { admin: "/admin/phan-loai", kho: "/kho/tiep-nhan" },
+    hash: { admin: "/thung?tab=cho_admin", kho: "/thung?tab=cho_admin" },
   },
   {
     key: "xac_nhan_sl",
@@ -74,7 +74,7 @@ export const STAGES: StageDef[] = [
     since: "COALESCE(g.admin_thoi_gian_nhan, p.created_at)",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { admin: "/admin/phan-loai" },
+    hash: { admin: "/don?tab=xu_ly" },
   },
   {
     key: "phan_loai",
@@ -85,7 +85,7 @@ export const STAGES: StageDef[] = [
     since: "u.updated_at",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { admin: "/admin/phan-loai" },
+    hash: { admin: "/don?tab=xu_ly" },
   },
   {
     key: "bo_sung",
@@ -97,7 +97,7 @@ export const STAGES: StageDef[] = [
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
     own: { vai_tro: "ktv", col: "g.nguoi_tao" },
-    hash: { ktv: "/ktv/tra-cuu", admin: "/admin/phan-loai" },
+    hash: { ktv: "/ktv/tra-cuu", admin: "/don?tab=xu_ly" },
   },
   {
     key: "chan_doan",
@@ -109,7 +109,7 @@ export const STAGES: StageDef[] = [
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
     own: { vai_tro: "nv", col: "u.nguoi_sua_chua" },
-    hash: { nv: "/nv/viec-cua-toi" },
+    hash: { nv: "/don?tab=nv" },
   },
   {
     // 12/10/2026: NV de xuat cap linh kien, Admin BH chua len MISA xuat kho.
@@ -122,7 +122,7 @@ export const STAGES: StageDef[] = [
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
     own: { vai_tro: "nv", col: "d.nguoi_de_xuat" },
-    hash: { admin: "/admin/de-xuat", nv: "/nv/viec-cua-toi" },
+    hash: { admin: "/admin/de-xuat", nv: "/don?tab=nv" },
   },
   {
     key: "xac_nhan_ht",
@@ -133,7 +133,7 @@ export const STAGES: StageDef[] = [
     since: "u.updated_at",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { admin: "/admin/xac-nhan" },
+    hash: { admin: "/don?tab=hoan_tat" },
   },
   {
     key: "gom_phieu_tra",
@@ -144,7 +144,7 @@ export const STAGES: StageDef[] = [
     since: "u.updated_at",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { admin: "/admin/phieu-tra" },
+    hash: { admin: "/phieu-tra?tab=cho_tao" },
   },
   {
     key: "phieu_tra_nhap",
@@ -155,7 +155,7 @@ export const STAGES: StageDef[] = [
     since: "t.created_at",
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
-    hash: { admin: "/admin/phieu-tra" },
+    hash: { admin: "/phieu-tra?tab=nhap" },
   },
   {
     key: "ke_toan",
@@ -166,7 +166,7 @@ export const STAGES: StageDef[] = [
     since: "t.updated_at",
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
-    hash: { ketoan: "/ketoan/duyet" },
+    hash: { ketoan: "/phieu-tra?tab=cho_kt" },
   },
   {
     key: "kho_dong_goi",
@@ -177,7 +177,7 @@ export const STAGES: StageDef[] = [
     since: "t.updated_at",
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
-    hash: { kho: "/kho/dong-goi" },
+    hash: { kho: "/phieu-tra?tab=cho_kho" },
   },
   {
     key: "ktv_nhan",
@@ -189,7 +189,7 @@ export const STAGES: StageDef[] = [
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
     own: { vai_tro: "ktv", col: "t.ktv_nhan" },
-    hash: { ktv: "/ktv/nhan-hang", kho: "/kho/dong-goi" },
+    hash: { ktv: "/ktv/nhan-hang", kho: "/phieu-tra?tab=dang_gui" },
   },
   {
     // 12/10/2026: KTV bao khong nhan duoc hang, Kho chua danh gia gui thanh cong / that bai.
@@ -201,7 +201,7 @@ export const STAGES: StageDef[] = [
     since: "t.updated_at",
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
-    hash: { kho: "/kho/dong-goi" },
+    hash: { kho: "/phieu-tra?tab=khieu_nai" },
   },
 ];
 

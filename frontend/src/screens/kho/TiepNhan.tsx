@@ -34,7 +34,10 @@ const DEFS: FilterDef[] = [
   KHOANG_DEF,
 ];
 
-export function KhoTiepNhanScreen() {
+// 31/10/2026: dung lam noi dung tab o man chung "Thùng hàng" - only = phan can hien.
+export type KhoPhan = "cho_nhan" | "ban_giao" | "gan_day";
+export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
+  const hien = (k: KhoPhan) => !only || only === k;
   const toast = useToast();
   const { refresh } = useWorkload();
   const flt = useListFilters("/kho/phieu-gui?trang_thai=da_gui", DEFS.map((d) => d.key));
@@ -77,12 +80,12 @@ export function KhoTiepNhanScreen() {
     }
   };
 
-  if (loading && pending.length === 0 && !flt.active) return <Spinner />;
+  if (hien("cho_nhan") && loading && pending.length === 0 && !flt.active) return <Spinner />;
 
   return (
     <div className="space-y-3">
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, KTV, mã case, tên khách, linh kiện bên trong…" />
-      <Card className="p-3">
+      {only !== "gan_day" && <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, vận đơn, nhà xe, KTV, mã case, tên khách, linh kiện bên trong…" />}
+      {hien("cho_nhan") && <Card className="p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
@@ -122,14 +125,15 @@ export function KhoTiepNhanScreen() {
           </div>
         )}
         <Pagination page={page} pageCount={pageCount} total={pendingTotal} onChange={setPage} />
-      </Card>
+      </Card>}
 
-      {banGiao.total > 0 && (
+      {hien("ban_giao") && (banGiao.total > 0 || only === "ban_giao") && (
         <Card className="p-3 border-l-4 border-l-[var(--blue-500)]">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2 truncate">
             🤝 Chờ bàn giao cho Admin bảo hành ({banGiao.total})
             <span className="ml-2 hidden md:inline text-xs font-normal text-[var(--ink-soft)]">Kho đã nhận, Admin BH chưa bấm "Xác nhận đã nhận" — mang thùng sang và nhắc. Giờ tính từ lúc Kho nhận.</span>
           </h3>
+          {banGiao.items.length === 0 && <EmptyState text="Không có thùng nào chờ bàn giao cho Admin." />}
           <div className="space-y-1">
             {banGiao.items.map((g) => (
               <div key={g.id} className="flex items-center flex-wrap gap-x-3 gap-y-1 rounded-lg border border-[var(--line)] px-2.5 py-1 text-[13px] hover:bg-[var(--surface-2)] cursor-pointer" onClick={() => setLogFor(g.id)}>
@@ -146,7 +150,7 @@ export function KhoTiepNhanScreen() {
         </Card>
       )}
 
-      <Card className="p-3">
+      {hien("gan_day") && <Card className="p-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">Đã tiếp nhận gần đây</h3>
         {recent.length === 0 ? (
           <EmptyState text="Chưa tiếp nhận thùng nào." />
@@ -164,7 +168,7 @@ export function KhoTiepNhanScreen() {
             ))}
           </div>
         )}
-      </Card>
+      </Card>}
 
       {viewFor && (
         <PhieuGuiDetailModal

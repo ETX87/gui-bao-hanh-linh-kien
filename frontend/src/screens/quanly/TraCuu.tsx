@@ -102,7 +102,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
           stFilter && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1">
             Lọc: {stLabel}
-            <button onClick={() => nav("/quanly/tra-cuu")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
+            <button onClick={() => nav("/don?tab=tat_ca")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
               ✕
             </button>
           </span>

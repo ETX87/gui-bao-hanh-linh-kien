@@ -11,7 +11,6 @@ import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS, TRANG_THAI_PHIEU_TRA_LABELS, KHACH_LE_KEY, doiTacKeyFromName } from "../../lib/constants";
 import { fmtDate } from "../../lib/format";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
-import { PhieuTraListCard } from "./PhieuTraList";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { useClientPage } from "../../hooks/useClientPage";
 import type { AppUser, PhieuTra } from "../../lib/types";
@@ -37,7 +36,6 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [listKey, setListKey] = useState(0);
 
   const loadSanSang = () => api.get<{ don_vi: ReturnUnit[] }>("/phieu-tra/san-sang").then((r) => setSanSang(r.don_vi));
   useEffect(() => {
@@ -47,7 +45,6 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
   const afterChange = () => {
     setSelected(new Set());
     loadSanSang();
-    setListKey((k) => k + 1);
     refresh();
   };
 
@@ -192,18 +189,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
         )}
       </Card>
 
-      <PhieuTraListCard
-        user={user}
-        title="Phiếu trả đang làm"
-        reloadKey={listKey}
-        onChanged={afterChange}
-        tabs={[
-          { value: "nhap", label: "Nháp / bị trả lại" },
-          { value: "tu_choi_kt", label: "↩ KT từ chối" },
-          { value: "", label: "Tất cả" },
-        ]}
-      />
-      <p className="text-xs text-[var(--ink-soft)] px-1">Phiếu đã gửi Kế toán xem ở menu <a className="text-[var(--link)] font-semibold" href="#/admin/phieu-tra-ke-toan">Phiếu đã gửi kế toán</a>.</p>
+      <p className="text-xs text-[var(--ink-soft)] px-1">Phiếu vừa tạo nằm ở tab <a className="text-[var(--link)] font-semibold" href="#/phieu-tra?tab=nhap">Nháp</a> — bổ sung mã rồi gửi duyệt Kế toán.</p>
 
       {detailId && <PhieuTraDetailModal traId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={afterChange} />}
       {openUnit && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={afterChange} />}

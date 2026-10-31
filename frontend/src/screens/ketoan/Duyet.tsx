@@ -28,33 +28,11 @@ const KT_KQ_TONE: Record<string, "green" | "red" | "orange" | "gray"> = { duyet:
 const BASE_CHO = "/phieu-tra?trang_thai=cho_ke_toan_duyet";
 const BASE_DA = "/phieu-tra?kt_da_xu_ly=1";
 
-export function KeToanDuyetScreen({ user }: { user: AppUser }) {
-  const [tab, setTab] = useState<"cho" | "da">("cho");
-  const { counts } = useWorkload();
-  const soCho = counts.ketoan_cho_duyet ?? 0;
+// 31/10/2026: gop vao man chung "Phieu tra" (#/phieu-tra?tab=kt_da) - tab "Chờ KT duyệt" dung danh sach chung.
+export function KtDaXuLyCard({ user }: { user: AppUser }) {
   return (
     <Card className="p-3">
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">💰 Duyệt phiếu trả</h3>
-        <div className="flex flex-wrap gap-1">
-          {(
-            [
-              ["cho", `Chờ duyệt${soCho ? ` · ${soCho}` : ""}`],
-              ["da", "Đã xử lý"],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setTab(v)}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold border ${tab === v ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-body)] hover:bg-[var(--surface-2)]"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {tab === "cho" ? <ChoDuyetList key="cho" user={user} /> : <DaXuLyList key="da" user={user} />}
+      <DaXuLyList user={user} />
     </Card>
   );
 }
@@ -69,33 +47,6 @@ function baseCols(): Column<Row>[] {
     { key: "madh", header: "Mã đơn hàng", render: (r) => r.ma_don_hang || "—" },
     { key: "misa", header: "Mã MISA", render: (r) => r.ma_misa || "—" },
   ];
-}
-
-function ChoDuyetList({ user }: { user: AppUser }) {
-  const { refresh } = useWorkload();
-  const DEFS = phieuTraDefs();
-  const flt = useListFilters(BASE_CHO, DEFS.map((d) => d.key));
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<Row>(withQuery(BASE_CHO, flt.query), "phieu_tra");
-  const [detailId, setDetailId] = useState<string | null>(null);
-  if (loading && rows.length === 0 && !flt.active) return <Spinner />;
-  return (
-    <>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, KTV, mã case, tên khách, linh kiện bên trong…" />
-      <Table columns={baseCols()} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có phiếu nào khớp bộ lọc." : "Không có phiếu trả nào chờ duyệt."} />
-      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
-      {detailId && (
-        <PhieuTraDetailModal
-          traId={detailId}
-          user={user}
-          onClose={() => setDetailId(null)}
-          onChanged={() => {
-            reload();
-            refresh();
-          }}
-        />
-      )}
-    </>
-  );
 }
 
 function DaXuLyList({ user }: { user: AppUser }) {
