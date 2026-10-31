@@ -498,6 +498,49 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
 });
 
 // DELETE /api/phieu-gui-don/:id - xoa 1 don CHUA gui (phieu cha van "nhap").
+// 31/10/2026: sua 1 don trong thung NHAP (bam vao don): doi linh kien KTV chon (A, VD linh kien mac dinh tu
+// Odoo bi sai), so luong, mo ta loi, loai doi tru de xuat. Chi khi thung con nhap (chua gui).
+phieuGui.patch("/don/:donId", async (c) => {
+  const user = c.get("user");
+  const donId = c.req.param("donId");
+  const don = await c.env.DB.prepare(
+    `SELECT p.ma_lk, p.so_luong_khai, p.mo_ta_loi, p.loai_doi_tru_de_xuat, g.nguoi_tao, g.nguoi_tao_ho, g.trang_thai
+     FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.id = ?`,
+  )
+    .bind(donId)
+    .first<{ ma_lk: string | null; so_luong_khai: number; mo_ta_loi: string | null; loai_doi_tru_de_xuat: string | null; nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
+  if (!don) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!ownsPhieuGui(user, don)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (don.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
+  const body = await c.req.json<{ ma_lk?: string; so_luong_khai?: number; mo_ta_loi?: string; loai_doi_tru_de_xuat?: string }>().catch(() => ({}) as Record<string, never>);
+  const set: string[] = [];
+  const binds: unknown[] = [];
+  const doi: string[] = [];
+  if (body.ma_lk !== undefined && body.ma_lk !== don.ma_lk) {
+    const lk = await c.env.DB.prepare("SELECT ma_lk FROM linh_kien_bh WHERE ma_lk = ?").bind(body.ma_lk).first();
+    if (!lk) return c.json({ error: "INVALID_LINH_KIEN" }, 400);
+    set.push("ma_lk = ?"); binds.push(body.ma_lk); doi.push(`linh kiện ${don.ma_lk ?? "—"} → ${body.ma_lk}`);
+  }
+  if (body.so_luong_khai !== undefined && Number(body.so_luong_khai) !== don.so_luong_khai) {
+    const sl = Math.floor(Number(body.so_luong_khai));
+    if (!Number.isFinite(sl) || sl < 1 || sl > 999) return c.json({ error: "INVALID_SO_LUONG" }, 400);
+    set.push("so_luong_khai = ?"); binds.push(sl); doi.push(`số lượng ${don.so_luong_khai} → ${sl}`);
+  }
+  if (body.mo_ta_loi !== undefined && body.mo_ta_loi.trim() !== (don.mo_ta_loi ?? "")) {
+    if (!body.mo_ta_loi.trim()) return c.json({ error: "MISSING_MO_TA_LOI" }, 400);
+    set.push("mo_ta_loi = ?"); binds.push(body.mo_ta_loi.trim()); doi.push("mô tả lỗi");
+  }
+  if (body.loai_doi_tru_de_xuat !== undefined && body.loai_doi_tru_de_xuat !== don.loai_doi_tru_de_xuat) {
+    if (!["doi_tra", "tru_cong_no"].includes(body.loai_doi_tru_de_xuat)) return c.json({ error: "INVALID_LOAI_DOI_TRU" }, 400);
+    set.push("loai_doi_tru_de_xuat = ?"); binds.push(body.loai_doi_tru_de_xuat); doi.push("loại đối trừ đề xuất");
+  }
+  if (set.length === 0) return c.json({ ok: true, doi: 0 });
+  await c.env.DB.prepare(`UPDATE phieu_sua_chua_bh SET ${set.join(", ")} WHERE id = ?`).bind(...binds, donId).run();
+  await addLog(c.env.DB, "phieu_sc", donId, "nhap", "nhap", user.email, "Sửa đơn trong thùng nháp: " + doi.join("; "));
+  c.executionCtx.waitUntil(capNhatTimKiem(c.env.DB, [donId]).then(() => undefined).catch(() => undefined));
+  return c.json({ ok: true, doi: doi.length });
+});
+
 phieuGui.delete("/don/:donId", async (c) => {
   const user = c.get("user");
   const donId = c.req.param("donId");

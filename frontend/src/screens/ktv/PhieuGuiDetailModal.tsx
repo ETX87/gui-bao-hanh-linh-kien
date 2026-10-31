@@ -1,4 +1,5 @@
 import { useLinhKien, lkLabel, refreshLinhKien } from "../../hooks/useLinhKien";
+import { SuaDonModal, type DonSua } from "./SuaDonModal";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { StatusBadge } from "../../ui/StatusBadge";
@@ -70,6 +71,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [addDonOpen, setAddDonOpen] = useState(false);
   const [odooOpen, setOdooOpen] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
+  const [suaDon, setSuaDon] = useState<DonSua | null>(null);
   const [busy, setBusy] = useState(false);
   useUserNames();
   // O van chuyen chi khoi tao 1 LAN khi mo phieu - cac lan tai lai sau thao tac (them don, xoa don...)
@@ -346,13 +348,13 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               <div className="divide-y divide-[var(--line)] -mx-1">
                 {data.don_cha.map((d) => {
                   const td = tienDoOf(d.id);
-                  const clickable = canOpenUnit && td.length > 0;
+                  const clickable = (canOpenUnit && td.length > 0) || isNhap;
                   return (
                     <div
                       key={d.id}
-                      onClick={clickable ? () => setOpenUnit(`${d.id}-1`) : undefined}
+                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : setOpenUnit(`${d.id}-1`)) : undefined}
                       className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
-                      title={clickable ? "Mở chi tiết đơn" : undefined}
+                      title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
                     >
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
@@ -368,6 +370,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                           </Badge>
                         ))}
                         {isNhap && (
+                          <span className="ml-auto text-xs font-semibold text-[var(--link)]">✎ Sửa</span>
+                        )}
+                        {isNhap && (
                           <Btn
                             variant="ghost"
                             size="sm"
@@ -376,7 +381,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                               xoaDon(d.id);
                             }}
                             disabled={busy}
-                            className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+                            className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]"
                           >
                             ✕ Xoá
                           </Btn>
@@ -651,13 +656,13 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               <div className="divide-y divide-[var(--line)] -mx-1">
                 {data.don_cha.map((d) => {
                   const td = tienDoOf(d.id);
-                  const clickable = canOpenUnit && td.length > 0;
+                  const clickable = (canOpenUnit && td.length > 0) || isNhap;
                   return (
                     <div
                       key={d.id}
-                      onClick={clickable ? () => setOpenUnit(`${d.id}-1`) : undefined}
+                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : setOpenUnit(`${d.id}-1`)) : undefined}
                       className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
-                      title={clickable ? "Mở chi tiết đơn" : undefined}
+                      title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
                     >
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
@@ -673,6 +678,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                           </Badge>
                         ))}
                         {isNhap && (
+                          <span className="ml-auto text-xs font-semibold text-[var(--link)]">✎ Sửa</span>
+                        )}
+                        {isNhap && (
                           <Btn
                             variant="ghost"
                             size="sm"
@@ -681,7 +689,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                               xoaDon(d.id);
                             }}
                             disabled={busy}
-                            className="ml-auto !text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+                            className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]"
                           >
                             ✕ Xoá
                           </Btn>
@@ -723,6 +731,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
         ) : (
           <AddDonModal guiId={g.id} ktvEmail={g.nguoi_tao} onClose={() => setAddDonOpen(false)} onDone={() => { setAddDonOpen(false); load(); onChanged(); }} />
         ))}
+      {suaDon && <SuaDonModal don={suaDon} onClose={() => setSuaDon(null)} onDone={() => { setSuaDon(null); onChanged(); load(); }} />}
       {openUnit && user && <UnitDetailModal unitId={openUnit} user={user} nested onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
     </>
   );
