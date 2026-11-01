@@ -183,6 +183,7 @@ odooDon.get("/xuat-import", async (c) => {
       tu: ngay(c.req.query("tu")),
       den: ngay(c.req.query("den")),
       chiCanCapNhat: c.req.query("chi_can_cap_nhat") !== "0",
+      chiXong: c.req.query("chi_xong") === "1",
     }),
   );
 });

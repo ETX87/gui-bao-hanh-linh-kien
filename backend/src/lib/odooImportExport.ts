@@ -95,7 +95,7 @@ interface SrcRow {
 
 export async function buildOdooImportRows(
   db: D1Database,
-  opts: { tu?: string; den?: string; chiCanCapNhat: boolean },
+  opts: { tu?: string; den?: string; chiCanCapNhat: boolean; chiXong?: boolean },
 ): Promise<{ rows: OdooImportRow[]; thieu_id: number }> {
   const where: string[] = ["(s.last_status IS NOT NULL OR o.khong_gui_boi IS NOT NULL)"];
   const binds: string[] = [];
@@ -147,6 +147,9 @@ export async function buildOdooImportRows(
     if (!sc) continue;
     const state = ODOO_STATE_FROM_SC[sc];
     if (!state) continue;
+    // 01/11/2026: chi xuat don da xu ly xong (Da sua xong / Hoan thanh / Tu choi / Huy) - viec import Odoo
+    // thuong lam sau khi don da xu ly xong.
+    if (opts.chiXong && !["repaired", "done", "rejected", "cancelled"].includes(state)) continue;
     let suffix: string;
     if (sc === "khong_gui") {
       suffix = `${NOTE_TAG} Hủy đơn lỗi${r.khong_gui_ly_do ? `: ${r.khong_gui_ly_do}` : ""}`;

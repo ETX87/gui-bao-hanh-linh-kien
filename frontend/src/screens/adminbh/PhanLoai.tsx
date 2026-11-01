@@ -16,7 +16,6 @@ import { PhanLoaiModal } from "../shared/PhanLoaiModal";
 import { FastActionsModal } from "../shared/FastActionsModal";
 import { YeuCauBoSungModal } from "../shared/YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
-import { OdooImportExportModal } from "../shared/OdooImportExportModal";
 import type { AppUser, DonCha, DonVi } from "../../lib/types";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
@@ -31,7 +30,6 @@ import type { AppUser, DonCha, DonVi } from "../../lib/types";
 // nen bang van toi da 20 dong khi chua so ra).
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
-  const [odooImportOpen, setOdooImportOpen] = useState(false);
   const [filter, setFilter] = useState<AdminFilter>(EMPTY_FILTER);
   const qs = filterQuery(filter);
   const [optsKey, setOptsKey] = useState(0);
@@ -122,9 +120,6 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
                 ✔ Xác nhận SL hàng loạt ({donChaTotal})
               </Btn>
             )}
-            <Btn onClick={() => setOdooImportOpen(true)} title="File ID / Trạng thái / Ngày hoàn thành / Ghi chú để import ngược về Odoo">
-              📤 File import Odoo
-            </Btn>
             <Btn variant="primary" onClick={() => setDonDichVuOpen(true)}>
               + Tạo đơn dịch vụ tính phí
             </Btn>
@@ -178,7 +173,6 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           }}
         />
       )}
-      {odooImportOpen && <OdooImportExportModal onClose={() => setOdooImportOpen(false)} />}
       {donDichVuOpen && (
         <DonDichVuModal
           onClose={() => setDonDichVuOpen(false)}

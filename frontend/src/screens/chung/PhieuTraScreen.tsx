@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { TabScreen, type TabDef } from "../../ui/TabScreen";
+import { Btn } from "../../ui/primitives";
+import { OdooImportExportModal } from "../shared/OdooImportExportModal";
 import { PhieuTraListCard } from "../adminbh/PhieuTraList";
 import { AdminPhieuTraScreen } from "../adminbh/PhieuTra";
 import { KtDaXuLyCard } from "../ketoan/Duyet";
@@ -31,6 +34,7 @@ function list(user: AppUser, value: string, emptyText: string, opts: { extraKhie
 }
 
 export function PhieuTraScreen({ user }: { user: AppUser }) {
+  const [odooOpen, setOdooOpen] = useState(false);
   const tabs: TabDef[] = [
     { key: "cho_tao", label: "Chờ tạo phiếu", show: admin, countKeys: ["admin_san_sang_gom"], hint: "Đơn đã xử lý xong, chờ gộp phiếu trả", render: () => <AdminPhieuTraScreen user={user} /> },
     { key: "nhap", label: "Nháp", show: admin, render: () => list(user, "nhap", "Không có phiếu trả nháp nào.") },
@@ -43,5 +47,23 @@ export function PhieuTraScreen({ user }: { user: AppUser }) {
     { key: "xong", label: "Đã kết thúc", show: xem, render: () => list(user, "ktv_da_nhan,gui_that_bai,ket_thuc_khong_gui", "Chưa có phiếu trả nào kết thúc.") },
     { key: "tat_ca", label: "Tất cả", show: xem, render: () => list(user, "", "Chưa có phiếu trả nào.") },
   ];
-  return <TabScreen user={user} title="↩️ Phiếu trả" tabs={tabs} />;
+  // 01/11/2026 ("nút tải file import odoo ... thường là file đã xử lý mới cần import lên odoo"): nut chuyen tu
+  // man Xu ly don (dang xu ly) sang day - noi Admin theo doi don da xu ly xong / dang tra / da ket thuc.
+  return (
+    <>
+      <TabScreen
+        user={user}
+        title="↩️ Phiếu trả"
+        tabs={tabs}
+        actions={
+          admin(user) && (
+            <Btn onClick={() => setOdooOpen(true)} title="File ID / Trạng thái / Ngày hoàn thành / Ghi chú của đơn đã xử lý xong để import ngược về Odoo">
+              📤 File import Odoo
+            </Btn>
+          )
+        }
+      />
+      {odooOpen && <OdooImportExportModal onClose={() => setOdooOpen(false)} />}
+    </>
+  );
 }

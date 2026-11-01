@@ -31,11 +31,12 @@ export function OdooImportExportModal({ onClose }: { onClose: () => void }) {
   const [tu, setTu] = useState(daysAgo(3));
   const [den, setDen] = useState(daysAgo(-1)); // mac dinh -3 .. +1 ngay (giong moc tai Odoo ben auto qs)
   const [chiCanCapNhat, setChiCanCapNhat] = useState(true);
+  const [chiXong, setChiXong] = useState(true); // 01/11/2026: mac dinh chi don da xu ly xong
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<{ rows: Row[]; thieu_id: number } | null>(null);
 
   const load = async () => {
-    const q = new URLSearchParams({ tu, den, chi_can_cap_nhat: chiCanCapNhat ? "1" : "0" });
+    const q = new URLSearchParams({ tu, den, chi_can_cap_nhat: chiCanCapNhat ? "1" : "0", chi_xong: chiXong ? "1" : "0" });
     return api.get<{ rows: Row[]; thieu_id: number }>(`/odoo-don/xuat-import?${q}`);
   };
 
@@ -110,6 +111,10 @@ export function OdooImportExportModal({ onClose }: { onClose: () => void }) {
       <label className="flex items-center gap-2 mt-3 text-sm">
         <input type="checkbox" checked={chiCanCapNhat} onChange={(e) => { setChiCanCapNhat(e.target.checked); setPreview(null); }} />
         Chỉ đơn cần cập nhật (bỏ đơn Odoo đã đúng trạng thái + ghi chú)
+      </label>
+      <label className="flex items-center gap-2 mt-1.5 text-sm">
+        <input type="checkbox" checked={chiXong} onChange={(e) => { setChiXong(e.target.checked); setPreview(null); }} />
+        Chỉ đơn đã xử lý xong (Đã sửa xong / Hoàn thành / Từ chối / Hủy) — bỏ tích để xuất cả đơn đang gửi, đang sửa
       </label>
       {preview && (
         <div className="mt-4">

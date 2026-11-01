@@ -5873,3 +5873,19 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch; regex khoảng ngày thử 4 trường hợp (đủ 2 đầu, 1 đầu, rỗng, sai). Chạy thử câu đếm A≠B / B≠C trên D1 production (chỉ đọc). Chưa bấm thử giao diện.
 
 **Deploy (01/11/2026):** `npm run deploy` (Version ID `1ddc6470`), không có migration mới.
+
+## Nút "File import Odoo" chuyển sang màn Phiếu trả + chỉ xuất đơn đã xử lý xong (01/11/2026) — v1.058
+
+**(a) Nguyên văn yêu cầu:** *"nút tải file import odoo sao lại chi xuất hiện ở mục quản lý đơn đang xử lý => thường là file đã xử lý mới cần import lên odoo chứ?"*
+
+**(b) Đã làm:**
+- Bỏ nút "📤 File import Odoo" khỏi màn Xử lý đơn (tab Chờ phân loại, `adminbh/PhanLoai.tsx`). Đặt lại nút ở góc phải tiêu đề màn **Phiếu trả** (`chung/PhieuTraScreen.tsx`), hiện ở mọi tab cho Admin BH / qtri. Màn Phiếu trả là nơi theo dõi đơn đã xử lý xong, đang trả và đã kết thúc.
+- `TabScreen` thêm prop `actions` (nút ở góc phải hàng tiêu đề).
+- Thẻ "Đồng bộ đơn bảo hành Odoo" ở Cài đặt vẫn giữ nút như cũ.
+- Hộp tải file thêm ô **"Chỉ đơn đã xử lý xong"**, mặc định bật: chỉ xuất đơn có trạng thái Odoo là Đã sửa xong / Hoàn thành / Từ chối / Hủy. Bỏ tích thì xuất cả đơn đang gửi, đang sửa như trước.
+  - Backend: `GET /odoo-don/xuat-import?chi_xong=1`, `buildOdooImportRows({chiXong})`.
+- Không có migration.
+
+**(c) Vấn đề:** không có.
+
+**(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Chưa bấm thử giao diện.

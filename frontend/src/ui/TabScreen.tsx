@@ -22,7 +22,7 @@ export function visibleTabs(tabs: TabDef[], u: AppUser): TabDef[] {
   return tabs.filter((t) => t.show(u));
 }
 
-export function TabScreen({ user, tabs, title }: { user: AppUser; tabs: TabDef[]; title: string }) {
+export function TabScreen({ user, tabs, title, actions }: { user: AppUser; tabs: TabDef[]; title: string; actions?: React.ReactNode }) {
   const { path, query, nav } = useRoute();
   const { counts } = useWorkload();
   const vis = visibleTabs(tabs, user);
@@ -73,6 +73,7 @@ export function TabScreen({ user, tabs, title }: { user: AppUser; tabs: TabDef[]
             })}
           </div>
         )}
+        {actions && <div className="ml-auto shrink-0 flex items-center gap-1.5">{actions}</div>}
       </div>
       <div key={active.key}>{active.render()}</div>
     </div>
