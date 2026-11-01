@@ -8,7 +8,7 @@ import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, Badge, Spinner } from "../../ui/primitives";
-import { LOAI_DOI_TRU_LABELS, isDoiTacKey } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, isDoiTacKey, KHACH_LE_KEY } from "../../lib/constants";
 import { useLinhKien, useLkName, lkOptions } from "../../hooks/useLinhKien";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { ChonMonThieu } from "./ChonMonThieu";
@@ -17,13 +17,50 @@ import { LogTimeline } from "./LogTimeline";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { DetailGrid, SummaryBox, Section, KvGrid, Kv, Chip, Banner, Thumbs, SectionTitle, DETAIL_MAX_W } from "../../ui/DetailParts";
 import type { AppUser, LogRow, PhieuTra } from "../../lib/types";
-import { UserName } from "../../hooks/useUserNames";
+import { UserName, displayName } from "../../hooks/useUserNames";
 
 interface DetailResponse {
   phieu_tra: PhieuTra;
   don_vi: ReturnUnit[];
   anh: { id: number; anh_url: string }[];
   logs: LogRow[];
+  misa_ktv: string | null;
+}
+
+// "Dien giai MISA" (02/11/2026): doan text Admin BH / Ke toan dan vao phieu xuat kho MISA.
+// Ma kho theo mien cua phieu: MN = 6803, MB = 6804. Tong don = so don cha, tong linh kien = so don vi;
+// MYC = ma case cua tung don cha (theo thu tu don trong phieu).
+export function buildDienGiaiMisa(units: ReturnUnit[], mien: string | null, ktvTen: string): { text: string; maKho: string | null } {
+  const maKho = mien === "MN" ? "6803" : mien === "MB" ? "6804" : null;
+  const parents: { id: string; caseId: string | null }[] = [];
+  const seen = new Set<string>();
+  for (const u of [...units].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (seen.has(u.parent_id)) continue;
+    seen.add(u.parent_id);
+    parents.push({ id: u.parent_id, caseId: u.case_id ?? null });
+  }
+  const myc = parents.map((p) => p.caseId || p.id).join(" ");
+  const text = `Tổng đơn: ${parents.length} (tổng : ${units.length} linh kiện)
+${maKho ?? "????"} xuất kho bảo hành cho KTV ${ktvTen} theo MYC: ${myc}`;
+  return { text, maKho };
+}
+
+function DienGiaiMisa({ units, mien, ktvTen }: { units: ReturnUnit[]; mien: string | null; ktvTen: string }) {
+  const toast = useToast();
+  const { text, maKho } = buildDienGiaiMisa(units, mien, ktvTen);
+  return (
+    <Section
+      title="📝 Diễn giải MISA"
+      right={
+        <Btn size="sm" onClick={() => navigator.clipboard?.writeText(text).then(() => toast("Đã sao chép diễn giải MISA", "ok"))}>
+          📋 Sao chép
+        </Btn>
+      }
+    >
+      {!maKho && <p className="mb-1.5 text-[12px] text-[var(--red-600)]">Phiếu chưa xác định miền — đổi miền phiếu (MN = kho 6803, MB = kho 6804) để có mã kho.</p>}
+      <pre className="whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] p-2.5 font-sans text-[13px] text-[var(--ink)] select-all">{text}</pre>
+    </Section>
+  );
 }
 
 // "UI chi tiet" phieu tra bao hanh. Nut thao tac theo dung vai tro + trang thai (Admin BH sua ma/gui
@@ -417,6 +454,14 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               </>
             )}
           </Section>
+
+          {!ktvView && data.don_vi.length > 0 && (
+            <DienGiaiMisa
+              units={data.don_vi}
+              mien={t.mien ?? null}
+              ktvTen={data.misa_ktv || (t.ktv_nhan === KHACH_LE_KEY ? "khách lẻ" : displayName(t.ktv_nhan))}
+            />
+          )}
 
           <Section
             title={`📦 Đơn vị trong phiếu (${data.don_vi.length})`}

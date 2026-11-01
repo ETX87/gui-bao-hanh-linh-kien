@@ -13,6 +13,7 @@ import { LBL, KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { mienScope, syncPhieuTraMien } from "../lib/mien";
+import { extractMaKtv } from "../lib/ktvCode";
 
 // Phieu tra bao hanh - Admin BH tao/gop, Ke toan duyet, Kho dong goi/gui/ket thuc, KTV xac nhan
 // nhan/khieu nai. State machine: nhap -> cho_ke_toan_duyet -> da_duyet_ke_toan -> da_gui ->
@@ -312,7 +313,31 @@ phieuTra.get("/:id", async (c) => {
     .all();
   const { results: anh } = await c.env.DB.prepare("SELECT * FROM phieu_tra_bh_anh WHERE phieu_tra_id = ?").bind(id).all();
   const { results: logs } = await c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_tra' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all();
-  return c.json({ phieu_tra: t, don_vi: donVi, anh, logs });
+  // Ten KTV cho "Dien giai MISA" (02/11/2026): dung dung chuoi KTV tren CRM "(ma) Loai - Khu vuc - Ten"
+  // (uu tien case trong phieu, roi don Odoo cua KTV), khong co thi "(ma) Ten" tu danh ba.
+  let misaKtv: string | null = null;
+  const ktv = await c.env.DB.prepare("SELECT ma_ktv, ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ? LIMIT 1")
+    .bind(t.ktv_nhan)
+    .first<{ ma_ktv: string; ten_hien_thi: string | null }>();
+  if (ktv) {
+    const caseIds = [...new Set((donVi as { case_id: string | null }[]).map((u) => u.case_id).filter(Boolean))] as string[];
+    if (caseIds.length) {
+      const { results: snaps } = await c.env.DB.prepare(
+        `SELECT json_extract(data, '$.ky_thuat_vien') AS ktv FROM case_lookup_snapshot WHERE case_id IN (${caseIds.map(() => "?").join(",")})`,
+      )
+        .bind(...caseIds)
+        .all<{ ktv: string | null }>();
+      misaKtv = snaps.map((r) => r.ktv).find((k) => !!k && extractMaKtv(k) === ktv.ma_ktv) ?? null;
+    }
+    if (!misaKtv) {
+      const o = await c.env.DB.prepare("SELECT ky_thuat_vien FROM don_bh_odoo WHERE ma_ktv = ? AND ky_thuat_vien IS NOT NULL ORDER BY ngay_dong_bo DESC LIMIT 1")
+        .bind(ktv.ma_ktv)
+        .first<{ ky_thuat_vien: string }>();
+      misaKtv = o?.ky_thuat_vien ?? null;
+    }
+    if (!misaKtv) misaKtv = `(${ktv.ma_ktv}) ${ktv.ten_hien_thi || t.ktv_nhan}`;
+  }
+  return c.json({ phieu_tra: t, don_vi: donVi, anh, logs, misa_ktv: misaKtv });
 });
 
 // PATCH - tach khoi phieu (chi khi con "nhap"), sua ma don hang/misa/van don.
