@@ -5889,3 +5889,5 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Chưa bấm thử giao diện.
+
+**Deploy (01/11/2026):** `npm run deploy` (Version ID `3f9072b6`), không có migration mới.
