@@ -16,6 +16,8 @@ import { detectMien, loadTuKhoa, type Mien } from "./mien";
 interface Row {
   user_email: string;
   khu_vuc_ma: string;
+  // 01/11/2026: tai khoan vai tro Giam sat ben linh-kien-app -> GS PHU cua khu vuc (quyen nhu GS chinh).
+  la_gs?: number;
 }
 
 export interface UserKhuVucSyncResult {
@@ -28,6 +30,8 @@ export interface UserKhuVucSyncResult {
   bo_qua_chua_co_tk: number;
   bo_qua_khu_vuc_la: number;
   mien_cap_nhat: number;
+  gs_phu_them?: number;
+  gs_phu_xoa?: number;
   loi: string | null;
 }
 
@@ -119,6 +123,37 @@ export async function runUserKhuVucSync(env: Env): Promise<UserKhuVucSyncResult>
         result.mien_cap_nhat++;
       }
     }
+    // GS PHU (01/11/2026): danh sach GS cua khu vuc (khu_vuc_gs_bh) nguon 'linhkien' = GS chinh (khu_vuc_bh.gs_email) + cac tai
+    // khoan Giam sat duoc gan khu vuc ben linh-kien-app. Khong can tai khoan ben nay da ton tai (GS dang nhap sau van khop). Dong
+    // 'tay' (qtri gan o app nay) giu nguyen.
+    const [{ results: gsChinh }, { results: gsCu }] = await Promise.all([
+      db.prepare("SELECT ma, LOWER(TRIM(gs_email)) AS gs FROM khu_vuc_bh WHERE gs_email IS NOT NULL AND TRIM(gs_email) <> ''").all<{ ma: string; gs: string }>(),
+      db.prepare("SELECT khu_vuc_ma, gs_email, nguon FROM khu_vuc_gs_bh").all<{ khu_vuc_ma: string; gs_email: string; nguon: string }>(),
+    ]);
+    const gsWant = new Set<string>();
+    for (const r of gsChinh) gsWant.add(`${r.ma}\u0001${r.gs}`);
+    for (const r of src) {
+      if (!r.la_gs) continue;
+      const e = String(r.user_email ?? "").trim().toLowerCase();
+      const ma = String(r.khu_vuc_ma ?? "").trim();
+      if (e && ma) gsWant.add(`${ma}\u0001${e}`);
+    }
+    const gsHave = new Map(gsCu.map((r) => [`${r.khu_vuc_ma}\u0001${r.gs_email}`, r.nguon]));
+    result.gs_phu_them = 0;
+    result.gs_phu_xoa = 0;
+    for (const k of gsWant) {
+      if (gsHave.has(k)) continue;
+      const [ma, e] = k.split("\u0001");
+      stmts.push(db.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email, nguon) VALUES (?, ?, 'linhkien')").bind(ma, e));
+      result.gs_phu_them++;
+    }
+    for (const [k, nguon] of gsHave) {
+      if (nguon !== "linhkien" || gsWant.has(k)) continue;
+      const [ma, e] = k.split("\u0001");
+      stmts.push(db.prepare("DELETE FROM khu_vuc_gs_bh WHERE khu_vuc_ma = ? AND gs_email = ? AND nguon = 'linhkien'").bind(ma, e));
+      result.gs_phu_xoa++;
+    }
+
     for (let i = 0; i < stmts.length; i += CHUNK) await db.batch(stmts.slice(i, i + CHUNK));
   } catch (e) {
     result.ok = false;
@@ -132,7 +167,8 @@ export async function runUserKhuVucSync(env: Env): Promise<UserKhuVucSyncResult>
   return result;
 }
 
-// Cron 15 phut: 1 lan/ngay tu 1h sang gio VN (cung lich dong bo ETX). Lan loi thi lan cron sau thu lai.
+// Cron 15 phut: 1 lan/GIO (01/11/2026, truoc 1 lan/ngay - de GS phu Admin gan ben linh-kien-app co hieu luc som), tu 1h sang gio
+// VN. Lan loi thi lan cron sau thu lai.
 export async function maybeRunUserKhuVucSync(env: Env): Promise<void> {
   const now = nowVN();
   if (Number(now.slice(11, 13)) < 1) return;
@@ -140,7 +176,7 @@ export async function maybeRunUserKhuVucSync(env: Env): Promise<void> {
   if (last) {
     try {
       const v = JSON.parse(last.value) as { luc?: string; ok?: boolean };
-      if (v.ok && v.luc && v.luc.slice(0, 10) === now.slice(0, 10)) return;
+      if (v.ok && v.luc && v.luc.slice(0, 13) === now.slice(0, 13)) return;
     } catch {
       // gia tri hong -> chay lai
     }

@@ -166,6 +166,7 @@ function GanGsModal({ khuVuc, onClose, onDone }: { khuVuc: KhuVucQuanSat; onClos
                         <span className="block text-sm font-semibold text-[var(--ink)] truncate">{u.ten || u.email}</span>
                         <span className="block text-[11px] text-[var(--ink-soft)] truncate">{u.email}</span>
                       </span>
+                      {(khuVuc.gs_dong_bo ?? []).includes(e) && <Badge tone="blue">Từ Đặt mua LK</Badge>}
                       {idx === 0 ? (
                         <Badge tone="green">GS chính</Badge>
                       ) : idx > 0 ? (
@@ -189,7 +190,7 @@ function GanGsModal({ khuVuc, onClose, onDone }: { khuVuc: KhuVucQuanSat; onClos
                 <p className="text-xs text-[var(--red-600)]">{ngoaiDs.join(", ")} không còn vai trò Giám sát — sẽ được bỏ khỏi khu vực khi lưu.</p>
               )}
               <p className="text-[11px] text-[var(--ink-soft)]">
-                Mọi Giám sát được tích đều thấy KTV, đơn bảo hành và tạo hộ đơn được cho KTV trong khu vực này. "GS chính" là người ghi trên đơn mới tạo. Bỏ tích hết = khu vực chưa có Giám sát.
+                Mọi Giám sát được tích đều thấy KTV, đơn bảo hành và tạo hộ đơn được cho KTV trong khu vực này. "GS chính" là người ghi trên đơn mới tạo. GS nhãn "Từ Đặt mua LK" được gán ở hệ Đặt mua linh kiện (tài khoản GS › Khu vực phụ trách) và tự đồng bộ mỗi giờ — muốn bỏ hẳn thì bỏ bên đó.
               </p>
             </div>
           )}

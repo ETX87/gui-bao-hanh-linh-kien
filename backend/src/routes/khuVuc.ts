@@ -39,13 +39,15 @@ khuVuc.get("/", async (c) => {
        GROUP BY k.khu_vuc_ma
        ORDER BY k.khu_vuc_ma`,
     ).all<{ ma: string; gs_email: string | null }>(),
-    c.env.DB.prepare("SELECT khu_vuc_ma, gs_email FROM khu_vuc_gs_bh ORDER BY gs_email").all<{ khu_vuc_ma: string; gs_email: string }>(),
+    c.env.DB.prepare("SELECT khu_vuc_ma, gs_email, nguon FROM khu_vuc_gs_bh ORDER BY gs_email").all<{ khu_vuc_ma: string; gs_email: string; nguon: string }>(),
   ]);
   const map = new Map<string, string[]>();
+  const dongBo = new Map<string, string[]>();
   for (const r of gs.results) {
     const a = map.get(r.khu_vuc_ma) ?? [];
     a.push(r.gs_email);
     map.set(r.khu_vuc_ma, a);
+    if (r.nguon === "linhkien") dongBo.set(r.khu_vuc_ma, [...(dongBo.get(r.khu_vuc_ma) ?? []), r.gs_email]);
   }
   return c.json({
     khu_vuc: results.map((r) => {
@@ -53,7 +55,8 @@ khuVuc.get("/", async (c) => {
       // GS chinh dung dau danh sach.
       const main = r.gs_email?.toLowerCase();
       if (main && list.includes(main)) list.sort((a, b) => (a === main ? -1 : b === main ? 1 : 0));
-      return { ...r, gs_emails: list };
+      // gs_dong_bo: GS den tu linh-kien-app (GS chinh / GS phu gan ben do) - bo tich o day thi lan dong bo sau se them lai.
+      return { ...r, gs_emails: list, gs_dong_bo: dongBo.get(r.ma) ?? [] };
     }),
   });
 });
@@ -94,8 +97,11 @@ khuVuc.patch("/:ma", async (c) => {
     ).bind(ma, ten, gsMain, nowVN()),
   ];
   if (list) {
+    // Giu nguon cu cua GS con duoc tich (dong bo / tay); GS moi tich = 'tay'.
+    const { results: cu } = await c.env.DB.prepare("SELECT gs_email, nguon FROM khu_vuc_gs_bh WHERE khu_vuc_ma = ?").bind(ma).all<{ gs_email: string; nguon: string }>();
+    const nguonCu = new Map(cu.map((r) => [r.gs_email, r.nguon]));
     stmts.push(c.env.DB.prepare("DELETE FROM khu_vuc_gs_bh WHERE khu_vuc_ma = ?").bind(ma));
-    for (const e of list) stmts.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email) VALUES (?, ?)").bind(ma, e));
+    for (const e of list) stmts.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email, nguon) VALUES (?, ?, ?)").bind(ma, e, nguonCu.get(e) ?? "tay"));
   }
   await c.env.DB.batch(stmts);
   return c.json({ ok: true });

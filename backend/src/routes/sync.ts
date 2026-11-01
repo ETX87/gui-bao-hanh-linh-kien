@@ -82,26 +82,34 @@ sync.post("/khu-vuc", async (c) => {
   const now = nowVN();
   const statements = [];
   let skipped = 0;
+  let upserted = 0;
   for (const row of body.rows) {
     if (!row.ma || !row.ten) {
       skipped++;
       continue;
     }
+    // 01/11/2026: danh sach GS cua Khu vuc (khu_vuc_gs_bh). GS chinh cu (nguon 'linhkien') khong con la GS chinh -> bo (CHAY
+    // TRUOC khi ghi de khu_vuc_bh.gs_email de subquery doc dung GS cu); neu nguoi do van la GS phu ben linh-kien-app, lan dong bo
+    // user_khu_vuc ke tiep (lib/userKhuVucSync.ts, moi gio) them lai. GS qtri gan tay ben nay (nguon 'tay') giu nguyen.
+    const gsMoi = row.gs_email?.trim().toLowerCase() || null;
+    statements.push(
+      c.env.DB.prepare(
+        "DELETE FROM khu_vuc_gs_bh WHERE khu_vuc_ma = ? AND nguon = 'linhkien' AND gs_email IN (SELECT LOWER(TRIM(gs_email)) FROM khu_vuc_bh WHERE ma = ? AND gs_email IS NOT NULL) AND gs_email <> COALESCE(?, '')",
+      ).bind(row.ma, row.ma, gsMoi),
+    );
     statements.push(
       c.env.DB.prepare(
         `INSERT INTO khu_vuc_bh (ma, ten, gs_email, dong_bo_luc) VALUES (?, ?, ?, ?)
          ON CONFLICT(ma) DO UPDATE SET ten = excluded.ten, gs_email = excluded.gs_email, dong_bo_luc = excluded.dong_bo_luc`,
       ).bind(row.ma, row.ten, row.gs_email ?? null, now),
     );
-    // 01/11/2026: GS linh-kien-app gui sang luon nam trong danh sach GS cua Khu vuc (khu_vuc_gs_bh);
-    // cac GS qtri gan them ben nay giu nguyen.
-    if (row.gs_email?.trim())
-      statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email) VALUES (?, ?)").bind(row.ma, row.gs_email.trim().toLowerCase()));
+    if (gsMoi) statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email, nguon) VALUES (?, ?, 'linhkien')").bind(row.ma, gsMoi));
+    upserted++;
   }
   if (statements.length) {
     await c.env.DB.batch(statements);
   }
-  return c.json({ upserted: statements.length, skipped });
+  return c.json({ upserted, skipped });
 });
 
 interface LinhKienSyncRow {

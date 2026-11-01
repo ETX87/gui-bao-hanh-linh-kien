@@ -307,6 +307,8 @@ export interface KhuVucQuanSat {
   gs_email: string | null;
   // 01/11/2026: 1 Khu vuc nhieu GS - GS chinh dung dau.
   gs_emails: string[];
+  // GS dong bo tu linh-kien-app (GS chinh + GS phu gan ben Dat mua linh kien).
+  gs_dong_bo?: string[];
 }
 
 export interface FastActionMeta {
