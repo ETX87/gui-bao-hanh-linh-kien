@@ -5968,3 +5968,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
   - `choGsDuyet` = 1 / 1 / 0;
   - màn tài khoản hiện đúng nhãn GS chính (khoá) / GS phụ / "GS chính: …", tích thêm MB2 lưu đúng.
 
+**Deploy (01/11/2026):** linh-kien-app v1.432 (Version ID `7a3580af`, không có migration) deploy trước; sau đó app này áp migration 0023 (14 dòng GS chính sẵn có thành nguồn `linhkien`) và `npm run deploy` (Version ID `91efecd5`). GS phụ sẽ được kéo về ở lần cron đồng bộ kế tiếp (mỗi giờ) hoặc khi bấm "Đồng bộ ngay" ở Cài đặt.
