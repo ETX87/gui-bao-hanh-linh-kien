@@ -67,7 +67,8 @@ traCuu.get("/don-vi", async (c) => {
   // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
   const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
-  const f = joinF(eqFilters(c, LOC), timeFilter(c, "x.created_at"), slaFilter(c, "x.updated_at"));
+  // 01/11/2026: loc giai doan (frontend gui 1 giai doan hoac nhom "a,b,c" -> IN).
+  const f = joinF(eqFilters(c, { ...LOC, giai_doan: "x.giai_doan" }), timeFilter(c, "x.created_at"), slaFilter(c, "x.updated_at"));
   where += f.sql;
   binds.push(...f.binds);
   const kw = kwClause(c.req.query("q"), ["x.id", "x.case_id", "x.ma_lk", tenLkOf("x.ma_lk"), "x.mo_ta_loi", "x.ten_khach_hang", "x.sdt_khach_hang", "x.ktv", tenOf("x.ktv"), "x.phieu_gui_id", "x.phieu_tra_id",

@@ -5835,3 +5835,17 @@ Phản biện chính: số lần bấm không phải vấn đề (luồng Odoo �
 - Sai sót khi làm: lần so khớp đầu cắt `AppSheet ID` ở 40 ký tự nên tưởng chỉ khớp 416 đơn → đọc đủ ghi chú mới khớp đúng.
 
 **(d) Kiểm thử:** chạy thử toàn bộ SQL trên bản sao D1 production (sqlite, bật khoá ngoại): 0 lỗi, `foreign_key_check` rỗng, không trùng `odoo_id`, không phiếu trả rỗng, không thùng rỗng (trừ 2 thùng nháp rỗng có sẵn trên hệ thống mới), không đơn cha `da_tach` thiếu đơn vị, không đơn chưa tách nằm trong thùng Admin đã nhận. Đếm trên production sau khi nhập khớp đúng bản chạy thử.
+
+## Lọc giai đoạn ở tab "Mọi giai đoạn" của màn Đơn bảo hành (01/11/2026) — v1.056
+
+**(a) Nguyên văn yêu cầu:** *"\"Đơn bh\" => mọi trạng thái thiếu filter trạng thái => đơn đã sửa xong, đơn đang gửi đến kTV..."*
+
+**(b) Đã làm:** ô lọc mới "Giai đoạn" trên tab `#/don?tab=tat_ca` (`screens/quanly/TraCuu.tsx`, `GIAI_DOAN_DEF`). Lựa chọn gồm 2 phần:
+- 7 nhóm hay dùng: Chưa về Kho / Đang xử lý tại trung tâm / Đã sửa, xử lý xong — chờ trả (chờ tạo phiếu, phiếu nháp, chờ KT, chờ Kho gửi) / Đang gửi đến KTV / Hoàn tất / KTV báo thiếu, thất lạc / Đã huỷ, chuyển kho;
+- 20 giai đoạn riêng (theo `GIAI_DOAN`).
+
+Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → IN, qua `eqFilters`). Lựa chọn cố định ở frontend nên không cần thêm truy vấn lấy danh sách. Chip `?trang_thai=` (bấm từ Trang chủ) vẫn giữ, kết hợp được với ô lọc mới. Không có migration.
+
+**(c) Vấn đề:** không có.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa bấm thử giao diện. Ô lọc dùng lại `FilterBar` / `eqFilters`, vốn đã chạy ở các màn khác.

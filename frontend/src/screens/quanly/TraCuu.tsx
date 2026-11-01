@@ -6,7 +6,7 @@ import { useRoute } from "../../router/Router";
 import { Card, Badge, Spinner } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
-import { GIAI_DOAN_MAP, HUONG_XU_LY_LABELS, KHACH_LE_KEY } from "../../lib/constants";
+import { GIAI_DOAN, GIAI_DOAN_MAP, HUONG_XU_LY_LABELS, KHACH_LE_KEY } from "../../lib/constants";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { MienBadge } from "../../ui/MienBadge";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -35,7 +35,25 @@ interface TraCuuRow {
 }
 import { UserName } from "../../hooks/useUserNames";
 
+// 01/11/2026 ("mọi trạng thái thiếu filter trạng thái => đơn đã sửa xong, đơn đang gửi đến KTV..."): nhom
+// giai doan thuong tra (gia tri "a,b" -> backend loc IN) + tung giai doan rieng.
+const NHOM_GIAI_DOAN: { value: string; label: string }[] = [
+  { value: "thung_nhap,thung_dang_gui", label: "▸ Nhóm: Chưa về Kho (nháp / đang gửi)" },
+  { value: "thung_cho_admin_nhan,cho_xac_nhan_so_luong,cho_phan_loai,admin_can_xem_lai,cho_bo_sung_tt,cho_chan_doan,cho_admin_xac_nhan", label: "▸ Nhóm: Đang xử lý tại trung tâm" },
+  { value: "san_sang_gom_phieu_tra,tra_nhap,tra_cho_ke_toan_duyet,tra_da_duyet_ke_toan", label: "▸ Nhóm: Đã sửa / xử lý xong — chờ trả" },
+  { value: "tra_da_gui", label: "▸ Nhóm: Đang gửi đến KTV" },
+  { value: "tra_ktv_da_nhan,tra_ket_thuc_khong_gui", label: "▸ Nhóm: Hoàn tất" },
+  { value: "tra_khieu_nai_van_chuyen,tra_gui_that_bai", label: "▸ Nhóm: KTV báo thiếu / thất lạc" },
+  { value: "ket_thuc_tu_choi,ket_thuc_chuyen_kho", label: "▸ Nhóm: Đã huỷ / chuyển kho" },
+];
+const GIAI_DOAN_DEF: FilterDef = {
+  key: "giai_doan",
+  label: "Giai đoạn",
+  static: [...NHOM_GIAI_DOAN, ...GIAI_DOAN.map((g) => ({ value: g.key, label: `${g.icon} ${g.label}` }))],
+};
+
 const DEFS: FilterDef[] = [
+  GIAI_DOAN_DEF,
   { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" },
   { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" },
   { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" },
