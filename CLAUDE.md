@@ -5849,3 +5849,5 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa bấm thử giao diện. Ô lọc dùng lại `FilterBar` / `eqFilters`, vốn đã chạy ở các màn khác.
+
+**Deploy (01/11/2026):** `npm run deploy` (Version ID `8eca3c44`), không có migration mới.
