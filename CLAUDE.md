@@ -5871,3 +5871,5 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(c) Vấn đề:** không có. Chọn "Chọn khoảng ngày…" mà chưa nhập ngày thì vẫn đếm là 1 bộ lọc đang bật, nhưng chưa lọc gì.
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch; regex khoảng ngày thử 4 trường hợp (đủ 2 đầu, 1 đầu, rỗng, sai). Chạy thử câu đếm A≠B / B≠C trên D1 production (chỉ đọc). Chưa bấm thử giao diện.
+
+**Deploy (01/11/2026):** `npm run deploy` (Version ID `1ddc6470`), không có migration mới.
