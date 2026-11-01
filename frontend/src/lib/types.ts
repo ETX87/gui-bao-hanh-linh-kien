@@ -305,6 +305,8 @@ export interface KhuVucQuanSat {
   so_ktv: number;
   ten: string | null;
   gs_email: string | null;
+  // 01/11/2026: 1 Khu vuc nhieu GS - GS chinh dung dau.
+  gs_emails: string[];
 }
 
 export interface FastActionMeta {

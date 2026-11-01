@@ -6,7 +6,7 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
-import { computeEmailGs } from "../lib/gs";
+import { computeEmailGs, isGsOfKtv } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
 import { mienOfKtv } from "../lib/mien";
 import { lookupCaseEx } from "../lib/caseLookupClient";
@@ -145,8 +145,7 @@ phieuGui.post("/", async (c) => {
     // BH/qtri khong bi gioi han khu vuc (dung nguyen van yeu cau "hoặc Admin bảo hành", khong dieu
     // kien them).
     if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
-      const emailGs = await computeEmailGs(c.env.DB, ktvEmailReq);
-      if (emailGs !== user.email) return c.json({ error: "OUT_OF_KHU_VUC" }, 403);
+      if (!(await isGsOfKtv(c.env.DB, user.email, ktvEmailReq))) return c.json({ error: "OUT_OF_KHU_VUC" }, 403);
     }
     // "tao ho" duoc phep cho ca KTV CHUA TUNG dang nhap (danh ba ktv_lien_he_bh, CHOT qua
     // AskUserQuestion 05/09/2026) - nhung phieu_gui_bh.nguoi_tao co FOREIGN KEY REFERENCES

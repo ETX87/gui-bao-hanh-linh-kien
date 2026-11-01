@@ -89,6 +89,7 @@ interface KtvInfo {
   khu_vuc_ma?: string | null;
   vai_tro_ktv?: string | null;
   email_gs?: string | null;
+  gs_list?: string[];
 }
 
 interface DetailResponse {
@@ -301,7 +302,22 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       </span>,
     ]);
   if (ktv_info?.ma_ktv) nguoi.push(["Mã KTV · khu vực", `${ktv_info.ma_ktv}${ktv_info.khu_vuc_ma ? " · " + ktv_info.khu_vuc_ma : ""}`]);
-  if (ktv_info?.email_gs) nguoi.push(["Giám sát", <UserName email={ktv_info.email_gs} />]);
+  {
+    // 01/11/2026: 1 Khu vuc co nhieu GS - hien du danh sach.
+    const gs = ktv_info?.gs_list?.length ? ktv_info.gs_list : ktv_info?.email_gs ? [ktv_info.email_gs] : [];
+    if (gs.length)
+      nguoi.push([
+        "Giám sát",
+        <span>
+          {gs.map((e, i) => (
+            <span key={e}>
+              {i > 0 && ", "}
+              <UserName email={e} />
+            </span>
+          ))}
+        </span>,
+      ]);
+  }
   if (pg?.nguoi_tao_ho) nguoi.push(["Tạo hộ bởi", <UserName email={pg.nguoi_tao_ho} />]);
   if (pg?.nguoi_nhan_kho) nguoi.push(["Kho nhận thùng", <UserName email={pg.nguoi_nhan_kho} />]);
   if (pg?.admin_nguoi_nhan) nguoi.push(["Admin nhận nội bộ", <UserName email={pg.admin_nguoi_nhan} />]);

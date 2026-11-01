@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env, AppUser } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
-import { computeEmailGs } from "../lib/gs";
+import { isGsOfKtv } from "../lib/gs";
 import { runOdooSync } from "../lib/odooSync";
 import { buildOdooImportRows } from "../lib/odooImportExport";
 import { nowVN } from "../lib/vnTime";
@@ -24,7 +24,7 @@ export async function resolveKtvTarget(db: D1Database, user: AppUser, ktvEmailRe
     const k = await db.prepare("SELECT 1 FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(req).first();
     if (!k) return { error: "KTV_NOT_FOUND", status: 404 };
     if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
-      if ((await computeEmailGs(db, req)) !== user.email) return { error: "OUT_OF_KHU_VUC", status: 403 };
+      if (!(await isGsOfKtv(db, user.email, req))) return { error: "OUT_OF_KHU_VUC", status: 403 };
     }
     return { email: req };
   }

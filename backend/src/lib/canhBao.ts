@@ -2,6 +2,7 @@ import type { AppUser } from "../types";
 import { hoursSince, parseVn, slaHoursBetween } from "./sla";
 import { mienScope } from "./mien";
 import { viewKhuVucEmailInSql } from "./scope";
+import { GS_KTV_SUBQUERY } from "./gs";
 import { nowVN } from "./vnTime";
 
 // Canh bao don ton theo tung vai tro + thoi gian xu ly trung binh tung giai doan (12/10/2026, yeu cau
@@ -236,8 +237,8 @@ function scopeSql(u: AppUser, s: StageDef, m: Mode): { sql: string; binds: strin
   if (m.kind === "mien") return mienScope(u, s.mienAlias);
   if (m.kind === "gs")
     return {
-      sql: ` AND ${s.ktvCol} IN (SELECT k.email_dang_nhap FROM ktv_lien_he_bh k JOIN khu_vuc_bh kv ON kv.ma = k.khu_vuc_ma WHERE kv.gs_email = ?)`,
-      binds: [u.email],
+      sql: ` AND ${s.ktvCol} IN (${GS_KTV_SUBQUERY})`,
+      binds: [u.email.toLowerCase()],
     };
   if (m.kind === "view") return { sql: ` AND ${s.ktvCol} IN ${viewKhuVucEmailInSql()}`, binds: [u.email] };
   return { sql: "", binds: [] };

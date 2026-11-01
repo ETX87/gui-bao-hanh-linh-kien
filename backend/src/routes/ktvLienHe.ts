@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { eqFilters, distinctOpts } from "../lib/filters";
 import { parsePage } from "../lib/pagination";
+import { GS_KHU_VUC_SUBQUERY } from "../lib/gs";
 
 // Man "Quan ly danh sach KTV" (qtri) - CRUD ktv_lien_he_bh, gap that phat hien 04/09/2026 ("thieu
 // modules quan ly danh sach ktv"): bang nay truoc gio CHI nhan duoc du lieu qua sync day tu
@@ -38,8 +39,8 @@ ktvLienHe.get("/", async (c) => {
   let where = "1=1";
   const binds: unknown[] = [];
   if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
-    where = "khu_vuc_ma IN (SELECT ma FROM khu_vuc_bh WHERE gs_email = ?)";
-    binds.push(user.email);
+    where = `khu_vuc_ma IN (${GS_KHU_VUC_SUBQUERY})`;
+    binds.push(user.email.toLowerCase());
   }
   // Phat hien 13 vong ra soat UX: tim theo ten/email/SDT/ma KTV/khu vuc.
   const kw = (c.req.query("q") || "").trim();

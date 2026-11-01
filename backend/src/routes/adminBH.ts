@@ -5,6 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
+import { gsListOfKtv } from "../lib/gs";
 import { isOverdue, slaCutoffVn } from "../lib/sla";
 import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
@@ -452,6 +453,8 @@ adminBH.get("/don-vi/:id", async (c) => {
       : Promise.resolve({ results: [] }),
   ]);
 
+  // 01/11/2026: 1 Khu vuc co nhieu GS - hien du danh sach GS cua Khu vuc chua KTV.
+  const gsList = guiRow ? await gsListOfKtv(c.env.DB, guiRow.nguoi_tao) : [];
   return c.json({
     don_vi: u,
     don_cha: p,
@@ -460,7 +463,7 @@ adminBH.get("/don-vi/:id", async (c) => {
     anh: { don_vi: ctAnh.results, don_cha: pAnh.results },
     bao_cao_sai_thong_tin: baoCaoSai.results,
     lien_ket: { phieu_gui: phieuGui, phieu_tra: phieuTra, odoo },
-    ktv_info: ktvInfo ? { ...ktvInfo, email_gs: pFull?.email_gs ?? null } : pFull?.email_gs ? { email_gs: pFull.email_gs } : null,
+    ktv_info: ktvInfo ? { ...ktvInfo, email_gs: pFull?.email_gs ?? null, gs_list: gsList } : pFull?.email_gs ? { email_gs: pFull.email_gs, gs_list: gsList } : null,
     ghi_chu: ghiChu.results,
     co_the_trao_doi: !!pFull?.phieu_gui_id && (canGhiChu || uRow.nguoi_sua_chua === user.email),
   });

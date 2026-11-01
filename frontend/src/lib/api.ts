@@ -109,6 +109,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   CASE_KTV_MISMATCH: "Sai mã sự vụ — mã này không thuộc về KTV đang tạo đơn.",
   KTV_NOT_FOUND: "Không tìm thấy KTV này trong danh bạ.",
   OUT_OF_KHU_VUC: "KTV này không thuộc Khu vực bạn phụ trách.",
+  GS_KHONG_HOP_LE: "Có tài khoản không mang vai trò Giám sát — kiểm tra lại danh sách.",
   TOO_SOON: "Vừa mới đồng bộ — vui lòng thử lại sau ít phút.",
 };
 

@@ -26,27 +26,48 @@ function requireQtri(c: { get(k: "user"): { la_qtri: boolean } }): boolean {
 
 // GET / - moi Khu vuc DA TUNG thay tren it nhat 1 dong ktv_lien_he_bh (ke ca chua co dong khu_vuc_bh
 // tuong ung - ten/gs_email se la null, frontend hien "Chưa đặt tên"/"Chưa gán").
+// 01/11/2026 ("1 khu vực có thể có nhiều GS cùng phụ trách"): tra them gs_emails = danh sach GS
+// (khu_vuc_gs_bh), gs_email giu lai la GS chinh.
 khuVuc.get("/", async (c) => {
   if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { results } = await c.env.DB.prepare(
-    `SELECT k.khu_vuc_ma AS ma, COUNT(*) AS so_ktv, kv.ten AS ten, kv.gs_email AS gs_email
-     FROM ktv_lien_he_bh k
-     LEFT JOIN khu_vuc_bh kv ON kv.ma = k.khu_vuc_ma
-     WHERE k.khu_vuc_ma IS NOT NULL AND k.khu_vuc_ma != ''
-     GROUP BY k.khu_vuc_ma
-     ORDER BY k.khu_vuc_ma`,
-  ).all();
-  return c.json({ khu_vuc: results });
+  const [{ results }, gs] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT k.khu_vuc_ma AS ma, COUNT(*) AS so_ktv, kv.ten AS ten, kv.gs_email AS gs_email
+       FROM ktv_lien_he_bh k
+       LEFT JOIN khu_vuc_bh kv ON kv.ma = k.khu_vuc_ma
+       WHERE k.khu_vuc_ma IS NOT NULL AND k.khu_vuc_ma != ''
+       GROUP BY k.khu_vuc_ma
+       ORDER BY k.khu_vuc_ma`,
+    ).all<{ ma: string; gs_email: string | null }>(),
+    c.env.DB.prepare("SELECT khu_vuc_ma, gs_email FROM khu_vuc_gs_bh ORDER BY gs_email").all<{ khu_vuc_ma: string; gs_email: string }>(),
+  ]);
+  const map = new Map<string, string[]>();
+  for (const r of gs.results) {
+    const a = map.get(r.khu_vuc_ma) ?? [];
+    a.push(r.gs_email);
+    map.set(r.khu_vuc_ma, a);
+  }
+  return c.json({
+    khu_vuc: results.map((r) => {
+      const list = map.get(r.ma) ?? [];
+      // GS chinh dung dau danh sach.
+      const main = r.gs_email?.toLowerCase();
+      if (main && list.includes(main)) list.sort((a, b) => (a === main ? -1 : b === main ? 1 : 0));
+      return { ...r, gs_emails: list };
+    }),
+  });
 });
 
 interface PatchBody {
   ten?: string;
   gs_email?: string | null;
+  gs_emails?: string[];
 }
 
-// PATCH /:ma - gan/doi GS phu trach (va/hoac ten hien thi) cho 1 Khu vuc - upsert vi co the Khu vuc
-// nay CHUA co dong khu_vuc_bh nao (moi thay qua ktv_lien_he_bh.khu_vuc_ma, chua tung dong bo).
-// gs_email=null (hoac "") = go GS dang gan (Khu vuc tro ve trang thai "chua co GS phu trach").
+// PATCH /:ma - doi ten hien thi va/hoac danh sach GS phu trach cua 1 Khu vuc - upsert vi Khu vuc co the
+// CHUA co dong khu_vuc_bh nao (moi thay qua ktv_lien_he_bh.khu_vuc_ma). gs_emails = danh sach GS (thay
+// toan bo, [] = bo het); GS dau tien thanh GS chinh (khu_vuc_bh.gs_email). Van nhan gs_email (1 GS) cho
+// tuong thich.
 khuVuc.patch("/:ma", async (c) => {
   if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const ma = decodeURIComponent(c.req.param("ma"));
@@ -54,14 +75,29 @@ khuVuc.patch("/:ma", async (c) => {
 
   const existing = await c.env.DB.prepare("SELECT ten, gs_email FROM khu_vuc_bh WHERE ma = ?").bind(ma).first<{ ten: string; gs_email: string | null }>();
   const ten = body.ten?.trim() || existing?.ten || ma;
-  const gsEmail = body.gs_email === undefined ? (existing?.gs_email ?? null) : body.gs_email?.trim() || null;
+  let list: string[] | null = null;
+  if (Array.isArray(body.gs_emails)) list = body.gs_emails;
+  else if (body.gs_email !== undefined) list = body.gs_email?.trim() ? [body.gs_email] : [];
+  if (list) list = [...new Set(list.map((e) => String(e).trim().toLowerCase()).filter(Boolean))];
+  if (list && list.length > 50) return c.json({ error: "INVALID_BODY" }, 400);
+  if (list && list.length) {
+    const ph = list.map(() => "?").join(",");
+    const ok = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM users WHERE LOWER(email) IN (${ph}) AND la_giam_sat = 1`).bind(...list).first<{ n: number }>();
+    if ((ok?.n ?? 0) !== list.length) return c.json({ error: "GS_KHONG_HOP_LE" }, 400);
+  }
+  const gsMain = list ? (list[0] ?? null) : (existing?.gs_email ?? null);
 
-  await c.env.DB.prepare(
-    `INSERT INTO khu_vuc_bh (ma, ten, gs_email, dong_bo_luc) VALUES (?, ?, ?, ?)
-     ON CONFLICT(ma) DO UPDATE SET ten = excluded.ten, gs_email = excluded.gs_email, dong_bo_luc = excluded.dong_bo_luc`,
-  )
-    .bind(ma, ten, gsEmail, nowVN())
-    .run();
+  const stmts = [
+    c.env.DB.prepare(
+      `INSERT INTO khu_vuc_bh (ma, ten, gs_email, dong_bo_luc) VALUES (?, ?, ?, ?)
+       ON CONFLICT(ma) DO UPDATE SET ten = excluded.ten, gs_email = excluded.gs_email, dong_bo_luc = excluded.dong_bo_luc`,
+    ).bind(ma, ten, gsMain, nowVN()),
+  ];
+  if (list) {
+    stmts.push(c.env.DB.prepare("DELETE FROM khu_vuc_gs_bh WHERE khu_vuc_ma = ?").bind(ma));
+    for (const e of list) stmts.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email) VALUES (?, ?)").bind(ma, e));
+  }
+  await c.env.DB.batch(stmts);
   return c.json({ ok: true });
 });
 

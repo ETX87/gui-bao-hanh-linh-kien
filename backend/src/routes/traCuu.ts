@@ -7,6 +7,7 @@ import { parsePage } from "../lib/pagination";
 import { slaCutoffVn } from "../lib/sla";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
+import { GS_KTV_SUBQUERY } from "../lib/gs";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -18,7 +19,8 @@ traCuu.use("*", verifySessionMiddleware, loadUser);
 // Tra ve {whereSql, binds} loc theo dung vai tro dang goi - qtri/admin_bh xem tat ca.
 function scopeClause(user: { la_giam_sat: boolean; la_view: boolean; la_qtri: boolean; la_admin_bh: boolean; email: string }): { where: string; binds: unknown[] } {
   if (user.la_qtri || user.la_admin_bh) return { where: "1=1", binds: [] };
-  if (user.la_giam_sat) return { where: "p.email_gs = ?", binds: [user.email] };
+  // 01/11/2026: 1 Khu vuc co nhieu GS -> GS thay don dong goi email_gs = minh HOAC don cua KTV thuoc Khu vuc minh phu trach.
+  if (user.la_giam_sat) return { where: `(p.email_gs = ? OR COALESCE(g.nguoi_tao, '') IN (${GS_KTV_SUBQUERY}))`, binds: [user.email, user.email.toLowerCase()] };
   if (user.la_view) return { where: `COALESCE(g.nguoi_tao, '') IN ${viewKhuVucEmailInSql()}`, binds: [user.email] };
   return { where: "1=0", binds: [] };
 }

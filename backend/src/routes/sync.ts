@@ -93,6 +93,10 @@ sync.post("/khu-vuc", async (c) => {
          ON CONFLICT(ma) DO UPDATE SET ten = excluded.ten, gs_email = excluded.gs_email, dong_bo_luc = excluded.dong_bo_luc`,
       ).bind(row.ma, row.ten, row.gs_email ?? null, now),
     );
+    // 01/11/2026: GS linh-kien-app gui sang luon nam trong danh sach GS cua Khu vuc (khu_vuc_gs_bh);
+    // cac GS qtri gan them ben nay giu nguyen.
+    if (row.gs_email?.trim())
+      statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO khu_vuc_gs_bh (khu_vuc_ma, gs_email) VALUES (?, ?)").bind(row.ma, row.gs_email.trim().toLowerCase()));
   }
   if (statements.length) {
     await c.env.DB.batch(statements);
