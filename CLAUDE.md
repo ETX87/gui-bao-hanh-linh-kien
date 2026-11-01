@@ -5924,3 +5924,4 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 - cảnh báo 200;
 - giao diện: modal hiện đủ 3 GS, tích thêm GS Ba + "Đặt làm GS chính" GS Một → Lưu (3 GS) → API trả `gs_emails = [gs1, gs2, gs3]`, bảng hiện "GS Một +2".
 
+**Deploy (01/11/2026):** áp migration 0022 lên D1 production (chép 14 cặp khu vực – GS sẵn có) và `npm run deploy` (Version ID `8bcbc85d`).
