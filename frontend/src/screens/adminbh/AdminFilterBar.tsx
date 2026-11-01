@@ -6,7 +6,7 @@ import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useLinhKien, lkLabel } from "../../hooks/useLinhKien";
 import { displayName, useUserNames } from "../../hooks/useUserNames";
 import { KHACH_LE_KEY, HUONG_XU_LY_LABELS } from "../../lib/constants";
-import { KHOANG_DEF } from "../../ui/FilterBar";
+import { KhoangSelect } from "../../ui/FilterBar";
 
 // Bo loc bang thong nhat Admin BH (09/10/2026: "bo sung them cac filter de tim kiem va lap danh sach can
 // xu ly: Trang thai, Nguoi gui, Linh kien gui, linh kien thuc sua, Loai linh kien, trang thai cham").
@@ -151,7 +151,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
             <option value="__none__">Chưa khai báo</option>
           </Select>
         </div>
-        <FilterSelect label="Thời gian" value={value.khoang} onChange={(v) => set("khoang", v)} options={KHOANG_DEF.static || []} />
+        <KhoangSelect label="Thời gian" value={value.khoang} onChange={(v) => set("khoang", v)} />
       </div>
       {active > 0 && (
         <div className="mt-1.5 flex items-center gap-2">

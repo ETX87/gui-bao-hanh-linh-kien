@@ -5851,3 +5851,23 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa bấm thử giao diện. Ô lọc dùng lại `FilterBar` / `eqFilters`, vốn đã chạy ở các màn khác.
 
 **Deploy (01/11/2026):** `npm run deploy` (Version ID `8eca3c44`), không có migration mới.
+
+## Đánh giá lệch linh kiện A/B/C + chọn khoảng ngày cho bộ lọc thời gian (01/11/2026) — v1.057
+
+**(a) Nguyên văn yêu cầu:** *"thêm đánh giá việc linh kiện A <> linh kiện B, B <> linh kiện c, giải thích"*. Gửi thêm giữa lượt: *"cho chọn khoảng thời gian filter"*.
+
+**(b) Đã làm:**
+- **Đánh giá linh kiện** (tab "Mọi giai đoạn", `screens/quanly/TraCuu.tsx`):
+  - Cột mới "Đánh giá LK": badge cam **A≠B** (KTV khai sai mã — xác tính theo B), badge tím **B≠C** (đổi sang mã khác — phiếu trả / đối trừ theo C), hoặc "✓ Khớp". Rê chuột vào badge để xem giải thích.
+  - Ô lọc "Đánh giá LK": Có lệch / A≠B / B≠C / Lệch cả hai / Khớp hết.
+  - Khối thu gọn "ℹ Đánh giá linh kiện A / B / C là gì?" giải thích ý nghĩa.
+  - Backend `GET /tra-cuu/don-vi?lech_lk=ab|bc|ab_bc|bat_ky|khop`. Đơn cha chưa tách thì A = B = C (chưa đánh giá).
+  - Production lúc làm: 0/2.562 đơn vị A≠B, 195 đơn vị B≠C.
+- **Khoảng ngày tự chọn:** ô "Thời gian tạo" có thêm "📅 Chọn khoảng ngày…" → hiện 2 ô Từ ngày / Đến ngày (`KhoangSelect` trong `ui/FilterBar.tsx`).
+  - Giá trị mã hoá luôn trong tham số `khoang` = `tu:YYYY-MM-DD:YYYY-MM-DD` (được bỏ trống 1 đầu). `timeFilter` (`lib/filters.ts`) tự đọc, nên áp cho mọi danh sách đang có lọc thời gian (13 route) mà không thêm tham số.
+  - Bảng thống nhất Admin BH cũng dùng.
+- Không có migration.
+
+**(c) Vấn đề:** không có. Chọn "Chọn khoảng ngày…" mà chưa nhập ngày thì vẫn đếm là 1 bộ lọc đang bật, nhưng chưa lọc gì.
+
+**(d) Kiểm thử:** typecheck 0 lỗi, build sạch; regex khoảng ngày thử 4 trường hợp (đủ 2 đầu, 1 đầu, rỗng, sai). Chạy thử câu đếm A≠B / B≠C trên D1 production (chỉ đọc). Chưa bấm thử giao diện.

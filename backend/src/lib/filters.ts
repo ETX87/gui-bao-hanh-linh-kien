@@ -76,7 +76,15 @@ export function timeFilter(c: Context, expr: string, param = "khoang"): { sql: s
     den = shift(dau, -1);
     tu = den.slice(0, 8) + "01";
   } else if (v === "cu_hon_30n") den = shift(day, -30);
-  else return { sql: "", binds: [] };
+  else {
+    // 01/11/2026 ("cho chọn khoảng thời gian filter"): khoang tu chon "tu:YYYY-MM-DD:YYYY-MM-DD" (1 trong 2
+    // dau co the trong). Gop vao cung tham so de moi danh sach dang dung timeFilter tu nhan, khong them tham so.
+    const m = /^tu:(\d{4}-\d{2}-\d{2})?:(\d{4}-\d{2}-\d{2})?$/.exec(v);
+    if (!m || (!m[1] && !m[2])) return { sql: "", binds: [] };
+    tu = m[1] || "";
+    den = m[2] || "";
+    if (tu && den && tu > den) [tu, den] = [den, tu];
+  }
   let sql = "";
   const binds: string[] = [];
   if (tu) {

@@ -71,6 +71,14 @@ traCuu.get("/don-vi", async (c) => {
   const f = joinF(eqFilters(c, { ...LOC, giai_doan: "x.giai_doan" }), timeFilter(c, "x.created_at"), slaFilter(c, "x.updated_at"));
   where += f.sql;
   binds.push(...f.binds);
+  // 01/11/2026 ("thêm đánh giá việc linh kiện A <> linh kiện B, B <> linh kiện C"): A = KTV chon, B = thuc te
+  // gui ve (mac dinh A), C = doi moi (x.ma_lk = C, mac dinh B). Don cha chua tach luon A = B = C.
+  const lech = (c.req.query("lech_lk") || "").trim();
+  if (lech === "ab") where += " AND x.lk_b <> x.lk_a";
+  else if (lech === "bc") where += " AND x.ma_lk <> x.lk_b";
+  else if (lech === "ab_bc") where += " AND x.lk_b <> x.lk_a AND x.ma_lk <> x.lk_b";
+  else if (lech === "bat_ky") where += " AND (x.lk_b <> x.lk_a OR x.ma_lk <> x.lk_b)";
+  else if (lech === "khop") where += " AND x.lk_b = x.lk_a AND x.ma_lk = x.lk_b";
   const kw = kwClause(c.req.query("q"), ["x.id", "x.case_id", "x.ma_lk", tenLkOf("x.ma_lk"), "x.mo_ta_loi", "x.ten_khach_hang", "x.sdt_khach_hang", "x.ktv", tenOf("x.ktv"), "x.phieu_gui_id", "x.phieu_tra_id",
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"], ["(SELECT pt.tim_kiem FROM phieu_sua_chua_bh pt WHERE pt.id = x.parent_id)"]);
   where += kw.sql;

@@ -25,6 +25,8 @@ interface TraCuuRow {
   updated_at: string;
   case_id: string | null;
   ma_lk: string | null;
+  lk_a: string | null;
+  lk_b: string | null;
   mo_ta_loi: string | null;
   ten_khach_hang: string | null;
   phieu_gui_id: string | null;
@@ -52,8 +54,37 @@ const GIAI_DOAN_DEF: FilterDef = {
   static: [...NHOM_GIAI_DOAN, ...GIAI_DOAN.map((g) => ({ value: g.key, label: `${g.icon} ${g.label}` }))],
 };
 
+// 01/11/2026: danh gia lech linh kien A (KTV chon) / B (thuc te gui ve) / C (doi moi).
+const LECH_LK_DEF: FilterDef = {
+  key: "lech_lk",
+  label: "Đánh giá LK",
+  static: [
+    { value: "bat_ky", label: "Có lệch (A≠B hoặc B≠C)" },
+    { value: "ab", label: "A≠B — KTV chọn sai linh kiện" },
+    { value: "bc", label: "B≠C — đổi sang linh kiện khác" },
+    { value: "ab_bc", label: "Lệch cả A≠B và B≠C" },
+    { value: "khop", label: "Khớp hết (A = B = C)" },
+  ],
+};
+const TIP_AB = "A≠B: linh kiện KTV chọn khi gửi (A) khác linh kiện Admin xác nhận thực tế gửi về (B) — KTV khai sai mã. Xác (trả đối tác / tiêu huỷ) tính theo B.";
+const TIP_BC = "B≠C: linh kiện đổi mới / thay thế (C) khác linh kiện gửi về (B) — đổi sang mã khác (tương đương, nâng cấp, hoặc hết hàng mã cũ). Phiếu trả KTV xuất theo C.";
+
+function LechLkBadges({ r }: { r: TraCuuRow }) {
+  if (r.loai !== "unit") return <span className="text-[var(--ink-faint)]">—</span>;
+  const ab = !!r.lk_a && !!r.lk_b && r.lk_a !== r.lk_b;
+  const bc = !!r.lk_b && !!r.ma_lk && r.lk_b !== r.ma_lk;
+  if (!ab && !bc) return <span className="text-xs text-[var(--green-700)]" title="A = B = C: linh kiện KTV chọn, thực tế gửi về và đổi mới trùng nhau.">✓ Khớp</span>;
+  return (
+    <span className="inline-flex gap-1">
+      {ab && <span title={TIP_AB}><Badge tone="orange">A≠B</Badge></span>}
+      {bc && <span title={TIP_BC}><Badge tone="violet">B≠C</Badge></span>}
+    </span>
+  );
+}
+
 const DEFS: FilterDef[] = [
   GIAI_DOAN_DEF,
+  LECH_LK_DEF,
   { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" },
   { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" },
   { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" },
@@ -103,6 +134,11 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
     { key: "ktv", header: "KTV / Nguồn", render: (r) => (r.ktv && r.ktv !== KHACH_LE_KEY ? <UserName email={r.ktv} /> : <Badge tone="violet">Khách lẻ{r.ten_khach_hang ? ` · ${r.ten_khach_hang}` : ""}</Badge>) },
     { key: "case", header: "Case", render: (r) => <span className="font-mono text-xs">{r.case_id || "—"}</span> },
     { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk) },
+    {
+      key: "lech",
+      header: "Đánh giá LK",
+      render: (r) => <LechLkBadges r={r} />,
+    },
     { key: "mota", header: "Mô tả lỗi", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
   ];
@@ -127,6 +163,15 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
           )
         }
       />
+      <details className="mb-2 text-xs text-[var(--ink-soft)]">
+        <summary className="cursor-pointer select-none font-semibold text-[var(--link)]">ℹ Đánh giá linh kiện A / B / C là gì?</summary>
+        <div className="mt-1.5 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 leading-relaxed">
+          <p><b>A</b> = linh kiện KTV chọn khi gửi. <b>B</b> = linh kiện Admin xác nhận thực tế gửi về (để trống = giống A). <b>C</b> = linh kiện đổi mới / thay thế (để trống = giống B).</p>
+          <p><Badge tone="orange">A≠B</Badge> KTV khai sai mã linh kiện. Nên rà lại với KTV (có thể ghi "KTV báo cáo sai"). Xác linh kiện (trả đối tác / tiêu huỷ) tính theo <b>B</b>.</p>
+          <p><Badge tone="violet">B≠C</Badge> Trả cho KTV linh kiện khác với linh kiện gửi về: mã tương đương, nâng cấp, hoặc mã cũ hết hàng. Phiếu trả xuất theo <b>C</b>, nên đối trừ / kho phải theo C.</p>
+          <p>Đơn chưa tách (chưa xác nhận số lượng) chưa có B, C nên chưa đánh giá.</p>
+        </div>
+      </details>
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => (r.loai === "unit" ? setDetailId(r.id) : r.phieu_gui_id ? setGuiId(r.phieu_gui_id) : undefined)} emptyText="Không tìm thấy đơn nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {guiId && <PhieuGuiDetailModal guiId={guiId} onClose={() => setGuiId(null)} onChanged={reload} />}

@@ -46,8 +46,34 @@ export const KHOANG_DEF: FilterDef = {
     { value: "thang_nay", label: "Tháng này" },
     { value: "thang_truoc", label: "Tháng trước" },
     { value: "cu_hon_30n", label: "Cũ hơn 30 ngày" },
+    { value: "tu::", label: "📅 Chọn khoảng ngày…" },
   ],
 };
+
+// 01/11/2026 ("cho chọn khoảng thời gian filter"): khoang tu chon ma hoa "tu:<tu ngay>:<den ngay>" trong chinh
+// gia tri o loc (backend lib/filters.ts timeFilter). Chon "Chọn khoảng ngày…" -> hien 2 o ngay.
+export function KhoangSelect({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const custom = value.startsWith("tu:");
+  const [, tu = "", den = ""] = custom ? value.split(":") : [];
+  const sel = custom ? "tu::" : value;
+  const opts = (KHOANG_DEF.static || []).map((o) => (o.value === "tu::" && custom && (tu || den) ? { ...o, label: `📅 ${tu ? fmtNgay(tu) : "…"} → ${den ? fmtNgay(den) : "…"}` } : o));
+  return (
+    <div className="min-w-0">
+      <FilterSelect label={label} value={sel} onChange={(v) => onChange(v === "tu::" ? (custom ? value : "tu::") : v)} options={opts} />
+      {custom && (
+        <div className="mt-1 flex items-center gap-1">
+          <input type="date" aria-label="Từ ngày" value={tu} max={den || undefined} onChange={(e) => onChange(`tu:${e.target.value}:${den}`)} className="min-w-0 flex-1 rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-1 text-xs" />
+          <span className="text-xs text-[var(--ink-soft)]">→</span>
+          <input type="date" aria-label="Đến ngày" value={den} min={tu || undefined} onChange={(e) => onChange(`tu:${tu}:${e.target.value}`)} className="min-w-0 flex-1 rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-1 text-xs" />
+        </div>
+      )}
+    </div>
+  );
+}
+function fmtNgay(d: string): string {
+  const [y, m, dd] = d.split("-");
+  return `${dd}/${m}/${y.slice(2)}`;
+}
 // Linh kien A = KTV chon, B = thuc te gui ve (Admin xac nhan), C = doi moi (lk = C, khong co thi B, A).
 export const LK_A_DEF: FilterDef = { key: "lk_a", label: "LK KTV chọn (A)", kind: "lk" };
 export const LK_B_DEF: FilterDef = { key: "lk_b", label: "LK gửi về (B)", kind: "lk" };
@@ -183,7 +209,11 @@ export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: Lis
       {visible.length > 0 && (!collapsible || open) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5 mt-1.5">
           {visible.map((d) => (
-            <FilterSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
+            d.key === "khoang" ? (
+              <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} />
+            ) : (
+              <FilterSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
+            )
           ))}
         </div>
       )}
