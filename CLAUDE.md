@@ -5408,6 +5408,8 @@ remote rồi khôi phục `wrangler.jsonc`), seed 7 đơn sẵn sàng của 2 KT
 
 **(d) Kiểm thử:** typecheck 0 lỗi; chạy thử câu SQL trên D1 production (chỉ đọc) ra đúng 28 đơn (23 + 5 theo 2 NV), cột đề xuất đếm đúng. Chưa bấm thử giao diện.
 
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `7d5f8b52`), không có migration mới. Lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua.
+
 ## Bộ lọc + tìm kiếm cho mọi bảng danh sách + ghi chú kết quả sửa chữa (21/10/2026) — v1.038
 
 **(a) Nguyên văn yêu cầu:**
@@ -5486,6 +5488,8 @@ rồi trả lại nguyên trạng.
 **(c) Vấn đề:** phiếu nhập từ AppSheet không có nhật ký duyệt → hiện kết quả "Duyệt trên AppSheet", không có người / thời điểm.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi; chạy thử câu lọc trên D1 production (chỉ đọc) — trả đúng các phiếu AppSheet. Chưa bấm thử giao diện.
+
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `7d5f8b52`), không có migration mới. Lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua.
 
 ## Kéo khu vực phụ trách của tài khoản nhân sự từ linh-kien-app (21/10/2026) — v1.043 (+ linh-kien-app v1.378)
 
@@ -5872,6 +5876,8 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch; regex khoảng ngày thử 4 trường hợp (đủ 2 đầu, 1 đầu, rỗng, sai). Chạy thử câu đếm A≠B / B≠C trên D1 production (chỉ đọc). Chưa bấm thử giao diện.
 
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `7d5f8b52`), không có migration mới. Lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua.
+
 **Deploy (01/11/2026):** `npm run deploy` (Version ID `1ddc6470`), không có migration mới.
 
 ## Nút "File import Odoo" chuyển sang màn Phiếu trả + chỉ xuất đơn đã xử lý xong (01/11/2026) — v1.058
@@ -5889,6 +5895,8 @@ Backend `GET /tra-cuu/don-vi` nhận `giai_doan` (1 giá trị hoặc "a,b" → 
 **(c) Vấn đề:** không có.
 
 **(d) Kiểm thử:** typecheck 0 lỗi, build sạch. Chưa bấm thử giao diện.
+
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `7d5f8b52`), không có migration mới. Lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua.
 
 **Deploy (01/11/2026):** `npm run deploy` (Version ID `3f9072b6`), không có migration mới.
 
@@ -5985,4 +5993,6 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** `wrangler d1 execute` lần đầu lỗi 7403 khi ép `CLOUDFLARE_ACCOUNT_ID`; bỏ biến (whoami đã đúng tài khoản `dichvu3t`) thì chạy được.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Truy vấn đọc D1 production: TR-000361 (MB, 9 đơn / 12 đơn vị) ra tên "(kiennt.dvkh) KTV Thái Nguyên - Nguyễn Trung Kiên", TR-000360 (MN) ra "(annlt.mn1) KTV HCM - Nguyễn Lê Thanh An". Chưa bấm thử giao diện.
+
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `7d5f8b52`), không có migration mới. Lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua.
 
