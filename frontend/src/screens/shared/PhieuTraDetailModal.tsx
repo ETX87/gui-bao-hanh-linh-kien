@@ -47,12 +47,30 @@ ${maKho ?? "????"} xuất kho bảo hành cho KTV ${ktvTen} theo MYC: ${myc}`;
 
 function DienGiaiMisa({ units, mien, ktvTen }: { units: ReturnUnit[]; mien: string | null; ktvTen: string }) {
   const toast = useToast();
+  const { items } = useLinhKien();
   const { text, maKho } = buildDienGiaiMisa(units, mien, ktvTen);
+  // "Ma yeu cau theo linh kien" (02/11/2026): moi linh kien tra (C -> B -> A) 1 nhom, liet ke ma case
+  // cua tung don vi (theo thu tu don trong phieu).
+  const groups: { ma: string | null; cases: string[] }[] = [];
+  for (const u of [...units].sort((a, b) => a.id.localeCompare(b.id))) {
+    const ma = u.ma_lk_thuc_te || u.ma_lk_nhan || u.ma_lk || null;
+    let g = groups.find((x) => x.ma === ma);
+    if (!g) groups.push((g = { ma, cases: [] }));
+    g.cases.push(u.case_id || u.parent_id);
+  }
+  const tenLk = (ma: string | null) => {
+    if (!ma) return "Cả sản phẩm";
+    const ten = items.find((x) => x.ma_lk === ma)?.ten_lk?.trim();
+    return ten ? `${ten} [${ma}]` : ma;
+  };
+  const textLk = groups.map((g, i) => `${i + 1}) ${tenLk(g.ma)}:\n${g.cases.join(" ")}`).join("\n\n");
+  const copy = (t: string, msg: string) => navigator.clipboard?.writeText(t).then(() => toast(msg, "ok"));
   return (
+    <>
     <Section
       title="📝 Diễn giải MISA"
       right={
-        <Btn size="sm" onClick={() => navigator.clipboard?.writeText(text).then(() => toast("Đã sao chép diễn giải MISA", "ok"))}>
+        <Btn size="sm" onClick={() => copy(text, "Đã sao chép diễn giải MISA")}>
           📋 Sao chép
         </Btn>
       }
@@ -60,6 +78,17 @@ function DienGiaiMisa({ units, mien, ktvTen }: { units: ReturnUnit[]; mien: stri
       {!maKho && <p className="mb-1.5 text-[12px] text-[var(--red-600)]">Phiếu chưa xác định miền — đổi miền phiếu (MN = kho 6803, MB = kho 6804) để có mã kho.</p>}
       <pre className="whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] p-2.5 font-sans text-[13px] text-[var(--ink)] select-all">{text}</pre>
     </Section>
+    <Section
+      title="🔩 Mã yêu cầu theo linh kiện"
+      right={
+        <Btn size="sm" onClick={() => copy(textLk, "Đã sao chép mã yêu cầu theo linh kiện")}>
+          📋 Sao chép
+        </Btn>
+      }
+    >
+      <pre className="whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] p-2.5 font-sans text-[13px] text-[var(--ink)] select-all">{textLk}</pre>
+    </Section>
+    </>
   );
 }
 
