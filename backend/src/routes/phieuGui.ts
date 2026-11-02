@@ -8,7 +8,7 @@ import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { computeEmailGs, isGsOfKtv } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
-import { mienOfKtv } from "../lib/mien";
+import { mienOfKtv, mienAllowed } from "../lib/mien";
 import { lookupCaseEx } from "../lib/caseLookupClient";
 import { extractMaKtv } from "../lib/ktvCode";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
@@ -263,6 +263,53 @@ phieuGui.patch("/:id", async (c) => {
       .run();
   }
   return c.json({ ok: true });
+});
+
+// POST /api/phieu-gui/:id/nhan-thung-nhap (02/11/2026) - Kho / Admin BH nhan TRUC TIEP thung con NHAP
+// cua KTV (KTV giao tan tay, chua bam "Xac nhan gui"). Bo qua buoc gui. vai_tro:
+//  - "kho"  : nhap -> da_tiep_nhan (cho Admin BH tiep nhan noi bo nhu binh thuong)
+//  - "admin": nhap -> da_tiep_nhan + admin_tiep_nhan = 1 (bo qua ca Kho), tuy chon tu xac nhan SL.
+// Khong bao sang khovan (thung chua tung duoc bao, hang da ve tay).
+phieuGui.post("/:id/nhan-thung-nhap", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+  const body = await c.req
+    .json<{ vai_tro?: string; ghi_chu?: string; tu_xac_nhan_sl?: boolean; ngay_gui_xe?: string; hinh_thuc_gui?: string; ma_xe_hoac_tai_xe?: string; don_vi_van_chuyen?: string; ma_van_don?: string }>()
+    .catch(() => ({}) as Record<string, never>);
+  const vaiTro = body.vai_tro === "kho" ? "kho" : "admin";
+  if (vaiTro === "kho" && !(user.la_kho || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (vaiTro === "admin" && !(user.la_admin_bh || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
+  const g = await c.env.DB.prepare("SELECT trang_thai, mien FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ trang_thai: string; mien: string | null }>();
+  if (!g) return c.json({ error: "NOT_FOUND" }, 404);
+  if (g.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
+  if (!mienAllowed(user, g.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+  const donCount = await c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh WHERE phieu_gui_id = ?").bind(id).first<{ cnt: number }>();
+  if ((donCount?.cnt ?? 0) === 0) return c.json({ error: "EMPTY_PHIEU" }, 400);
+
+  const now = nowVN();
+  const ghiChu = body.ghi_chu?.trim() ? " | " + body.ghi_chu.trim().slice(0, 1000) : "";
+  const s = (v?: string) => (typeof v === "string" ? v.trim().slice(0, 200) : null);
+  await c.env.DB.prepare(
+    `UPDATE phieu_gui_bh SET trang_thai = 'da_gui', ngay_gui_xe = ?,
+       hinh_thuc_gui = COALESCE(?, hinh_thuc_gui), ma_xe_hoac_tai_xe = COALESCE(?, ma_xe_hoac_tai_xe),
+       don_vi_van_chuyen = COALESCE(?, don_vi_van_chuyen), ma_van_don = COALESCE(?, ma_van_don), updated_at = ? WHERE id = ?`,
+  )
+    .bind(body.ngay_gui_xe || now.slice(0, 10), s(body.hinh_thuc_gui) || null, s(body.ma_xe_hoac_tai_xe), s(body.don_vi_van_chuyen), s(body.ma_van_don), now, id)
+    .run();
+  const ai = vaiTro === "kho" ? "Kho" : "Admin BH";
+  await addLog(c.env.DB, "phieu_gui", id, "nhap", "da_gui", user.email, `${ai} nhận trực tiếp thùng nháp của KTV (bỏ qua bước gửi)` + ghiChu);
+
+  if (vaiTro === "kho") {
+    await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_tiep_nhan', nguoi_nhan_kho = ?, thoi_gian_nhan_kho = ?, updated_at = ? WHERE id = ?").bind(user.email, now, now, id).run();
+    await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho xác nhận đã nhận (nhận trực tiếp thùng nháp)");
+    return c.json({ ok: true, vai_tro: "kho" });
+  }
+  const r = await nhanHoThung(c.env.DB, id, user.email, {
+    tuXacNhanSL: !!body.tu_xac_nhan_sl,
+    ghiChu: "Admin BH nhận trực tiếp thùng nháp — bỏ qua Kho tiếp nhận + tiếp nhận nội bộ",
+  });
+  if ("error" in r) return c.json(r, 400);
+  return c.json({ ok: true, vai_tro: "admin", so_don_vi: r.so_don_vi });
 });
 
 // POST /api/phieu-gui/:id/xac-nhan-gui - "nhap" -> "da_gui", cho phep sua lai ngay gui xe. Day

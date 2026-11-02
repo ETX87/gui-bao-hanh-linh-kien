@@ -7,7 +7,7 @@ import { api, errorMessage } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select, Badge, Spinner } from "../../ui/primitives";
+import { Btn, Field, Input, Select, Badge, Spinner, Textarea } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { LOAI_DOI_TRU_LABELS, HINH_THUC_GUI_OPTIONS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
@@ -73,6 +73,10 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [suaDon, setSuaDon] = useState<DonSua | null>(null);
   const [busy, setBusy] = useState(false);
+  // 02/11/2026: Kho / Admin BH nhan truc tiep thung nhap cua KTV (bo qua buoc gui).
+  const [nhanVaiTro, setNhanVaiTro] = useState<"kho" | "admin" | null>(null);
+  const [nhanGhiChu, setNhanGhiChu] = useState("");
+  const [nhanTuSl, setNhanTuSl] = useState(true);
   useUserNames();
   // O van chuyen chi khoi tao 1 LAN khi mo phieu - cac lan tai lai sau thao tac (them don, xoa don...)
   // khong ghi de thong tin KTV dang go do (truoc 12/10/2026 them 1 don la mat thong tin chua luu).
@@ -221,6 +225,27 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
       if (r.tu_tiep_nhan) toast(`Thùng do Admin BH tạo — đã tự bỏ qua Kho + tiếp nhận nội bộ, ${r.so_don_vi ?? 0} đơn vị vào thẳng hàng chờ phân loại.`, "ok");
       else toast(giaoTrucTiep ? "Đã lưu thông tin & xác nhận đã giao hàng." : "Đã lưu thông tin & xác nhận gửi xe.", "ok");
     });
+  const laChuThung = !!user && (user.email === g.nguoi_tao || user.email === g.nguoi_tao_ho || user.la_qtri);
+  const coTheNhanKho = !!user && (user.la_kho || user.la_qtri);
+  const coTheNhanAdmin = !!user && (user.la_admin_bh || user.la_qtri);
+  const nhanThungNhap = () =>
+    run(async () => {
+      const r = await api.post<{ so_don_vi?: number }>(`/phieu-gui/${g.id}/nhan-thung-nhap`, {
+        vai_tro: nhanVaiTro,
+        ghi_chu: nhanGhiChu,
+        tu_xac_nhan_sl: nhanTuSl,
+        ngay_gui_xe: ngayGuiXe,
+        ...header,
+      });
+      toast(
+        nhanVaiTro === "kho"
+          ? "Kho đã nhận thùng — chờ Admin BH tiếp nhận nội bộ."
+          : `Admin BH đã nhận thùng (bỏ qua Kho)${nhanTuSl ? `, ${r.so_don_vi ?? 0} đơn vị vào hàng chờ phân loại` : " — còn bước xác nhận số lượng"}.`,
+        "ok",
+      );
+      setNhanVaiTro(null);
+      onClose();
+    });
   const goiYMaXe = [...new Set([...(cache?.recentMaXe ?? []), ...(data.goi_y?.ma_xe ?? [])])];
   const goiYDvvc = [...new Set([...(cache?.recentDvvc ?? []), ...(data.goi_y?.dvvc ?? [])])];
   const xoaPhieu = () =>
@@ -239,7 +264,20 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
         maxWidthClass={DETAIL_MAX_W}
         headerActions={ktvView ? <StageBadge stage={ktvGuiStage(g.trang_thai)} /> : <StatusBadge kind="gui" value={g.trang_thai} />}
         footerActions={
-          isNhap ? (
+          isNhap && !laChuThung ? (
+            <>
+              {coTheNhanKho && (
+                <Btn disabled={busy || data.don_cha.length === 0} onClick={() => setNhanVaiTro("kho")} title="KTV giao thùng tận tay Kho, chưa bấm gửi">
+                  📦 Kho nhận thùng
+                </Btn>
+              )}
+              {coTheNhanAdmin && (
+                <Btn variant="primary" disabled={busy || data.don_cha.length === 0} onClick={() => setNhanVaiTro("admin")} title="Hàng đã về tay Admin BH — bỏ qua bước gửi và Kho tiếp nhận">
+                  ✔ Admin BH nhận thùng
+                </Btn>
+              )}
+            </>
+          ) : isNhap ? (
             <>
               {data.don_cha.length === 0 && (
                 <Btn variant="danger" disabled={busy} onClick={xoaPhieu}>
@@ -733,6 +771,39 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
         ))}
       {suaDon && <SuaDonModal don={suaDon} onClose={() => setSuaDon(null)} onDone={() => { setSuaDon(null); onChanged(); load(); }} />}
       {openUnit && user && <UnitDetailModal unitId={openUnit} user={user} nested onClose={() => setOpenUnit(null)} onChanged={() => { onChanged(); load(); }} />}
+      {nhanVaiTro && (
+        <Modal
+          title={nhanVaiTro === "kho" ? `Kho nhận thùng nháp ${g.id}` : `Admin BH nhận thùng nháp ${g.id}`}
+          onClose={() => setNhanVaiTro(null)}
+          maxWidthClass="max-w-md"
+          footerActions={
+            <>
+              <Btn onClick={() => setNhanVaiTro(null)}>Huỷ</Btn>
+              <Btn variant="primary" disabled={busy} onClick={nhanThungNhap}>
+                Xác nhận đã nhận {data.don_cha.length} đơn
+              </Btn>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm">
+            <p>
+              Thùng của <b>{displayName(g.nguoi_tao)}</b> đang là nháp (KTV chưa bấm gửi).{" "}
+              {nhanVaiTro === "kho"
+                ? "Xác nhận Kho đã nhận hàng trực tiếp — thùng chuyển sang chờ Admin BH tiếp nhận nội bộ."
+                : "Xác nhận hàng đã về tay Admin BH — bỏ qua bước gửi, Kho tiếp nhận và tiếp nhận nội bộ."}
+            </p>
+            {nhanVaiTro === "admin" && (
+              <label className="flex items-start gap-2">
+                <input type="checkbox" className="mt-0.5" checked={nhanTuSl} onChange={(e) => setNhanTuSl(e.target.checked)} />
+                <span>Xác nhận luôn số lượng thực nhận = số lượng KTV khai (đơn vào thẳng hàng chờ phân loại)</span>
+              </label>
+            )}
+            <Field label="Ghi chú (tuỳ chọn)">
+              <Textarea rows={2} value={nhanGhiChu} onChange={(e) => setNhanGhiChu(e.target.value)} placeholder="VD: KTV mang tới quầy, đủ hàng" />
+            </Field>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
