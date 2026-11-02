@@ -353,6 +353,27 @@ phieuTra.patch("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// POST /api/phieu-tra/:id/ma-misa (02/11/2026) - Ke toan nhap them / sua ma MISA truoc khi Kho xu ly:
+// phieu "cho KT duyet", hoac "KT da duyet" ma Kho chua dong goi (chua co anh dong goi) / chua gui.
+phieuTra.post("/:id/ma-misa", async (c) => {
+  const user = c.get("user");
+  if (!requireKeToan(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai, ma_misa FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; ma_misa: string | null }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!["cho_ke_toan_duyet", "da_duyet_ke_toan"].includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  if (t.trang_thai === "da_duyet_ke_toan") {
+    const a = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM phieu_tra_bh_anh WHERE phieu_tra_id = ?").bind(id).first<{ n: number }>();
+    if ((a?.n ?? 0) > 0) return c.json({ error: "KHO_DA_XU_LY" }, 400);
+  }
+  const body = await c.req.json<{ ma_misa?: string }>().catch(() => ({}) as { ma_misa?: string });
+  const moi = (body.ma_misa ?? "").trim().slice(0, 200);
+  if ((t.ma_misa || "") === moi) return c.json({ ok: true, khong_doi: true });
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET ma_misa = ?, updated_at = ? WHERE id = ?").bind(moi || null, nowVN(), id).run();
+  await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, t.trang_thai, user.email, `Kế toán ${t.ma_misa ? "sửa" : "nhập"} mã MISA: ${t.ma_misa || "(trống)"} → ${moi || "(trống)"}`);
+  return c.json({ ok: true });
+});
+
 // DELETE /api/phieu-tra/:id/don-vi/:unitId - bo 1 don vi khoi phieu (don vi quay lai danh sach "cho tao
 // phieu tra"). Duoc khi phieu con "nhap" hoac "cho Ke toan duyet" (19/10/2026).
 phieuTra.delete("/:id/don-vi/:unitId", async (c) => {

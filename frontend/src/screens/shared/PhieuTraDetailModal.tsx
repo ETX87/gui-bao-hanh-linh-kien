@@ -139,11 +139,14 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   // Sua duoc (ma, them/bot don vi, doi linh kien) cho toi khi Ke toan duyet cho Kho xuat.
   const canEdit = isAdmin && (isNhap || t.trang_thai === "cho_ke_toan_duyet");
   const khoChoGui = isKho && t.trang_thai === "da_duyet_ke_toan";
+  // 02/11/2026: Ke toan nhap them / sua ma MISA truoc khi Kho xu ly (chua dong goi / chua gui).
+  const ktSuaMisa = isKeToan && !canEdit && (t.trang_thai === "cho_ke_toan_duyet" || (t.trang_thai === "da_duyet_ke_toan" && data.anh.length === 0));
   // 20/10/2026: "mã misa ko bắt buộc ở bước admin bh (mã misa là bước của kế toán - admin bh có thể nhập hoặc không)".
   const batBuocMa = false;
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
   const canOpenUnit = !nested && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
 
+  const luuMisaKT = () => run(async () => { await api.post(`/phieu-tra/${traId}/ma-misa`, { ma_misa: maMisa }); toast("Đã lưu mã MISA.", "ok"); });
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
   const guiDuyet = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); await api.post(`/phieu-tra/${traId}/gui-duyet`); toast("Đã gửi duyệt kế toán.", "ok"); });
   const huyGuiDuyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/huy-gui-duyet`); toast("Đã huỷ gửi duyệt.", "ok"); });
@@ -420,6 +423,10 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 <Btn size="sm" onClick={saveCodes} disabled={busy}>
                   Lưu mã
                 </Btn>
+              ) : ktSuaMisa ? (
+                <Btn size="sm" onClick={luuMisaKT} disabled={busy || maMisa.trim() === (t.ma_misa || "")}>
+                  Lưu mã MISA
+                </Btn>
               ) : undefined
             }
           >
@@ -437,10 +444,17 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               </div>
             ) : (
               <>
+                {ktSuaMisa && (
+                  <div className="mb-2 max-w-xs">
+                    <Field label="Mã MISA (Kế toán nhập / sửa trước khi Kho xử lý)">
+                      <Input value={maMisa} onChange={(e) => setMaMisa(e.target.value)} placeholder="VD: XK-00123" />
+                    </Field>
+                  </div>
+                )}
                 {coMa || !khoChoGui ? (
                   <KvGrid>
                     <Kv k="Mã đơn hàng" v={t.ma_don_hang || "—"} />
-                    {!(user && isPureKtv(user)) && <Kv k="Mã MISA" v={t.ma_misa || "—"} />}
+                    {ktSuaMisa ? null : !(user && isPureKtv(user)) && <Kv k="Mã MISA" v={t.ma_misa || "—"} />}
                     {!khoChoGui && <Kv k="Mã vận đơn" v={t.ma_van_don || "—"} />}
                   </KvGrid>
                 ) : null}

@@ -63,6 +63,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INVALID_MIEN: "Miền không hợp lệ.",
   DOI_THEO_PHIEU_GUI: "Đơn này thuộc 1 thùng gửi — đổi miền ở thùng (phiếu gửi) để áp cho cả thùng.",
   NOT_DRAFT: "Chỉ thực hiện được khi phiếu còn ở trạng thái Nháp.",
+  KHO_DA_XU_LY: "Kho đã đóng gói phiếu này — không sửa mã MISA được nữa.",
   MISSING_ODOO_IDS: "Chưa chọn đơn Odoo nào.",
   DA_GAN_THUNG: "Đơn Odoo này đã được đưa vào 1 thùng khác.",
   ODOO_KHONG_GUI: "Đơn Odoo này đã bị hủy (đơn lỗi) — mở lại trước nếu cần gửi.",
