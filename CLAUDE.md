@@ -6012,3 +6012,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chưa chạy thử local / bấm giao diện.
 
+
+**Deploy (02/11/2026):** `npm run deploy` (Version ID `d1a1714d`), không có migration mới.
