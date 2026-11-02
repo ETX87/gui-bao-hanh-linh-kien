@@ -6081,3 +6081,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - Theo linh kiện: LK1 / LK2 / LK3 → KTV đúng;
 - tab Mọi giai đoạn nhóm đúng;
 - 375px không tràn ngang.
+
+**Deploy (02/11/2026):** dvbh v1.516 (`deploy:smarttrade`, Version ID `e0528ac2`) deploy trước, sau đó suachua `npm run deploy` (Version ID `7284b45e`). Không có migration mới.
