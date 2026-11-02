@@ -17,6 +17,8 @@ import { FastActionsModal } from "../shared/FastActionsModal";
 import { YeuCauBoSungModal } from "../shared/YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
 import type { AppUser, DonCha, DonVi } from "../../lib/types";
+import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
+import { StatusBadge } from "../../ui/StatusBadge";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
 // 1) Thung cho xac nhan tiep nhan noi bo tu Kho, 2) Bang thong nhat GOP ca don cha (cho xac nhan SL)
@@ -34,6 +36,10 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const qs = filterQuery(filter);
   const [optsKey, setOptsKey] = useState(0);
   const [bulkSlOpen, setBulkSlOpen] = useState(false);
+  // 02/11/2026: 3 che do xem - Danh sach (bang thong nhat) / nhom theo KTV / nhom theo linh kien. Che do
+  // nhom lay toi da 1000 don cha + 1000 don vi 1 lan (hang doi bi gate nen thuc te khong lon).
+  const [mode, setMode] = useDonViewMode("don_view_xu_ly");
+  const grouped = mode !== "list";
   const { refresh } = useWorkload();
   const {
     items: donCha,
@@ -42,7 +48,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     pageCount: donChaPageCount,
     setPage: setDonChaPage,
     reload: reloadDonCha,
-  } = usePagedApi<DonCha>(`/admin/don-cha${qs ? "?" + qs : ""}`, "don_cha");
+  } = usePagedApi<DonCha>(`/admin/don-cha?${qs}${grouped ? "&view=nhom" : ""}`, "don_cha", grouped ? 1000 : 20);
   const {
     items: donVi,
     total: donViTotal,
@@ -52,12 +58,12 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     loading: loadingDonVi,
     reload: reloadDonVi,
     raw: donViRaw,
-  } = usePagedApi<DonVi>(`/admin/don-vi?group=1${qs ? "&" + qs : ""}`, "don_vi");
-  const donViUnits = (donViRaw.total_don_vi as number) ?? 0;
+  } = usePagedApi<DonVi>(grouped ? `/admin/don-vi?view=nhom${qs ? "&" + qs : ""}` : `/admin/don-vi?group=1${qs ? "&" + qs : ""}`, "don_vi", grouped ? 1000 : 20);
+  const donViUnits = grouped ? donViTotal : ((donViRaw.total_don_vi as number) ?? 0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFastOpen, setBulkFastOpen] = useState(false);
   // Chon hang loat chi trong trang dang xem (doi trang -> bo chon, tranh ap nham don khong nhin thay).
-  useEffect(() => setSelected(new Set()), [donViPage, qs]);
+  useEffect(() => setSelected(new Set()), [donViPage, qs, mode]);
   const selectedUnits = donVi.filter((u) => selected.has(u.id));
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
@@ -93,6 +99,59 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
     });
   };
 
+  const gRows: GroupRow[] = grouped
+    ? [
+        ...donCha.map((p) => ({
+          id: p.id,
+          ktv: p.ktv ?? null,
+          lk: p.ma_lk,
+          caseId: p.case_id,
+          slDat: p.so_luong_khai,
+          slDuyet: null,
+          serial: p.case_serial,
+          ngayMua: p.case_ngay_mua,
+          ngaySx: p.case_ngay_sx,
+          moTa: p.mo_ta_loi,
+          status: <Badge tone="amber">Chờ xác nhận SL</Badge>,
+          sla: <SlaBadge since={p.created_at} entityType="phieu_sc" entityId={p.id} clickable />,
+          actions: (
+            <Btn size="sm" variant="primary" onClick={() => setXacNhanSlFor(p)}>
+              Xác nhận SL
+            </Btn>
+          ),
+          onClick: () => setXacNhanSlFor(p),
+        })),
+        ...donVi.map((u) => ({
+          id: u.id,
+          parentId: u.parent_id,
+          ktv: u.ktv ?? null,
+          lk: u.ma_lk_nhan || u.ma_lk || null,
+          caseId: u.case_id,
+          slDat: u.so_luong_khai,
+          slDuyet: u.so_luong_thuc_nhan,
+          serial: u.case_serial,
+          ngayMua: u.case_ngay_mua,
+          ngaySx: u.case_ngay_sx,
+          moTa: u.mo_ta_loi,
+          status: <StatusBadge kind="unit" value={u.trang_thai} />,
+          sla: <SlaBadge since={u.updated_at} entityType="phieu_sc_ct" entityId={u.id} clickable />,
+          selectable: true,
+          actions:
+            u.trang_thai === "cho_bo_sung_tt" ? undefined : (
+              <>
+                <Btn size="sm" variant="primary" onClick={() => setPhanLoaiFor(u)}>
+                  Phân loại
+                </Btn>
+                <Btn size="sm" onClick={() => setFastFor(u)} title="Xử lý nhanh">
+                  ⚡
+                </Btn>
+              </>
+            ),
+          onClick: () => setDetailId(u.id),
+        })),
+      ]
+    : [];
+
   if ((loadingDonVi && donVi.length === 0 && donCha.length === 0 && donChaTotal === 0 && !qs)) return <Spinner />;
 
   return (
@@ -103,6 +162,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🗂️ Đơn bảo hành cần xử lý ({donChaTotal + donViUnits})</h3>
           <div className="flex flex-wrap items-center gap-2">
+            <DonViewToggle value={mode} onChange={setMode} />
             {selected.size > 0 && (
               <>
                 <Badge tone="blue">{selected.size} đã chọn</Badge>
@@ -126,6 +186,9 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           </div>
         </div>
         <AdminFilterBar value={filter} onChange={setFilter} reloadKey={optsKey} />
+        {grouped ? (
+          <GroupedDonView rows={gRows} mode={mode as "ktv" | "lk"} selected={selected} onToggle={toggleAll} emptyText="Không có đơn nào cần xử lý." />
+        ) : (
         <AdminUnifiedTable
           parents={donCha}
           units={donVi}
@@ -139,13 +202,14 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onOpenBoSung={(pid) => setBoSungFor(pid)}
           onOpenBaoCaoSai={(pid) => setBaoCaoSaiFor(pid)}
         />
-        {donChaPageCount > 1 && (
+        )}
+        {!grouped && donChaPageCount > 1 && (
           <div className="mt-2">
             <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn chờ xác nhận số lượng ({donChaTotal})</p>
             <Pagination page={donChaPage} pageCount={donChaPageCount} total={donChaTotal} onChange={setDonChaPage} />
           </div>
         )}
-        {donViPageCount > 1 && (
+        {!grouped && donViPageCount > 1 && (
           <div className="mt-2">
             <p className="text-xs font-semibold text-[var(--ink-soft)]">Đơn vị cần xử lý — {donViTotal} đơn cha / {donViUnits} đơn vị (20 đơn cha mỗi trang)</p>
             <Pagination page={donViPage} pageCount={donViPageCount} total={donViTotal} onChange={setDonViPage} />

@@ -251,7 +251,7 @@ adminBH.get("/don-cha", async (c) => {
   const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, ${lanTruocSql("p", "p.ma_lk")} AS lan_truoc, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, ${lanTruocSql("p", "p.ma_lk")} AS lan_truoc, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai, ...loc.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_cha: results, total: totalRow?.cnt ?? 0 });
@@ -331,7 +331,7 @@ adminBH.get("/don-vi", async (c) => {
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
        AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const B = loc.binds;
-  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan`;
+  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.so_luong_khai, p.so_luong_thuc_nhan, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
   // trang theo DON CHA (moi trang toi da `limit` don cha + du moi don vi cua chung) - bang thong nhat
@@ -351,7 +351,8 @@ adminBH.get("/don-vi", async (c) => {
     return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
   }
 
-  const { limit, offset } = parsePage(c);
+  // 02/11/2026: che do xem nhom theo KTV / linh kien lay toi da 1000 don vi 1 lan.
+  const { limit, offset } = parsePage(c, 20, 1000);
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...B, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...B).first<{ cnt: number }>(),

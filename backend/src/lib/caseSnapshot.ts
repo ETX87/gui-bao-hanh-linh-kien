@@ -59,6 +59,26 @@ export async function backfillCaseSnapshots(env: Env, max = 40): Promise<{ hoi: 
   return { hoi: todo.length, luu };
 }
 
+// 02/11/2026: dvbh (v1.516) bat dau tra "ngay_san_xuat" trong case-lookup - lam moi dan bang chung cu chua co
+// truong nay (khoa vang hoan toan trong JSON). Con tro theo case_id de case dvbh khong con / loi khong chan
+// cac case sau; het vong thi quay lai dau. Toi da `max` case / lan cron.
+export async function refreshSnapshotsThieuNsx(env: Env, max = 80): Promise<{ hoi: number; luu: number }> {
+  const cur = await env.DB.prepare("SELECT value FROM sync_state WHERE key = 'nsx_after'").first<{ value: string }>();
+  const after = cur?.value || "";
+  const { results } = await env.DB.prepare(
+    "SELECT case_id FROM case_lookup_snapshot WHERE json_type(data, '$.ngay_san_xuat') IS NULL AND case_id > ? ORDER BY case_id LIMIT ?",
+  )
+    .bind(after, max)
+    .all<{ case_id: string }>();
+  const ids = results.map((r) => r.case_id);
+  const luu = ids.length ? await syncCaseSnapshots(env, ids) : 0;
+  const next = ids.length < max ? "" : ids[ids.length - 1];
+  await env.DB.prepare("INSERT INTO sync_state (key, value, updated_at) VALUES ('nsx_after', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
+    .bind(next, nowVN())
+    .run();
+  return { hoi: ids.length, luu };
+}
+
 // 30/10/2026: xac minh lai cac don tao luc he DVBH loi (case_xac_minh = 1, xem POST /phieu-gui/:id/don).
 // Khop dung KTV so huu thung -> 0 + luu bang chung; khong tim thay case / lech KTV -> 2 + ly do, ghi nhat
 // ky (Admin BH thay canh bao o bang xu ly + UI chi tiet). DVBH van loi -> giu nguyen 1, lan cron sau hoi lai.

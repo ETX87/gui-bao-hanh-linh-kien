@@ -35,7 +35,7 @@ function allRowsSql(scopeWhere: string): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
       CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
       u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.ma_lk AS lk_a, COALESCE(u.ma_lk_nhan, p.ma_lk) AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
-      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong
+      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong, p.so_luong_khai AS sl_dat, p.so_luong_thuc_nhan AS sl_duyet
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
     WHERE ${scopeWhere}`;
@@ -43,7 +43,7 @@ function allRowsSql(scopeWhere: string): string {
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
            WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
-      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong
+      p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong, p.so_luong_khai AS sl_dat, NULL AS sl_duyet
     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND ${scopeWhere}`;
   return `(${units} UNION ALL ${parents}) x`;
@@ -52,7 +52,8 @@ function allRowsSql(scopeWhere: string): string {
 traCuu.get("/don-vi", async (c) => {
   const user = c.get("user");
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
-  const { limit, offset } = parsePage(c);
+  // 02/11/2026: che do xem nhom theo KTV / linh kien lay toi da 1000 dong 1 lan.
+  const { limit, offset } = parsePage(c, 20, 1000);
   const { where: scopeWhere, binds: scopeBinds } = scopeClause(user);
   let where = "1=1";
   const binds: unknown[] = [];
@@ -88,7 +89,7 @@ traCuu.get("/don-vi", async (c) => {
   const from = `FROM ${allRowsSql(scopeWhere)} WHERE ${where}`;
   const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT x.* ${from} ORDER BY x.updated_at DESC LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT x.*, json_extract(s.data, '$.seri_san_pham') AS serial, json_extract(s.data, '$.ngay_mua') AS ngay_mua, json_extract(s.data, '$.ngay_san_xuat') AS ngay_sx FROM ${allRowsSql(scopeWhere)} LEFT JOIN case_lookup_snapshot s ON s.case_id = x.case_id WHERE ${where} ORDER BY x.updated_at DESC LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from}`).bind(...allBinds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });

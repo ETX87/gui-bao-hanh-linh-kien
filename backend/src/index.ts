@@ -29,7 +29,7 @@ import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
 import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
-import { backfillCaseSnapshots, verifyPendingCases } from "./lib/caseSnapshot";
+import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } from "./lib/caseSnapshot";
 import { capNhatTimKiem } from "./lib/timKiem";
 import etxRoutes from "./routes/etx";
 
@@ -87,6 +87,6 @@ export default {
     // 20/10/2026: bo sung bang chung case (dvbh) cho don chua co - toi da 40 case / lan.
     ctx.waitUntil(verifyPendingCases(env).then(() => undefined).catch((e) => console.error("[caseVerify]", e instanceof Error ? e.message : e)));
     // 31/10/2026: sau khi bo sung bang chung case -> tinh lai chuoi tim kiem khong dau cho don moi / co thay doi.
-    ctx.waitUntil(backfillCaseSnapshots(env).catch(() => undefined).then(() => capNhatTimKiem(env.DB)).then(() => undefined).catch((e) => console.error("[timKiem]", e instanceof Error ? e.message : e)));
+    ctx.waitUntil(backfillCaseSnapshots(env).catch(() => undefined).then(() => refreshSnapshotsThieuNsx(env).catch(() => undefined)).then(() => capNhatTimKiem(env.DB)).then(() => undefined).catch((e) => console.error("[timKiem]", e instanceof Error ? e.message : e)));
   },
 };

@@ -12,6 +12,7 @@ import { MienBadge } from "../../ui/MienBadge";
 import { useLkName } from "../../hooks/useLinhKien";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
+import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
 import type { AppUser } from "../../lib/types";
 
 // 20/10/2026: moi dong la 1 don vi HOAC 1 don cha chua tach (thung chua ve / chua xac nhan SL), kem
@@ -34,6 +35,11 @@ interface TraCuuRow {
   mien: "MB" | "MN" | null;
   ktv: string | null;
   so_luong: number;
+  sl_dat?: number | null;
+  sl_duyet?: number | null;
+  serial?: string | null;
+  ngay_mua?: string | null;
+  ngay_sx?: string | null;
 }
 import { UserName } from "../../hooks/useUserNames";
 
@@ -103,7 +109,12 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   const stFilter = query.get("trang_thai") || "";
   const flt = useListFilters("/tra-cuu/don-vi", DEFS.map((d) => d.key));
   const base = stFilter ? `/tra-cuu/don-vi?trang_thai=${encodeURIComponent(stFilter)}` : "/tra-cuu/don-vi";
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<TraCuuRow>(withQuery(base, flt.query), "don_vi");
+  // 02/11/2026: 3 che do xem (danh sach / nhom theo KTV / nhom theo linh kien) - che do nhom lay toi da 1000 dong 1 lan.
+  const [mode, setMode] = useDonViewMode("don_view_tat_ca");
+  const grouped = mode !== "list";
+  const listPath = withQuery(base, flt.query);
+  const path = grouped ? `${listPath}${listPath.includes("?") ? "&" : "?"}view=nhom` : listPath;
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<TraCuuRow>(path, "don_vi", grouped ? 1000 : 20);
   const { nameOf } = useLkName();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
@@ -143,11 +154,38 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
     { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
   ];
 
+  const openRow = (r: TraCuuRow) => (r.loai === "unit" ? setDetailId(r.id) : r.phieu_gui_id ? setGuiId(r.phieu_gui_id) : undefined);
+  const gRows: GroupRow[] = grouped
+    ? rows.map((r) => {
+        const g = GIAI_DOAN_MAP[r.giai_doan];
+        return {
+          id: r.id,
+          parentId: r.parent_id,
+          ktv: r.ktv,
+          lk: r.lk_b || r.ma_lk,
+          caseId: r.case_id,
+          slDat: r.sl_dat,
+          slDuyet: r.sl_duyet,
+          serial: r.serial,
+          ngayMua: r.ngay_mua,
+          ngaySx: r.ngay_sx,
+          moTa: r.mo_ta_loi,
+          status: <Badge tone={g?.tone || "gray"}>{g ? `${g.icon} ${g.label}` : r.giai_doan}</Badge>,
+          sla: <SlaBadge since={r.updated_at} />,
+          badge: r.loai === "parent" && r.so_luong > 1 ? <span className="text-xs text-[var(--ink-soft)]">×{r.so_luong}</span> : undefined,
+          onClick: () => openRow(r),
+        };
+      })
+    : [];
+
   if (loading && rows.length === 0 && !flt.active && !stFilter) return <Spinner />;
 
   return (
     <Card className="p-3">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">🔍 Tra cứu mọi đơn — mọi giai đoạn ({total})</h3>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔍 Tra cứu mọi đơn — mọi giai đoạn ({total})</h3>
+        <DonViewToggle value={mode} onChange={setMode} />
+      </div>
       <FilterBar
         f={flt}
         defs={DEFS}
@@ -172,8 +210,17 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
           <p>Đơn chưa tách (chưa xác nhận số lượng) chưa có B, C nên chưa đánh giá.</p>
         </div>
       </details>
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => (r.loai === "unit" ? setDetailId(r.id) : r.phieu_gui_id ? setGuiId(r.phieu_gui_id) : undefined)} emptyText="Không tìm thấy đơn nào." />
-      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      {grouped ? (
+        <>
+          {total > rows.length && <p className="mb-1.5 text-xs font-semibold text-[var(--orange-700)]">Đang nhóm {rows.length}/{total} đơn mới nhất — lọc thêm để xem đủ.</p>}
+          <GroupedDonView rows={gRows} mode={mode as "ktv" | "lk"} emptyText="Không tìm thấy đơn nào." />
+        </>
+      ) : (
+        <>
+          <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={openRow} emptyText="Không tìm thấy đơn nào." />
+          <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+        </>
+      )}
       {guiId && <PhieuGuiDetailModal guiId={guiId} onClose={() => setGuiId(null)} onChanged={reload} />}
       {detailId && <UnitDetailModal unitId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={reload} />}
     </Card>

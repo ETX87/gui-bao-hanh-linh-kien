@@ -35,6 +35,7 @@ export interface CaseLookupPreview {
   dt_linh_kien: number | null;
   dt_dich_vu: number | null;
   ly_do_qua_han: string | null;
+  ngay_san_xuat?: string | null; // 02/11/2026 - dvbh v1.516 moi tra
 }
 
 // 30/10/2026: tach "khong tim thay case" (dvbh tra loi found=false) voi "dvbh loi / khong phan hoi"

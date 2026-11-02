@@ -95,6 +95,8 @@ export interface DonCha {
   case_khach_hang?: string | null;
   case_ngay_mua?: string | null;
   case_tiep_nhan?: string | null;
+  case_serial?: string | null; // 02/11/2026 - xem nhom theo KTV / linh kien
+  case_ngay_sx?: string | null;
 }
 
 export interface DonVi {
@@ -147,6 +149,10 @@ export interface DonVi {
   case_khach_hang?: string | null;
   case_ngay_mua?: string | null;
   case_tiep_nhan?: string | null;
+  case_serial?: string | null; // 02/11/2026 - xem nhom theo KTV / linh kien
+  case_ngay_sx?: string | null;
+  so_luong_khai?: number | null;
+  so_luong_thuc_nhan?: number | null;
   // Thu hoi chi phi bao hanh tu hang (12/10/2026) - ghi nhan thu cong, khong bat buoc.
   so_tien_thu_hoi_hang?: number | null;
   thu_hoi_hang_ghi_chu?: string | null;
@@ -273,6 +279,7 @@ export interface CaseLookupPreview {
   nganh: string | null;
   loai_nganh: string | null;
   nhom_kh: string | null;
+  ngay_san_xuat?: string | null; // 02/11/2026
   dt_san_pham: number | null;
   dt_linh_kien: number | null;
   dt_dich_vu: number | null;
