@@ -1,3 +1,4 @@
+import { maKtvCuaEmail } from "../lib/ktvMa";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -24,9 +25,7 @@ caseLookup.use("*", verifySessionMiddleware, loadUser);
 async function computeKhopKtv(db: D1Database, kyThuatVien: string | null, ktvEmail: string): Promise<boolean> {
   const maKtvCase = extractMaKtv(kyThuatVien);
   if (!maKtvCase) return false;
-  const ktvRow = await db.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(ktvEmail).first<{ ma_ktv: string }>();
-  if (!ktvRow) return false;
-  return ktvRow.ma_ktv === maKtvCase;
+  return (await maKtvCuaEmail(db, ktvEmail)).includes(maKtvCase);
 }
 
 import { laCaseHomNay } from "../lib/caseNgay";

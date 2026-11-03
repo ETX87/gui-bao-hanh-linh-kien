@@ -1,3 +1,4 @@
+import { maKtvCuaEmail } from "../lib/ktvMa";
 import { laCaseHomNay } from "../lib/caseNgay";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
@@ -436,8 +437,7 @@ phieuGui.post("/:id/don", async (c) => {
   let lechKtv = false;
   if (casePreview) {
     const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
-    const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
-    lechKtv = !maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase;
+    lechKtv = !maKtvCase || !(await maKtvCuaEmail(c.env.DB, g.nguoi_tao)).includes(maKtvCase);
   }
   // Chi nguoi tao HO (khong phai chinh KTV so huu thung) co quyen tao ho moi duoc xac nhan vuot qua.
   const duocVuot = (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== g.nguoi_tao;
@@ -499,8 +499,8 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
   const body = await c.req.json<{ odoo_ids?: number[] }>().catch(() => ({}) as { odoo_ids?: number[] });
   const ids = [...new Set((body.odoo_ids || []).map(Number).filter((x) => Number.isInteger(x) && x > 0))].slice(0, 100);
   if (ids.length === 0) return c.json({ error: "MISSING_ODOO_IDS" }, 400);
-  const ktvRow = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(g.nguoi_tao).first<{ ma_ktv: string }>();
-  if (!ktvRow) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
+  const maCuaKtv = await maKtvCuaEmail(c.env.DB, g.nguoi_tao);
+  if (!maCuaKtv.length) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
 
   const { results: rows } = await c.env.DB.prepare(
     `SELECT o.*, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan FROM don_bh_odoo o WHERE o.odoo_id IN (${ids.map(() => "?").join(",")})`,
@@ -514,7 +514,7 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     if (r.da_gan) e = "DA_GAN_THUNG";
     else if (r.khong_gui_boi) e = "ODOO_KHONG_GUI";
     else if (!r.con_hieu_luc || !["new", "repairing"].includes(r.trang_thai || "")) e = "KHONG_CON_CHO_GUI";
-    else if (r.ma_ktv !== ktvRow.ma_ktv) e = "CASE_KTV_MISMATCH";
+    else if (!r.ma_ktv || !maCuaKtv.includes(r.ma_ktv)) e = "CASE_KTV_MISMATCH";
     else if (!r.case_id) e = "MISSING_CASE_ID";
     if (e) loi.push({ odoo_id: r.odoo_id, error: e });
     return !e;

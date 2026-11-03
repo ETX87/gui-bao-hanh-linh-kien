@@ -1,3 +1,4 @@
+import { maKtvCuaEmail } from "../lib/ktvMa";
 import { Hono } from "hono";
 import type { Env, AppUser } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -39,8 +40,8 @@ odooDon.get("/cho-gui", async (c) => {
   const user = c.get("user");
   const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
   if ("error" in t) return c.json({ error: t.error }, t.status);
-  const ktv = await c.env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.email).first<{ ma_ktv: string }>();
-  if (!ktv) return c.json({ don: [], khong_gui: [], so_da_gui: 0, ktv_email: t.email, chua_khai_bao_ktv: true });
+  const maCuaKtv = await maKtvCuaEmail(c.env.DB, t.email);
+  if (!maCuaKtv.length) return c.json({ don: [], khong_gui: [], so_da_gui: 0, ktv_email: t.email, chua_khai_bao_ktv: true });
   const daGui = await c.env.DB.prepare(
     `SELECT COUNT(*) AS n FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.odoo_id IS NOT NULL AND g.nguoi_tao = ?`,
   )
@@ -51,11 +52,11 @@ odooDon.get("/cho-gui", async (c) => {
             o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do,
             (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = o.case_id) AS khach_hang
      FROM don_bh_odoo o
-     WHERE o.ma_ktv = ? AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
+     WHERE o.ma_ktv IN (${maCuaKtv.map(() => "?").join(",")}) AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
        AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)
      ORDER BY o.ngay_tao DESC LIMIT 500`,
   )
-    .bind(ktv.ma_ktv)
+    .bind(...maCuaKtv)
     .all<{ khong_gui_boi: string | null }>();
   return c.json({
     don: results.filter((r) => !r.khong_gui_boi),
@@ -108,8 +109,7 @@ async function loadOwnedOdoo(db: D1Database, user: AppUser, odooId: number, ktvE
     .bind(odooId)
     .first<{ odoo_id: number; ma_ktv: string | null; khong_gui_boi: string | null; da_gan: string | null }>();
   if (!row) return { error: "NOT_FOUND", status: 404 } as const;
-  const ktv = await db.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(t.email).first<{ ma_ktv: string }>();
-  if (!ktv || row.ma_ktv !== ktv.ma_ktv) return { error: "CASE_KTV_MISMATCH", status: 403 } as const;
+  if (!row.ma_ktv || !(await maKtvCuaEmail(db, t.email)).includes(row.ma_ktv)) return { error: "CASE_KTV_MISMATCH", status: 403 } as const;
   if (row.da_gan) return { error: "DA_GAN_THUNG", status: 400 } as const;
   return { row } as const;
 }

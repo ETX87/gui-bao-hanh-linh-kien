@@ -1,3 +1,4 @@
+import { maKtvCuaEmail } from "./ktvMa";
 import { conChoDongBo } from "./caseNgay";
 import type { Env } from "../types";
 import { lookupCase, lookupCaseEx } from "./caseLookupClient";
@@ -101,8 +102,8 @@ export async function verifyPendingCases(env: Env, max = 30): Promise<{ hoi: num
     if (res.status === "not_found") loi = "Không tìm thấy case này bên hệ DVBH";
     else {
       const maKtvCase = extractMaKtv(res.preview.ky_thuat_vien);
-      const ktvRow = await env.DB.prepare("SELECT ma_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(r.nguoi_tao).first<{ ma_ktv: string }>();
-      if (!maKtvCase || !ktvRow || ktvRow.ma_ktv !== maKtvCase) loi = `Case không thuộc KTV gửi hàng (KTV trên case: ${res.preview.ky_thuat_vien || "không xác định"})`;
+      const maCuaKtv = await maKtvCuaEmail(env.DB, r.nguoi_tao);
+      if (!maKtvCase || !maCuaKtv.includes(maKtvCase)) loi = `Case không thuộc KTV gửi hàng (KTV trên case: ${res.preview.ky_thuat_vien || "không xác định"})`;
       await env.DB.prepare(
         "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
       )
