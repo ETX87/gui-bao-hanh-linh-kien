@@ -29,6 +29,8 @@ async function computeKhopKtv(db: D1Database, kyThuatVien: string | null, ktvEma
   return ktvRow.ma_ktv === maKtvCase;
 }
 
+import { laCaseHomNay } from "../lib/caseNgay";
+
 caseLookup.get("/", async (c) => {
   const id = (c.req.query("id") || "").trim();
   if (!id) return c.json({ error: "MISSING_ID" }, 400);
@@ -37,7 +39,8 @@ caseLookup.get("/", async (c) => {
   const ktvEmail = (c.req.query("ktv_email") || "").trim();
   const khopKtv = preview && ktvEmail ? await computeKhopKtv(c.env.DB, preview.ky_thuat_vien, ktvEmail) : null;
   // loi_dvbh (30/10/2026): DVBH loi/khong phan hoi - khac "khong tim thay" (cho tao don chua xac minh).
-  return c.json({ found: !!preview, preview, khopKtv, loi_dvbh: r.status === "error" });
+  // cho_dong_bo (03/11/2026): khong thay tren DVBH nhung la case trong ngay (SC+YYMMDD hom nay) -> cho tao, chua xac minh.
+  return c.json({ found: !!preview, preview, khopKtv, loi_dvbh: r.status === "error", cho_dong_bo: r.status === "not_found" && laCaseHomNay(id) });
 });
 
 // Khoang cach toi thieu giua 2 lan Admin bao hanh bam "Dong bo lai" tren 1 case (tranh spam API doi

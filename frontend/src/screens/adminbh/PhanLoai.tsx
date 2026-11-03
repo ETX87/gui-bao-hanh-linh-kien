@@ -139,6 +139,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           status: <StatusBadge kind="unit" value={u.trang_thai} />,
           sla: <SlaBadge since={u.updated_at} entityType="phieu_sc_ct" entityId={u.id} clickable />,
           selectable: true,
+          badge: u.case_xac_minh === 1 ? <Badge tone="amber">Case chưa xác minh</Badge> : u.case_xac_minh === 2 ? <Badge tone="red">Sai case</Badge> : undefined,
           actions:
             u.trang_thai === "cho_bo_sung_tt" ? undefined : (
               <>

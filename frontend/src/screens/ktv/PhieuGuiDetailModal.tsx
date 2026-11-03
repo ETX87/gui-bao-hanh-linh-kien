@@ -429,7 +429,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                         {d.case_id && <span className="font-mono">{d.case_id} · </span>}
                         {d.mo_ta_loi}
                       </p>
-                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (hệ DVBH không phản hồi lúc tạo) — hệ thống sẽ tự kiểm tra lại</p>}
+                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (lúc tạo DVBH chưa có case / không phản hồi) — hệ thống sẽ tự kiểm tra lại</p>}
                       {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
                       {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
                     </div>
@@ -737,7 +737,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                         {d.case_id && <span className="font-mono">{d.case_id} · </span>}
                         {d.mo_ta_loi}
                       </p>
-                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (hệ DVBH không phản hồi lúc tạo) — hệ thống sẽ tự kiểm tra lại</p>}
+                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (lúc tạo DVBH chưa có case / không phản hồi) — hệ thống sẽ tự kiểm tra lại</p>}
                       {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
                       {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
                     </div>

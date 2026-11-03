@@ -86,7 +86,28 @@ function DienGiaiMisa({ units, mien, ktvTen }: { units: ReturnUnit[]; mien: stri
         </Btn>
       }
     >
-      <pre className="whitespace-pre-wrap break-words rounded-lg bg-[var(--surface-2)] p-2.5 font-sans text-[13px] text-[var(--ink)] select-all">{textLk}</pre>
+      {/* 03/11/2026: "cho phép người dùng kéo chọn để copy lẻ theo nhu cầu" - bo select-all (bam 1 cai la chon het),
+          moi nhom linh kien 1 khoi rieng, kem nut sao chep rieng danh sach ma case cua nhom. */}
+      <div className="space-y-1.5 rounded-lg bg-[var(--surface-2)] p-2.5 text-[13px] text-[var(--ink)] select-text cursor-text">
+        {groups.map((g, i) => (
+          <div key={i} className="group">
+            <div className="flex items-start gap-2">
+              <span className="font-semibold flex-1 min-w-0 break-words">
+                {i + 1}) {tenLk(g.ma)}:
+              </span>
+              <button
+                type="button"
+                className="shrink-0 select-none rounded px-1.5 text-[11px] font-semibold text-[var(--link)] hover:bg-white"
+                title="Sao chép mã yêu cầu của linh kiện này"
+                onClick={() => copy(g.cases.join(" "), `Đã sao chép ${g.cases.length} mã yêu cầu`)}
+              >
+                📋 {g.cases.length} mã
+              </button>
+            </div>
+            <p className="whitespace-pre-wrap break-words font-mono text-[12.5px]">{g.cases.join(" ")}</p>
+          </div>
+        ))}
+      </div>
     </Section>
     </>
   );

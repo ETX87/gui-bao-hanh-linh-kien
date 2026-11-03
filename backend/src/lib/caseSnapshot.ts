@@ -1,3 +1,4 @@
+import { conChoDongBo } from "./caseNgay";
 import type { Env } from "../types";
 import { lookupCase, lookupCaseEx } from "./caseLookupClient";
 import { extractMaKtv } from "./ktvCode";
@@ -94,6 +95,8 @@ export async function verifyPendingCases(env: Env, max = 30): Promise<{ hoi: num
   for (const r of results) {
     const res = await lookupCaseEx(r.case_id, env);
     if (res.status === "error") break; // DVBH van loi - thu lai lan sau
+    // 03/11/2026: case trong ngay chua dong bo kip -> cho toi het ngay hom sau moi danh dau that bai.
+    if (res.status === "not_found" && conChoDongBo(r.case_id)) continue;
     let loi: string | null = null;
     if (res.status === "not_found") loi = "Không tìm thấy case này bên hệ DVBH";
     else {

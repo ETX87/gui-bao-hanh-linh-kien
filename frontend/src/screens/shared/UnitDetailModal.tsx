@@ -433,7 +433,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
             </SummaryBox>
 
             {p.case_xac_minh === 1 && (
-              <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">⏳ Mã case chưa được xác minh — đơn tạo lúc hệ DVBH không phản hồi. Hệ thống sẽ tự kiểm tra lại khi DVBH hoạt động.</p>
+              <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">⏳ Mã case chưa được xác minh — lúc tạo đơn hệ DVBH chưa có case này (case trong ngày, chưa kịp đồng bộ) hoặc không phản hồi. Hệ thống sẽ tự kiểm tra lại; kiểm tra kỹ mã case trước khi xử lý.</p>
             )}
             {p.case_xac_minh === 2 && (
               <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">✖ Xác minh mã case thất bại: {p.case_xac_minh_loi || "sai mã case"} — kiểm tra lại với KTV.</p>

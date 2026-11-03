@@ -1,3 +1,4 @@
+import { laCaseHomNay } from "../lib/caseNgay";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
@@ -426,9 +427,11 @@ phieuGui.post("/:id/don", async (c) => {
   // 30/10/2026: tach "khong tim thay case" (chan cung) voi "DVBH loi / khong phan hoi" (cho tao neu nguoi
   // dung tich xac nhan, gan co case_xac_minh = 1, cron xac minh lai - lib/caseSnapshot.ts verifyPendingCases).
   const lk = await lookupCaseEx(caseId, c.env);
-  if (lk.status === "not_found") return c.json({ error: "CASE_NOT_FOUND" }, 400);
-  const chuaXacMinh = lk.status === "error";
-  if (chuaXacMinh && body.xac_nhan_chua_xac_minh !== true) return c.json({ error: "DVBH_KHONG_PHAN_HOI" }, 400);
+  // 03/11/2026: case trong ngay (SC + YYMMDD hom nay) chua dong bo kip sang DVBH -> cho tao, chua xac minh.
+  const choDongBo = lk.status === "not_found" && laCaseHomNay(caseId);
+  if (lk.status === "not_found" && !choDongBo) return c.json({ error: "CASE_NOT_FOUND" }, 400);
+  const chuaXacMinh = lk.status === "error" || choDongBo;
+  if (lk.status === "error" && body.xac_nhan_chua_xac_minh !== true) return c.json({ error: "DVBH_KHONG_PHAN_HOI" }, 400);
   const casePreview = lk.status === "found" ? lk.preview : null;
   let lechKtv = false;
   if (casePreview) {
@@ -457,7 +460,9 @@ phieuGui.post("/:id/don", async (c) => {
     await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview?.ky_thuat_vien || "không xác định"})`);
   }
   if (chuaXacMinh) {
-    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Tạo đơn khi hệ DVBH không phản hồi — mã case ${caseId} CHƯA được xác minh, hệ thống sẽ tự xác minh lại`);
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, choDongBo
+      ? `⚠ Mã case ${caseId} chưa có trên DVBH (case trong ngày, có thể chưa kịp đồng bộ) — CHƯA được xác minh, hệ thống sẽ tự xác minh lại`
+      : `Tạo đơn khi hệ DVBH không phản hồi — mã case ${caseId} CHƯA được xác minh, hệ thống sẽ tự xác minh lại`);
   }
   // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
   // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai

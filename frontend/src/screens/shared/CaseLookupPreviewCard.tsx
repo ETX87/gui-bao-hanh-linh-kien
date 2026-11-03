@@ -59,7 +59,7 @@ export function CaseLookupPreviewCard({
       return;
     }
     // dvbh_down (30/10/2026): DVBH loi -> tich "Vẫn tạo đơn" la hop le (dung chung o override).
-    onValidityChange((status === "found" && (khopKtv === true || (!!allowOverride && !!override))) || (status === "dvbh_down" && !!override));
+    onValidityChange((status === "found" && (khopKtv === true || (!!allowOverride && !!override))) || (status === "dvbh_down" && !!override) || status === "cho_dong_bo");
   }, [ktvEmail, status, khopKtv, allowOverride, override, onValidityChange]);
 
   if (!caseId.trim()) return null;
@@ -77,10 +77,17 @@ export function CaseLookupPreviewCard({
       </div>
     );
   }
+  // 03/11/2026: case trong ngay (SC + YYMMDD hom nay) chua dong bo kip sang DVBH -> van tao duoc, chua xac minh.
+  if (status === "cho_dong_bo")
+    return (
+      <p className="text-xs font-bold text-[var(--amber-800)] bg-[var(--amber-100)] border border-[var(--amber-200)] rounded px-2 py-1.5">
+        ⏳ Chưa thấy case này trên DVBH — là case trong ngày hôm nay nên có thể chưa kịp đồng bộ. Vẫn tạo đơn được; đơn sẽ được đánh dấu “mã case chưa xác minh” để Admin bảo hành lưu ý, hệ thống tự xác minh lại sau.
+      </p>
+    );
   if (status === "error") return <p className="text-xs text-[var(--red-600)]">Không tra cứu được case lúc này (có thể do mất kết nối tới hệ DVBH) — thử bấm “Kiểm tra” lại.</p>;
   if (status === "not_found") {
     return ktvEmail ? (
-      <p className="text-xs font-bold text-[var(--red-700)] bg-[var(--red-100)] rounded px-2 py-1.5">⚠ Sai mã sự vụ — không tìm thấy case này bên hệ DVBH. Kiểm tra lại mã, chưa thể tạo đơn.</p>
+      <p className="text-xs font-bold text-[var(--red-700)] bg-[var(--red-100)] rounded px-2 py-1.5">⚠ Sai mã sự vụ — không tìm thấy case này bên hệ DVBH. Kiểm tra lại mã, chưa thể tạo đơn (chỉ case trong ngày hôm nay mới được tạo khi chưa đồng bộ).</p>
     ) : (
       <p className="text-xs text-[var(--ink-soft)]">Không tìm thấy case với mã này bên hệ DVBH — kiểm tra lại mã, hoặc vẫn có thể tiếp tục nếu đây là mã case mới/chưa đồng bộ.</p>
     );

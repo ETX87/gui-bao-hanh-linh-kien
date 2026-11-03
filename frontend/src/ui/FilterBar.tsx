@@ -183,7 +183,7 @@ export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: Lis
       .map((v) => {
         if (!v) return { value: NONE, label: d.noneLabel || "(Chưa có)" };
         const label = d.fmt ? d.fmt(v) : d.kind === "person" ? displayName(v) : d.kind === "lk" ? nameOf(v) : d.kind === "map" ? d.labels?.[v] || v : v;
-        return { value: v, label, hint: d.kind === "person" && label !== v ? v : undefined };
+        return { value: v, label }; // 03/11/2026: chi hien ten (van tim duoc theo email vi value nam trong chi muc tim)
       })
       .sort((a, b) => (a.value === NONE ? 1 : b.value === NONE ? -1 : a.label.localeCompare(b.label, "vi")));
   };

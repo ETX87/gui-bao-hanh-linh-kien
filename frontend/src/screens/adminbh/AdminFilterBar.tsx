@@ -75,7 +75,7 @@ export function AdminFilterBar({ value, onChange, reloadKey }: { value: AdminFil
   const active = Object.values(value).filter(Boolean).length;
 
   const ktvOptions = opts.ktv
-    .map((e) => ({ value: e, label: e === KHACH_LE_KEY ? "Khách lẻ (đơn dịch vụ)" : displayName(e), hint: e === KHACH_LE_KEY || displayName(e) === e ? undefined : e }))
+    .map((e) => ({ value: e, label: e === KHACH_LE_KEY ? "Khách lẻ (đơn dịch vụ)" : displayName(e) }))
     .sort((a, b) => a.label.localeCompare(b.label, "vi"));
   const lkOpts = (arr: string[]) => arr.map((m) => ({ value: m, label: lkText(m) })).sort((a, b) => a.label.localeCompare(b.label, "vi"));
 
