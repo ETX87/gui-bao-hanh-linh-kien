@@ -6114,3 +6114,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), dữ liệu mẫu 3 đơn cha / 4 đơn vị / 3 phiếu trả / 2 đề xuất — script HTTP **26/26 đạt**: cấp thiếu ĐH 400, cấp → chờ KT, số việc KT = 2, lùi đơn khi đề xuất chờ KT bị chặn, KT trả lại / thiếu MISA / từ chối / duyệt; trừ công nợ phiếu nháp bị chặn, phiếu đã duyệt + chờ duyệt → kết thúc; lùi đơn có phiếu trả chờ KT bị chặn, lùi đơn huỷ + đơn trong phiếu nháp (tự gỡ khỏi phiếu); đổi LK hàng loạt (LK sai / thiếu LK bị chặn, 2 đúng 1 lỗi, bỏ B giữ C); tên = "Lò Văn Thanh". Giao diện: tab "Đã cấp" hiện đúng "ĐH DH10 · MISA XK1", tên NV hiện tên ETX. Chưa xem bằng mắt: hiển thị "1/2" ở chế độ nhóm, modal lùi lại / đổi linh kiện hàng loạt.
 
+
+**Deploy (03/11/2026):** áp migration 0024 lên D1 production và `npm run deploy` (Version ID `2f2db4db`).
