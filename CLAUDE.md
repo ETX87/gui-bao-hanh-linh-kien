@@ -6166,3 +6166,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck 0 lỗi. Đọc D1 production xác nhận 2 mã cùng email; mã trên case `tinhnv.ns-465` nằm trong danh sách mã của email → sẽ khớp. Chưa thử lại bằng tài khoản thật của KTV.
 
+
+**Deploy (03/11/2026):** `npm run deploy` (Version ID `1a82706b`), không có migration mới.
