@@ -6138,3 +6138,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Hàm tách ngày thử 7 mã (đúng / thường / hôm qua / ngày mai / sai tháng / không phải SC). Chạy local với 1 Worker `dvbh` giả luôn trả "không tìm thấy": `case-lookup` hôm nay `cho_dong_bo:true`, hôm qua `false`; thêm đơn SC hôm nay 201 + `case_xac_minh=1`, hôm qua / ngày mai / mã số đều 400 `CASE_NOT_FOUND`. Chưa xem bằng mắt khung vàng và khối mã yêu cầu mới.
 
+
+**Deploy (03/11/2026):** `npm run deploy` (Version ID `e0618558`), không có migration mới.
