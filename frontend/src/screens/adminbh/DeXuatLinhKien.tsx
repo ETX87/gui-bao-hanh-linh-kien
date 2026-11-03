@@ -11,17 +11,21 @@ import { useLkName } from "../../hooks/useLinhKien";
 import { UserName } from "../../hooks/useUserNames";
 import { fmtDate } from "../../lib/format";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
-import { CapLinhKienModal, DeXuatBadge, TuChoiDeXuatModal } from "../shared/DeXuatLinhKien";
+import { CapLinhKienModal, DeXuatBadge, KtTraLaiDeXuatModal, KtXacNhanDeXuatModal, TuChoiDeXuatModal } from "../shared/DeXuatLinhKien";
+import { useRoute } from "../../router/Router";
 import type { AppUser, DeXuatLk } from "../../lib/types";
 
 // Man "Cap linh kien sua chua" (Admin BH, 12/10/2026): de xuat linh kien cua NV (don con cua don vi bao
 // hanh). Admin len phieu xuat MISA roi bam "Cap" (1 hoac nhieu de xuat chung 1 ma MISA), hoac "Tu choi".
 
+// 03/11/2026: them buoc "Cho KT xac nhan" - Admin dong y cap (ma don hang) -> Ke toan nhap MISA, duyet /
+// tu choi / tra lai Admin. Ke toan chi thay 2 tab cho_ke_toan + da_cap.
 const TABS = [
-  { key: "cho_cap", label: "Chờ cấp" },
-  { key: "da_cap", label: "Đã cấp" },
-  { key: "tu_choi", label: "Từ chối" },
-  { key: "huy", label: "Đã huỷ" },
+  { key: "cho_cap", label: "Chờ Admin cấp", kt: false },
+  { key: "cho_ke_toan", label: "Chờ KT xác nhận", kt: true },
+  { key: "da_cap", label: "Đã cấp", kt: true },
+  { key: "tu_choi", label: "Từ chối", kt: false },
+  { key: "huy", label: "Đã huỷ", kt: false },
 ];
 
 const DEFS: FilterDef[] = [
@@ -39,7 +43,14 @@ const DEFS: FilterDef[] = [
 export function AdminDeXuatScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const { nameOf } = useLkName();
-  const [tab, setTab] = useState("cho_cap");
+  const { query } = useRoute();
+  const isAdmin = user.la_admin_bh || user.la_qtri;
+  const isKt = user.la_ke_toan || user.la_qtri;
+  const tabs = TABS.filter((t) => isAdmin || t.kt);
+  const qTab = query.get("tab");
+  const [tab, setTab] = useState(tabs.find((t) => t.key === qTab)?.key || (isAdmin ? "cho_cap" : "cho_ke_toan"));
+  const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);
+  const [traLaiFor, setTraLaiFor] = useState<DeXuatLk | null>(null);
   const flt = useListFilters(`/de-xuat?trang_thai=${tab}`, DEFS.map((d) => d.key));
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DeXuatLk>(withQuery(`/de-xuat?trang_thai=${tab}`, flt.query), "de_xuat");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -47,7 +58,8 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
   const [tuChoiFor, setTuChoiFor] = useState<DeXuatLk | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   useEffect(() => setSelected(new Set()), [page, tab, flt.query]);
-  const choCap = tab === "cho_cap";
+  const choKt = tab === "cho_ke_toan" && isKt;
+  const choCap = (tab === "cho_cap" && isAdmin) || choKt;
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -75,7 +87,19 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
       key: "act",
       header: "",
       render: (r) =>
-        r.trang_thai === "cho_cap" ? (
+        r.trang_thai === "cho_ke_toan" && isKt ? (
+          <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Btn size="sm" variant="success" onClick={() => setKtFor([r])}>
+              Duyệt
+            </Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setTraLaiFor(r)}>
+              ↩ Trả lại
+            </Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setTuChoiFor(r)}>
+              Từ chối
+            </Btn>
+          </span>
+        ) : r.trang_thai === "cho_cap" && isAdmin ? (
           <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
             <Btn size="sm" variant="success" onClick={() => setCapFor([r])}>
               Cấp
@@ -93,12 +117,13 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
     { key: "nv", header: "NV đề xuất", render: (r) => <UserName email={r.nguoi_de_xuat} /> },
     { key: "gc", header: "Ghi chú", render: (r) => <span className="block max-w-[220px] truncate" title={r.ghi_chu || ""}>{r.ghi_chu || "—"}</span> },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    choCap
-      ? { key: "sla", header: "Chờ", render: (r) => <SlaBadge since={r.created_at} /> }
-      : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ma_misa ? `MISA ${r.ma_misa}` : r.ly_do_tu_choi || "—"} · {fmtDate(r.xu_ly_luc)}</span> },
+    { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}</span> },
+    tab === "cho_cap" || tab === "cho_ke_toan"
+      ? { key: "sla", header: "Chờ", render: (r) => <span className="flex items-center gap-1"><SlaBadge since={tab === "cho_ke_toan" ? r.xu_ly_luc || r.created_at : r.created_at} />{r.ly_do_tu_choi && tab === "cho_cap" && <span className="text-xs text-[var(--red-700,#b91c1c)] truncate max-w-[200px]" title={r.ly_do_tu_choi}>↩ {r.ly_do_tu_choi}</span>}</span> }
+      : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
   ];
 
-  if (loading && rows.length === 0 && total === 0 && tab === "cho_cap" && !flt.active) return <Spinner />;
+  if (loading && rows.length === 0 && total === 0 && !flt.active) return <Spinner />;
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   return (
@@ -106,7 +131,7 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Cấp linh kiện sửa chữa</h3>
         <div className="flex gap-1">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
@@ -126,13 +151,20 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <Badge tone="blue">{selected.size} đã chọn</Badge>
-            <Btn variant="success" onClick={() => setCapFor(rows.filter((r) => selected.has(r.id)))}>
-              ✔ Cấp {selected.size} đề xuất (chung 1 mã MISA)
-            </Btn>
+            {choKt ? (
+              <Btn variant="success" onClick={() => setKtFor(rows.filter((r) => selected.has(r.id)))}>
+                ✔ Duyệt {selected.size} đề xuất (nhập MISA)
+              </Btn>
+            ) : (
+              <Btn variant="success" onClick={() => setCapFor(rows.filter((r) => selected.has(r.id)))}>
+                ✔ Đồng ý cấp {selected.size} đề xuất
+              </Btn>
+            )}
           </div>
         )}
       </div>
-      {choCap && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Lên phiếu xuất MISA rồi bấm "Cấp" và nhập mã phiếu. Bấm dòng để mở đơn bảo hành.</p>}
+      {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Bấm "Cấp", nhập mã đơn hàng (mã MISA tuỳ chọn) → đề xuất chuyển sang Kế toán xác nhận. Bấm dòng để mở đơn bảo hành.</p>}
+      {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
       <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.unit_id)} emptyText="Không có đề xuất nào." />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
@@ -153,6 +185,27 @@ export function AdminDeXuatScreen({ user }: { user: AppUser }) {
           onClose={() => setTuChoiFor(null)}
           onDone={() => {
             setTuChoiFor(null);
+            after();
+          }}
+        />
+      )}
+      {ktFor && (
+        <KtXacNhanDeXuatModal
+          list={ktFor}
+          onClose={() => setKtFor(null)}
+          onDone={() => {
+            setKtFor(null);
+            setSelected(new Set());
+            after();
+          }}
+        />
+      )}
+      {traLaiFor && (
+        <KtTraLaiDeXuatModal
+          dx={traLaiFor}
+          onClose={() => setTraLaiFor(null)}
+          onDone={() => {
+            setTraLaiFor(null);
             after();
           }}
         />

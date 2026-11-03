@@ -41,7 +41,7 @@ function Routed({ user }: { user: AppUser }) {
   if ((user.la_admin_bh || user.la_nv_sua_chua || user.la_giam_sat || user.la_view || user.la_qtri) && path === "/don") return <DonBaoHanhScreen user={user} />;
   if ((user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_view || user.la_qtri) && path === "/phieu-tra") return <PhieuTraScreen user={user} />;
   if ((user.la_admin_bh || user.la_qtri) && path === "/quan-tri") return <QuanTriScreen user={user} />;
-  if ((user.la_admin_bh || user.la_qtri) && path === "/admin/de-xuat") return <AdminDeXuatScreen user={user} />;
+  if ((user.la_admin_bh || user.la_ke_toan || user.la_qtri) && path === "/admin/de-xuat") return <AdminDeXuatScreen user={user} />;
 
   // KTV: 3 man rieng (toi uu dien thoai, v1.048). Giam sat / Admin "tao ho" dung tab "Thùng nháp" cua man
   // Thùng hàng (cung component KtvTaoPhieuScreen).

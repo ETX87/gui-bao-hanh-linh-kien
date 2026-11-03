@@ -82,14 +82,27 @@ users.get("/nv-sua-chua", async (c) => {
 // GET /api/users/ten - bang tra cuu email -> ten hien thi (09/10/2026: "Cac noi hien thi thong tin ten
 // nguoi dung deu uu tien hien ten, neu khong co ten moi hien thi theo gmail"). Gop danh ba KTV
 // (ktv_lien_he_bh.ten_hien_thi) + tai khoan (users.ten - uu tien). Frontend tai 1 lan/phien, cache may.
+// "(thanhlv2.dvkh) KTV Bình Dương - Lò Văn Thanh" -> "Lò Văn Thanh".
+function tenGonKtv(t: string): string {
+  const x = t.trim();
+  if (!x.startsWith("(")) return x;
+  const i = x.lastIndexOf(" - ");
+  return i > 0 ? x.slice(i + 3).trim() || x : x;
+}
+
 users.get("/ten", async (c) => {
-  const [ktv, us] = await Promise.all([
+  // 03/11/2026 - "Sửa lại tên người đặt hàng trên hệ thống theo tên nhân sự từ linh-kien-app kéo sang" (VD
+  // karofibinhduong01@gmail.com hien "kenvin thanh" = ten Google). Uu tien: ho ten ETX nhan su (keo tu
+  // linh-kien-app, ban 'on' truoc) > ten trong danh ba KTV (bo tien to "(ma) KTV Tinh - ") > ten Google (users.ten).
+  const [ktv, us, etx] = await Promise.all([
     c.env.DB.prepare("SELECT email_dang_nhap AS email, ten_hien_thi AS ten FROM ktv_lien_he_bh WHERE email_dang_nhap IS NOT NULL AND TRIM(COALESCE(ten_hien_thi,'')) <> ''").all<{ email: string; ten: string }>(),
     c.env.DB.prepare("SELECT email, ten FROM users WHERE TRIM(COALESCE(ten,'')) <> ''").all<{ email: string; ten: string }>(),
+    c.env.DB.prepare("SELECT gmail AS email, ho_ten AS ten FROM etx_nhan_su_bh WHERE gmail IS NOT NULL AND TRIM(COALESCE(ho_ten,'')) <> '' ORDER BY CASE trang_thai_lam_viec WHEN 'on' THEN 1 ELSE 0 END").all<{ email: string; ten: string }>(),
   ]);
   const names: Record<string, string> = {};
-  for (const r of ktv.results) names[r.email.toLowerCase()] = r.ten.trim();
   for (const r of us.results) names[r.email.toLowerCase()] = r.ten.trim();
+  for (const r of ktv.results) names[r.email.toLowerCase()] = tenGonKtv(r.ten);
+  for (const r of etx.results) names[r.email.toLowerCase()] = r.ten.trim();
   return c.json({ names });
 });
 

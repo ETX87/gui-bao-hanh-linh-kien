@@ -21,6 +21,9 @@ deXuat.use("*", verifySessionMiddleware, loadUser);
 
 const isAdmin = (u: AppUser) => u.la_admin_bh || u.la_qtri;
 const isNv = (u: AppUser) => u.la_nv_sua_chua || u.la_qtri;
+const isKt = (u: AppUser) => u.la_ke_toan || u.la_qtri;
+// 02/11/2026: Ke toan chi xem cac de xuat da qua buoc Admin dong y cap.
+const KT_XEM = ["cho_ke_toan", "da_cap"];
 
 interface DxRow {
   id: string;
@@ -37,8 +40,8 @@ async function unitOf(db: D1Database, unitId: string) {
 // Hang doi Admin BH: de xuat theo trang thai (mac dinh cho_cap), gioi han theo mien cua nguoi xem.
 deXuat.get("/", async (c) => {
   const user = c.get("user");
-  if (!isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const tt = c.req.query("trang_thai") || "cho_cap";
+  if (!isAdmin(user) && !(isKt(user) && KT_XEM.includes(tt))) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
   const ms0 = mienScope(user, "p");
   const kw = kwClause(c.req.query("q"), ["d.id", "d.ma_lk", tenLkOf("d.ma_lk"), "d.ma_misa", "d.ma_don_hang", "d.ghi_chu", "d.nguoi_tao", tenOf("d.nguoi_tao"), "u.id", "p.case_id", "p.mo_ta_loi", "g.nguoi_tao", tenOf("g.nguoi_tao")], ["p.tim_kiem"]);
@@ -51,7 +54,7 @@ deXuat.get("/", async (c) => {
   const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   const fw = `FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = ?${ms.sql}`;
-  const order = tt === "cho_cap" ? "d.created_at" : "d.updated_at DESC";
+  const order = tt === "cho_cap" || tt === "cho_ke_toan" ? "d.created_at" : "d.updated_at DESC";
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv ${fw} ORDER BY ${order} LIMIT ? OFFSET ?`)
       .bind(tt, ...ms.binds, limit, offset)
@@ -110,16 +113,18 @@ deXuat.post("/:id/huy", async (c) => {
   return c.json({ ok: true });
 });
 
-// Admin BH cap linh kien (1 hoac nhieu de xuat chung 1 phieu xuat MISA). Ma MISA bat buoc.
+// Admin BH dong y cap linh kien (1 hoac nhieu de xuat). 02/11/2026 - nguyen van: "Admin BH đồng ý cấp LK thì
+// không bắt buộc nhập Mã Misa => xác nhận mã đơn hàng xong => sang trạng thái chờ kế toán xác nhận".
+// Ma don hang bat buoc, MISA tuy chon -> 'cho_ke_toan'; Ke toan nhap MISA + xac nhan -> 'da_cap'.
 deXuat.post("/cap", async (c) => {
   const user = c.get("user");
   if (!isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<{ ids?: string[]; ma_misa?: string; ma_don_hang?: string }>().catch(() => ({}) as { ids?: string[]; ma_misa?: string; ma_don_hang?: string });
   const ids = [...new Set((body.ids || []).filter((x) => typeof x === "string"))].slice(0, 200);
   if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
-  const misa = body.ma_misa?.trim();
-  if (!misa) return c.json({ error: "REQUIRE_MA_MISA" }, 400);
-  const dh = body.ma_don_hang?.trim() || null;
+  const misa = body.ma_misa?.trim() || null;
+  const dh = body.ma_don_hang?.trim();
+  if (!dh) return c.json({ error: "REQUIRE_MA_DON_HANG" }, 400);
   const now = nowVN();
   let ok = 0;
   const loi: { id: string; error: string }[] = [];
@@ -133,28 +138,83 @@ deXuat.post("/cap", async (c) => {
       loi.push({ id, error: "WRONG_STATE" });
       continue;
     }
-    await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'da_cap', ma_misa = ?, ma_don_hang = ?, nguoi_xu_ly = ?, xu_ly_luc = ?, updated_at = ? WHERE id = ?").bind(misa, dh, user.email, now, now, id).run();
+    await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'cho_ke_toan', ma_misa = ?, ma_don_hang = ?, nguoi_xu_ly = ?, xu_ly_luc = ?, ly_do_tu_choi = NULL, updated_at = ? WHERE id = ?").bind(misa, dh, user.email, now, now, id).run();
     const u = await unitOf(c.env.DB, d.unit_id);
-    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Admin BH cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}) | MISA: ${misa}` + (dh ? ` | Mã ĐH: ${dh}` : ""));
+    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Admin BH đồng ý cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}) | Mã ĐH: ${dh}` + (misa ? ` | MISA: ${misa}` : "") + " → chờ Kế toán xác nhận");
     ok++;
   }
   return c.json({ ok, loi });
 });
 
-// Admin BH tu choi 1 de xuat (bat buoc ly do). Khong gioi han so lan - NV de xuat lai duoc.
-deXuat.post("/:id/tu-choi", async (c) => {
+// Ke toan nhap ma MISA + xac nhan (1 hoac nhieu de xuat). items[{id, ma_misa}] - moi de xuat 1 ma MISA rieng
+// (thuong chung 1 phieu xuat). Ma MISA bat buoc.
+deXuat.post("/ke-toan-xac-nhan", async (c) => {
   const user = c.get("user");
-  if (!isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!isKt(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ items?: { id?: string; ma_misa?: string }[] }>().catch(() => ({}) as { items?: { id?: string; ma_misa?: string }[] });
+  const items = (body.items || []).filter((x) => typeof x.id === "string").slice(0, 200);
+  if (!items.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const now = nowVN();
+  let ok = 0;
+  const loi: { id: string; error: string }[] = [];
+  for (const it of items) {
+    const id = it.id!;
+    const misa = it.ma_misa?.trim();
+    if (!misa) {
+      loi.push({ id, error: "REQUIRE_MA_MISA" });
+      continue;
+    }
+    const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(id).first<DxRow & { ma_don_hang: string | null }>();
+    if (!d) {
+      loi.push({ id, error: "NOT_FOUND" });
+      continue;
+    }
+    if (d.trang_thai !== "cho_ke_toan") {
+      loi.push({ id, error: "WRONG_STATE" });
+      continue;
+    }
+    await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'da_cap', ma_misa = ?, kt_boi = ?, kt_luc = ?, updated_at = ? WHERE id = ?").bind(misa, user.email, now, now, id).run();
+    const u = await unitOf(c.env.DB, d.unit_id);
+    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Kế toán xác nhận cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}) | MISA: ${misa}` + (d.ma_don_hang ? ` | Mã ĐH: ${d.ma_don_hang}` : ""));
+    ok++;
+  }
+  return c.json({ ok, loi });
+});
+
+// Ke toan tra lai Admin BH (sai ma don hang...) - bat buoc ly do, de xuat quay ve 'cho_cap'.
+deXuat.post("/:id/kt-tra-lai", async (c) => {
+  const user = c.get("user");
+  if (!isKt(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(c.req.param("id")).first<DxRow>();
   if (!d) return c.json({ error: "NOT_FOUND" }, 404);
-  if (d.trang_thai !== "cho_cap") return c.json({ error: "WRONG_STATE" }, 400);
+  if (d.trang_thai !== "cho_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
   const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
   const lyDo = body.ly_do?.trim();
   if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
   const now = nowVN();
-  await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'tu_choi', ly_do_tu_choi = ?, nguoi_xu_ly = ?, xu_ly_luc = ?, updated_at = ? WHERE id = ?").bind(lyDo, user.email, now, now, d.id).run();
+  await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'cho_cap', ly_do_tu_choi = ?, kt_boi = ?, kt_luc = ?, updated_at = ? WHERE id = ?").bind(`Kế toán trả lại: ${lyDo}`, user.email, now, now, d.id).run();
   const u = await unitOf(c.env.DB, d.unit_id);
-  await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Admin BH từ chối đề xuất linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}): ${lyDo}`);
+  await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Kế toán trả lại đề xuất linh kiện ${d.id} cho Admin BH: ${lyDo}`);
+  return c.json({ ok: true });
+});
+
+// Admin BH tu choi 1 de xuat (bat buoc ly do). Khong gioi han so lan - NV de xuat lai duoc.
+deXuat.post("/:id/tu-choi", async (c) => {
+  const user = c.get("user");
+  const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(c.req.param("id")).first<DxRow>();
+  if (!d) return c.json({ error: "NOT_FOUND" }, 404);
+  // 03/11/2026: Ke toan cung tu choi duoc de xuat dang cho KT xac nhan (ket thuc, khong cap).
+  const laKt = d.trang_thai === "cho_ke_toan";
+  if (laKt ? !isKt(user) : !isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (d.trang_thai !== "cho_cap" && !laKt) return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
+  const lyDo = body.ly_do?.trim();
+  if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
+  const now = nowVN();
+  if (laKt) await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'tu_choi', ly_do_tu_choi = ?, kt_boi = ?, kt_luc = ?, updated_at = ? WHERE id = ?").bind(`Kế toán từ chối: ${lyDo}`, user.email, now, now, d.id).run();
+  else await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'tu_choi', ly_do_tu_choi = ?, nguoi_xu_ly = ?, xu_ly_luc = ?, updated_at = ? WHERE id = ?").bind(lyDo, user.email, now, now, d.id).run();
+  const u = await unitOf(c.env.DB, d.unit_id);
+  await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `${laKt ? "Kế toán" : "Admin BH"} từ chối đề xuất linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}): ${lyDo}`);
   return c.json({ ok: true });
 });
 

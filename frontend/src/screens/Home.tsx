@@ -30,6 +30,7 @@ const LABELS: Record<keyof WorkloadCounts, string> = {
   admin_phieu_tra_tu_choi: "Phiếu trả Kế toán trả lại",
   nv_cho_chan_doan: "Việc chờ chẩn đoán",
   ketoan_cho_duyet: "Phiếu trả chờ duyệt",
+  ketoan_de_xuat_lk: "Cấp linh kiện chờ KT xác nhận",
 };
 
 const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
@@ -50,6 +51,7 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   admin_phieu_tra_tu_choi: "/phieu-tra?tab=tu_choi_kt",
   nv_cho_chan_doan: "/don?tab=nv",
   ketoan_cho_duyet: "/phieu-tra?tab=cho_kt",
+  ketoan_de_xuat_lk: "/admin/de-xuat?tab=cho_ke_toan",
 };
 
 const ICON_OF: Record<keyof WorkloadCounts, string> = {
@@ -70,6 +72,7 @@ const ICON_OF: Record<keyof WorkloadCounts, string> = {
   admin_phieu_tra_tu_choi: "↩️",
   nv_cho_chan_doan: "🔧",
   ketoan_cho_duyet: "💰",
+  ketoan_de_xuat_lk: "🔩",
 };
 
 // Tone KPI theo nhom nghiep vu (DESIGN_SYSTEM.md §2.5): viec dang CHO minh xu ly = amber, viec cua
@@ -92,6 +95,7 @@ const TONE_OF: Record<keyof WorkloadCounts, "amber" | "blue" | "brand" | "red"> 
   admin_phieu_tra_tu_choi: "red",
   nv_cho_chan_doan: "amber",
   ketoan_cho_duyet: "amber",
+  ketoan_de_xuat_lk: "amber",
 };
 
 function todayLabel() {

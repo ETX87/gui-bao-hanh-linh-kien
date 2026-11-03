@@ -21,7 +21,7 @@ export const tkPhieuTraOf = (traIdExpr: string) =>
 
 // Bieu thuc ten nguoi dung / KTV theo email (users.ten hoac ten trong danh ba KTV) - dung lam 1 "cot".
 export const tenOf = (emailExpr: string) =>
-  `(SELECT COALESCE(us.ten,'') || ' ' || COALESCE((SELECT k.ten_hien_thi || ' ' || k.ma_ktv FROM ktv_lien_he_bh k WHERE k.email_dang_nhap = ${emailExpr} LIMIT 1),'') FROM (SELECT 1) LEFT JOIN users us ON us.email = ${emailExpr})`;
+  `(SELECT COALESCE(us.ten,'') || ' ' || COALESCE((SELECT e.ho_ten FROM etx_nhan_su_bh e WHERE e.gmail = ${emailExpr} LIMIT 1),'') || ' ' || COALESCE((SELECT k.ten_hien_thi || ' ' || k.ma_ktv FROM ktv_lien_he_bh k WHERE k.email_dang_nhap = ${emailExpr} LIMIT 1),'') FROM (SELECT 1) LEFT JOIN users us ON us.email = ${emailExpr})`;
 
 // Ten linh kien theo ma.
 export const tenLkOf = (maExpr: string) => `(SELECT ten_lk FROM linh_kien_bh WHERE ma_lk = ${maExpr})`;

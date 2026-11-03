@@ -9,6 +9,7 @@ import { XacNhanSoLuongModal } from "./XacNhanSoLuongModal";
 import { DonDichVuModal } from "./DonDichVuModal";
 import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
+import { BulkDoiLinhKienModal } from "./BulkDoiLinhKienModal";
 import { ThungChoNhanLink } from "./ThungNoiBo";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
@@ -62,6 +63,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const donViUnits = grouped ? donViTotal : ((donViRaw.total_don_vi as number) ?? 0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFastOpen, setBulkFastOpen] = useState(false);
+  const [bulkLkOpen, setBulkLkOpen] = useState(false);
   // Chon hang loat chi trong trang dang xem (doi trang -> bo chon, tranh ap nham don khong nhin thay).
   useEffect(() => setSelected(new Set()), [donViPage, qs, mode]);
   const selectedUnits = donVi.filter((u) => selected.has(u.id));
@@ -129,6 +131,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           caseId: u.case_id,
           slDat: u.so_luong_khai,
           slDuyet: u.so_luong_thuc_nhan,
+          laDonVi: true,
           serial: u.case_serial,
           ngayMua: u.case_ngay_mua,
           ngaySx: u.case_ngay_sx,
@@ -169,6 +172,9 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
                 <Btn onClick={() => setSelected(new Set())}>Bỏ chọn</Btn>
                 <Btn onClick={() => setBulkFastOpen(true)} title="Đổi mới / Trừ công nợ / Sửa chữa... cho cả nhóm, chọn 1 lần">
                   ⚡ Xử lý nhanh hàng loạt
+                </Btn>
+                <Btn onClick={() => setBulkLkOpen(true)} title="Đổi linh kiện thực tế gửi về (B) / đổi mới (C) cho các đơn đã chọn">
+                  🔩 Đổi linh kiện
                 </Btn>
                 <Btn variant="primary" onClick={() => setBulkOpen(true)}>
                   Phân loại hàng loạt
@@ -253,6 +259,17 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onClose={() => setBulkOpen(false)}
           onDone={() => {
             setBulkOpen(false);
+            setSelected(new Set());
+            afterChange();
+          }}
+        />
+      )}
+      {bulkLkOpen && (
+        <BulkDoiLinhKienModal
+          ids={selectedUnits.map((u) => u.id)}
+          onClose={() => setBulkLkOpen(false)}
+          onDone={() => {
+            setBulkLkOpen(false);
             setSelected(new Set());
             afterChange();
           }}

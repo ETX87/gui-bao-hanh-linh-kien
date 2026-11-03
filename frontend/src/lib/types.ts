@@ -167,7 +167,9 @@ export interface DeXuatLk {
   ma_lk: string;
   so_luong: number;
   ghi_chu: string | null;
-  trang_thai: "cho_cap" | "da_cap" | "tu_choi" | "huy";
+  trang_thai: "cho_cap" | "cho_ke_toan" | "da_cap" | "tu_choi" | "huy";
+  kt_boi?: string | null; // 02/11/2026: Ke toan xac nhan (nhap MISA)
+  kt_luc?: string | null;
   nguoi_de_xuat: string;
   created_at: string;
   ma_misa: string | null;

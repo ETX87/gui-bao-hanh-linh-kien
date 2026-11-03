@@ -114,6 +114,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const [khieuNai, setKhieuNai] = useState("");
   const [thieu, setThieu] = useState<string[]>([]);
   const [showTuChoi, setShowTuChoi] = useState(false);
+  const [showTruNo, setShowTruNo] = useState(false);
+  const [ghiChuTruNo, setGhiChuTruNo] = useState("");
   const [showKhieuNai, setShowKhieuNai] = useState(false);
   // Kho danh gia khieu nai "khong nhan duoc hang" (12/10/2026): thanh_cong | that_bai.
   const [danhGiaKN, setDanhGiaKN] = useState<"thanh_cong" | "that_bai" | null>(null);
@@ -199,6 +201,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
       setDayNguoc(null);
       setLyDoDayNguoc("");
     });
+  const truCongNo = () => run(async () => { await api.post(`/phieu-tra/${traId}/kt-tru-cong-no`, { ghi_chu: ghiChuTruNo }); toast("Đã xác nhận trừ công nợ — phiếu kết thúc, không gửi KTV.", "ok"); setShowTruNo(false); });
   const duyet = () => run(async () => { await api.post(`/phieu-tra/${traId}/duyet`); toast("Đã duyệt.", "ok"); });
   const tuChoi = () => run(async () => { await api.post(`/phieu-tra/${traId}/tu-choi`, { ly_do: lyDoTuChoi }); toast("Đã từ chối.", "ok"); setShowTuChoi(false); });
   const dongGoi = async (files: FileList | null) =>
@@ -257,6 +260,11 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                   Duyệt
                 </Btn>
               </>
+            )}
+            {isKeToan && (t.trang_thai === "cho_ke_toan_duyet" || t.trang_thai === "da_duyet_ke_toan") && !showTruNo && !showTuChoi && !dayNguoc && (
+              <Btn variant="secondary" onClick={() => setShowTruNo(true)} title="Kết thúc phiếu theo hình thức trừ công nợ — không gửi hàng về KTV">
+                💳 Trừ công nợ
+              </Btn>
             )}
             {t.trang_thai === "da_duyet_ke_toan" && !dayNguoc && isKeToan && (
               <Btn variant="danger" onClick={() => setDayNguoc("ke_toan")} title="Huỷ duyệt, trả phiếu về Admin BH sửa (phiếu lên nhầm)">
@@ -335,6 +343,20 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
                 <Btn onClick={() => setDayNguoc(null)}>Huỷ</Btn>
                 <Btn variant="danger" disabled={!lyDoDayNguoc.trim() || busy} onClick={guiDayNguoc}>
                   Xác nhận đẩy ngược
+                </Btn>
+              </div>
+            </div>
+          )}
+          {showTruNo && (
+            <div className="rounded-lg border border-[var(--amber-500)] bg-[var(--amber-100)] p-3 space-y-2">
+              <p className="text-sm font-semibold text-[var(--ink)]">Xác nhận trừ công nợ: phiếu kết thúc ở trạng thái "Kết thúc, không gửi" — hàng KHÔNG gửi về KTV{t.trang_thai === "da_duyet_ke_toan" ? ", Kho không cần xử lý nữa" : ""}.</p>
+              <Field label="Ghi chú (tuỳ chọn)">
+                <Textarea rows={2} value={ghiChuTruNo} onChange={(e) => setGhiChuTruNo(e.target.value)} placeholder="VD: Trừ công nợ tháng 11 của KTV" autoFocus />
+              </Field>
+              <div className="flex justify-end gap-2">
+                <Btn onClick={() => setShowTruNo(false)}>Huỷ</Btn>
+                <Btn variant="primary" disabled={busy} onClick={truCongNo}>
+                  Xác nhận trừ công nợ
                 </Btn>
               </div>
             </div>

@@ -66,6 +66,8 @@ export interface GroupRow {
   caseId?: string | null;
   slDat?: number | null;
   slDuyet?: number | null;
+  // 03/11/2026: dong la 1 DON VI tach tu don cha (moi don vi = 1 linh kien) -> SL hien 1, kem "/N" cua don cha.
+  laDonVi?: boolean;
   serial?: string | null;
   ngayMua?: string | null;
   ngaySx?: string | null;
@@ -105,6 +107,19 @@ function buildGroups(rows: GroupRow[], mode: "ktv" | "lk"): Group[] {
     out.push({ key, subs, rows: subs.flatMap((s) => s.rows) });
   }
   return out.sort((x, y) => y.rows.length - x.rows.length);
+}
+
+// So luong hien tren dong: don vi tach = 1 cai (kem /N cua don cha); don cha chua tach = SL khai / thuc nhan.
+function SlCell({ r, kind }: { r: GroupRow; kind: "dat" | "duyet" }) {
+  const v = kind === "dat" ? r.slDat : r.slDuyet;
+  if (v == null) return <span className="text-[var(--ink-faint)]">—</span>;
+  if (r.laDonVi && Number(v) > 1)
+    return (
+      <span title={`1 đơn vị trong đơn cha ${r.parentId ?? ""} (${kind === "dat" ? "KTV khai" : "thực nhận"} ${v})`}>
+        1<span className="text-[var(--ink-faint)] text-xs">/{v}</span>
+      </span>
+    );
+  return <>{v}</>;
 }
 
 const sumDat = (rs: GroupRow[]) => {
@@ -234,7 +249,7 @@ export function GroupedDonView({
                         </div>
                         <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-[var(--ink-soft)]">
                           <span>Case: <b className="font-mono text-[var(--ink-body)]">{r.caseId || "—"}</b></span>
-                          <span>SL đặt / duyệt: <b className="text-[var(--ink-body)]">{r.slDat ?? "—"} / {r.slDuyet ?? "—"}</b></span>
+                          <span>SL đặt / duyệt: <b className="text-[var(--ink-body)]"><SlCell r={r} kind="dat" /> / <SlCell r={r} kind="duyet" /></b></span>
                           <span>Serial: <b className="text-[var(--ink-body)]">{r.serial || "—"}</b></span>
                           <span>Ngày mua: <b className="text-[var(--ink-body)]">{r.ngayMua ? fmtDateOnly(r.ngayMua) : "—"}</b></span>
                           <span>Ngày SX: <b className="text-[var(--ink-body)]">{r.ngaySx ? fmtDateOnly(r.ngaySx) : "—"}</b></span>
@@ -331,10 +346,10 @@ export function GroupedDonView({
                             <Dash v={r.caseId} />
                           </td>
                           <td className="text-right">
-                            <Dash v={r.slDat} />
+                            <SlCell r={r} kind="dat" />
                           </td>
                           <td className={`text-right ${r.slDuyet != null && r.slDat != null && Number(r.slDuyet) !== Number(r.slDat) ? "font-bold text-[var(--orange-700)]" : ""}`}>
-                            <Dash v={r.slDuyet} />
+                            <SlCell r={r} kind="duyet" />
                           </td>
                           <td className="font-mono text-xs">
                             <Dash v={r.serial} />

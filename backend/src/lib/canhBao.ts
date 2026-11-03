@@ -170,6 +170,18 @@ export const STAGES: StageDef[] = [
     hash: { ketoan: "/phieu-tra?tab=cho_kt" },
   },
   {
+    // 02/11/2026: Admin da dong y cap linh kien, cho Ke toan nhap MISA + xac nhan.
+    key: "de_xuat_kt",
+    label: "Đề xuất linh kiện chờ Kế toán xác nhận",
+    vai_tro: ["ketoan", "admin"],
+    don_vi: "phiếu",
+    from: `de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = 'cho_ke_toan'`,
+    since: "d.xu_ly_luc",
+    ktvCol: "g.nguoi_tao",
+    mienAlias: "p",
+    hash: { ketoan: "/admin/de-xuat?tab=cho_ke_toan", admin: "/admin/de-xuat?tab=cho_ke_toan" },
+  },
+  {
     key: "kho_dong_goi",
     label: "Phiếu đã duyệt, Kho chưa gửi trả",
     vai_tro: ["kho"],

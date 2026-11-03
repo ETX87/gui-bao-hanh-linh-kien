@@ -166,6 +166,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
           caseId: r.case_id,
           slDat: r.sl_dat,
           slDuyet: r.sl_duyet,
+          laDonVi: r.loai === "unit",
           serial: r.serial,
           ngayMua: r.ngay_mua,
           ngaySx: r.ngay_sx,

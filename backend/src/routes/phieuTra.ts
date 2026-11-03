@@ -11,7 +11,7 @@ import { addLog } from "../lib/logs";
 import { isOverdue } from "../lib/sla";
 import { LBL, KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
-import { pushBoxToKhovan } from "../lib/khovanPushClient";
+import { pushBoxToKhovan, pushBoxDoneToKhovan } from "../lib/khovanPushClient";
 import { mienScope, syncPhieuTraMien } from "../lib/mien";
 import { extractMaKtv } from "../lib/ktvCode";
 
@@ -592,6 +592,24 @@ phieuTra.post("/:id/tu-choi", async (c) => {
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_tu_choi_kt = ?, updated_at = ? WHERE id = ?").bind(body.ly_do.trim(), nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "cho_ke_toan_duyet", "nhap", user.email, "Kế toán từ chối, trả lại Admin BH: " + body.ly_do.trim());
+  return c.json({ ok: true });
+});
+
+// 03/11/2026 - nguyen van: "Kế toán thêm nút trừ công nợ => xác nhận trừ công nợ đơn sẽ kết thúc như đơn kho
+// xác nhận trừ công nợ (không gửi đến KTV)". Phieu cho KT duyet hoac da duyet ma Kho chua gui -> ket_thuc_khong_gui.
+// Phieu da duyet (da bao sang khovan) -> bao khovan "da ban giao" de Kho khong xu ly nua.
+phieuTra.post("/:id/kt-tru-cong-no", async (c) => {
+  const user = c.get("user");
+  if (!requireKeToan(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const t = await c.env.DB.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string }>();
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if (t.trang_thai !== "cho_ke_toan_duyet" && t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ghi_chu?: string }>().catch(() => ({}) as { ghi_chu?: string });
+  const gc = body.ghi_chu?.trim();
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ket_thuc_khong_gui', ly_do_tu_choi_kt = NULL, updated_at = ? WHERE id = ?").bind(nowVN(), id).run();
+  await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, "ket_thuc_khong_gui", user.email, "Kế toán xác nhận trừ công nợ — kết thúc, không gửi hàng về KTV" + (gc ? " | " + gc : ""));
+  if (t.trang_thai === "da_duyet_ke_toan") c.executionCtx.waitUntil(pushBoxDoneToKhovan(c.env, id, "Kế toán xác nhận trừ công nợ — không gửi hàng"));
   return c.json({ ok: true });
 });
 

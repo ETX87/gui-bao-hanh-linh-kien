@@ -46,7 +46,7 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT u.*, p.case_id, p.ma_lk, p.mo_ta_loi, p.phieu_gui_id,
-         (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'cho_cap') AS so_dx_cho_cap,
+         (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai IN ('cho_cap', 'cho_ke_toan')) AS so_dx_cho_cap,
          (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'da_cap') AS so_dx_da_cap
        FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
        WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?${kw.sql} ORDER BY u.updated_at LIMIT ? OFFSET ?`,

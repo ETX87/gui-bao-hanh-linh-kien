@@ -84,7 +84,7 @@ const CATALOG: CatalogItem[] = [
     countKeys: ["admin_cho_xac_nhan_sl", "admin_cho_phan_loai", "admin_cho_xac_nhan_hoan_tat", "nv_cho_chan_doan"],
     show: (u) => u.la_admin_bh || u.la_nv_sua_chua || u.la_giam_sat || u.la_view || u.la_qtri,
   },
-  { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: "", desc: "NV xin linh kiện — lên MISA xuất kho rồi cấp", countKeys: ["admin_de_xuat_cho_cap"], show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: "", desc: "NV xin linh kiện — Admin đồng ý cấp, Kế toán nhập MISA xác nhận", countKeys: ["admin_de_xuat_cho_cap", "ketoan_de_xuat_lk"], show: (u) => u.la_admin_bh || u.la_ke_toan || u.la_qtri },
   {
     hash: "/phieu-tra",
     label: "Phiếu trả",
@@ -159,6 +159,7 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   admin_phieu_tra_tu_choi: "phiếu trả Kế toán trả lại",
   nv_cho_chan_doan: "đơn chờ chẩn đoán",
   ketoan_cho_duyet: "phiếu chờ duyệt",
+  ketoan_de_xuat_lk: "đề xuất linh kiện chờ KT xác nhận",
 };
 
 export function countBreakdown(it: RouteItem, counts: WorkloadCounts): string {

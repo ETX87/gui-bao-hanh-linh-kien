@@ -53,7 +53,7 @@ export function ketQuaLabel(u: { ket_qua_nv?: string | null; ket_qua_chan_doan?:
 }
 
 // De xuat linh kien (12/10/2026).
-export const DE_XUAT_TT_LABELS: Record<string, string> = { cho_cap: "Chờ cấp", da_cap: "Đã cấp", tu_choi: "Từ chối", huy: "Đã huỷ" };
+export const DE_XUAT_TT_LABELS: Record<string, string> = { cho_cap: "Chờ Admin cấp", cho_ke_toan: "Chờ KT xác nhận", da_cap: "Đã cấp", tu_choi: "Từ chối", huy: "Đã huỷ" };
 
 export const HUONG_CAN_NV = ["sua_chua", "dich_vu_tinh_phi"];
 

@@ -33,6 +33,7 @@ import { ThuHoiHangSection } from "./ThuHoiHangSection";
 import { DeXuatSection } from "./DeXuatLinhKien";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
+import { HoanTacModal } from "./HoanTacModal";
 import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import type { AppUser, DonCha, DonVi, GhiChuLog, LogRow } from "../../lib/types";
@@ -106,7 +107,7 @@ interface DetailResponse {
   co_the_trao_doi?: boolean;
 }
 
-type SubModal = "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | "tra-ktv" | "tra-kho" | "chan-doan" | null;
+type SubModal = "hoan-tac" | "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | "tra-ktv" | "tra-kho" | "chan-doan" | null;
 type QuickKey = "pg" | "dc" | "pt" | "odoo" | null;
 
 const ODOO_SC_LABELS: Record<string, string> = {
@@ -196,6 +197,14 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       if (!isKhachLe) buttons.push({ label: "⚡ Trả trực tiếp KTV", onClick: () => setSub("tra-ktv") });
       buttons.push({ label: "⚡ Giao trực tiếp Kho", onClick: () => setSub("tra-kho") });
     }
+  }
+  // 03/11/2026: lui lai don huy nham / da phan loai (duyet) khi giai doan sau chua thuc hien.
+  if (
+    (user.la_admin_bh || user.la_qtri) &&
+    ["ket_thuc_tu_choi", "ket_thuc_chuyen_kho", "cho_chan_doan", "san_sang_gom_phieu_tra"].includes(u.trang_thai) &&
+    (!u.phieu_tra_id || pt?.trang_thai === "nhap")
+  ) {
+    buttons.push({ label: "↩ Lùi lại", onClick: () => setSub("hoan-tac") });
   }
   if (user.la_nv_sua_chua && u.trang_thai === "cho_chan_doan" && u.nguoi_sua_chua === user.email) {
     buttons.push({ label: "🔧 Nộp kết quả sửa chữa", onClick: () => setSub("chan-doan"), variant: "primary" });
@@ -702,6 +711,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       {sub === "tra-ktv" && <TraTrucTiepModal unitId={u.id} mode="ktv" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "tra-kho" && <TraTrucTiepModal unitId={u.id} mode="kho" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "chan-doan" && <ChanDoanModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
+      {sub === "hoan-tac" && <HoanTacModal unitId={u.id} trangThai={u.trang_thai} quaNv={!!u.ket_qua_nv && !!u.admin_xac_nhan_hoan_tat} phieuTraId={u.phieu_tra_id} onClose={() => setSub(null)} onDone={afterAction} />}
       {suaLk && <SuaLinhKienModal unitId={u.id} maLkKtv={p.ma_lk} maLkNhan={u.ma_lk_nhan ?? null} maLkThucTe={u.ma_lk_thuc_te} onClose={() => setSuaLk(false)} onDone={() => { setSuaLk(false); onChanged(); load(); }} />}
       {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}
       {openPt && pt && <PhieuTraDetailModal traId={pt.id} user={user} nested onClose={() => setOpenPt(false)} onChanged={() => { onChanged(); load(); }} />}

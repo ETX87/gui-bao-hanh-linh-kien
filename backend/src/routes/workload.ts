@@ -36,6 +36,7 @@ const EMPTY = {
   admin_phieu_tra_tu_choi: 0,
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
+  ketoan_de_xuat_lk: 0,
 };
 type Counts = typeof EMPTY;
 
@@ -170,6 +171,13 @@ workload.get("/", async (c) => {
     jobs.push(
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'cho_ke_toan_duyet'${mt.sql}`, ...mt.binds).then((r) => {
         counts.ketoan_cho_duyet = r?.cnt ?? 0;
+      }),
+      // 02/11/2026: de xuat linh kien Admin da dong y cap, cho Ke toan nhap MISA + xac nhan.
+      one(
+        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_ke_toan'${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.ketoan_de_xuat_lk = r?.cnt ?? 0;
       }),
     );
   }
