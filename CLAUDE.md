@@ -6140,3 +6140,19 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 
 **Deploy (03/11/2026):** `npm run deploy` (Version ID `e0618558`), không có migration mới.
+
+## Sửa 282 đơn nhập AppSheet bị mã case "NHẬP MÃ THỦ CÔNG" (03/11/2026) — chỉ thao tác dữ liệu, không đổi code
+
+**(a) Nguyên văn yêu cầu:** *"fix các đơn bảo hành này, hôm trước import lên bị nhầm thành mã ID NHẬP MÃ THỦ CÔNG => fix lại cho tôi"* (file `don bh fix.xlsx` trên Desktop, sheet DATA 3.070 dòng).
+
+**(b) Đã làm:**
+- Production có **282 đơn cha** mang `case_id = 'NHẬP MÃ THỦ CÔNG'` (lần nhập cuối 01/11/2026 lấy nhầm chữ hiển thị của AppSheet thay vì mã thật).
+- Khớp theo `AppSheet ID` ghi trong `ghi_chu` của đơn với cột ID của file: **282/282 khớp**, lấy cột "MÃ YÊU CẦU" làm mã case (256 mã SC…, 19 mã số, 7 mã T…).
+- Ghép thêm đơn Odoo cùng mã case (lượt 1: cùng mã case + mã linh kiện, lượt 2: cùng mã case; bỏ đơn Odoo đã gắn / đã "Hủy đơn lỗi"): **195 đơn** được gắn `odoo_id` — các đơn Odoo này trước đó vẫn hiện ở tab "Chưa gửi" của KTV.
+- Mỗi đơn 1 dòng nhật ký (người thực hiện "Hệ thống"). `tim_kiem` đặt NULL để cron tính lại chuỗi tìm kiếm; cron 15 phút cũng sẽ tự bổ sung bằng chứng case từ DVBH và báo trạng thái gửi sửa của 195 đơn Odoo về dvbh.
+- Sao lưu trước khi sửa: `../backup-suachua/case-thu-cong-truoc-fix-20261103.json` (id, ghi_chu, odoo_id, ma_lk, phieu_gui_id của 282 đơn); SQL đã chạy: `../backup-suachua/fix-case-thu-cong-20261103.sql` (759 lệnh).
+
+**(c) Vấn đề:** `wrangler d1 execute --file` không trả dòng kết quả → truy vấn tra cứu phải chạy bằng `--command`. Cột linh kiện của `don_bh_odoo` là `ma_linh_kien` (không phải `ma_lk`).
+
+**(d) Kiểm tra sau khi chạy:** còn 0 đơn "NHẬP MÃ THỦ CÔNG"; 195 đơn đã gắn Odoo; 282 dòng nhật ký; ví dụ DH-000749 → `T25022`.
+
