@@ -6274,3 +6274,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
   - rút lại → bên kia "Đã rút lại"; "Đã nắm" → hết số việc.
 - Thêm: sửa ticket bên kia mà không đẩy → "Đồng bộ ngay" kéo về đúng. Ghi lý do chậm độc lập "Hết hàng tồn kho" → tự tạo THB-000003 với linh kiện C.
 - Giao diện app này (trình duyệt thật): tab Thiếu hàng đủ nhóm + số, khối trong UI chi tiết có trạng thái + Rút lại, nhật ký có dòng báo thiếu.
+
+**Deploy (04/11/2026):** linh-kien-app áp migration 0106 + deploy v1.437 (Version ID `f702571f`, từ git worktree sạch của commit `8cbb6b5`); app này áp migration 0026 + deploy v1.071 (Version ID `5c71176c`, lần đầu báo "Authentication error 10000", chạy lại có ép `CLOUDFLARE_ACCOUNT_ID` thì qua). Kiểm tra sau deploy: `/api/thieu-hang` và `/api/thieu-hang-bh` trả 401 (route có thật), bundle mang 1.071.
