@@ -6291,3 +6291,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** link cũ `#/admin/de-xuat?tab=da_cap` giờ mở tab mặc định. Ô tìm không dấu ("bom") chỉ khớp khi cron đã tính chuỗi tìm kiếm của đơn.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), script HTTP 17/17 (sau khi sửa dữ liệu mẫu thiếu quyền qtri): chưa KT duyệt → Kho bị chặn; KT duyệt 3 → tab Chờ Kho in 3, số việc 3; in 2, in lần 2 bị chặn; chưa in 1; xuất 2 (1 đã in + 1 xuất luôn); đã xuất không lùi; hành động sai 400; số việc còn 1/0; `loc_only` + cảnh báo OK; tìm theo mã LK / tên có dấu / mã đơn đúng. Giao diện: bấm "🖨 Đã in" → phiếu sang tab "Kho đã in" có "↩ Chưa in" / "📦 Đã xuất".
+
+**Deploy (04/11/2026):** áp migration 0027 lên D1 production (11 đề xuất → chờ Kho in, 217 → đã xuất) và `npm run deploy` (Version ID `f58a6f74`).
