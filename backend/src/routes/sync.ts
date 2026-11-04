@@ -1,4 +1,4 @@
-import { tuDuyetTaiKhoanCho } from "../lib/etxSync";
+import { dongBoTaiKhoan } from "../lib/taiKhoan";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
@@ -66,7 +66,8 @@ sync.post("/ktv", async (c) => {
   }
   // 16/10/2026: KTV moi ve danh ba (linh-kien-app tu tao tu ETX) -> tai khoan dang "Cho duyet" cung Gmail duoc duyet ngay,
   // khong doi lan dang nhap sau.
-  const tuDuyet = statements.length ? await tuDuyetTaiKhoanCho(c.env.DB) : 0;
+  // 04/11/2026: dong bo luon ten cong ty + co KTV cho tai khoan chua co vai tro (lib/taiKhoan.ts).
+  const tuDuyet = statements.length ? (await dongBoTaiKhoan(c.env.DB)).tu_duyet : 0;
   return c.json({ upserted: statements.length, skipped, tu_duyet: tuDuyet });
 });
 

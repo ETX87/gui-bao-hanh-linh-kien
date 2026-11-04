@@ -1,5 +1,6 @@
 import { runUserKhuVucSync } from "../lib/userKhuVucSync";
 import { Hono } from "hono";
+import { dongBoTaiKhoan } from "../lib/taiKhoan";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { Env } from "../types";
 import { signSession } from "../lib/jwt";
@@ -78,7 +79,7 @@ auth.get("/callback", async (c) => {
   // ap dung khi tai khoan van dang "Cho duyet" (khong bao gio ghi de tai khoan da duyet/cau hinh tay).
   let ktvMatch: { laKtvDvbh: number; laVeTinh: number } | null = null;
   if (!isBootstrapAdmin) {
-    const ktvRow = await c.env.DB.prepare("SELECT vai_tro_ktv FROM ktv_lien_he_bh WHERE email_dang_nhap = ?")
+    const ktvRow = await c.env.DB.prepare("SELECT vai_tro_ktv FROM ktv_lien_he_bh WHERE LOWER(TRIM(email_dang_nhap)) = LOWER(?) ORDER BY CASE vai_tro_ktv WHEN 'Ve tinh' THEN 1 ELSE 0 END LIMIT 1")
       .bind(userInfo.email)
       .first<{ vai_tro_ktv: string | null }>();
     if (ktvRow) {
@@ -124,6 +125,9 @@ auth.get("/callback", async (c) => {
       .bind(userInfo.email, userInfo.name ?? null, isBootstrapAdmin || etxDangLam ? "Da duyet" : "Cho duyet", isBootstrapAdmin ? 1 : 0, nowVN(), etxDangLam ? 1 : 0)
       .run();
   }
+
+  // 04/11/2026: dong bo tai khoan voi danh ba KTV / ETX - ten cong ty thay ten Google, tai khoan chua co vai tro ma co trong danh ba KTV thi gan co KTV.
+  await dongBoTaiKhoan(c.env.DB, userInfo.email).catch((e) => console.error("[dongBoTaiKhoan]", e));
 
   if (!daCoTaiKhoan && !ktvMatch) {
     c.executionCtx.waitUntil(runUserKhuVucSync(c.env).then(() => undefined).catch(() => undefined));

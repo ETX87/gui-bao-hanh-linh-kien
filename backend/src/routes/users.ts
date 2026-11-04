@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { tenGonKtv } from "../lib/taiKhoan";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
@@ -82,13 +83,6 @@ users.get("/nv-sua-chua", async (c) => {
 // GET /api/users/ten - bang tra cuu email -> ten hien thi (09/10/2026: "Cac noi hien thi thong tin ten
 // nguoi dung deu uu tien hien ten, neu khong co ten moi hien thi theo gmail"). Gop danh ba KTV
 // (ktv_lien_he_bh.ten_hien_thi) + tai khoan (users.ten - uu tien). Frontend tai 1 lan/phien, cache may.
-// "(thanhlv2.dvkh) KTV Bình Dương - Lò Văn Thanh" -> "Lò Văn Thanh".
-function tenGonKtv(t: string): string {
-  const x = t.trim();
-  if (!x.startsWith("(")) return x;
-  const i = x.lastIndexOf(" - ");
-  return i > 0 ? x.slice(i + 3).trim() || x : x;
-}
 
 users.get("/ten", async (c) => {
   // 03/11/2026 - "Sửa lại tên người đặt hàng trên hệ thống theo tên nhân sự từ linh-kien-app kéo sang" (VD

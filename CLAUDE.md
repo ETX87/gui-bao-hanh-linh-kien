@@ -6295,3 +6295,17 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **Deploy (04/11/2026):** áp migration 0027 lên D1 production (11 đề xuất → chờ Kho in, 217 → đã xuất) và `npm run deploy` (Version ID `f58a6f74`).
 
 **Bổ sung (04/11/2026, v1.074)** — nguyên văn: *"cho kho nhìn thấy mục \"cấp linh kiện\""*. Menu "Cấp linh kiện sửa chữa" (`#/admin/de-xuat`) hiện cho Kho (trước chỉ Admin BH / qtri), số việc cộng `kho_lk_cho_in` + `kho_lk_da_in`; Kho mở màn này thấy 3 tab Chờ Kho in / Kho đã in / Kho đã xuất. Link Trang chủ và cảnh báo đơn tồn của Kho trỏ thẳng `#/admin/de-xuat?tab=cho_kho_in` (tab "Cấp linh kiện" trong Phiếu trả vẫn giữ). Typecheck 0 lỗi.
+
+## Tài khoản: đồng bộ với danh bạ KTV / ETX + tên công ty (04/11/2026) — v1.075
+
+**(a) Nguyên văn yêu cầu:** *"1. tài khoản chưa được cấp quyền không được phép vào app 2. Tài khoản trùng với tài khoản hệ thống có sẵn tự động đồng bộ vào nhau. 3. Tài khoản chưa có trên hệ thống thì mới để tên gốc, còn lại phải chuyển hết thành tài khoản công ty"*. Đã hỏi lại, người dùng chốt: "tài khoản hệ thống có sẵn" = **danh bạ KTV + ETX nhân sự**; mục 1 = **chỉ chặn chờ duyệt / từ chối** (giữ như hiện tại — đã duyệt mà chưa có vai trò vẫn vào được).
+
+**(b) Đã làm:**
+- Mục 1: không đổi code — `loadUser` đã chặn Chờ duyệt (`PENDING_APPROVAL`), Từ chối (`REJECTED`), Khoá (`DISABLED`). Tài khoản bị Admin từ chối không bao giờ được tự duyệt lại.
+- `backend/src/lib/taiKhoan.ts` `dongBoTaiKhoan(db, email?)`: (1) tự duyệt tài khoản "Chờ duyệt" trùng danh bạ KTV / ETX đang làm (`tuDuyetTaiKhoanCho` có sẵn); (2) tài khoản đã duyệt nhưng CHƯA có vai trò nào mà có trong danh bạ KTV → gán cờ KTV / Vệ tinh (không đụng tài khoản đã có vai trò); (3) `users.ten` = tên công ty — họ tên ETX (bản đang làm trước) > tên danh bạ KTV (bỏ tiền tố "(mã) KTV Tỉnh - "); không có trên hệ thống thì giữ tên Google. So khớp Gmail không phân biệt hoa / thường.
+- Chạy ở: đăng nhập (sau khi ghi tài khoản — tên Google bị thay ngay bằng tên công ty), cron 15 phút (sau bước ETX), nhận đồng bộ danh bạ KTV từ linh-kien-app, nút "Đồng bộ ngay" ETX. Đăng nhập: tra danh bạ KTV không phân biệt hoa / thường (trước so khớp chính xác).
+- `tenGonKtv` chuyển từ `routes/users.ts` sang `lib/taiKhoan.ts` dùng chung.
+
+**(c) Ghi nhận:** xem trước trên production (chỉ đọc): 200 tài khoản → 180 đổi sang tên công ty (VD "tuan ngo" → "Ngô Văn Tuân", "Thái Vũ Hồng" → "Vũ Hồng Thái"), 13 giữ tên Google; không có tài khoản chờ duyệt / thiếu vai trò nào trùng danh bạ. Admin sửa tên tay ở màn Người dùng sẽ bị đổi lại theo tên công ty ở lần đồng bộ sau (đúng yêu cầu mục 3).
+
+**(d) Kiểm thử:** typecheck backend 0 lỗi; mô phỏng thuật toán đổi tên trên dữ liệu production thật. Chưa chạy local end-to-end — kiểm tra sau deploy bằng D1 production khi cron chạy.

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { dongBoTaiKhoan } from "../lib/taiKhoan";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
@@ -60,7 +61,9 @@ etx.get("/status", async (c) => {
 // POST /api/etx/sync-now
 etx.post("/sync-now", async (c) => {
   if (!c.get("user").la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
-  return c.json(await runEtxSync(c.env));
+  const kq = await runEtxSync(c.env);
+  const tk = await dongBoTaiKhoan(c.env.DB).catch(() => null);
+  return c.json({ ...kq, tai_khoan: tk });
 });
 
 // POST /api/etx/khu-vuc-sync-now - dong bo tay khu vuc nhan su tu linh-kien-app (lib/userKhuVucSync.ts).
