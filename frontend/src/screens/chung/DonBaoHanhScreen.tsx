@@ -4,6 +4,7 @@ import { AdminDangSuaScreen } from "../adminbh/DangSua";
 import { AdminXacNhanScreen } from "../adminbh/XacNhan";
 import { NvViecCuaToiScreen } from "../nv/ViecCuaToi";
 import { QuanLyTraCuuScreen } from "../quanly/TraCuu";
+import { ThieuHangListScreen } from "../adminbh/ThieuHangList";
 import type { AppUser } from "../../lib/types";
 
 // 31/10/2026 - MAN CHUNG "Đơn bảo hành" (#/don) thay 5 man cu: Admin "Xử lý đơn bảo hành", "KTV đang sửa",
@@ -27,6 +28,14 @@ export function DonBaoHanhScreen({ user }: { user: AppUser }) {
     { key: "nv", label: "Việc sửa của tôi", show: (u) => u.la_nv_sua_chua, countKeys: ["nv_cho_chan_doan"], hint: "Đơn được giao cho bạn — nộp kết quả sửa chữa", render: () => <NvViecCuaToiScreen user={user} /> },
     { key: "dang_sua", label: "Đang sửa (NV)", show: admin, hint: "Đơn đang chờ NV sửa chữa — theo dõi, đề xuất linh kiện hộ", render: () => <AdminDangSuaScreen user={user} /> },
     { key: "hoan_tat", label: "Chờ xác nhận hoàn tất", show: admin, countKeys: ["admin_cho_xac_nhan_hoan_tat"], hint: "Duyệt kết quả NV sửa chữa", render: () => <AdminXacNhanScreen user={user} /> },
+    {
+      key: "thieu_hang",
+      label: "📦 Thiếu hàng",
+      show: (u) => admin(u) || u.la_nv_sua_chua || u.la_giam_sat || u.la_view,
+      countKeys: ["admin_thieu_hang_da_ve"],
+      hint: "Yêu cầu thiếu linh kiện gửi Kho / Mua hàng — theo dõi hàng đã về",
+      render: () => <ThieuHangListScreen user={user} />,
+    },
     { key: "tat_ca", label: "Mọi giai đoạn", show: theoDoi, hint: "Tra cứu mọi đơn, kể cả thùng chưa về Kho", render: () => <QuanLyTraCuuScreen user={user} /> },
   ];
   return <TabScreen user={user} title="🗂️ Đơn bảo hành" tabs={tabs} />;

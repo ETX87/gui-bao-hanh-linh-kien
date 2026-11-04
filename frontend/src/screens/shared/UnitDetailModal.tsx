@@ -31,6 +31,7 @@ import { BaoCaoSaiModal } from "./BaoCaoSaiModal";
 import { XacNhanHoanTatModal } from "./XacNhanHoanTatModal";
 import { ThuHoiHangSection } from "./ThuHoiHangSection";
 import { DeXuatSection } from "./DeXuatLinhKien";
+import { ThieuHangSection } from "./ThieuHang";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import { HoanTacModal } from "./HoanTacModal";
@@ -610,6 +611,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
             </Section>
 
             <DeXuatSection unitId={u.id} unitTrangThai={u.trang_thai} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
+
+            <ThieuHangSection key={`thb-${u.id}`} unitId={u.id} defaultLk={u.ma_lk_thuc_te || lkB} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
 
             <ThuHoiHangSection key={`${u.id}-${u.thu_hoi_hang_luc || ""}`} unit={u} user={user} onSaved={load} />
 

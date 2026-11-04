@@ -32,12 +32,23 @@ import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
 import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } from "./lib/caseSnapshot";
 import { capNhatTimKiem } from "./lib/timKiem";
 import etxRoutes from "./routes/etx";
+import thieuHangRoutes from "./routes/thieuHang";
+import { dongBoThieuHang, guiThieuHangCho, layVaXoaCoYeuCauMoi } from "./lib/thieuHang";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
 // CLAUDE.md "Trien khai day du Giai doan 3-6". Cron 15 phut dong bo don Odoo (lib/odooSync.ts); Worker nay cung la BEN NHAN cua co che
 // day tu linh-kien-app, xem routes/sync.ts).
 const app = new Hono<{ Bindings: Env }>();
+
+// 04/11/2026: thao tac vua tao yeu cau thieu hang (ly do cham "Khong co linh kien" / "Het hang ton kho", ghi qua addLog) -> gui sang
+// linh-kien-app ngay sau khi tra loi, khong cho cron 15 phut. Loi thi cron gui lai.
+app.use("/api/*", async (c, next) => {
+  await next();
+  if (c.req.method !== "GET" && layVaXoaCoYeuCauMoi()) {
+    c.executionCtx.waitUntil(guiThieuHangCho(c.env).then(() => undefined).catch((e) => console.error("[thieuHang gui]", e instanceof Error ? e.message : e)));
+  }
+});
 
 app.route("/api/auth", authRoutes);
 app.route("/api/users", usersRoutes);
@@ -63,6 +74,7 @@ app.route("/api/canh-bao", canhBaoRoutes);
 app.route("/api/lich-su", lichSuRoutes);
 app.route("/api/de-xuat", deXuatRoutes);
 app.route("/api/etx", etxRoutes);
+app.route("/api/thieu-hang", thieuHangRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -77,6 +89,8 @@ export default {
   // nguoc ve dvbh (lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
+    // 04/11/2026: thieu hang bao hanh - gui yeu cau con cho + keo trang thai ticket ben linh-kien-app.
+    ctx.waitUntil(dongBoThieuHang(env).then(() => undefined).catch((e) => console.error("[thieuHang]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(pushPhanLoaiPending(env).then(() => undefined).catch(() => undefined));
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).

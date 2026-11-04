@@ -3,6 +3,7 @@ import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { nowVN } from "../lib/vnTime";
+import { apDungTicketLk, type TicketLk } from "../lib/thieuHang";
 
 // Giai doan 5: nhan du lieu "day" (push) tu linh-kien-app - KTV/Khu vuc/danh muc linh kien. Mirror
 // dung khuon POST /api/partner/sync/ktv|linh-kien da co that ben dvbh (routes/partnerApi.ts cua
@@ -157,6 +158,13 @@ sync.post("/linh-kien", async (c) => {
     await bumpLinhKienVersion(c.env.DB);
   }
   return c.json({ upserted: statements.length, skipped });
+});
+
+// POST /api/partner/sync/thieu-hang - { rows: TicketLk[] } (04/11/2026) - linh-kien-app bao trang thai moi cua ticket thieu hang bao hanh.
+sync.post("/thieu-hang", async (c) => {
+  const body = await c.req.json<{ rows?: TicketLk[] }>().catch(() => ({}) as { rows?: TicketLk[] });
+  if (!Array.isArray(body.rows) || body.rows.length > 500) return c.json({ error: "INVALID_BODY" }, 400);
+  return c.json({ cap_nhat: await apDungTicketLk(c.env.DB, body.rows) });
 });
 
 export default sync;
