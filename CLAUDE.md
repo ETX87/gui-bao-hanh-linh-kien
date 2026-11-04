@@ -6205,3 +6205,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Local (config + D1 tạm, đã xoá), 3 phiếu trả + 3 đề xuất ở 2 case: API 10/10 đạt (số việc cho_in = 2 / da_in = 0 / lk = 3; đánh dấu in, lọc kho_in=0/1, đổi lại chưa in, hàng loạt 2 đúng + phiếu nháp báo lỗi, đẩy ngược reset; KT duyệt cả case 2 đề xuất + duyệt lẻ 1). Giao diện: tab "🔩 Cấp linh kiện" nhóm đúng Case SC1 (2 linh kiện, nút "Duyệt cả case (2)") / SC2; tab "Kho đã in phiếu" có nút "↩ Chưa in" và nút đổi cả trang.
 
+
+**Deploy (04/11/2026):** áp migration 0025 lên D1 production, `npm run deploy` (Version ID `3302a58b`) từ 1 bản sao sạch của commit (git worktree) — thư mục làm việc đang có thay đổi dở của 1 phiên khác (menu KTV `KtvMenu.tsx`, `traCuu.ts`, `FilterBar.tsx`, `TabScreen.tsx`, `usePagedApi.ts`, `Shell.tsx`, `PhanLoai.tsx`), lần commit đầu đã lỡ gom vào → đã tách ra, không commit / deploy phần đó.
