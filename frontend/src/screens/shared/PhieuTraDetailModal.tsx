@@ -161,6 +161,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [traId]);
 
+  const doiIn = () => run(async () => { await api.post("/phieu-tra/kho-in", { ids: [traId], da_in: !t?.kho_da_in }); toast(t?.kho_da_in ? "Đã chuyển về chờ in phiếu." : "Đã đánh dấu Kho in phiếu.", "ok"); });
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     try {
@@ -254,7 +255,12 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
         title={t.id}
         onClose={onClose}
         maxWidthClass={DETAIL_MAX_W}
-        headerActions={<StatusBadge kind="tra" value={t.trang_thai} />}
+        headerActions={
+          <span className="flex items-center gap-1.5">
+            <StatusBadge kind="tra" value={t.trang_thai} />
+            {t.trang_thai === "da_duyet_ke_toan" && (t.kho_da_in ? <Badge tone="green">🖨 Kho đã in phiếu</Badge> : <Badge tone="amber">Chờ Kho in phiếu</Badge>)}
+          </span>
+        }
         footerActions={
           <>
             {canEdit && data.don_vi.length === 0 && (
@@ -299,6 +305,9 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
             )}
             {khoChoGui && (
               <>
+                <Btn variant={t.kho_da_in ? "ghost" : "success"} disabled={busy} onClick={doiIn} title="Trạng thái in phiếu của Kho, đổi qua lại được">
+                  {t.kho_da_in ? "↩ Chuyển về chờ in" : "🖨 Kho đã in phiếu"}
+                </Btn>
                 <label className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-white text-[var(--ink-body)] border border-[var(--line)] hover:bg-[var(--surface-2)] cursor-pointer">
                   📦 Đóng gói (ảnh tuỳ chọn)
                   <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => dongGoi(e.target.files)} />

@@ -5,7 +5,9 @@ import { MienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useWorkload } from "../../hooks/useWorkload";
-import { Card, Badge, Input, Select } from "../../ui/primitives";
+import { Card, Badge, Btn, Input, Select } from "../../ui/primitives";
+import { api, errorMessage } from "../../lib/api";
+import { useToast } from "../../ui/Toast";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
@@ -23,11 +25,14 @@ export interface TtTab {
   label: string;
 }
 
-export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extraCols, emptyText }: { user: AppUser; title: string; tabs: TtTab[]; reloadKey?: number; onChanged?: () => void; extraCols?: Column<PhieuTra>[]; emptyText?: string }) {
+// khoIn (04/11/2026): tab Kho "Chờ in phiếu" (0) / "Đã in phiếu" (1) - loc kho_in + nut doi trang thai in tung dong / ca trang.
+export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extraCols, emptyText, khoIn }: { user: AppUser; title: string; tabs: TtTab[]; reloadKey?: number; onChanged?: () => void; extraCols?: Column<PhieuTra>[]; emptyText?: string; khoIn?: 0 | 1 }) {
   const { refresh } = useWorkload();
+  const toast = useToast();
+  const [busyIn, setBusyIn] = useState(false);
   const [tab, setTab] = useState(tabs[0].value);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const basePath = tab === "tu_choi_kt" ? "/phieu-tra?tu_choi_kt=1" : `/phieu-tra?trang_thai=${tab}`;
+  const basePath = (tab === "tu_choi_kt" ? "/phieu-tra?tu_choi_kt=1" : `/phieu-tra?trang_thai=${tab}`) + (khoIn !== undefined ? `&kho_in=${khoIn}` : "");
   const DEFS: FilterDef[] = [
     { key: "nguoi_nhan", label: "Loại người nhận", static: [{ value: "ktv", label: "KTV" }, { value: "khach_le", label: "Khách lẻ" }, { value: "doi_tac", label: "Đối tác (trả xác)" }] },
     ...phieuTraDefs(),
@@ -40,6 +45,22 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
   const soLoc = flt.active;
+  const laKho = user.la_kho || user.la_qtri;
+  const doiIn = async (ids: string[], daIn: boolean) => {
+    if (!ids.length) return;
+    setBusyIn(true);
+    try {
+      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>("/phieu-tra/kho-in", { ids, da_in: daIn });
+      toast(r.loi.length ? `Đã cập nhật ${r.ok}, ${r.loi.length} phiếu lỗi (${r.loi.map((x) => x.id).join(", ")}).` : daIn ? `Đã đánh dấu in ${r.ok} phiếu.` : `Đã chuyển ${r.ok} phiếu về chờ in.`, r.loi.length ? "error" : "ok");
+      reload();
+      refresh();
+      onChanged?.();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusyIn(false);
+    }
+  };
 
   const cols: Column<PhieuTra>[] = [
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
@@ -67,6 +88,21 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extr
         ),
     },
     ...(extraCols ?? []),
+    ...(khoIn !== undefined && laKho
+      ? [
+          {
+            key: "in",
+            header: "",
+            render: (r: PhieuTra) => (
+              <span onClick={(e) => e.stopPropagation()}>
+                <Btn size="sm" variant={khoIn ? "ghost" : "success"} disabled={busyIn} onClick={() => doiIn([r.id], !khoIn)}>
+                  {khoIn ? "↩ Chưa in" : "🖨 Đã in"}
+                </Btn>
+              </span>
+            ),
+          } as Column<PhieuTra>,
+        ]
+      : []),
   ];
 
   return (
@@ -87,6 +123,11 @@ export function PhieuTraListCard({ user, title, tabs, reloadKey, onChanged, extr
             </button>
           ))}
         </div>}
+        {khoIn !== undefined && laKho && list.length > 0 && (
+          <Btn size="sm" className="ml-auto" variant={khoIn ? "ghost" : "success"} disabled={busyIn} onClick={() => doiIn(list.map((r) => r.id), !khoIn)}>
+            {khoIn ? `↩ Chuyển ${list.length} phiếu đang hiển thị về chờ in` : `🖨 Đánh dấu đã in ${list.length} phiếu đang hiển thị`}
+          </Btn>
+        )}
       </div>
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã phiếu, mã ĐH, MISA, vận đơn, KTV, mã đơn, case, linh kiện…" />
       <Table columns={cols} rows={list} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={soLoc ? "Không có phiếu trả nào khớp bộ lọc." : emptyText || "Không có phiếu trả nào."} />

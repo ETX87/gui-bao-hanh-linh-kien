@@ -190,6 +190,9 @@ export interface DeXuatLk {
 }
 
 export interface PhieuTra {
+  kho_da_in?: number; // 04/11/2026: Kho da in phieu (1) / cho in (0)
+  kho_in_boi?: string | null;
+  kho_in_luc?: string | null;
   id: string;
   so_don?: number; // GET /phieu-tra (12/10/2026): so don vi trong phieu
   ktv_nhan: string;

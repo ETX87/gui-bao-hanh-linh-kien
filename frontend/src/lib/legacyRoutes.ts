@@ -2,7 +2,7 @@
 // Zalo, hash trong canh bao don ton) tu chuyen sang man moi + dung tab, giu nguyen cac tham so khac.
 export const LEGACY_ROUTES: Record<string, string> = {
   "/kho/tiep-nhan": "/thung?tab=dang_gui",
-  "/kho/dong-goi": "/phieu-tra?tab=cho_kho",
+  "/kho/dong-goi": "/phieu-tra?tab=cho_in",
   "/admin/phan-loai": "/don?tab=xu_ly",
   "/admin/dang-sua": "/don?tab=dang_sua",
   "/admin/xac-nhan": "/don?tab=hoan_tat",

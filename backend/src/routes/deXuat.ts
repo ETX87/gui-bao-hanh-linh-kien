@@ -42,7 +42,7 @@ deXuat.get("/", async (c) => {
   const user = c.get("user");
   const tt = c.req.query("trang_thai") || "cho_cap";
   if (!isAdmin(user) && !(isKt(user) && KT_XEM.includes(tt))) return c.json({ error: "FORBIDDEN" }, 403);
-  const { limit, offset } = parsePage(c);
+  const { limit, offset } = parsePage(c, 20, 200); // 04/11: tab KT nhom theo case lay 200 de 1 case khong bi cat qua 2 trang
   const ms0 = mienScope(user, "p");
   const kw = kwClause(c.req.query("q"), ["d.id", "d.ma_lk", tenLkOf("d.ma_lk"), "d.ma_misa", "d.ma_don_hang", "d.ghi_chu", "d.nguoi_tao", tenOf("d.nguoi_tao"), "u.id", "p.case_id", "p.mo_ta_loi", "g.nguoi_tao", tenOf("g.nguoi_tao")], ["p.tim_kiem"]);
   // 21/10/2026: loc nguoi de xuat / NV sua chua / KTV gui / linh kien xin / nguoi xu ly.

@@ -179,7 +179,7 @@ export const STAGES: StageDef[] = [
     since: "d.xu_ly_luc",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { ketoan: "/admin/de-xuat?tab=cho_ke_toan", admin: "/admin/de-xuat?tab=cho_ke_toan" },
+    hash: { ketoan: "/phieu-tra?tab=cap_lk", admin: "/admin/de-xuat?tab=cho_ke_toan" },
   },
   {
     key: "kho_dong_goi",
@@ -190,7 +190,7 @@ export const STAGES: StageDef[] = [
     since: "t.updated_at",
     ktvCol: "t.ktv_nhan",
     mienAlias: "t",
-    hash: { kho: "/phieu-tra?tab=cho_kho" },
+    hash: { kho: "/phieu-tra?tab=cho_in" },
   },
   {
     key: "ktv_nhan",

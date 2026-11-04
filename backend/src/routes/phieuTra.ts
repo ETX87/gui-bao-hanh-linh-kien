@@ -204,6 +204,12 @@ phieuTra.get("/", async (c) => {
     binds.push(...tts);
   }
   // 20/10/2026: phieu bi Ke toan tu choi, da tra ve Admin BH (nhap + co ly do tu choi).
+  // 04/11/2026: Kho tach "Chờ kho gửi" thanh Chờ in phiếu (kho_in=0) / Đã in phiếu (kho_in=1).
+  const khoIn = c.req.query("kho_in");
+  if (khoIn === "0" || khoIn === "1") {
+    where += " AND kho_da_in = ?";
+    binds.push(Number(khoIn));
+  }
   if (c.req.query("tu_choi_kt") === "1") where += " AND trang_thai = 'nhap' AND ly_do_tu_choi_kt IS NOT NULL";
   // 21/10/2026: "vai trò kế toán thiếu tab các đơn đã từng xử lý" - phieu Ke toan da duyet / tu choi / day
   // nguoc (theo nhat ky) + phieu nhap tu AppSheet da qua buoc KT. Kem lan xu ly gan nhat (kt_luc/kt_boi/kt_kq).
@@ -613,6 +619,39 @@ phieuTra.post("/:id/kt-tru-cong-no", async (c) => {
   return c.json({ ok: true });
 });
 
+// 04/11/2026 - "Bổ sung 1 trạng trung gian cho KHO là trạng thái "Kho đã in phiếu", "Chờ kho in phiếu", có thể đổi
+// qua lại". POST /api/phieu-tra/kho-in {ids, da_in} - 1 hoac nhieu phieu da Ke toan duyet (Kho chua gui).
+phieuTra.post("/kho-in", async (c) => {
+  const user = c.get("user");
+  if (!requireKho(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ ids?: string[]; da_in?: boolean }>().catch(() => ({}) as { ids?: string[]; da_in?: boolean });
+  const ids = [...new Set((body.ids || []).filter((x) => typeof x === "string"))].slice(0, 200);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const daIn = body.da_in === false ? 0 : 1;
+  const now = nowVN();
+  let ok = 0;
+  const loi: { id: string; error: string }[] = [];
+  for (const id of ids) {
+    const t = await c.env.DB.prepare("SELECT trang_thai, kho_da_in FROM phieu_tra_bh WHERE id = ?").bind(id).first<{ trang_thai: string; kho_da_in: number }>();
+    if (!t) {
+      loi.push({ id, error: "NOT_FOUND" });
+      continue;
+    }
+    if (t.trang_thai !== "da_duyet_ke_toan") {
+      loi.push({ id, error: "WRONG_STATE" });
+      continue;
+    }
+    if (t.kho_da_in === daIn) {
+      ok++;
+      continue;
+    }
+    await c.env.DB.prepare("UPDATE phieu_tra_bh SET kho_da_in = ?, kho_in_boi = ?, kho_in_luc = ?, updated_at = ? WHERE id = ?").bind(daIn, daIn ? user.email : null, daIn ? now : null, now, id).run();
+    await addLog(c.env.DB, "phieu_tra", id, t.trang_thai, t.trang_thai, user.email, daIn ? "Kho đã in phiếu" : "Kho chuyển về: chờ in phiếu");
+    ok++;
+  }
+  return c.json({ ok, loi });
+});
+
 // POST /api/phieu-tra/:id/day-nguoc {vai_tro: 'kho'|'ke_toan', ly_do} - phieu da duyet nhung len nham
 // (19/10/2026: "them nut day nguoc cho kho + ke toan phong truong hop don bi len nham"): Kho (truoc khi
 // gui) hoac Ke toan (huy duyet) tra phieu ve "nhap" cho Admin BH sua, bat buoc ly do.
@@ -629,7 +668,7 @@ phieuTra.post("/:id/day-nguoc", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
   const now = nowVN();
-  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', ly_do_day_nguoc = ?, day_nguoc_boi = ?, day_nguoc_vai_tro = ?, day_nguoc_luc = ?, updated_at = ? WHERE id = ?")
+  await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'nhap', kho_da_in = 0, ly_do_day_nguoc = ?, day_nguoc_boi = ?, day_nguoc_vai_tro = ?, day_nguoc_luc = ?, updated_at = ? WHERE id = ?")
     .bind(lyDo, user.email, vaiTro, now, now, id)
     .run();
   await addLog(c.env.DB, "phieu_tra", id, "da_duyet_ke_toan", "nhap", user.email, `${vaiTro === "kho" ? "Kho" : "Kế toán"} đẩy ngược phiếu về Admin BH (lên nhầm): ${lyDo}`);
