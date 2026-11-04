@@ -17,7 +17,17 @@ import type { AppUser, DeXuatLk } from "../../lib/types";
 
 const TONE: Record<string, "amber" | "green" | "red" | "gray"> = { cho_cap: "amber", cho_ke_toan: "amber", da_cap: "green", tu_choi: "red", huy: "gray" };
 
-export function DeXuatBadge({ tt }: { tt: string }) {
+// 04/11/2026: de xuat KT da xac nhan (da_cap) hien theo giai doan Kho: cho in / da in / da xuat.
+const KHO_LABEL: Record<string, string> = { cho_in: "Chờ Kho in phiếu", da_in: "Kho đã in phiếu", da_xuat: "Kho đã xuất" };
+export function DeXuatBadge({ tt, khoTt }: { tt: string; khoTt?: string | null }) {
+  if (tt === "da_cap" && khoTt !== undefined) {
+    const k = khoTt || "cho_in";
+    return (
+      <Badge tone={k === "da_xuat" ? "green" : "blue"} dot={k !== "da_xuat"}>
+        {KHO_LABEL[k] || k}
+      </Badge>
+    );
+  }
   return (
     <Badge tone={TONE[tt] || "gray"} dot={tt === "cho_cap" || tt === "cho_ke_toan"}>
       {DE_XUAT_TT_LABELS[tt] || tt}
@@ -357,7 +367,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
             <li key={d.id} className="py-1.5 text-[13px]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
-                <DeXuatBadge tt={d.trang_thai} />
+                <DeXuatBadge tt={d.trang_thai} khoTt={d.kho_tt ?? null} />
                 <span className="font-semibold text-[var(--ink)]">{nameOf(d.ma_lk)}</span>
                 <span className="font-semibold">×{d.so_luong}</span>
                 <span className="ml-auto flex gap-1.5">

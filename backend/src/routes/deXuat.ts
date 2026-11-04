@@ -23,7 +23,16 @@ const isAdmin = (u: AppUser) => u.la_admin_bh || u.la_qtri;
 const isNv = (u: AppUser) => u.la_nv_sua_chua || u.la_qtri;
 const isKt = (u: AppUser) => u.la_ke_toan || u.la_qtri;
 // 02/11/2026: Ke toan chi xem cac de xuat da qua buoc Admin dong y cap.
-const KT_XEM = ["cho_ke_toan", "da_cap"];
+const KT_XEM = ["cho_ke_toan", "da_cap", "cho_kho_in", "kho_da_in", "kho_da_xuat"];
+const isKho = (u: AppUser) => u.la_kho || u.la_qtri;
+// 04/11/2026: giai doan Kho sau khi KT xac nhan (trang_thai = 'da_cap', cot kho_tt). Tab ao cua GET /.
+const KHO_TAB: Record<string, string> = { cho_kho_in: "cho_in", kho_da_in: "da_in", kho_da_xuat: "da_xuat" };
+const KHO_XEM = Object.keys(KHO_TAB);
+// Dieu kien trang thai theo tab (tab Kho -> da_cap + kho_tt).
+function ttWhere(tt: string): { sql: string; binds: unknown[] } {
+  if (KHO_TAB[tt]) return { sql: "d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') = ?", binds: [KHO_TAB[tt]] };
+  return { sql: "d.trang_thai = ?", binds: [tt] };
+}
 
 interface DxRow {
   id: string;
@@ -41,25 +50,26 @@ async function unitOf(db: D1Database, unitId: string) {
 deXuat.get("/", async (c) => {
   const user = c.get("user");
   const tt = c.req.query("trang_thai") || "cho_cap";
-  if (!isAdmin(user) && !(isKt(user) && KT_XEM.includes(tt))) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!isAdmin(user) && !(isKt(user) && KT_XEM.includes(tt)) && !(isKho(user) && KHO_XEM.includes(tt))) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c, 20, 200); // 04/11: tab KT nhom theo case lay 200 de 1 case khong bi cat qua 2 trang
   const ms0 = mienScope(user, "p");
-  const kw = kwClause(c.req.query("q"), ["d.id", "d.ma_lk", tenLkOf("d.ma_lk"), "d.ma_misa", "d.ma_don_hang", "d.ghi_chu", "d.nguoi_tao", tenOf("d.nguoi_tao"), "u.id", "p.case_id", "p.mo_ta_loi", "g.nguoi_tao", tenOf("g.nguoi_tao")], ["p.tim_kiem"]);
+  const kw = kwClause(c.req.query("q"), ["d.id", "d.ma_lk", tenLkOf("d.ma_lk"), "d.ma_misa", "d.ma_don_hang", "d.ghi_chu", "d.nguoi_de_xuat", tenOf("d.nguoi_de_xuat"), "u.id", "p.case_id", "p.mo_ta_loi", "g.nguoi_tao", tenOf("g.nguoi_tao")], ["p.tim_kiem"]);
   // 21/10/2026: loc nguoi de xuat / NV sua chua / KTV gui / linh kien xin / nguoi xu ly.
   const LOC = { nguoi_de_xuat: "d.nguoi_de_xuat", nv: "u.nguoi_sua_chua", ktv: "g.nguoi_tao", lk_a: "p.ma_lk", lk_b: "COALESCE(u.ma_lk_nhan, p.ma_lk)", lk: "d.ma_lk", nguoi_xu_ly: "d.nguoi_xu_ly" };
+  const tw = ttWhere(tt);
   const baseDx = `FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-    LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = ?${ms0.sql}`;
-  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseDx, [tt, ...ms0.binds]) });
+    LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE ${tw.sql}${ms0.sql}`;
+  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseDx, [...tw.binds, ...ms0.binds]) });
   const f = joinF(eqFilters(c, LOC), timeFilter(c, "d.created_at"), slaFilter(c, "d.created_at"));
   const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   const fw = `FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-    LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = ?${ms.sql}`;
-  const order = tt === "cho_cap" || tt === "cho_ke_toan" ? "d.created_at" : "d.updated_at DESC";
+    LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE ${tw.sql}${ms.sql}`;
+  const order = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in"].includes(tt) ? (KHO_TAB[tt] ? "COALESCE(d.kho_in_luc, d.kt_luc, d.updated_at)" : "d.created_at") : "d.updated_at DESC";
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv ${fw} ORDER BY ${order} LIMIT ? OFFSET ?`)
-      .bind(tt, ...ms.binds, limit, offset)
+      .bind(...tw.binds, ...ms.binds, limit, offset)
       .all(),
-    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fw}`).bind(tt, ...ms.binds).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fw}`).bind(...tw.binds, ...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ de_xuat: results, total: totalRow?.cnt ?? 0 });
 });
@@ -173,9 +183,9 @@ deXuat.post("/ke-toan-xac-nhan", async (c) => {
       loi.push({ id, error: "WRONG_STATE" });
       continue;
     }
-    await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'da_cap', ma_misa = ?, kt_boi = ?, kt_luc = ?, updated_at = ? WHERE id = ?").bind(misa, user.email, now, now, id).run();
+    await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'da_cap', kho_tt = 'cho_in', ma_misa = ?, kt_boi = ?, kt_luc = ?, updated_at = ? WHERE id = ?").bind(misa, user.email, now, now, id).run();
     const u = await unitOf(c.env.DB, d.unit_id);
-    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Kế toán xác nhận cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}) | MISA: ${misa}` + (d.ma_don_hang ? ` | Mã ĐH: ${d.ma_don_hang}` : ""));
+    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Kế toán xác nhận cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}) | MISA: ${misa}` + (d.ma_don_hang ? ` | Mã ĐH: ${d.ma_don_hang}` : "") + " → chờ Kho in phiếu");
     ok++;
   }
   return c.json({ ok, loi });
@@ -216,6 +226,51 @@ deXuat.post("/:id/tu-choi", async (c) => {
   const u = await unitOf(c.env.DB, d.unit_id);
   await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `${laKt ? "Kế toán" : "Admin BH"} từ chối đề xuất linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}): ${lyDo}`);
   return c.json({ ok: true });
+});
+
+// 04/11/2026: Kho xu ly phieu cap linh kien KT da xac nhan. hanh_dong: da_in (cho_in -> da_in) | chua_in (da_in -> cho_in) |
+// da_xuat (cho_in / da_in -> da_xuat, xuat luon khong can in). 1 hoac nhieu de xuat (<=200), loi theo dong.
+deXuat.post("/kho", async (c) => {
+  const user = c.get("user");
+  if (!isKho(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ ids?: string[]; hanh_dong?: string }>().catch(() => ({}) as { ids?: string[]; hanh_dong?: string });
+  const ids = [...new Set((body.ids || []).filter((x) => typeof x === "string"))].slice(0, 200);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const hd = body.hanh_dong;
+  const TU: Record<string, string[]> = { da_in: ["cho_in"], chua_in: ["da_in"], da_xuat: ["cho_in", "da_in"] };
+  if (!hd || !TU[hd]) return c.json({ error: "INVALID_HANH_DONG" }, 400);
+  const now = nowVN();
+  let ok = 0;
+  const loi: { id: string; error: string }[] = [];
+  for (const id of ids) {
+    const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(id).first<DxRow & { kho_tt: string | null; ma_misa: string | null }>();
+    if (!d) {
+      loi.push({ id, error: "NOT_FOUND" });
+      continue;
+    }
+    const khoTt = d.kho_tt || "cho_in";
+    if (d.trang_thai !== "da_cap" || !TU[hd].includes(khoTt)) {
+      loi.push({ id, error: "WRONG_STATE" });
+      continue;
+    }
+    const sql =
+      hd === "da_in"
+        ? "UPDATE de_xuat_linh_kien_bh SET kho_tt = 'da_in', kho_in_boi = ?, kho_in_luc = ?, updated_at = ? WHERE id = ? AND trang_thai = 'da_cap' AND COALESCE(kho_tt, 'cho_in') = ?"
+        : hd === "chua_in"
+          ? "UPDATE de_xuat_linh_kien_bh SET kho_tt = 'cho_in', kho_in_boi = NULL, kho_in_luc = NULL, updated_at = ? WHERE id = ? AND trang_thai = 'da_cap' AND COALESCE(kho_tt, 'cho_in') = ?"
+          : "UPDATE de_xuat_linh_kien_bh SET kho_tt = 'da_xuat', kho_xuat_boi = ?, kho_xuat_luc = ?, updated_at = ? WHERE id = ? AND trang_thai = 'da_cap' AND COALESCE(kho_tt, 'cho_in') = ?";
+    const binds = hd === "chua_in" ? [now, id, khoTt] : [user.email, now, now, id, khoTt];
+    const res = await c.env.DB.prepare(sql).bind(...binds).run();
+    if (!res.meta.changes) {
+      loi.push({ id, error: "STATE_CHANGED" });
+      continue;
+    }
+    const u = await unitOf(c.env.DB, d.unit_id);
+    const nd = hd === "da_in" ? "Kho đã in phiếu cấp linh kiện" : hd === "chua_in" ? "Kho chuyển về: chờ in phiếu cấp linh kiện" : "Kho đã xuất linh kiện";
+    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `${nd} ${d.id} (${d.ma_lk} ×${d.so_luong})` + (d.ma_misa ? ` | MISA: ${d.ma_misa}` : ""));
+    ok++;
+  }
+  return c.json({ ok, loi });
 });
 
 export default deXuat;

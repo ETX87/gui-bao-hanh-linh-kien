@@ -193,6 +193,18 @@ export const STAGES: StageDef[] = [
     hash: { kho: "/phieu-tra?tab=cho_in" },
   },
   {
+    // 04/11/2026: phieu cap linh kien KT da xac nhan, Kho chua xuat.
+    key: "de_xuat_kho",
+    label: "Phiếu cấp linh kiện KT đã duyệt, Kho chưa xuất",
+    vai_tro: ["kho"],
+    don_vi: "phiếu",
+    from: `de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') IN ('cho_in', 'da_in')`,
+    since: "d.kt_luc",
+    ktvCol: "g.nguoi_tao",
+    mienAlias: "p",
+    hash: { kho: "/phieu-tra?tab=cap_lk" },
+  },
+  {
     key: "ktv_nhan",
     label: "Hàng trả đã gửi, KTV chưa xác nhận nhận",
     vai_tro: ["ktv", "kho"],

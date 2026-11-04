@@ -20,6 +20,8 @@ export interface WorkloadCounts {
   kho_cho_dong_goi: number;
   kho_cho_in: number; // 04/11/2026: phieu KT da duyet, Kho chua in
   kho_da_in: number; // Kho da in phieu, chua gui
+  kho_lk_cho_in: number; // 04/11/2026: phieu cap linh kien KT da duyet, Kho chua in
+  kho_lk_da_in: number; // phieu cap linh kien Kho da in, chua xuat
   kho_cho_ban_giao: number;
   kho_khieu_nai: number;
   admin_cho_tiep_nhan_noi_bo: number;
@@ -44,6 +46,8 @@ const EMPTY: WorkloadCounts = {
   kho_cho_dong_goi: 0,
   kho_cho_in: 0,
   kho_da_in: 0,
+  kho_lk_cho_in: 0,
+  kho_lk_da_in: 0,
   kho_cho_ban_giao: 0,
   kho_khieu_nai: 0,
   admin_cho_tiep_nhan_noi_bo: 0,

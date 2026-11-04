@@ -170,6 +170,11 @@ export interface DeXuatLk {
   trang_thai: "cho_cap" | "cho_ke_toan" | "da_cap" | "tu_choi" | "huy";
   kt_boi?: string | null; // 02/11/2026: Ke toan xac nhan (nhap MISA)
   kt_luc?: string | null;
+  kho_tt?: "cho_in" | "da_in" | "da_xuat" | null; // 04/11/2026: giai doan Kho sau khi KT xac nhan
+  kho_in_boi?: string | null;
+  kho_in_luc?: string | null;
+  kho_xuat_boi?: string | null;
+  kho_xuat_luc?: string | null;
   nguoi_de_xuat: string;
   created_at: string;
   ma_misa: string | null;

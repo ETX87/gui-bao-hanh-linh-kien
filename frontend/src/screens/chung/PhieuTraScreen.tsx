@@ -45,7 +45,7 @@ export function PhieuTraScreen({ user }: { user: AppUser }) {
     { key: "cho_kt", label: "Chờ KT duyệt", show: (u) => admin(u) || kt(u), countKeys: ["ketoan_cho_duyet"], hint: "Kế toán mở từng phiếu để duyệt / từ chối", render: () => list(user, "cho_ke_toan_duyet", "Không có phiếu trả nào chờ duyệt.") },
     // 04/11/2026 - "gộp các công việc cần xử lý của kế toán vào chung 1 side bar => chuyển phiếu cấp linh kiện về chung
     // menu Phiếu trả": de xuat linh kien cho Ke toan xac nhan MISA (duyet ca case hoac le tung don).
-    { key: "cap_lk", label: "🔩 Cấp linh kiện", show: kt, countKeys: ["ketoan_de_xuat_lk"], hint: "Đề xuất linh kiện Admin BH đã đồng ý cấp — Kế toán nhập MISA, duyệt / trả lại / từ chối", render: () => <AdminDeXuatScreen user={user} ktOnly /> },
+    { key: "cap_lk", label: "🔩 Cấp linh kiện", show: (u) => kt(u) || kho(u), countKeys: ["ketoan_de_xuat_lk", "kho_lk_cho_in", "kho_lk_da_in"], hint: "Phiếu cấp linh kiện: Kế toán nhập MISA, duyệt → Kho in phiếu → Kho xuất", render: () => <AdminDeXuatScreen user={user} ktOnly /> },
     { key: "kt_da", label: "KT đã xử lý", show: kt, render: () => <KtDaXuLyCard user={user} /> },
     // 04/11/2026 - "Bổ sung 1 trạng trung gian cho KHO là trạng thái Kho đã in phiếu, Chờ kho in phiếu, có thể đổi qua lại,
     // và tách Chờ kho gửi thành 2 tab theo 2 trạng thái này."

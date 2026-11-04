@@ -27,6 +27,8 @@ const EMPTY = {
   kho_cho_dong_goi: 0,
   kho_cho_in: 0,
   kho_da_in: 0,
+  kho_lk_cho_in: 0,
+  kho_lk_da_in: 0,
   kho_cho_ban_giao: 0,
   kho_khieu_nai: 0,
   admin_cho_tiep_nhan_noi_bo: 0,
@@ -111,6 +113,19 @@ workload.get("/", async (c) => {
       }),
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'da_duyet_ke_toan' AND t.kho_da_in = 1${mt.sql}`, ...mt.binds).then((r) => {
         counts.kho_da_in = r?.cnt ?? 0;
+      }),
+      // 04/11/2026: phieu cap linh kien KT da xac nhan - Kho in / xuat.
+      one(
+        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') = 'cho_in'${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.kho_lk_cho_in = r?.cnt ?? 0;
+      }),
+      one(
+        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND d.kho_tt = 'da_in'${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.kho_lk_da_in = r?.cnt ?? 0;
       }),
       // KTV bao khong nhan duoc hang -> Kho danh gia gui thanh cong / that bai (12/10/2026).
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'khieu_nai_van_chuyen'${mt.sql}`, ...mt.binds).then((r) => {

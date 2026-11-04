@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { api, errorMessage } from "../../lib/api";
+import { useToast } from "../../ui/Toast";
 import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -20,13 +22,18 @@ import type { AppUser, DeXuatLk } from "../../lib/types";
 
 // 03/11/2026: them buoc "Cho KT xac nhan" - Admin dong y cap (ma don hang) -> Ke toan nhap MISA, duyet /
 // tu choi / tra lai Admin. Ke toan chi thay 2 tab cho_ke_toan + da_cap.
+// 04/11/2026 - "Phiếu cấp linh kiện sửa chữa tách thành các giai đoạn: Chờ KT, (KT xác nhận xong) => chờ kho in, kho đã in,
+// Kho đã xuất (có 2 nút đã in hoặc đã xuất luôn cho kho) => Cho kho nhìn thấy đơn cấp lk": tab "Đã cấp" tach thanh 3 giai doan Kho.
 const TABS = [
-  { key: "cho_cap", label: "Chờ Admin cấp", kt: false },
-  { key: "cho_ke_toan", label: "Chờ KT xác nhận", kt: true },
-  { key: "da_cap", label: "Đã cấp", kt: true },
-  { key: "tu_choi", label: "Từ chối", kt: false },
-  { key: "huy", label: "Đã huỷ", kt: false },
+  { key: "cho_cap", label: "Chờ Admin cấp", kt: false, kho: false },
+  { key: "cho_ke_toan", label: "Chờ KT xác nhận", kt: true, kho: false },
+  { key: "cho_kho_in", label: "🖨 Chờ Kho in", kt: true, kho: true },
+  { key: "kho_da_in", label: "📦 Kho đã in", kt: true, kho: true },
+  { key: "kho_da_xuat", label: "✔ Kho đã xuất", kt: true, kho: true },
+  { key: "tu_choi", label: "Từ chối", kt: false, kho: false },
+  { key: "huy", label: "Đã huỷ", kt: false, kho: false },
 ];
+const KHO_TABS = ["cho_kho_in", "kho_da_in"];
 
 const DEFS: FilterDef[] = [
   { key: "nguoi_de_xuat", label: "Người đề xuất", kind: "person" },
@@ -43,14 +50,18 @@ const DEFS: FilterDef[] = [
 // ktOnly (04/11/2026): nhung vao man "Phiếu trả" cho Ke toan - chi 2 tab Cho KT xac nhan / Da cap, tab Cho KT
 // xac nhan nhom theo case de duyet ca case hoac le tung don.
 export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktOnly?: boolean }) {
-  const { refresh } = useWorkload();
+  const { refresh, counts } = useWorkload();
   const { nameOf } = useLkName();
   const { query } = useRoute();
   const isAdmin = user.la_admin_bh || user.la_qtri;
   const isKt = user.la_ke_toan || user.la_qtri;
-  const tabs = TABS.filter((t) => (isAdmin && !ktOnly) || t.kt);
+  const isKho = user.la_kho || user.la_qtri;
+  const tabs = TABS.filter((t) => (isAdmin && !ktOnly) || (isKt && t.kt) || (isKho && t.kho));
   const qTab = ktOnly ? null : query.get("tab");
-  const [tab, setTab] = useState(tabs.find((t) => t.key === qTab)?.key || (isAdmin && !ktOnly ? "cho_cap" : "cho_ke_toan"));
+  const macDinh = isAdmin && !ktOnly ? "cho_cap" : isKt && (!isKho || counts.ketoan_de_xuat_lk > 0) ? "cho_ke_toan" : counts.kho_lk_cho_in === 0 && counts.kho_lk_da_in > 0 ? "kho_da_in" : "cho_kho_in";
+  const [tab, setTab] = useState(tabs.find((t) => t.key === qTab)?.key || macDinh);
+  const [khoBusy, setKhoBusy] = useState(false);
+  const toast = useToast();
   const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);
   const [traLaiFor, setTraLaiFor] = useState<DeXuatLk | null>(null);
   const flt = useListFilters(`/de-xuat?trang_thai=${tab}`, DEFS.map((d) => d.key));
@@ -61,7 +72,24 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const [detailId, setDetailId] = useState<string | null>(null);
   useEffect(() => setSelected(new Set()), [page, tab, flt.query]);
   const choKt = tab === "cho_ke_toan" && isKt;
-  const choCap = (tab === "cho_cap" && isAdmin) || choKt;
+  const khoTab = KHO_TABS.includes(tab) && isKho;
+  const choCap = (tab === "cho_cap" && isAdmin) || choKt || khoTab;
+  // Kho: da_in (in phieu) | chua_in (doi lai) | da_xuat (xuat luon, khong can in).
+  const khoLam = async (ids: string[], hanhDong: "da_in" | "chua_in" | "da_xuat") => {
+    if (hanhDong === "da_xuat" && !window.confirm(`Xác nhận Kho đã xuất ${ids.length} phiếu cấp linh kiện?`)) return;
+    setKhoBusy(true);
+    try {
+      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>("/de-xuat/kho", { ids, hanh_dong: hanhDong });
+      const nd = hanhDong === "da_in" ? "đã in phiếu" : hanhDong === "chua_in" ? "chuyển về chờ in" : "đã xuất";
+      toast(r.loi.length ? `${r.ok} phiếu ${nd}, ${r.loi.length} lỗi (${r.loi.map((x) => x.id).join(", ")})` : `${r.ok} phiếu ${nd}.`, r.loi.length ? "error" : "ok");
+      setSelected(new Set());
+      after();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setKhoBusy(false);
+    }
+  };
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -89,7 +117,22 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
       key: "act",
       header: "",
       render: (r) =>
-        r.trang_thai === "cho_ke_toan" && isKt ? (
+        r.trang_thai === "da_cap" && isKho && (r.kho_tt || "cho_in") !== "da_xuat" ? (
+          <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {(r.kho_tt || "cho_in") === "cho_in" ? (
+              <Btn size="sm" disabled={khoBusy} onClick={() => khoLam([r.id], "da_in")}>
+                🖨 Đã in
+              </Btn>
+            ) : (
+              <Btn size="sm" variant="ghost" disabled={khoBusy} onClick={() => khoLam([r.id], "chua_in")}>
+                ↩ Chưa in
+              </Btn>
+            )}
+            <Btn size="sm" variant="success" disabled={khoBusy} onClick={() => khoLam([r.id], "da_xuat")}>
+              📦 Đã xuất
+            </Btn>
+          </span>
+        ) : r.trang_thai === "cho_ke_toan" && isKt ? (
           <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
             <Btn size="sm" variant="success" onClick={() => setKtFor([r])}>
               Duyệt
@@ -112,7 +155,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
           </span>
         ) : null,
     },
-    { key: "tt", header: "Trạng thái", render: (r) => <DeXuatBadge tt={r.trang_thai} /> },
+    { key: "tt", header: "Trạng thái", render: (r) => <DeXuatBadge tt={r.trang_thai} khoTt={r.kho_tt ?? null} /> },
     { key: "unit", header: "Đơn bảo hành", render: (r) => <span className="font-mono text-xs">{r.unit_id}</span> },
     { key: "lk", header: "Linh kiện xin cấp", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span> },
     { key: "sl", header: "SL", render: (r) => <b>×{r.so_luong}</b> },
@@ -122,7 +165,11 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}</span> },
     tab === "cho_cap" || tab === "cho_ke_toan"
       ? { key: "sla", header: "Chờ", render: (r) => <span className="flex items-center gap-1"><SlaBadge since={tab === "cho_ke_toan" ? r.xu_ly_luc || r.created_at : r.created_at} />{r.ly_do_tu_choi && tab === "cho_cap" && <span className="text-xs text-[var(--red-700,#b91c1c)] truncate max-w-[200px]" title={r.ly_do_tu_choi}>↩ {r.ly_do_tu_choi}</span>}</span> }
-      : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
+      : KHO_TABS.includes(tab)
+        ? { key: "sla", header: "Chờ Kho", render: (r) => <SlaBadge since={(tab === "kho_da_in" ? r.kho_in_luc : null) || r.kt_luc || r.updated_at} /> }
+        : tab === "kho_da_xuat"
+          ? { key: "xl", header: "Kho xuất", render: (r) => <span className="text-xs">{r.kho_xuat_boi ? <UserName email={r.kho_xuat_boi} /> : "—"} · {fmtDate(r.kho_xuat_luc || r.kt_luc)}</span> }
+          : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
   ];
 
   if (loading && rows.length === 0 && total === 0 && !flt.active) return <Spinner />;
@@ -153,7 +200,22 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <Badge tone="blue">{selected.size} đã chọn</Badge>
-            {choKt ? (
+            {khoTab ? (
+              <>
+                {tab === "cho_kho_in" ? (
+                  <Btn disabled={khoBusy} onClick={() => khoLam([...selected], "da_in")}>
+                    🖨 Đã in {selected.size} phiếu
+                  </Btn>
+                ) : (
+                  <Btn variant="ghost" disabled={khoBusy} onClick={() => khoLam([...selected], "chua_in")}>
+                    ↩ Chưa in
+                  </Btn>
+                )}
+                <Btn variant="success" disabled={khoBusy} onClick={() => khoLam([...selected], "da_xuat")}>
+                  📦 Đã xuất {selected.size} phiếu
+                </Btn>
+              </>
+            ) : choKt ? (
               <Btn variant="success" onClick={() => setKtFor(rows.filter((r) => selected.has(r.id)))}>
                 ✔ Duyệt {selected.size} đề xuất (nhập MISA)
               </Btn>
@@ -166,6 +228,8 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
         )}
       </div>
       {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Bấm "Cấp", nhập mã đơn hàng (mã MISA tuỳ chọn) → đề xuất chuyển sang Kế toán xác nhận. Bấm dòng để mở đơn bảo hành.</p>}
+      {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA. Kho in phiếu xuất rồi bấm "🖨 Đã in", hoặc xuất luôn bằng "📦 Đã xuất".</p>}
+      {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in").</p>}
       {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
       {choKt ? (
