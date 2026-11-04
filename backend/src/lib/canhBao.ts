@@ -202,7 +202,7 @@ export const STAGES: StageDef[] = [
     since: "d.kt_luc",
     ktvCol: "g.nguoi_tao",
     mienAlias: "p",
-    hash: { kho: "/phieu-tra?tab=cap_lk" },
+    hash: { kho: "/admin/de-xuat?tab=cho_kho_in" },
   },
   {
     key: "ktv_nhan",

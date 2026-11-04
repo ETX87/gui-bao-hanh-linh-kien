@@ -84,7 +84,7 @@ const CATALOG: CatalogItem[] = [
     countKeys: ["admin_cho_xac_nhan_sl", "admin_cho_phan_loai", "admin_cho_xac_nhan_hoan_tat", "nv_cho_chan_doan", "admin_thieu_hang_da_ve"],
     show: (u) => u.la_admin_bh || u.la_nv_sua_chua || u.la_giam_sat || u.la_view || u.la_qtri,
   },
-  { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: "", desc: "NV xin linh kiện — Admin đồng ý cấp, Kế toán nhập MISA xác nhận", countKeys: ["admin_de_xuat_cho_cap"], show: (u) => u.la_admin_bh || u.la_qtri },
+  { hash: "/admin/de-xuat", label: "Cấp linh kiện sửa chữa", short: "Cấp LK", icon: "🔩", group: "", desc: "NV xin linh kiện — Admin đồng ý cấp, Kế toán nhập MISA xác nhận, Kho in / xuất", countKeys: ["admin_de_xuat_cho_cap", "kho_lk_cho_in", "kho_lk_da_in"], show: (u) => u.la_admin_bh || u.la_kho || u.la_qtri },
   {
     hash: "/phieu-tra",
     label: "Phiếu trả",
