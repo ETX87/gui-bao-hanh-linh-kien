@@ -6223,3 +6223,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề phát hiện + đã sửa:** lần đầu mở màn có `?ktv=`, request chưa lọc gửi trước về sau ghi đè kết quả đã lọc → khởi tạo ô lọc từ URL ngay lần đầu + `usePagedApi` chỉ nhận kết quả của lần gọi mới nhất (sửa luôn lỗi tiềm ẩn này cho mọi danh sách khi đổi bộ lọc nhanh). Ghi nhận: điện thoại chưa có menu 2 (dùng ô lọc KTV sẵn có).
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. `wrangler dev` local riêng (config + D1 tạm, đã xoá): API trả 3 KTV (12 / 10 / 3 đơn); bấm "Trần Thanh Bình" ở tab Mọi giai đoạn → URL `ktv=…`, 14 dòng đúng KTV; đổi sang tab Chờ phân loại vẫn giữ lọc; Thùng › Đang gửi về Kho 3 → 1 thùng; Phiếu trả lọc đúng TR-000004 của Lê Quốc Cường, ô Người nhận hiện tên; "Tất cả KTV" và "Xoá lọc" đều bỏ tham số, trả đủ danh sách.
+
+**Deploy (04/11/2026):** `npm run deploy` (Version ID `1071060a`), không có migration mới.
