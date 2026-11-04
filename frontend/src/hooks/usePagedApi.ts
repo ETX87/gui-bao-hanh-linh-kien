@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 
 // Trang mac dinh 20 dong/trang - dung CHUNG cho moi bang du lieu trong app (port dung yeu cau "tat ca
@@ -17,11 +17,15 @@ export function usePagedApi<T>(path: string, key: string, pageSize = PAGE_SIZE) 
   const [loading, setLoading] = useState(true);
   const [raw, setRaw] = useState<Record<string, unknown>>({}); // ca response (cho truong phu, vd total_don_vi)
 
+  // 04/11/2026: chi nhan ket qua cua lan goi MOI NHAT (doi bo loc lien tiep -> response cu ve muon khong ghi de).
+  const seq = useRef(0);
   const load = useCallback(
     async (p: number) => {
+      const my = ++seq.current;
       setLoading(true);
       const sep = path.includes("?") ? "&" : "?";
       const r = await api.get<Record<string, unknown>>(`${path}${sep}limit=${pageSize}&offset=${p * pageSize}`);
+      if (my !== seq.current) return;
       setItems((r[key] as T[]) || []);
       setTotal((r.total as number) ?? 0);
       setRaw(r);

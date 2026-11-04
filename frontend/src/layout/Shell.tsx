@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { TopBar } from "./TopBar";
 import { TestModeBanner } from "./TestMode";
+import { KtvMenu, showKtvMenu } from "./KtvMenu";
 import type { AppUser } from "../lib/types";
 
 // Khung trang (DESIGN_SYSTEM.md §4): Desktop = Sidebar gradient (h-screen) | cot phai (TopBar trang +
@@ -13,6 +14,8 @@ export function Shell({ user, children }: { user: AppUser; children: ReactNode }
   return (
     <div className="min-h-full flex">
       <Sidebar user={user} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+      {/* 04/11/2026: menu 2 - danh sach KTV dang co don can xu ly, bam ten de loc (desktop). */}
+      {showKtvMenu(user) && <KtvMenu user={user} />}
       <div className="flex-1 min-w-0 flex flex-col">
         <TestModeBanner />
         <TopBar user={user} />

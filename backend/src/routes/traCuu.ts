@@ -8,6 +8,7 @@ import { slaCutoffVn } from "../lib/sla";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { GS_KTV_SUBQUERY } from "../lib/gs";
+import { mienScope } from "../lib/mien";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -108,6 +109,37 @@ traCuu.get("/tong-quan", async (c) => {
       .first<{ cnt: number }>(),
   ]);
   return c.json({ theo_trang_thai: results, qua_han: quaHanRow?.cnt ?? 0 });
+});
+
+// 04/11/2026 ("menu 2 ... hien danh sach cac KTV dang gui don BH (x123) ... click vao ten KTV de loc"):
+// so don (don cha) dang con viec cua tung KTV - giai doan dang cho xu ly (DANG_CHO + KTV bao thieu). Pham vi:
+// qtri/Admin BH/Kho/Ke toan theo mien; Giam sat / View theo khu vuc; NV chi don duoc giao cho minh.
+traCuu.get("/ktv-menu", async (c) => {
+  const user = c.get("user");
+  let scopeWhere = "1=1";
+  let scopeBinds: unknown[] = [];
+  let extra = "";
+  if (user.la_qtri || user.la_admin_bh || user.la_kho || user.la_ke_toan) {
+    const ms = mienScope(user, "p");
+    scopeWhere = "1=1" + ms.sql;
+    scopeBinds = ms.binds;
+  } else if (user.la_giam_sat || user.la_view) {
+    const sc = scopeClause(user);
+    scopeWhere = sc.where;
+    scopeBinds = sc.binds;
+  } else if (user.la_nv_sua_chua) {
+    extra = " AND x.nguoi_sua_chua = ?";
+  } else return c.json({ error: "FORBIDDEN" }, 403);
+  const gd = [...DANG_CHO, "tra_khieu_nai_van_chuyen"];
+  const binds: unknown[] = [...scopeBinds, ...scopeBinds, ...gd];
+  if (extra) binds.push(user.email);
+  const { results } = await c.env.DB.prepare(
+    `SELECT COALESCE(x.ktv, '') AS ktv, COUNT(DISTINCT x.parent_id) AS so_don, COUNT(*) AS so_dong,
+       SUM(CASE WHEN x.updated_at < ? THEN 1 ELSE 0 END) AS qua_han
+     FROM ${allRowsSql(scopeWhere)} WHERE x.giai_doan IN (${gd.map(() => "?").join(",")})${extra}
+     GROUP BY COALESCE(x.ktv, '') ORDER BY so_don DESC`
+  ).bind(slaCutoffVn(24), ...binds).all();
+  return c.json({ ktv: results });
 });
 
 export default traCuu;

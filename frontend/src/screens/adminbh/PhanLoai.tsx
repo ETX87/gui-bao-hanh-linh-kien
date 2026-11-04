@@ -11,6 +11,8 @@ import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
 import { BulkDoiLinhKienModal } from "./BulkDoiLinhKienModal";
 import { ThungChoNhanLink } from "./ThungNoiBo";
+import { useRoute } from "../../router/Router";
+import { setUrlKtv } from "../../layout/KtvMenu";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
@@ -33,7 +35,16 @@ import { StatusBadge } from "../../ui/StatusBadge";
 // nen bang van toi da 20 dong khi chua so ra).
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
-  const [filter, setFilter] = useState<AdminFilter>(EMPTY_FILTER);
+  const urlKtv = useRoute().query.get("ktv") || "";
+  const [filter, setFilterRaw] = useState<AdminFilter>({ ...EMPTY_FILTER, ktv: urlKtv });
+  // 04/11/2026: o "Người gửi" dong bo voi ?ktv= (menu 2 danh sach KTV).
+  useEffect(() => {
+    setFilterRaw((f) => (f.ktv === urlKtv ? f : { ...f, ktv: urlKtv }));
+  }, [urlKtv]);
+  const setFilter = (f: AdminFilter) => {
+    setFilterRaw(f);
+    if (f.ktv !== urlKtv) setUrlKtv(f.ktv);
+  };
   const qs = filterQuery(filter);
   const [optsKey, setOptsKey] = useState(0);
   const [bulkSlOpen, setBulkSlOpen] = useState(false);

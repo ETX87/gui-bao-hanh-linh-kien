@@ -31,7 +31,11 @@ export function TabScreen({ user, tabs, title, actions }: { user: AppUser; tabs:
   const active = vis.find((t) => t.key === want) ?? vis.find((t) => countOf(t) > 0) ?? vis[0];
 
   // Giu cac tham so khac tren URL (vd ?trang_thai= cua Tra cuu) khi doi tab thi bo di.
-  const go = (key: string) => nav(`${path}?tab=${key}`);
+  // 04/11/2026: giu ?ktv= (menu 2 danh sach KTV) khi doi tab.
+  const go = (key: string) => {
+    const k = query.get("ktv");
+    nav(`${path}?tab=${key}${k ? `&ktv=${encodeURIComponent(k)}` : ""}`);
+  };
   // Chua co ?tab (vd bam menu) -> ghi tab mac dinh len URL de F5 / chia se link giu dung tab.
   useEffect(() => {
     if (active && want !== active.key && !vis.some((t) => t.key === want)) {

@@ -5,6 +5,8 @@ import { SearchableSelect } from "./SearchableSelect";
 import { displayName, useUserNames } from "../hooks/useUserNames";
 import { useLkName } from "../hooks/useLinhKien";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useRoute } from "../router/Router";
+import { setUrlKtv } from "../layout/KtvMenu";
 
 // Thanh loc dung chung cho moi bang danh sach (21/10/2026: "tất cả các giao diện có table danh sách đơn,
 // phiếu... đều phải bổ sung các filter phù hợp ... + công cụ tìm kiếm. lựa chọn filter nhiều hơn 5 lựa chọn
@@ -97,9 +99,15 @@ export interface ListFilters {
 export function useListFilters(locPath: string | null, keys: string[]): ListFilters {
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
-  const [values, setValues] = useState<Record<string, string>>({});
+  // 04/11/2026: o loc "ktv" dong bo voi tham so ?ktv= tren URL (menu 2 danh sach KTV ben canh sidebar).
+  const urlKtv = useRoute().query.get("ktv") || "";
+  const hasKtv = keys.includes("ktv");
+  const [values, setValues] = useState<Record<string, string>>(() => (hasKtv && urlKtv ? { ktv: urlKtv } : ({} as Record<string, string>)));
   const [loc, setLoc] = useState<Record<string, string[]>>({});
   const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (hasKtv) setValues((s) => (s.ktv === urlKtv || (!s.ktv && !urlKtv) ? s : { ...s, ktv: urlKtv }));
+  }, [urlKtv, hasKtv]);
   useEffect(() => {
     const t = setTimeout(() => setQ(qInput.trim()), 400);
     return () => clearTimeout(t);
@@ -128,9 +136,13 @@ export function useListFilters(locPath: string | null, keys: string[]): ListFilt
     setQ: setQInput,
     qInput,
     values,
-    set: (k, v) => setValues((s) => ({ ...s, [k]: v })),
+    set: (k, v) => {
+      setValues((s) => ({ ...s, [k]: v }));
+      if (k === "ktv" && hasKtv) setUrlKtv(v);
+    },
     clear: () => {
       setValues({});
+      if (hasKtv && urlKtv) setUrlKtv("");
       setQInput("");
       setQ("");
     },
@@ -178,7 +190,9 @@ export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: Lis
   const { nameOf } = useLkName();
   const optsOf = (d: FilterDef) => {
     if (d.static) return d.static;
-    const raw = f.loc[d.key] || [];
+    const cur = f.values[d.key];
+    // Gia tri dang loc (vd ?ktv= tu menu KTV) khong co trong du lieu -> van hien dung ten thay vi "Tất cả".
+    const raw = cur && cur !== NONE && !(f.loc[d.key] || []).includes(cur) ? [...(f.loc[d.key] || []), cur] : f.loc[d.key] || [];
     return raw
       .map((v) => {
         if (!v) return { value: NONE, label: d.noneLabel || "(Chưa có)" };
