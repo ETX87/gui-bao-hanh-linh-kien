@@ -2,6 +2,7 @@ import type { AppUser } from "../lib/types";
 import { useState } from "react";
 import { InstallAppButton } from "./InstallAppButton";
 import { TestModeModal, useTestMode } from "./TestMode";
+import { useUserNames } from "../hooks/useUserNames";
 
 // TopBar (DESIGN_SYSTEM.md §4):
 // - Mobile: header gradient xanh la (cung nen Sidebar) de nhan dien thuong hieu - icon + ten app + nut
@@ -28,7 +29,12 @@ async function logout() {
 
 export function TopBar({ user }: { user: AppUser }) {
   const roles = ROLE_LABELS.filter((r) => user[r.flag]).map((r) => r.label);
-  const initial = (user.ten || user.email).trim().charAt(0).toUpperCase();
+  // Ten hien thi = ten tai khoan tren he thong (05/11/2026, "fix tên ktv theo tên tài khoản trên hệ thống" - loi chao tung hien ten Google
+  // "kenvin thanh"): CUNG bang ten /users/ten (ho ten ETX nhan su > danh ba KTV > ten Google) nhu moi danh sach, khong co moi dung users.ten.
+  const { nameOf } = useUserNames();
+  const tenHt = nameOf(user.email);
+  const ten = tenHt && tenHt !== user.email ? tenHt : user.ten || user.email;
+  const initial = ten.trim().charAt(0).toUpperCase();
   const test = useTestMode();
   const [testOpen, setTestOpen] = useState(false);
   // Nut "Chế độ test" chi cho tai khoan THAT la Admin he thong (ke ca khi dang test duoi vai tro khac).
@@ -51,7 +57,7 @@ export function TopBar({ user }: { user: AppUser }) {
         <img src="/icon-192.png" alt="" className="w-9 h-9 rounded-xl shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="font-bold text-base leading-tight truncate">Bảo hành đổi trả 3T</p>
-          <p className="text-xs text-white/75 leading-tight truncate">{user.ten || user.email}</p>
+          <p className="text-xs text-white/75 leading-tight truncate">{ten}</p>
         </div>
         {testBtn(true)}
         <InstallAppButton onDark />
@@ -65,7 +71,7 @@ export function TopBar({ user }: { user: AppUser }) {
           {initial}
         </span>
         <p className="min-w-0 truncate text-sm" title={`${roles.join(", ")} · ${user.email}`}>
-          <span className="font-semibold text-[var(--ink)]">Xin chào, {user.ten || user.email}</span>
+          <span className="font-semibold text-[var(--ink)]">Xin chào, {ten}</span>
           <span className="text-xs text-[var(--ink-soft)]"> · {roles.join(" · ") || "Chưa gán vai trò"}</span>
         </p>
         <div className="ml-auto" />
