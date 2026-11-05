@@ -6395,4 +6395,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - Phiếu trả: Chờ tạo phiếu / Nháp (+ KT trả lại) / Chờ KT duyệt / Chờ Kho in + đã in / KTV báo không nhận / Đang gửi KTV / Đã kết thúc / Tất cả.
 - Tab khác (Thiếu hàng, Kho nhận gần đây, Cấp linh kiện, KT đã xử lý) và màn khác: giữ cách đếm cũ.
 **(c) Ghi nhận:** số trên menu luôn là số **đơn** (đơn cha) của KTV ở giai đoạn đó, kể cả ở tab thùng / phiếu trả (không phải số thùng / số phiếu).
-**(d):** typecheck 0 lỗi. Chưa xem bằng mắt trên bản thật.
+**(d):** typecheck 0 lỗi. Chưa xem bằng mắt trên bản thật. **Deploy (05/11/2026):** Version ID `fec1c135`.
