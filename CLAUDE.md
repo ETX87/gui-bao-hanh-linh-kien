@@ -6372,4 +6372,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(a) Nguyên văn:** *"bug "DH-002735-1" đang bị dừng không hiện chức năng thao tác nào"*
 **(b) Nguyên nhân + đã sửa:** đọc D1 production: DH-002735-1 ở `cho_admin_xac_nhan` (NV báo "Đã sửa xong"; Admin đã 2 lần xác nhận hoàn tất rồi "Lùi lại" với lý do "thêm linh kiện phin lọc"). `UnitDetailModal.tsx` chỉ dựng nhóm nút Admin (Phân loại / ⚡ / Bổ sung / Xác nhận hoàn tất / Trả trực tiếp) khi `user.la_admin_bh` — tài khoản Admin hệ thống (`la_qtri`) không có cờ đó nên không thấy nút nào, dù backend cho qtri làm (quy ước superuser 04/09/2026). Đổi thành `la_admin_bh || la_qtri`. Ghi nhận: muốn thêm đề xuất linh kiện (phin lọc) thì đơn phải ở bước NV sửa — dùng "Xác nhận hoàn tất / Yêu cầu làm lại" → "Yêu cầu làm lại" để đơn về NV, rồi "+ Đề xuất hộ NV".
-**(c)/(d):** typecheck 0 lỗi; không còn chỗ nào khác chặn nút chỉ theo `la_admin_bh`. Chưa xem bằng mắt.
+**(c)/(d):** typecheck 0 lỗi; không còn chỗ nào khác chặn nút chỉ theo `la_admin_bh`. Chưa xem bằng mắt. **Deploy (05/11/2026):** Version ID `208805e1`.
