@@ -6339,3 +6339,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 2. Case SC261028106: dvbh có `ktv_trien_khai = (dienmaykp.mn)…` (Trạm = bhptdv.mn), nhưng 2 đơn Odoo BH05774/05775 chưa được bước cron "Bổ sung KTV triển khai" hỏi lại (`tk_hoi=0`; còn 5.402 đơn mở chờ, mỗi lần cron chỉ 1.000). Tạo đơn THỦ CÔNG theo mã case đã được (tra cứu case dùng `ktv_trien_khai` trực tiếp). Sửa: tăng bước bổ sung lên 30 lô × 200 / lần cron → xong trong 1 lần cron.
 
 **(c)/(d):** typecheck 0 lỗi. Chưa thử bằng tài khoản thật.
+
+**Deploy (05/11/2026):** `npm run deploy` (Version ID `aa50c173`), không có migration mới.
