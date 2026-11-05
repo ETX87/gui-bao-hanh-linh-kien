@@ -1,10 +1,9 @@
-import { maKtvCuaEmail } from "../lib/ktvMa";
+import { caseThuocKtv } from "../lib/ktvMa";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { lookupCase, lookupCaseEx } from "../lib/caseLookupClient";
-import { extractMaKtv } from "../lib/ktvCode";
 import { nowVN } from "../lib/vnTime";
 
 // GET /api/case-lookup?id=... - proxy tra cuu 1 case_dvbh THEO ID sang he DVBH goc (chi doc), dung
@@ -22,10 +21,9 @@ import { nowVN } from "../lib/vnTime";
 const caseLookup = new Hono<{ Bindings: Env }>();
 caseLookup.use("*", verifySessionMiddleware, loadUser);
 
-async function computeKhopKtv(db: D1Database, kyThuatVien: string | null, ktvEmail: string): Promise<boolean> {
-  const maKtvCase = extractMaKtv(kyThuatVien);
-  if (!maKtvCase) return false;
-  return (await maKtvCuaEmail(db, ktvEmail)).includes(maKtvCase);
+// 05/11/2026: khop Tram (ky_thuat_vien) HOAC KTV trien khai.
+async function computeKhopKtv(db: D1Database, p: { ky_thuat_vien: string | null; ktv_trien_khai?: string | null }, ktvEmail: string): Promise<boolean> {
+  return caseThuocKtv(db, p, ktvEmail);
 }
 
 import { laCaseHomNay } from "../lib/caseNgay";
@@ -36,7 +34,7 @@ caseLookup.get("/", async (c) => {
   const r = await lookupCaseEx(id, c.env);
   const preview = r.status === "found" ? r.preview : null;
   const ktvEmail = (c.req.query("ktv_email") || "").trim();
-  const khopKtv = preview && ktvEmail ? await computeKhopKtv(c.env.DB, preview.ky_thuat_vien, ktvEmail) : null;
+  const khopKtv = preview && ktvEmail ? await computeKhopKtv(c.env.DB, preview, ktvEmail) : null;
   // loi_dvbh (30/10/2026): DVBH loi/khong phan hoi - khac "khong tim thay" (cho tao don chua xac minh).
   // cho_dong_bo (03/11/2026): khong thay tren DVBH nhung la case trong ngay (SC+YYMMDD hom nay) -> cho tao, chua xac minh.
   return c.json({ found: !!preview, preview, khopKtv, loi_dvbh: r.status === "error", cho_dong_bo: r.status === "not_found" && laCaseHomNay(id) });

@@ -302,6 +302,7 @@ export interface CaseLookupPreview {
 // khai bao qua man #/qtri/ktv, xem CLAUDE.md).
 export interface KtvLienHe {
   ma_ktv: string;
+  so_tao_ho?: number; // 05/11/2026: so KTV ma KTV nay duoc tao don ho
   ten_hien_thi: string | null;
   sdt: string | null;
   gmail: string | null;

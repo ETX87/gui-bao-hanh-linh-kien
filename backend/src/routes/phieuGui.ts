@@ -1,4 +1,4 @@
-import { maKtvCuaEmail } from "../lib/ktvMa";
+import { maKtvCuaEmail, caseThuocKtv, laKtvTaoHo } from "../lib/ktvMa";
 import { laCaseHomNay } from "../lib/caseNgay";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
@@ -12,7 +12,6 @@ import { computeEmailGs, isGsOfKtv } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
 import { mienOfKtv, mienAllowed } from "../lib/mien";
 import { lookupCaseEx } from "../lib/caseLookupClient";
-import { extractMaKtv } from "../lib/ktvCode";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
 import { capNhatTimKiem } from "../lib/timKiem";
@@ -55,10 +54,12 @@ phieuGui.get("/", async (c) => {
   const user = c.get("user");
   const { limit, offset } = parsePage(c);
   const isRealKtv = user.la_ktv_dvbh || user.la_ve_tinh;
-  let col: "nguoi_tao" | "nguoi_tao_ho";
-  if (isRealKtv) col = "nguoi_tao";
-  else if (canTaoHo(user)) col = "nguoi_tao_ho";
-  else if (isKtv(user)) col = "nguoi_tao"; // qtri fallback (khong xay ra thuc te vi canTaoHo() da gom qtri, giu de an toan)
+  // 05/11/2026: KTV thay ca thung minh tao ho KTV khac (nguoi_tao_ho = minh).
+  let col: string;
+  let colBinds: unknown[];
+  if (isRealKtv) { col = "(nguoi_tao = ? OR nguoi_tao_ho = ?)"; colBinds = [user.email, user.email]; }
+  else if (canTaoHo(user)) { col = "nguoi_tao_ho = ?"; colBinds = [user.email]; }
+  else if (isKtv(user)) { col = "nguoi_tao = ?"; colBinds = [user.email]; } // qtri fallback (khong xay ra thuc te vi canTaoHo() da gom qtri, giu de an toan)
   else return c.json({ error: "FORBIDDEN" }, 403);
   const kw = kwClause(c.req.query("q"), [
     "id", "ma_van_don", "ma_xe_hoac_tai_xe", "don_vi_van_chuyen", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"),
@@ -67,11 +68,11 @@ phieuGui.get("/", async (c) => {
   // 21/10/2026: bo loc trang thai / hinh thuc gui / KTV (khi tao ho) / mien.
   const LOC = { trang_thai: "trang_thai", hinh_thuc_gui: "hinh_thuc_gui", ktv: "nguoi_tao", mien: "mien" };
   if (c.req.query("loc_only")) {
-    return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${col} = ?`, [user.email]) });
+    return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${col}`, colBinds) });
   }
   const f = joinF(eqFilters(c, LOC), timeFilter(c, "created_at"));
-  const w = `FROM phieu_gui_bh WHERE ${col} = ?${kw.sql}${f.sql}`;
-  const b = [user.email, ...kw.binds, ...f.binds];
+  const w = `FROM phieu_gui_bh WHERE ${col}${kw.sql}${f.sql}`;
+  const b = [...colBinds, ...kw.binds, ...f.binds];
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).bind(...b).first<{ cnt: number }>(),
@@ -138,7 +139,9 @@ phieuGui.post("/", async (c) => {
   let target: string;
   let nguoiTaoHo: string | null;
   if (ktvEmailReq && ktvEmailReq !== user.email) {
-    if (!canTaoHo(user)) return c.json({ error: "FORBIDDEN" }, 403);
+    // 05/11/2026: KTV duoc Admin cho tao don ho KTV khac (Quan tri > Danh sach KTV).
+    const laTaoHoKtv = (user.la_ktv_dvbh || user.la_ve_tinh) && (await laKtvTaoHo(c.env.DB, user.email, ktvEmailReq));
+    if (!canTaoHo(user) && !laTaoHoKtv) return c.json({ error: "FORBIDDEN" }, 403);
     const ktvRow = await c.env.DB.prepare("SELECT ma_ktv, khu_vuc_ma, vai_tro_ktv, ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ?")
       .bind(ktvEmailReq)
       .first<{ ma_ktv: string; khu_vuc_ma: string | null; vai_tro_ktv: string | null; ten_hien_thi: string | null }>();
@@ -146,7 +149,7 @@ phieuGui.post("/", async (c) => {
     // GS chi tao ho duoc trong dung Khu vuc minh phu trach (khop qua khu_vuc_bh.gs_email) - Admin
     // BH/qtri khong bi gioi han khu vuc (dung nguyen van yeu cau "hoặc Admin bảo hành", khong dieu
     // kien them).
-    if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
+    if (!laTaoHoKtv && user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
       if (!(await isGsOfKtv(c.env.DB, user.email, ktvEmailReq))) return c.json({ error: "OUT_OF_KHU_VUC" }, 403);
     }
     // "tao ho" duoc phep cho ca KTV CHUA TUNG dang nhap (danh ba ktv_lien_he_bh, CHOT qua
@@ -436,8 +439,7 @@ phieuGui.post("/:id/don", async (c) => {
   const casePreview = lk.status === "found" ? lk.preview : null;
   let lechKtv = false;
   if (casePreview) {
-    const maKtvCase = extractMaKtv(casePreview.ky_thuat_vien);
-    lechKtv = !maKtvCase || !(await maKtvCuaEmail(c.env.DB, g.nguoi_tao)).includes(maKtvCase);
+    lechKtv = !(await caseThuocKtv(c.env.DB, casePreview, g.nguoi_tao));
   }
   // Chi nguoi tao HO (khong phai chinh KTV so huu thung) co quyen tao ho moi duoc xac nhan vuot qua.
   const duocVuot = (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== g.nguoi_tao;
@@ -506,7 +508,7 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     `SELECT o.*, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan FROM don_bh_odoo o WHERE o.odoo_id IN (${ids.map(() => "?").join(",")})`,
   )
     .bind(...ids)
-    .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; trang_thai: string | null; tinh_trang_loi: string | null; ghi_chu: string | null; con_hieu_luc: number; ma_ktv: string | null; da_gan: string | null; khong_gui_boi: string | null }>();
+    .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; trang_thai: string | null; tinh_trang_loi: string | null; ghi_chu: string | null; con_hieu_luc: number; ma_ktv: string | null; ma_ktv_tk: string | null; da_gan: string | null; khong_gui_boi: string | null }>();
 
   const loi: { odoo_id: number; error: string }[] = [];
   const ok = rows.filter((r) => {
@@ -514,7 +516,7 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
     if (r.da_gan) e = "DA_GAN_THUNG";
     else if (r.khong_gui_boi) e = "ODOO_KHONG_GUI";
     else if (!r.con_hieu_luc || !["new", "repairing"].includes(r.trang_thai || "")) e = "KHONG_CON_CHO_GUI";
-    else if (!r.ma_ktv || !maCuaKtv.includes(r.ma_ktv)) e = "CASE_KTV_MISMATCH";
+    else if (!((r.ma_ktv && maCuaKtv.includes(r.ma_ktv)) || (r.ma_ktv_tk && maCuaKtv.includes(r.ma_ktv_tk)))) e = "CASE_KTV_MISMATCH";
     else if (!r.case_id) e = "MISSING_CASE_ID";
     if (e) loi.push({ odoo_id: r.odoo_id, error: e });
     return !e;

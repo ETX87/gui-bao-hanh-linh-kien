@@ -9,6 +9,7 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner, Field, Input, Select } from "../../ui/primitives";
 import { Pagination } from "../../ui/Pagination";
 import { Modal } from "../../ui/Modal";
+import { SearchableSelect } from "../../ui/SearchableSelect";
 import type { KtvLienHe } from "../../lib/types";
 
 const VAI_TRO_OPTIONS = ["KTV", "CTV", "Tram", "Ve tinh"];
@@ -93,6 +94,7 @@ export function QtriKtvScreen() {
                 <MienBadge mien={detectMien(k.khu_vuc_ma, tuKhoa)} short />
               ),
           },
+          { key: "taoho", header: "Tạo hộ", render: (k) => (k.so_tao_ho ? <span title="Số KTV mà KTV này được tạo đơn hộ"><Badge tone="violet">{k.so_tao_ho} KTV</Badge></span> : "—") },
           { key: "nguon", header: "Nguồn", render: (k) => <Badge tone={k.nguon_du_lieu === "dong_bo" ? "blue" : "gray"}>{k.nguon_du_lieu === "dong_bo" ? "Đồng bộ" : "Nội bộ"}</Badge> },
           {
             key: "act",
@@ -124,6 +126,18 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
   const [khuVuc, setKhuVuc] = useState(existing?.khu_vuc_ma || "");
   const [mienGan, setMienGan] = useState<string>(existing?.mien_gan || "");
   const [busy, setBusy] = useState(false);
+  // 05/11/2026: danh sach KTV ma KTV nay duoc tao don ho (ktv_tao_ho_bh).
+  const [taoHo, setTaoHo] = useState<string[] | null>(existing?.email_dang_nhap ? null : []);
+  const [taoHoGoc, setTaoHoGoc] = useState<string[]>([]);
+  const [tatCa, setTatCa] = useState<KtvLienHe[]>([]);
+  useEffect(() => {
+    if (!existing?.email_dang_nhap) return;
+    api.get<{ cho_emails: string[] }>(`/ktv-lien-he/tao-ho?email=${encodeURIComponent(existing.email_dang_nhap)}`).then((r) => {
+      setTaoHo(r.cho_emails);
+      setTaoHoGoc(r.cho_emails);
+    }).catch(() => setTaoHo([]));
+    api.get<{ ktv: KtvLienHe[] }>("/ktv-lien-he").then((r) => setTatCa(r.ktv)).catch(() => setTatCa([]));
+  }, [existing?.email_dang_nhap]);
 
   const valid = ten.trim() && email.trim();
 
@@ -134,6 +148,7 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
       if (existing) {
         await api.patch(`/ktv-lien-he/${encodeURIComponent(existing.ma_ktv)}`, body);
         if (mienGan !== (existing.mien_gan || "")) await api.put(`/mien/ktv/${encodeURIComponent(existing.ma_ktv)}`, { mien_gan: mienGan || null });
+        if (taoHo && email.trim() && [...taoHo].sort().join("|") !== [...taoHoGoc].sort().join("|")) await api.put("/ktv-lien-he/tao-ho", { email: email.trim(), cho_emails: taoHo });
         toast("Đã cập nhật.", "ok");
       } else {
         await api.post("/ktv-lien-he", body);
@@ -151,11 +166,11 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
     <Modal
       title={existing ? `Sửa KTV — ${existing.ma_ktv}` : "Khai báo KTV mới"}
       onClose={onClose}
-      maxWidthClass="max-w-sm"
+      maxWidthClass="max-w-lg"
       footerActions={
         <>
           <Btn onClick={onClose}>Huỷ</Btn>
-          <Btn variant="primary" disabled={!valid || busy} onClick={submit}>
+          <Btn variant="primary" disabled={!valid || busy || (!!existing?.email_dang_nhap && taoHo === null)} onClick={submit}>
             {existing ? "Lưu" : "Khai báo"}
           </Btn>
         </>
@@ -193,6 +208,39 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
               <option value="MB">Miền Bắc</option>
               <option value="MN">Miền Nam</option>
             </Select>
+          </Field>
+        )}
+        {existing?.email_dang_nhap && (
+          <Field label="Được tạo đơn hộ cho KTV" hint="KTV này thấy đơn Odoo và tạo thùng / đơn bảo hành thay cho các KTV dưới đây (như Giám sát tạo hộ).">
+            {taoHo === null ? (
+              <Spinner />
+            ) : (
+              <div className="space-y-2">
+                {taoHo.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {taoHo.map((e) => {
+                      const k = tatCa.find((x) => (x.email_dang_nhap || "").toLowerCase() === e.toLowerCase());
+                      return (
+                        <span key={e} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface-2)] px-2 py-0.5 text-xs">
+                          {k?.ten_hien_thi || e}
+                          <button type="button" className="text-[var(--ink-faint)] hover:text-[var(--red-600)]" onClick={() => setTaoHo(taoHo.filter((x) => x !== e))} aria-label={`Bỏ ${e}`}>
+                            ✕
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <SearchableSelect
+                  options={tatCa
+                    .filter((k) => k.email_dang_nhap && k.email_dang_nhap.toLowerCase() !== existing.email_dang_nhap!.toLowerCase() && !taoHo.includes(k.email_dang_nhap.toLowerCase()))
+                    .map((k) => ({ value: k.email_dang_nhap!.toLowerCase(), label: `${k.ten_hien_thi || k.email_dang_nhap} (${k.ma_ktv})`, hint: k.khu_vuc_ma || undefined }))}
+                  value=""
+                  onChange={(v) => v && setTaoHo([...new Set([...taoHo, v])])}
+                  placeholder="+ Thêm KTV được tạo hộ…"
+                />
+              </div>
+            )}
           </Field>
         )}
       </div>

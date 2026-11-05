@@ -29,6 +29,7 @@ interface OdooRow {
   con_hieu_luc: number;
   ngay_dong_bo: string | null;
   ky_thuat_vien: string | null;
+  ktv_trien_khai?: string | null; // 05/11/2026 (dvbh v1.522): KTV trien khai cua case
   ma_import_odoo?: string | null; // External ID Odoo (dvbh migration 0129)
 }
 
@@ -59,13 +60,16 @@ async function setState(db: D1Database, key: string, value: string) {
 function upsertStmt(db: D1Database, r: OdooRow, now: string) {
   return db
     .prepare(
-      `INSERT INTO don_bh_odoo (odoo_id, ma_don, case_id, ma_linh_kien, ten_linh_kien, so_luong, trang_thai, tinh_trang_loi, ghi_chu, ngay_tao, ngay_hoan_thanh, ngay_cap_nhat_odoo, con_hieu_luc, ky_thuat_vien, ma_ktv, ngay_dong_bo, synced_at, ma_import_odoo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO don_bh_odoo (odoo_id, ma_don, case_id, ma_linh_kien, ten_linh_kien, so_luong, trang_thai, tinh_trang_loi, ghi_chu, ngay_tao, ngay_hoan_thanh, ngay_cap_nhat_odoo, con_hieu_luc, ky_thuat_vien, ma_ktv, ngay_dong_bo, synced_at, ma_import_odoo, ktv_trien_khai, ma_ktv_tk, tk_hoi)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(odoo_id) DO UPDATE SET ma_don = excluded.ma_don, case_id = excluded.case_id, ma_linh_kien = excluded.ma_linh_kien,
          ten_linh_kien = excluded.ten_linh_kien, so_luong = excluded.so_luong, trang_thai = excluded.trang_thai, tinh_trang_loi = excluded.tinh_trang_loi,
          ghi_chu = excluded.ghi_chu, ngay_tao = excluded.ngay_tao, ngay_hoan_thanh = excluded.ngay_hoan_thanh, ngay_cap_nhat_odoo = excluded.ngay_cap_nhat_odoo,
          con_hieu_luc = excluded.con_hieu_luc, ky_thuat_vien = excluded.ky_thuat_vien, ma_ktv = excluded.ma_ktv, ngay_dong_bo = excluded.ngay_dong_bo,
-         synced_at = excluded.synced_at, ma_import_odoo = COALESCE(excluded.ma_import_odoo, don_bh_odoo.ma_import_odoo)`,
+         synced_at = excluded.synced_at, ma_import_odoo = COALESCE(excluded.ma_import_odoo, don_bh_odoo.ma_import_odoo),
+         ktv_trien_khai = CASE WHEN excluded.tk_hoi = 1 THEN excluded.ktv_trien_khai ELSE don_bh_odoo.ktv_trien_khai END,
+         ma_ktv_tk = CASE WHEN excluded.tk_hoi = 1 THEN excluded.ma_ktv_tk ELSE don_bh_odoo.ma_ktv_tk END,
+         tk_hoi = MAX(don_bh_odoo.tk_hoi, excluded.tk_hoi)`,
     )
     .bind(
       r.odoo_id,
@@ -86,6 +90,9 @@ function upsertStmt(db: D1Database, r: OdooRow, now: string) {
       r.ngay_dong_bo,
       now,
       r.ma_import_odoo ?? null,
+      r.ktv_trien_khai ?? null,
+      extractMaKtv(r.ktv_trien_khai ?? null),
+      "ktv_trien_khai" in r ? 1 : 0,
     );
 }
 
@@ -152,6 +159,26 @@ async function resolveMissingImportId(env: Env): Promise<number> {
     }
   }
   await setState(env.DB, "import_id_after", String(after));
+  return total;
+}
+
+// 2c) 05/11/2026: don keo ve truoc khi dvbh tra "ktv_trien_khai" -> hoi lai don con mo (toi da 5 lo x 200 / lan cron).
+async function resolveKtvTrienKhai(env: Env): Promise<number> {
+  let total = 0;
+  for (let i = 0; i < 5; i++) {
+    const { results } = await env.DB.prepare(
+      `SELECT odoo_id FROM don_bh_odoo WHERE tk_hoi = 0 AND con_hieu_luc = 1 AND trang_thai IN ('new','repairing') ORDER BY odoo_id DESC LIMIT 200`,
+    ).all<{ odoo_id: number }>();
+    if (results.length === 0) break;
+    const body = await callDvbh<{ rows: OdooRow[] }>(env, `don-bao-hanh-odoo?ids=${results.map((r) => r.odoo_id).join(",")}`);
+    const co = body.rows.filter((r) => "ktv_trien_khai" in r);
+    if (co.length === 0) break; // dvbh chua deploy ban co truong nay
+    await upsertRows(env.DB, co);
+    // don dvbh khong tra ve (da xoa / het hieu luc) -> danh dau da hoi de khong hoi mai.
+    await env.DB.prepare(`UPDATE don_bh_odoo SET tk_hoi = 1 WHERE odoo_id IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(results.map((r) => r.odoo_id))).run();
+    total += co.length;
+    if (results.length < 200) break;
+  }
   return total;
 }
 
@@ -295,6 +322,7 @@ export interface OdooSyncResult {
   keo_ve: number;
   bo_sung_ktv: number;
   bo_sung_id: number;
+  bo_sung_tk: number;
   day_trang_thai: number;
   loi: string[];
   luc: string;
@@ -303,8 +331,8 @@ export interface OdooSyncResult {
 // Chay ca 3 buoc, moi buoc doc lap (1 buoc loi khong chan buoc khac). Ghi ket qua vao sync_state de
 // man Cai dat hien "lan dong bo gan nhat".
 export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
-  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, bo_sung_id: 0, day_trang_thai: 0, loi: [], luc: nowVN() };
-  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "bo_sung_id" | "day_trang_thai") => {
+  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, bo_sung_id: 0, bo_sung_tk: 0, day_trang_thai: 0, loi: [], luc: nowVN() };
+  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "bo_sung_id" | "bo_sung_tk" | "day_trang_thai") => {
     try {
       res[key] = await fn();
     } catch (e) {
@@ -315,6 +343,7 @@ export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
   await step("Kéo đơn Odoo", () => pullOdoo(env), "keo_ve");
   await step("Bổ sung KTV", () => resolveMissingKtv(env), "bo_sung_ktv");
   await step("Bổ sung ID import", () => resolveMissingImportId(env), "bo_sung_id");
+  await step("Bổ sung KTV triển khai", () => resolveKtvTrienKhai(env), "bo_sung_tk");
   await step("Đẩy trạng thái", () => pushStatuses(env), "day_trang_thai");
   await setState(env.DB, "odoo_last_run", JSON.stringify(res));
   if (!res.ok) console.error("[odooSync]", res.loi.join(" | "));

@@ -74,8 +74,9 @@ workload.get("/", async (c) => {
     jobs.push(
       // Don bao hanh Odoo cua chinh KTV dang cho gui sua (chua dua vao thung) - khop GET /api/odoo-don/cho-gui.
       one(
-        `SELECT COUNT(*) as cnt FROM don_bh_odoo o JOIN ktv_lien_he_bh k ON k.ma_ktv = o.ma_ktv
-         WHERE k.email_dang_nhap = ? AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing') AND o.khong_gui_boi IS NULL
+        `SELECT COUNT(*) as cnt FROM don_bh_odoo o
+         WHERE (o.ma_ktv IN (SELECT ma_ktv FROM ktv_lien_he_bh WHERE LOWER(email_dang_nhap) = LOWER(?1)) OR o.ma_ktv_tk IN (SELECT ma_ktv FROM ktv_lien_he_bh WHERE LOWER(email_dang_nhap) = LOWER(?1)))
+           AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing') AND o.khong_gui_boi IS NULL
            AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)`,
         user.email,
       ).then((r) => {

@@ -6309,3 +6309,23 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** xem trước trên production (chỉ đọc): 200 tài khoản → 180 đổi sang tên công ty (VD "tuan ngo" → "Ngô Văn Tuân", "Thái Vũ Hồng" → "Vũ Hồng Thái"), 13 giữ tên Google; không có tài khoản chờ duyệt / thiếu vai trò nào trùng danh bạ. Admin sửa tên tay ở màn Người dùng sẽ bị đổi lại theo tên công ty ở lần đồng bộ sau (đúng yêu cầu mục 3).
 
 **(d) Kiểm thử:** typecheck backend 0 lỗi; mô phỏng thuật toán đổi tên trên dữ liệu production thật. Chưa chạy local end-to-end — kiểm tra sau deploy bằng D1 production khi cron chạy.
+
+## KTV triển khai được tạo đơn + KTV tạo hộ KTV khác (05/11/2026) — v1.076 (+ dvbh v1.522)
+
+**(a) Nguyên văn yêu cầu:** *"1. Lấy thêm thông tin "KTV triển khai" từ DVBH để xác định người được quyền tạo đơn bảo hành. chỉ cần là 1 trong 2 người là tạo được (ví dụ trạm triển khai là Trạm A, KTV triển khai là KTV B chạy sự cố SC001) => Trạm A hoặc KTV B đều có thể lên đặt đơn bh cho SC0001 2. 1 Tài khoản KTV có thể tạo đơn thay cho 1 tài khoản KTV khác, thêm trong phần cài đặt "Danh sách KTV" danh sách các KTV có thể tạo hộ (ví dụ KTV A, cho phép tạo đơn hộ KTV B, KTV C => khi KTV A tạo đơn sẽ nhìn thấy đơn odoo của KTV B, KTV C và có thể tạo thủ công theo mã đơn hàng của KTV B, KTV C. (tương tự như GS khu vực tạo hộ đơn cho KTV khu vực mình => đây làm Admin tạo hộ cho KTV)"*
+
+**(b) Đã làm:**
+1. **KTV triển khai:** dvbh đã có `case_dvbh.ktv_trien_khai` (migration 0135 bên đó, chỉ case nguồn Odoo) nhưng chưa trả ra API → dvbh v1.522 thêm cột này vào `case-lookup` và `don-bao-hanh-odoo`. App này:
+   - `migrations/0028_ktv_trien_khai_tao_ho.sql`: `don_bh_odoo.ktv_trien_khai`, `ma_ktv_tk`, `tk_hoi`; bảng `ktv_tao_ho_bh (email, cho_email)`.
+   - `lib/odooSync.ts`: lưu KTV triển khai khi kéo đơn (chỉ ghi khi bản tin dvbh có trường này); bước cron mới "Bổ sung KTV triển khai" hỏi lại đơn còn mở chưa có trường này (≤5×200 / lần).
+   - `lib/ktvMa.ts` `maKtvCuaCase` / `caseThuocKtv`: case thuộc KTV nếu mã KTV khớp **Trạm (`ky_thuat_vien`) HOẶC KTV triển khai**. Áp ở: kiểm tra mã case khi tra cứu, thêm đơn thủ công, cron xác minh case, danh sách / hủy / mở lại đơn Odoo chờ gửi, thêm đơn từ Odoo, số việc `ktv_odoo_cho_gui`.
+2. **KTV tạo hộ KTV khác:**
+   - Quản trị › Danh sách KTV: modal sửa KTV có khối "Được tạo đơn hộ cho KTV" (chọn nhiều, bỏ từng người); bảng có cột "Tạo hộ" (số KTV). API `GET /ktv-lien-he/tao-ho?email=`, `PUT /ktv-lien-he/tao-ho {email, cho_emails}` (qtri; email phải có trong danh bạ, bỏ chính mình), `GET /ktv-lien-he/tao-ho-cua-toi`.
+   - Quyền: `resolveKtvTarget` (đơn Odoo) và `POST /phieu-gui {ktv_email}` cho KTV thật tạo hộ đúng KTV được gán (không bị giới hạn khu vực như GS). Thùng ghi `nguoi_tao` = KTV được làm hộ, `nguoi_tao_ho` = người tạo — giống GS tạo hộ, nên người tạo hộ quản lý thùng tới khi gửi, case kiểm theo KTV sở hữu thùng. `GET /phieu-gui` của KTV thật nay gồm cả thùng mình tạo hộ.
+   - Màn Gửi hàng của KTV: có người được tạo hộ thì hiện hàng "Làm đơn cho: Tôi / KTV B / …"; chọn KTV B → tab Đơn Odoo hiện đơn của B (cả Đã gửi / Hủy bỏ), "Tạo thùng" / "+ Tạo thùng mới" tạo cho B; danh sách thùng có cột "Của KTV".
+
+**(c) Ghi nhận:** dvbh chỉ có KTV triển khai cho case nguồn Odoo (159 case đang khác Trạm lúc làm); case QuickSight để trống → chỉ Trạm tạo được như cũ. Thùng KTV tạo hộ vẫn đi qua Kho như thường (không bỏ qua bước như Admin tạo hộ). "Đơn của tôi" của người tạo hộ không hiện đơn của KTV được làm hộ (xem qua danh sách thùng).
+
+**(d) Kiểm thử:** typecheck backend + frontend 2 repo 0 lỗi, build sạch. Local (config + D1 tạm, đã xoá), script HTTP **17/17**: Trạm thấy đơn Odoo của mình; KTV triển khai thấy đơn có mình là KTV triển khai + đơn của mình, số việc = 2; chưa gán thì tạo hộ 403; gán KTV không có → 400; gán xong A xem / tạo thùng cho B, thêm đơn Odoo của B (đơn KTV khác bị loại), C bị chặn; B thấy thùng; cột số tạo hộ đúng. Giao diện: hàng "Làm đơn cho" + cột "Của KTV ↪ KTV B" hiện đúng.
+
+**Deploy (05/11/2026):** dvbh v1.522 (`deploy:smarttrade`, Version ID `936a0c46`) trước.

@@ -1,4 +1,4 @@
-import { maKtvCuaEmail } from "../lib/ktvMa";
+import { maKtvCuaEmail, laKtvTaoHo } from "../lib/ktvMa";
 import { Hono } from "hono";
 import type { Env, AppUser } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -21,10 +21,12 @@ odooDon.use("*", verifySessionMiddleware, loadUser);
 export async function resolveKtvTarget(db: D1Database, user: AppUser, ktvEmailReq: string | undefined | null): Promise<{ email: string } | { error: string; status: 403 | 404 }> {
   const req = ktvEmailReq?.trim();
   if (req && req !== user.email) {
-    if (!(user.la_giam_sat || user.la_admin_bh || user.la_qtri)) return { error: "FORBIDDEN", status: 403 };
+    // 05/11/2026: KTV duoc Admin cho tao ho KTV khac (Quan tri > Danh sach KTV, bang ktv_tao_ho_bh).
+    const laTaoHoKtv = (user.la_ktv_dvbh || user.la_ve_tinh) && (await laKtvTaoHo(db, user.email, req));
+    if (!(user.la_giam_sat || user.la_admin_bh || user.la_qtri || laTaoHoKtv)) return { error: "FORBIDDEN", status: 403 };
     const k = await db.prepare("SELECT 1 FROM ktv_lien_he_bh WHERE email_dang_nhap = ?").bind(req).first();
     if (!k) return { error: "KTV_NOT_FOUND", status: 404 };
-    if (user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
+    if (!laTaoHoKtv && user.la_giam_sat && !user.la_admin_bh && !user.la_qtri) {
       if (!(await isGsOfKtv(db, user.email, req))) return { error: "OUT_OF_KHU_VUC", status: 403 };
     }
     return { email: req };
@@ -52,11 +54,11 @@ odooDon.get("/cho-gui", async (c) => {
             o.khong_gui_boi, o.khong_gui_luc, o.khong_gui_ly_do,
             (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = o.case_id) AS khach_hang
      FROM don_bh_odoo o
-     WHERE o.ma_ktv IN (${maCuaKtv.map(() => "?").join(",")}) AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
+     WHERE (o.ma_ktv IN (${maCuaKtv.map(() => "?").join(",")}) OR o.ma_ktv_tk IN (${maCuaKtv.map(() => "?").join(",")})) AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
        AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)
      ORDER BY o.ngay_tao DESC LIMIT 500`,
   )
-    .bind(...maCuaKtv)
+    .bind(...maCuaKtv, ...maCuaKtv)
     .all<{ khong_gui_boi: string | null }>();
   return c.json({
     don: results.filter((r) => !r.khong_gui_boi),
@@ -103,13 +105,14 @@ async function loadOwnedOdoo(db: D1Database, user: AppUser, odooId: number, ktvE
   if ("error" in t) return { error: t.error, status: t.status } as const;
   const row = await db
     .prepare(
-      `SELECT o.odoo_id, o.ma_ktv, o.khong_gui_boi, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan
+      `SELECT o.odoo_id, o.ma_ktv, o.ma_ktv_tk, o.khong_gui_boi, (SELECT p.id FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id) AS da_gan
        FROM don_bh_odoo o WHERE o.odoo_id = ?`,
     )
     .bind(odooId)
-    .first<{ odoo_id: number; ma_ktv: string | null; khong_gui_boi: string | null; da_gan: string | null }>();
+    .first<{ odoo_id: number; ma_ktv: string | null; ma_ktv_tk: string | null; khong_gui_boi: string | null; da_gan: string | null }>();
   if (!row) return { error: "NOT_FOUND", status: 404 } as const;
-  if (!row.ma_ktv || !(await maKtvCuaEmail(db, t.email)).includes(row.ma_ktv)) return { error: "CASE_KTV_MISMATCH", status: 403 } as const;
+  const cua = await maKtvCuaEmail(db, t.email);
+  if (!((row.ma_ktv && cua.includes(row.ma_ktv)) || (row.ma_ktv_tk && cua.includes(row.ma_ktv_tk)))) return { error: "CASE_KTV_MISMATCH", status: 403 } as const;
   if (row.da_gan) return { error: "DA_GAN_THUNG", status: 400 } as const;
   return { row } as const;
 }

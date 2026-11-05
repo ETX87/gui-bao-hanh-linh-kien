@@ -1,8 +1,7 @@
-import { maKtvCuaEmail } from "./ktvMa";
+import { caseThuocKtv } from "./ktvMa";
 import { conChoDongBo } from "./caseNgay";
 import type { Env } from "../types";
 import { lookupCase, lookupCaseEx } from "./caseLookupClient";
-import { extractMaKtv } from "./ktvCode";
 import { addLog } from "./logs";
 import { nowVN } from "./vnTime";
 import { capNhatTimKiem } from "./timKiem";
@@ -101,9 +100,7 @@ export async function verifyPendingCases(env: Env, max = 30): Promise<{ hoi: num
     let loi: string | null = null;
     if (res.status === "not_found") loi = "Không tìm thấy case này bên hệ DVBH";
     else {
-      const maKtvCase = extractMaKtv(res.preview.ky_thuat_vien);
-      const maCuaKtv = await maKtvCuaEmail(env.DB, r.nguoi_tao);
-      if (!maKtvCase || !maCuaKtv.includes(maKtvCase)) loi = `Case không thuộc KTV gửi hàng (KTV trên case: ${res.preview.ky_thuat_vien || "không xác định"})`;
+      if (!(await caseThuocKtv(env.DB, res.preview, r.nguoi_tao))) loi = `Case không thuộc KTV gửi hàng (KTV trên case: ${res.preview.ky_thuat_vien || "không xác định"})`;
       await env.DB.prepare(
         "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
       )

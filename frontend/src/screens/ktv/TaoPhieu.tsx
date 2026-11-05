@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
@@ -46,8 +46,17 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
 
   // Don bao hanh Odoo dang cho gui sua cua chinh KTV (yeu cau 04/10/2026) - chi hien voi KTV that;
   // nguoi "tao ho" chon don Odoo trong chi tiet phieu sau khi da chon KTV.
-  const odoo = useOdooChoGui(null, isSelfKtv);
+  // 05/11/2026 - "1 Tài khoản KTV có thể tạo đơn thay cho 1 tài khoản KTV khác": KTV duoc Admin cho tao ho (Quan tri > Danh sach KTV)
+  // chon "Làm đơn cho" -> thay don Odoo + tao thung cho KTV do (thung ghi nguoi_tao = KTV do, nguoi_tao_ho = minh).
+  const [dsHo, setDsHo] = useState<{ email: string; ten: string | null }[]>([]);
+  const [ktvFor, setKtvFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isSelfKtv) return;
+    api.get<{ ktv: { email: string; ten: string | null }[] }>("/ktv-lien-he/tao-ho-cua-toi").then((r) => setDsHo(r.ktv)).catch(() => setDsHo([]));
+  }, [isSelfKtv]);
+  const odoo = useOdooChoGui(ktvFor, isSelfKtv);
   const sel = useSelection();
+  useEffect(() => sel.setSelected(new Set()), [ktvFor]); // eslint-disable-line react-hooks/exhaustive-deps
   const [huyOdoo, setHuyOdoo] = useState<OdooDon | null>(null);
   // 3 muc cho KTV quan ly don Odoo (09/10/2026): Chua gui / Da gui / Huy bo - moi muc 20 don/trang.
   const [odooTab, setOdooTab] = useState<"chua_gui" | "da_gui" | "huy">("chua_gui");
@@ -70,7 +79,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   const taoThungTuOdoo = async () => {
     setCreating(true);
     try {
-      const r = await api.post<{ id: string }>("/phieu-gui");
+      const r = await api.post<{ id: string }>("/phieu-gui", ktvFor ? { ktv_email: ktvFor } : undefined);
       const add = await api.post<{ created: string[]; loi: unknown[] }>(`/phieu-gui/${r.id}/don-tu-odoo`, { odoo_ids: [...sel.selected] });
       toast(`Đã tạo phiếu ${r.id} với ${add.created.length} đơn Odoo.`, "ok");
       sel.setSelected(new Set());
@@ -109,6 +118,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     { key: "sodon", header: "Số đơn", render: (r) => soDonOf(r) },
     ...(isSelfKtv ? [{ key: "buoc", header: "Bước tiếp", render: (r: PhieuGui) => <span className={r.trang_thai === "nhap" ? "font-semibold text-[var(--amber-700)]" : "text-[var(--ink-soft)]"}>{buocTiep(r)}{!!r.su_co_tiep_nhan && <b className="text-[var(--red-700)]"> · ⚠ Kho báo sự cố</b>}</span> } as Column<PhieuGui>] : []),
     ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <UserName email={r.nguoi_tao} className="text-xs" /> } as Column<PhieuGui>] : []),
+    ...(!hoMode && dsHo.length > 0 ? [{ key: "cua", header: "Của KTV", render: (r: PhieuGui) => (r.nguoi_tao === user.email ? <span className="text-xs text-[var(--ink-soft)]">Tôi</span> : <span className="text-xs">↪ <UserName email={r.nguoi_tao} /></span>) } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },
     { key: "hinhthuc", header: "Hình thức gửi", render: (r) => (r.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[r.hinh_thuc_gui] || r.hinh_thuc_gui : "—") },
     ...(isSelfKtv ? [] : [{ key: "sucos", header: "Sự cố", render: (r: PhieuGui) => (r.su_co_tiep_nhan ? <Badge tone="red">⚠ Có</Badge> : "—") } as Column<PhieuGui>]),
@@ -116,6 +126,21 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-3">
+    {isSelfKtv && dsHo.length > 0 && (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs font-semibold text-[var(--ink-soft)]">Làm đơn cho:</span>
+        {[{ email: null as string | null, ten: "Tôi" }, ...dsHo].map((k) => (
+          <button
+            key={k.email ?? "_toi"}
+            type="button"
+            onClick={() => setKtvFor(k.email)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${ktvFor === k.email ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "bg-white text-[var(--ink-body)] border-[var(--line)]"}`}
+          >
+            {k.ten || k.email}
+          </button>
+        ))}
+      </div>
+    )}
     {isSelfKtv && (
       <div className="flex gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:max-w-md" role="tablist">
         {(
@@ -189,13 +214,14 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
             </Btn>
           </div>
         )}
-        {odooTab === "da_gui" && <OdooDaGuiList reloadKey={daGuiKey} onOpenPhieu={setDetailId} />}
-        {odooTab === "huy" && <OdooHuyList items={odoo.khongGui} onChanged={reloadOdoo} />}
+        {odooTab === "da_gui" && <OdooDaGuiList ktvEmail={ktvFor} reloadKey={daGuiKey} onOpenPhieu={setDetailId} />}
+        {odooTab === "huy" && <OdooHuyList items={odoo.khongGui} ktvEmail={ktvFor} onChanged={reloadOdoo} />}
       </Card>
     )}
     {huyOdoo && (
       <KhongGuiModal
         don={huyOdoo}
+        ktvEmail={ktvFor}
         onClose={() => setHuyOdoo(null)}
         onDone={() => {
           sel.setSelected((prev) => {
@@ -212,7 +238,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     <Card className="p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📦 {hoMode ? "Phiếu bảo hành tôi đã tạo hộ" : isSelfKtv ? "Thùng của tôi" : "Phiếu gửi hàng của tôi"} ({total})</h3>
-        <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu())}>
+        <Btn variant="primary" disabled={creating} onClick={() => (hoMode ? setPickOpen(true) : taoPhieu(ktvFor ?? undefined))}>
           {isSelfKtv ? "+ Tạo thùng mới" : "+ Tạo phiếu mới"}
         </Btn>
       </div>

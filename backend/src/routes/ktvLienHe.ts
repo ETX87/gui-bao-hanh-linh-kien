@@ -65,7 +65,7 @@ ktvLienHe.get("/", async (c) => {
 
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv LIMIT ? OFFSET ?`)
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM ktv_tao_ho_bh t WHERE email_dang_nhap IS NOT NULL AND LOWER(t.email) = LOWER(ktv_lien_he_bh.email_dang_nhap)) AS so_tao_ho FROM ktv_lien_he_bh WHERE ${where} ORDER BY ten_hien_thi, ma_ktv LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM ktv_lien_he_bh WHERE ${where}`)
@@ -73,6 +73,48 @@ ktvLienHe.get("/", async (c) => {
       .first<{ cnt: number }>(),
   ]);
   return c.json({ ktv: results, total: totalRow?.cnt ?? 0 });
+});
+
+// 05/11/2026 - "1 Tài khoản KTV có thể tạo đơn thay cho 1 tài khoản KTV khác, thêm trong phần cài đặt Danh sách KTV danh sách
+// các KTV có thể tạo hộ": bang ktv_tao_ho_bh (email = KTV duoc tao ho, cho_email = KTV duoc lam ho).
+// GET /tao-ho-cua-toi - danh sach KTV ma nguoi dang dang nhap duoc tao ho (kem ten).
+ktvLienHe.get("/tao-ho-cua-toi", async (c) => {
+  const user = c.get("user");
+  const { results } = await c.env.DB.prepare(
+    `SELECT t.cho_email AS email, (SELECT ten_hien_thi FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(t.cho_email) LIMIT 1) AS ten
+     FROM ktv_tao_ho_bh t WHERE LOWER(t.email) = LOWER(?) ORDER BY ten, t.cho_email`,
+  ).bind(user.email).all<{ email: string; ten: string | null }>();
+  return c.json({ ktv: results });
+});
+
+// GET /tao-ho?email= (qtri) - danh sach KTV ma `email` duoc tao ho.
+ktvLienHe.get("/tao-ho", async (c) => {
+  if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const email = (c.req.query("email") || "").trim();
+  if (!email) return c.json({ error: "MISSING_EMAIL" }, 400);
+  const { results } = await c.env.DB.prepare("SELECT cho_email FROM ktv_tao_ho_bh WHERE LOWER(email) = LOWER(?) ORDER BY cho_email").bind(email).all<{ cho_email: string }>();
+  return c.json({ cho_emails: results.map((r) => r.cho_email) });
+});
+
+// PUT /tao-ho {email, cho_emails[]} (qtri) - thay toan bo danh sach KTV duoc tao ho.
+ktvLienHe.put("/tao-ho", async (c) => {
+  if (!requireQtri(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ email?: string; cho_emails?: string[] }>().catch(() => ({}) as { email?: string; cho_emails?: string[] });
+  const email = body.email?.trim().toLowerCase();
+  if (!email) return c.json({ error: "MISSING_EMAIL" }, 400);
+  const cho = [...new Set((body.cho_emails || []).map((x) => String(x).trim().toLowerCase()).filter((x) => x && x !== email))].slice(0, 200);
+  if (cho.length) {
+    const { results } = await c.env.DB.prepare("SELECT DISTINCT LOWER(email_dang_nhap) AS e FROM ktv_lien_he_bh WHERE LOWER(email_dang_nhap) IN (SELECT value FROM json_each(?))").bind(JSON.stringify(cho)).all<{ e: string }>();
+    const co = new Set(results.map((r) => r.e));
+    const sai = cho.filter((x) => !co.has(x));
+    if (sai.length) return c.json({ error: "KTV_NOT_FOUND", sai }, 400);
+  }
+  const now = nowVN();
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM ktv_tao_ho_bh WHERE LOWER(email) = ?").bind(email),
+    ...cho.map((x) => c.env.DB.prepare("INSERT INTO ktv_tao_ho_bh (email, cho_email, nguoi_gan, created_at) VALUES (?, ?, ?, ?)").bind(email, x, c.get("user").email, now)),
+  ]);
+  return c.json({ ok: true, so: cho.length });
 });
 
 interface KtvBody {
