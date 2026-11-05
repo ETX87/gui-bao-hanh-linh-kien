@@ -6404,3 +6404,9 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - Menu KTV (menu 2) ở màn Cấp linh kiện (`#/admin/de-xuat` và tab "🔩 Cấp linh kiện" của Phiếu trả) trước vẫn đếm đơn bảo hành đang chờ (v1.085 không có bảng giai đoạn cho màn này). Nay màn Cấp linh kiện ghi tab đang mở lên URL (`?dx=`), menu gọi route mới `GET /de-xuat/ktv-menu?trang_thai=` (cùng quyền / miền / điều kiện tab với danh sách đề xuất) → chỉ hiện KTV có đề xuất ở tab đó, số = số đề xuất; tiêu đề menu "Cấp LK · <tab>". Bấm KTV lọc danh sách đề xuất theo ô "KTV gửi" như cũ.
 - Mọi đường tạo phiếu trả (tạo tay / tạo nhiều / tự động gộp, FAST / hàng loạt, NV "Đã sửa xong" đẩy Kho) ghi `ma_don_hang` = mã phiếu (TR-…); Admin sửa lại ở khối Mã chứng từ. "Trả trực tiếp KTV / Giao trực tiếp Kho": để trống ô mã đơn hàng = mã phiếu (trước là mã ngẫu nhiên DH-xxxxxx). Phiếu đã có không đổi.
 **(c)/(d):** typecheck 0 lỗi; chạy thử câu đếm trên D1 production (chỉ đọc) ra đúng KTV ở tab Chờ Kho in. Chưa xem bằng mắt. **Deploy (05/11/2026):** Version ID `b54496cc`.
+
+## Ô ảnh trên điện thoại chỉ mở camera, không chọn ảnh có sẵn được (05/11/2026) — v1.087
+
+**(a) Nguyên văn:** *"ấn chọn ảnh trên điện thoại nhưng chỉ hiện chức năng chụp ảnh, không chọn ảnh được"* (ảnh form "Bổ sung thông tin theo yêu cầu Admin bảo hành").
+**(b) Nguyên nhân + đã sửa:** `ui/ImagePicker.tsx` đặt `capture="environment"` trên ô file → Android (và một số trình duyệt) mở thẳng camera, không cho vào thư viện ảnh. Đổi thành 2 nút cạnh nhau: **"📷 Chụp ảnh"** (giữ `capture`) và **"🖼 Chọn ảnh có sẵn"** (không `capture`, chọn nhiều). Ảnh từ 2 nút cộng dồn (ghép lại bằng `DataTransfer`, API vẫn trả `FileList` nên nơi gọi không đổi), có ✕ bỏ từng ảnh. Áp cho mọi chỗ dùng: thêm đơn (desktop + mobile), đơn dịch vụ, KTV bổ sung, NV nộp kết quả (3 ô ảnh).
+**(c)/(d):** typecheck 0 lỗi. Chưa thử trên điện thoại thật.
