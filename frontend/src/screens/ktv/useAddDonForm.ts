@@ -36,6 +36,16 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const [override, setOverride] = useState(false);
 
   const valid = !!moTa.trim() && Number(soLuong) >= 1 && !!caseId.trim() && caseValid;
+  // 05/11/2026 - "điền đủ thông tin nhưng không cho tạo đơn": noi ro vi sao nut "Thêm vào phiếu" bi khoa.
+  const lyDoKhoa = !caseId.trim()
+    ? "Nhập mã case rồi bấm “Kiểm tra”."
+    : !caseValid
+      ? "Mã case chưa hợp lệ — bấm “🔍 Kiểm tra” (sửa mã case thì phải kiểm tra lại) và xem cảnh báo ngay dưới ô Mã case."
+      : !(Number(soLuong) >= 1)
+        ? "Số lượng phải từ 1 trở lên."
+        : !moTa.trim()
+          ? "Nhập mô tả lỗi."
+          : "";
 
   const submit = async () => {
     setBusy(true);
@@ -61,5 +71,5 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
     }
   };
 
-  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, submit };
+  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, lyDoKhoa, submit };
 }

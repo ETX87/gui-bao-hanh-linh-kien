@@ -6410,3 +6410,12 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(a) Nguyên văn:** *"ấn chọn ảnh trên điện thoại nhưng chỉ hiện chức năng chụp ảnh, không chọn ảnh được"* (ảnh form "Bổ sung thông tin theo yêu cầu Admin bảo hành").
 **(b) Nguyên nhân + đã sửa:** `ui/ImagePicker.tsx` đặt `capture="environment"` trên ô file → Android (và một số trình duyệt) mở thẳng camera, không cho vào thư viện ảnh. Đổi thành 2 nút cạnh nhau: **"📷 Chụp ảnh"** (giữ `capture`) và **"🖼 Chọn ảnh có sẵn"** (không `capture`, chọn nhiều). Ảnh từ 2 nút cộng dồn (ghép lại bằng `DataTransfer`, API vẫn trả `FileList` nên nơi gọi không đổi), có ✕ bỏ từng ảnh. Áp cho mọi chỗ dùng: thêm đơn (desktop + mobile), đơn dịch vụ, KTV bổ sung, NV nộp kết quả (3 ô ảnh).
 **(c)/(d):** typecheck 0 lỗi. Chưa thử trên điện thoại thật. **Deploy (05/11/2026):** Version ID `6519ade5`.
+
+## Ảnh lỗi khi tải lên + nút "Thêm vào phiếu" bị khoá không rõ lý do (05/11/2026) — v1.088
+
+**(a) Nguyên văn:** *"bug: 1. khi up ảnh bị lỗi ảnh. 2. điền đủ thông tin nhưng không cho tạo đơn"* (2 ảnh: ô ảnh hiện ảnh vỡ ở form Bổ sung; form "Thêm đơn bảo hành" mobile đã có case / linh kiện / mô tả / ảnh mà nút xám).
+**(b) Đã làm:**
+- `ui/ImagePicker.tsx`: mỗi ảnh chọn / chụp được đọc thật bằng `<img>` rồi vẽ lại ra JPEG (cạnh dài ≤1600px, chất lượng 0,85) trước khi dùng — ảnh HEIC / ảnh chưa tải về máy (file rỗng) không đọc được thì bỏ và báo đỏ "Không đọc được N ảnh… chọn ảnh khác hoặc bấm Chụp ảnh". Ảnh lưu vào D1 nhẹ hơn nhiều (data URL). Đang xử lý hiện "Đang xử lý ảnh…".
+- `useAddDonForm` thêm `lyDoKhoa`; form thêm đơn (mobile + desktop) hiện dòng vàng ngay trên nút khi nút bị khoá: chưa nhập / chưa kiểm tra mã case (sửa mã case thì phải kiểm tra lại), mã case không hợp lệ, số lượng, mô tả lỗi.
+**(c) Ghi nhận:** đọc D1 production: KTV Lê Quang Hùng (hunglq.mb) là chủ thùng và là KTV trên case nên cổng mã case không phải nguyên nhân chắc chắn; 2 thùng nháp rỗng BH-000768/769 tạo sau đơn thành công lúc 16:31. Chưa tái hiện được — dòng lý do mới sẽ cho biết đúng điều kiện còn thiếu nếu còn gặp.
+**(d):** typecheck 0 lỗi. Chưa thử trên điện thoại thật.

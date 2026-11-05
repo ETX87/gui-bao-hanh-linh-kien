@@ -88,13 +88,16 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
         </Field>
       </div>
 
-      <div className="px-4 py-3 border-t border-[var(--line)] shrink-0 flex gap-2" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+      <div className="px-4 py-3 border-t border-[var(--line)] shrink-0" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+        {f.lyDoKhoa && !f.busy && <p className="mb-2 text-xs font-semibold text-[var(--amber-800)]">⚠ {f.lyDoKhoa}</p>}
+        <div className="flex gap-2">
         <Btn onClick={onClose} className="flex-1">
           Huỷ
         </Btn>
         <Btn variant="primary" disabled={!f.valid || f.busy} onClick={f.submit} className="flex-[2]">
           Thêm vào phiếu
         </Btn>
+        </div>
       </div>
     </div>,
     document.body,
