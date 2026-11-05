@@ -165,7 +165,7 @@ async function resolveMissingImportId(env: Env): Promise<number> {
 // 2c) 05/11/2026: don keo ve truoc khi dvbh tra "ktv_trien_khai" -> hoi lai don con mo (toi da 5 lo x 200 / lan cron).
 async function resolveKtvTrienKhai(env: Env): Promise<number> {
   let total = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 30; i++) {
     const { results } = await env.DB.prepare(
       `SELECT odoo_id FROM don_bh_odoo WHERE tk_hoi = 0 AND con_hieu_luc = 1 AND trang_thai IN ('new','repairing') ORDER BY odoo_id DESC LIMIT 200`,
     ).all<{ odoo_id: number }>();

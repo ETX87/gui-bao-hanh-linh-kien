@@ -6329,3 +6329,13 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck backend + frontend 2 repo 0 lỗi, build sạch. Local (config + D1 tạm, đã xoá), script HTTP **17/17**: Trạm thấy đơn Odoo của mình; KTV triển khai thấy đơn có mình là KTV triển khai + đơn của mình, số việc = 2; chưa gán thì tạo hộ 403; gán KTV không có → 400; gán xong A xem / tạo thùng cho B, thêm đơn Odoo của B (đơn KTV khác bị loại), C bị chặn; B thấy thùng; cột số tạo hộ đúng. Giao diện: hàng "Làm đơn cho" + cột "Của KTV ↪ KTV B" hiện đúng.
 
 **Deploy (05/11/2026):** dvbh v1.522 (`deploy:smarttrade`, Version ID `936a0c46`) trước. Sau đó suachua áp migration 0028 lên D1 production và `npm run deploy` (Version ID `0106b4c2`).
+
+## Kiểm tra tạo hộ "tài khoản phụ" + KTV triển khai chưa thấy đơn (05/11/2026) — v1.077
+
+**(a) Nguyên văn:** *"1. tôi cần thêm tài khoản phụ có thể tạo hộ cho tài khoản ktv này nhưng không được — (thanhlv2.dvkh) KTV Bình Dương - Lò Văn Thanh là tài khoản chính, tạo đơn hộ cho tài khoản phụ là (thanhlv.trambhptdv-hcm) Trạm BH PTDV HCM - Lò Văn Thanh 2. Kiểm tra: (dienmaykp.mn) Trạm Long An - Điện máy KP là KTV triển khai, cần tạo được các đơn Case của bản thân họ ví dụ SC261028106"*
+
+**(b) Kết quả (đọc D1 production):**
+1. 2 mã `thanhlv2.dvkh` và `thanhlv.trambhptdv-hcm` **dùng chung email đăng nhập** `karofibinhduong01@gmail.com` → đã là 1 tài khoản. Mọi chỗ đối chiếu mã KTV dùng `maKtvCuaEmail` (mọi mã của email, v1.068), nên đăng nhập email này đã thấy đơn Odoo + tạo được đơn cho case của cả 2 mã. Tạo hộ tính theo email nên danh sách chọn loại chính email đó → "Không có kết quả". Sửa: modal sửa KTV hiện ghi chú xanh "✔ Cùng email đăng nhập với: … — đã là 1 tài khoản". (Gmail phụ `baohanhtrungtam7@gmail.com` là tài khoản riêng, đang Từ chối + khoá.)
+2. Case SC261028106: dvbh có `ktv_trien_khai = (dienmaykp.mn)…` (Trạm = bhptdv.mn), nhưng 2 đơn Odoo BH05774/05775 chưa được bước cron "Bổ sung KTV triển khai" hỏi lại (`tk_hoi=0`; còn 5.402 đơn mở chờ, mỗi lần cron chỉ 1.000). Tạo đơn THỦ CÔNG theo mã case đã được (tra cứu case dùng `ktv_trien_khai` trực tiếp). Sửa: tăng bước bổ sung lên 30 lô × 200 / lần cron → xong trong 1 lần cron.
+
+**(c)/(d):** typecheck 0 lỗi. Chưa thử bằng tài khoản thật.

@@ -216,6 +216,14 @@ function KtvFormModal({ existing, onClose, onDone }: { existing?: KtvLienHe; onC
               <Spinner />
             ) : (
               <div className="space-y-2">
+                {(() => {
+                  const chung = tatCa.filter((k) => k.ma_ktv !== existing.ma_ktv && (k.email_dang_nhap || "").toLowerCase() === existing.email_dang_nhap!.toLowerCase());
+                  return chung.length > 0 ? (
+                    <p className="rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] px-2.5 py-1.5 text-xs text-[var(--green-700)]">
+                      ✔ Cùng email đăng nhập với: {chung.map((k) => k.ten_hien_thi || k.ma_ktv).join(", ")} — đã là 1 tài khoản, đăng nhập email này là tạo được đơn cho cả các mã đó, không cần thêm tạo hộ.
+                    </p>
+                  ) : null;
+                })()}
                 {taoHo.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {taoHo.map((e) => {
