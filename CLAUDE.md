@@ -6378,4 +6378,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(a) Nguyên văn:** *"không thêm được linh kiện đề xuất cho ID đó"* (DH-002735-1).
 **(b) Nguyên nhân + đã làm:** đơn ở `cho_admin_xac_nhan` (NV đã báo "Đã sửa xong"); `POST /de-xuat/don-vi/:unitId` và nút "+ Đề xuất" (`DeXuatLinhKien.tsx`) chỉ cho khi đơn `cho_chan_doan` → Admin BH (`nguyenphuongtuyentv`) phải lùi lại / xác nhận nhiều lần mà vẫn không thêm được phin lọc. Nay Admin BH / qtri được tạo đề xuất cả khi đơn `cho_admin_xac_nhan` (NV vẫn chỉ ở bước sửa); đề xuất đi tiếp luồng Kế toán → Kho như thường, không phải trả đơn về NV.
-**(c)/(d):** typecheck 0 lỗi. Chưa thử trên bản thật.
+**(c)/(d):** typecheck 0 lỗi. Chưa thử trên bản thật. **Deploy (05/11/2026):** Version ID `43159f2f`.
