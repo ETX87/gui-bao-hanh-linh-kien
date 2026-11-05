@@ -6409,4 +6409,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(a) Nguyên văn:** *"ấn chọn ảnh trên điện thoại nhưng chỉ hiện chức năng chụp ảnh, không chọn ảnh được"* (ảnh form "Bổ sung thông tin theo yêu cầu Admin bảo hành").
 **(b) Nguyên nhân + đã sửa:** `ui/ImagePicker.tsx` đặt `capture="environment"` trên ô file → Android (và một số trình duyệt) mở thẳng camera, không cho vào thư viện ảnh. Đổi thành 2 nút cạnh nhau: **"📷 Chụp ảnh"** (giữ `capture`) và **"🖼 Chọn ảnh có sẵn"** (không `capture`, chọn nhiều). Ảnh từ 2 nút cộng dồn (ghép lại bằng `DataTransfer`, API vẫn trả `FileList` nên nơi gọi không đổi), có ✕ bỏ từng ảnh. Áp cho mọi chỗ dùng: thêm đơn (desktop + mobile), đơn dịch vụ, KTV bổ sung, NV nộp kết quả (3 ô ảnh).
-**(c)/(d):** typecheck 0 lỗi. Chưa thử trên điện thoại thật.
+**(c)/(d):** typecheck 0 lỗi. Chưa thử trên điện thoại thật. **Deploy (05/11/2026):** Version ID `6519ade5`.
