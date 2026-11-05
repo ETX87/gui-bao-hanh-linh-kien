@@ -6367,3 +6367,9 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(a) Nguyên văn câu hỏi:** *"bây giờ 1 ktv đăng nhập vào hệ thống (đã có sẵn tài khoản trên linh-kien-app)=> hệ thống có tự động duyệt và phân khu vực, hiện thị tên ktv, phân vai trò không?"*
 **(b) Trả lời (đọc code `routes/auth.ts`):** email khớp danh bạ KTV → tự "Đã duyệt" + vai trò KTV (danh bạ "Vệ tinh" → cờ Vệ tinh); tên công ty ghi ngay (`dongBoTaiKhoan`: họ tên ETX > tên danh bạ KTV), màn Người dùng hiện "(mã) Tên"; khu vực / miền của đơn tính theo khu vực KTV ngay. Chỗ hở: `users.mien` của KTV mới chỉ được suy ở lượt đồng bộ mỗi giờ vì lúc đăng nhập bỏ qua KTV (`!ktvMatch`) → bỏ điều kiện, tài khoản mới nào (cả KTV) cũng chạy `runUserKhuVucSync` nền ngay khi đăng nhập lần đầu.
 **(c)/(d):** typecheck 0 lỗi; chưa thử bằng đăng nhập Google thật. **Deploy (05/11/2026):** Version ID `e3a096bc`.
+
+## UI chi tiết đơn không có nút thao tác với Admin hệ thống (05/11/2026) — v1.082
+
+**(a) Nguyên văn:** *"bug "DH-002735-1" đang bị dừng không hiện chức năng thao tác nào"*
+**(b) Nguyên nhân + đã sửa:** đọc D1 production: DH-002735-1 ở `cho_admin_xac_nhan` (NV báo "Đã sửa xong"; Admin đã 2 lần xác nhận hoàn tất rồi "Lùi lại" với lý do "thêm linh kiện phin lọc"). `UnitDetailModal.tsx` chỉ dựng nhóm nút Admin (Phân loại / ⚡ / Bổ sung / Xác nhận hoàn tất / Trả trực tiếp) khi `user.la_admin_bh` — tài khoản Admin hệ thống (`la_qtri`) không có cờ đó nên không thấy nút nào, dù backend cho qtri làm (quy ước superuser 04/09/2026). Đổi thành `la_admin_bh || la_qtri`. Ghi nhận: muốn thêm đề xuất linh kiện (phin lọc) thì đơn phải ở bước NV sửa — dùng "Xác nhận hoàn tất / Yêu cầu làm lại" → "Yêu cầu làm lại" để đơn về NV, rồi "+ Đề xuất hộ NV".
+**(c)/(d):** typecheck 0 lỗi; không còn chỗ nào khác chặn nút chỉ theo `la_admin_bh`. Chưa xem bằng mắt.

@@ -182,7 +182,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const canSuaLk = user.la_admin_bh || user.la_qtri;
 
   const buttons: { label: string; onClick: () => void; variant?: "primary" | "success" | "danger" }[] = [];
-  if (user.la_admin_bh) {
+  // 05/11/2026: Admin he thong (qtri) di qua moi cong vai tro (backend da cho) -> thay du nut nhu Admin BH.
+  if (user.la_admin_bh || user.la_qtri) {
     if (u.trang_thai === "cho_phan_loai" || u.trang_thai === "admin_can_xem_lai") {
       buttons.push({ label: u.trang_thai === "cho_phan_loai" ? "Phân loại" : "Phân loại lại", onClick: () => setSub("phan-loai"), variant: "primary" });
       if (u.trang_thai === "cho_phan_loai") buttons.push({ label: "⚡ Xử lý nhanh", onClick: () => setSub("fast") });
