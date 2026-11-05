@@ -16,6 +16,7 @@ const HO_TRO = ["/don", "/thung", "/phieu-tra", "/admin/de-xuat"];
 // 05/11/2026 - "số lượng đếm sẽ phụ thuộc vào tab người dùng đang chọn ví dụ chọn tab "Chờ phân loại" => chỉ hiện
 // danh sách KTV đang có đơn trong chờ phân loại và số lượng tương ứng": man + tab -> giai doan (GIAI_DOAN cua
 // /tra-cuu). "*" = moi giai doan. Khong khop -> null = dem cac giai doan dang cho xu ly (mac dinh).
+const DX_NHAN: Record<string, string> = { cho_cap: "Chờ Admin cấp", cho_ke_toan: "Chờ KT xác nhận", cho_kho_in: "Chờ Kho in", kho_da_in: "Kho đã in", kho_da_xuat: "Kho đã xuất", tu_choi: "Từ chối", huy: "Đã huỷ" };
 const TRA_ALL = "tra_nhap,tra_cho_ke_toan_duyet,tra_da_duyet_ke_toan,tra_da_gui,tra_khieu_nai_van_chuyen,tra_ktv_da_nhan,tra_gui_that_bai,tra_ket_thuc_khong_gui";
 const TAB_GD: Record<string, Record<string, { gd: string; nhan: string }>> = {
   "/don": {
@@ -74,7 +75,9 @@ export function KtvMenu({ user }: { user: AppUser }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
   const [tick, setTick] = useState(0);
-  const ngu = TAB_GD[path]?.[query.get("tab") || ""] ?? null;
+  // 05/11/2026: man Cap linh kien (ca tab "Cấp linh kiện" trong Phiếu trả) dem theo de xuat cua tab dang mo (?dx=).
+  const dxTab = path === "/admin/de-xuat" || (path === "/phieu-tra" && query.get("tab") === "cap_lk") ? query.get("dx") || "" : null;
+  const ngu = dxTab !== null ? { gd: "", nhan: `Cấp LK · ${DX_NHAN[dxTab] || "đang mở"}` } : TAB_GD[path]?.[query.get("tab") || ""] ?? null;
   const gd = ngu?.gd ?? "";
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export function KtvMenu({ user }: { user: AppUser }) {
     let alive = true;
     setRows(null);
     api
-      .get<{ ktv: Row[] }>(`/tra-cuu/ktv-menu${gd ? `?gd=${encodeURIComponent(gd)}` : ""}`)
+      .get<{ ktv: Row[] }>(dxTab ? `/de-xuat/ktv-menu?trang_thai=${encodeURIComponent(dxTab)}` : `/tra-cuu/ktv-menu${gd ? `?gd=${encodeURIComponent(gd)}` : ""}`)
       .then((r) => alive && setRows((r.ktv || []).filter((x) => x.ktv)))
       .catch(() => alive && setRows([]));
     const t = setInterval(() => setTick((v) => v + 1), 120_000);
@@ -91,7 +94,7 @@ export function KtvMenu({ user }: { user: AppUser }) {
       clearInterval(t);
     };
     // Tai lai khi doi man (thao tac xong o man khac) hoac moi 2 phut.
-  }, [open, path, gd, tick, user.email]);
+  }, [open, path, gd, dxTab, tick, user.email]);
 
   const list = useMemo(() => {
     const k = normVi(q.trim());
@@ -169,7 +172,7 @@ export function KtvMenu({ user }: { user: AppUser }) {
               key={r.ktv}
               type="button"
               onClick={() => pick(r.ktv)}
-              title={`${r.ten} · ${r.ktv}\n${r.so_don} đơn${ngu ? ` · ${ngu.nhan}` : " đang chờ xử lý"}${r.so_dong !== r.so_don ? ` (${r.so_dong} dòng)` : ""}${r.qua_han > 0 ? `\n${r.qua_han} dòng quá hạn SLA 24h` : ""}${on ? "\n(bấm lần nữa để bỏ lọc)" : ""}`}
+              title={`${r.ten} · ${r.ktv}\n${r.so_don} ${dxTab ? "đề xuất" : "đơn"}${ngu ? ` · ${ngu.nhan}` : " đang chờ xử lý"}${r.so_dong !== r.so_don ? ` (${r.so_dong} dòng)` : ""}${r.qua_han > 0 ? `\n${r.qua_han} dòng quá hạn SLA 24h` : ""}${on ? "\n(bấm lần nữa để bỏ lọc)" : ""}`}
               className={`focus-ring w-full flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12.5px] ${on ? "bg-[var(--brand-50)] font-semibold text-[var(--accent-ink)] ring-1 ring-[var(--brand-200)]" : "text-[var(--ink-body)] hover:bg-[var(--surface-2)]"}`}
             >
               {r.qua_han > 0 && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--red-600)]" />}

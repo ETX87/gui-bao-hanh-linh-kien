@@ -60,6 +60,15 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const qTab = ktOnly ? null : query.get("tab");
   const macDinh = isAdmin && !ktOnly ? "cho_cap" : isKt && (!isKho || counts.ketoan_de_xuat_lk > 0) ? "cho_ke_toan" : counts.kho_lk_cho_in === 0 && counts.kho_lk_da_in > 0 ? "kho_da_in" : "cho_kho_in";
   const [tab, setTab] = useState(tabs.find((t) => t.key === qTab)?.key || macDinh);
+  // 05/11/2026: ghi tab dang mo len URL (?dx=) de menu KTV dem dung theo tab.
+  useEffect(() => {
+    const raw = window.location.hash.replace(/^#/, "");
+    const [pth, qs] = raw.split("?");
+    const p = new URLSearchParams(qs || "");
+    if (p.get("dx") === tab) return;
+    p.set("dx", tab);
+    window.location.replace(`#${pth}?${p.toString()}`);
+  }, [tab]);
   const [khoBusy, setKhoBusy] = useState(false);
   const toast = useToast();
   const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);

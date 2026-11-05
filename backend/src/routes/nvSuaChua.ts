@@ -135,7 +135,7 @@ async function dayThangSangKho(env: Env, unitId: string, actor: string): Promise
     return existing.id;
   }
   const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
-  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'da_duyet_ke_toan', ?, ?, ?)").bind(id, ktvKey, actor, loai, now, now).run();
+  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, ma_don_hang, created_at, updated_at) VALUES (?, ?, ?, 'da_duyet_ke_toan', ?, ?, ?, ?)").bind(id, ktvKey, actor, loai, id, now, now).run();
   await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
   await syncPhieuTraMien(db, id);
   await addLog(db, "phieu_tra", id, null, "da_duyet_ke_toan", actor, `NV sửa xong ${unitId} — tự tạo phiếu trả, đẩy thẳng sang Kho (bỏ qua Admin xác nhận + Kế toán duyệt)`);

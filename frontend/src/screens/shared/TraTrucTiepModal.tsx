@@ -47,7 +47,7 @@ export function TraTrucTiepModal({ unitId, mode, onClose, onDone }: { unitId: st
           {mode === "ktv" ? "chuyển ngay sang chờ KTV xác nhận nhận." : "chuyển ngay sang chờ Kho đóng gói."}
         </p>
         <Field label="Mã đơn hàng (để trống sẽ tự sinh)">
-          <Input value={maDonHang} onChange={(e) => setMaDonHang(e.target.value)} placeholder="DH-123456" />
+          <Input value={maDonHang} onChange={(e) => setMaDonHang(e.target.value)} placeholder="Để trống = mã phiếu trả (TR-…)" />
         </Field>
         <Field label="Mã MISA / PXK (để trống sẽ tự sinh)">
           <Input value={maMisa} onChange={(e) => setMaMisa(e.target.value)} placeholder="PXK-123456" />

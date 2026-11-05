@@ -6396,3 +6396,11 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - Tab khác (Thiếu hàng, Kho nhận gần đây, Cấp linh kiện, KT đã xử lý) và màn khác: giữ cách đếm cũ.
 **(c) Ghi nhận:** số trên menu luôn là số **đơn** (đơn cha) của KTV ở giai đoạn đó, kể cả ở tab thùng / phiếu trả (không phải số thùng / số phiếu).
 **(d):** typecheck 0 lỗi. Chưa xem bằng mắt trên bản thật. **Deploy (05/11/2026):** Version ID `fec1c135`.
+
+## Menu KTV đếm đúng ở màn Cấp linh kiện + mã đơn hàng phiếu trả mặc định = mã phiếu (05/11/2026) — v1.086
+
+**(a) Nguyên văn:** *"bên menu cấp lk chưa nhảy đúng số lượng và danh sách người nhận hàng"* và *"2. khi tạo phiếu trả, mã đơn hàng sẽ tự động điền = mã ID trả (có thể sửa lại nếu cần)"*.
+**(b) Đã làm:**
+- Menu KTV (menu 2) ở màn Cấp linh kiện (`#/admin/de-xuat` và tab "🔩 Cấp linh kiện" của Phiếu trả) trước vẫn đếm đơn bảo hành đang chờ (v1.085 không có bảng giai đoạn cho màn này). Nay màn Cấp linh kiện ghi tab đang mở lên URL (`?dx=`), menu gọi route mới `GET /de-xuat/ktv-menu?trang_thai=` (cùng quyền / miền / điều kiện tab với danh sách đề xuất) → chỉ hiện KTV có đề xuất ở tab đó, số = số đề xuất; tiêu đề menu "Cấp LK · <tab>". Bấm KTV lọc danh sách đề xuất theo ô "KTV gửi" như cũ.
+- Mọi đường tạo phiếu trả (tạo tay / tạo nhiều / tự động gộp, FAST / hàng loạt, NV "Đã sửa xong" đẩy Kho) ghi `ma_don_hang` = mã phiếu (TR-…); Admin sửa lại ở khối Mã chứng từ. "Trả trực tiếp KTV / Giao trực tiếp Kho": để trống ô mã đơn hàng = mã phiếu (trước là mã ngẫu nhiên DH-xxxxxx). Phiếu đã có không đổi.
+**(c)/(d):** typecheck 0 lỗi; chạy thử câu đếm trên D1 production (chỉ đọc) ra đúng KTV ở tab Chờ Kho in. Chưa xem bằng mắt.

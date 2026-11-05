@@ -9,6 +9,7 @@ import { parsePage } from "../lib/pagination";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope } from "../lib/mien";
+import { slaCutoffVn } from "../lib/sla";
 
 // De xuat linh kien sua chua (12/10/2026) - nguyen van chot: "NV se tu bao linh kien can duoc cap, Admin
 // bao hanh se len misa de xuat tu kho sang. Cu de xuat den khi sua xong hoac xac dinh la khong sua
@@ -72,6 +73,24 @@ deXuat.get("/", async (c) => {
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fw}`).bind(...tw.binds, ...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ de_xuat: results, total: totalRow?.cnt ?? 0 });
+});
+
+// 05/11/2026 - "bên menu cấp lk chưa nhảy đúng số lượng và danh sách người nhận hàng": menu KTV (menu 2) dem
+// de xuat theo dung tab dang mo cua man Cap linh kien, nhom theo KTV gui don (g.nguoi_tao).
+deXuat.get("/ktv-menu", async (c) => {
+  const user = c.get("user");
+  const tt = c.req.query("trang_thai") || "cho_cap";
+  if (!isAdmin(user) && !(isKt(user) && KT_XEM.includes(tt)) && !(isKho(user) && KHO_XEM.includes(tt))) return c.json({ error: "FORBIDDEN" }, 403);
+  const ms = mienScope(user, "p");
+  const tw = ttWhere(tt);
+  const { results } = await c.env.DB.prepare(
+    `SELECT COALESCE(g.nguoi_tao, '') AS ktv, COUNT(*) AS so_don, COUNT(*) AS so_dong,
+       SUM(CASE WHEN d.created_at < ? THEN 1 ELSE 0 END) AS qua_han
+     FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE ${tw.sql}${ms.sql}
+     GROUP BY COALESCE(g.nguoi_tao, '') ORDER BY so_don DESC`
+  ).bind(slaCutoffVn(24), ...tw.binds, ...ms.binds).all();
+  return c.json({ ktv: results });
 });
 
 // Danh sach de xuat cua 1 don vi (hien trong UI chi tiet don - dang me con).

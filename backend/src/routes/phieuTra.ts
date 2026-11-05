@@ -34,7 +34,7 @@ async function ktvKeyOfUnit(db: D1Database, unitParentId: string): Promise<strin
 async function createPhieuTraForUnits(db: D1Database, ktvKey: string, loai: LoaiDoiTru, unitIds: string[], actor: string): Promise<string> {
   const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
   const now = nowVN();
-  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?)").bind(id, ktvKey, actor, loai, now, now).run();
+  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, ma_don_hang, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?, ?)").bind(id, ktvKey, actor, loai, id, now, now).run();
   const statements = unitIds.map((uid) => db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, uid));
   await db.batch(statements);
   await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loai] || loai}) với ${unitIds.length} dòng`);
@@ -544,10 +544,11 @@ phieuTra.post("/nhanh/:unitId", async (c) => {
   if (u.phieu_tra_id) return c.json({ error: "ALREADY_IN_PHIEU_TRA" }, 400);
 
   const ktvKey = await ktvKeyOfUnit(c.env.DB, u.parent_id);
-  const madh = body.ma_don_hang?.trim() || randomCode("DH");
   const misa = body.ma_misa?.trim() || randomCode("PXK");
   const targetState = body.mode === "ktv" ? "da_gui" : "da_duyet_ke_toan";
   const id = await nextSequentialId(c.env.DB, "phieu_tra_bh", "TR");
+  // 05/11/2026: ma don hang mac dinh = ma phieu tra (sua lai duoc).
+  const madh = body.ma_don_hang?.trim() || id;
   const now = nowVN();
   await c.env.DB.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, ma_don_hang, ma_misa, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .bind(id, ktvKey, user.email, targetState, u.loai_doi_tru, madh, misa, now, now)

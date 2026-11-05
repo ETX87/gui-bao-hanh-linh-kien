@@ -1046,7 +1046,7 @@ async function attachToOrCreatePhieuTra(db: D1Database, unitId: string, ktvKey: 
   }
   const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
   const now = nowVN();
-  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?)").bind(id, ktvKey, actor, loaiDoiTru, now, now).run();
+  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, ma_don_hang, created_at, updated_at) VALUES (?, ?, ?, 'nhap', ?, ?, ?, ?)").bind(id, ktvKey, actor, loaiDoiTru, id, now, now).run();
   await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
   await addLog(db, "phieu_tra", id, null, "nhap", actor, `Tạo phiếu trả mới (${LBL[loaiDoiTru] || loaiDoiTru}) từ nút thao tác nhanh`);
   await syncPhieuTraMien(db, id);
