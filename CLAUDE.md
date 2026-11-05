@@ -6346,4 +6346,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(a) Nguyên văn:** *"giao diện phân quyền, duyệt và miền không hiện đủ thông tin"* (ảnh: 2 ô chọn Duyệt / Miền chỉ còn mũi tên).
 **(b) Đã sửa:** bảng desktop `screens/qtri/NguoiDung.tsx` — ô chọn `w-full` trong bảng `whitespace-nowrap` bị cột "Người dùng" (tên + email dài) ép còn ~40px. Thêm `min-w-[108px]` (Duyệt) và `min-w-[168px]` (Miền, đủ "Chưa gán (thấy tất cả)"); bảng vẫn cuộn ngang khi thiếu chỗ.
-**(c)/(d):** typecheck 0 lỗi. Chưa xem bằng mắt sau sửa.
+**(c)/(d):** typecheck 0 lỗi. Chưa xem bằng mắt sau sửa. **Deploy (05/11/2026):** Version ID `8943a510`.
