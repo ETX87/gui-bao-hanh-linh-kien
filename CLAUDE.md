@@ -6353,3 +6353,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(a) Nguyên văn:** *"thông tin tên người dùng ở đây, ưu tiên hiện thị tên trên app linh-kien-app (theo mã ktv - ví dụ (id.ktv) tên ktv"*
 **(b) Đã làm:** `GET /api/users` trả thêm `ten_ktv` = "(mã) Tên" lấy từ danh bạ KTV (`ktv_lien_he_bh`, đồng bộ từ linh-kien-app) theo email đăng nhập; 1 email nhiều mã → "(mã1, mã2) Tên". Màn Người dùng (bảng + thẻ mobile) hiện `ten_ktv` trước, không có thì `users.ten` (ETX / Google). Ô tìm khớp cả mã KTV + tên danh bạ. Chỉ áp ở màn này — tên ở nơi khác vẫn theo quy tắc v1.066/v1.075.
 **(c)/(d):** typecheck 0 lỗi; chạy thử câu SQL trên D1 production (chỉ đọc) ra đúng 2 mã của karofibinhduong01. Chưa xem bằng mắt.
+**Deploy (05/11/2026):** Version ID `a4921bef`.
