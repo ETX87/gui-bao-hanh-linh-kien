@@ -323,7 +323,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
   const isAdmin = user.la_admin_bh || user.la_qtri;
   const isKt = user.la_ke_toan || user.la_qtri;
   // 21/10/2026: Admin BH de xuat thay cho NV sua chua (don dang o buoc sua chua).
-  const canDeXuat = unitTrangThai === "cho_chan_doan" && ((user.la_nv_sua_chua && nguoiSuaChua === user.email) || isAdmin);
+  const canDeXuat = (unitTrangThai === "cho_chan_doan" && ((user.la_nv_sua_chua && nguoiSuaChua === user.email) || isAdmin)) || (unitTrangThai === "cho_admin_xac_nhan" && isAdmin);
   const thayNv = canDeXuat && nguoiSuaChua !== user.email;
   if (!list || (list.length === 0 && !canDeXuat)) return null;
   const choCap = list.filter((d) => d.trang_thai === "cho_cap");
