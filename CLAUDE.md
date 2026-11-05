@@ -6366,4 +6366,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(a) Nguyên văn câu hỏi:** *"bây giờ 1 ktv đăng nhập vào hệ thống (đã có sẵn tài khoản trên linh-kien-app)=> hệ thống có tự động duyệt và phân khu vực, hiện thị tên ktv, phân vai trò không?"*
 **(b) Trả lời (đọc code `routes/auth.ts`):** email khớp danh bạ KTV → tự "Đã duyệt" + vai trò KTV (danh bạ "Vệ tinh" → cờ Vệ tinh); tên công ty ghi ngay (`dongBoTaiKhoan`: họ tên ETX > tên danh bạ KTV), màn Người dùng hiện "(mã) Tên"; khu vực / miền của đơn tính theo khu vực KTV ngay. Chỗ hở: `users.mien` của KTV mới chỉ được suy ở lượt đồng bộ mỗi giờ vì lúc đăng nhập bỏ qua KTV (`!ktvMatch`) → bỏ điều kiện, tài khoản mới nào (cả KTV) cũng chạy `runUserKhuVucSync` nền ngay khi đăng nhập lần đầu.
-**(c)/(d):** typecheck 0 lỗi; chưa thử bằng đăng nhập Google thật.
+**(c)/(d):** typecheck 0 lỗi; chưa thử bằng đăng nhập Google thật. **Deploy (05/11/2026):** Version ID `e3a096bc`.
