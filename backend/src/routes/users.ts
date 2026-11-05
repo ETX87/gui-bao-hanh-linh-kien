@@ -32,8 +32,8 @@ users.get("/", async (c) => {
   let where = "1=1";
   const binds: unknown[] = [];
   if (kw) {
-    where += " AND (email LIKE ? OR ten LIKE ?)";
-    binds.push(`%${kw}%`, `%${kw}%`);
+    where += " AND (email LIKE ? OR ten LIKE ? OR EXISTS (SELECT 1 FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(users.email) AND (k.ma_ktv LIKE ? OR k.ten_hien_thi LIKE ?)))";
+    binds.push(`%${kw}%`, `%${kw}%`, `%${kw}%`, `%${kw}%`);
   }
   // 16/10/2026: bo loc danh sach nhan su - trang thai duyet, khoa, vai tro, mien, trang thai ETX.
   const tt = c.req.query("trang_thai");
@@ -61,13 +61,29 @@ users.get("/", async (c) => {
   else if (etx === "off_mo") where += ` AND ${ETX_ST} = 'off' AND COALESCE(bi_khoa, 0) = 0`;
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT email, ten, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
-       (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai
+       (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai,
+       (SELECT json_group_array(json_object('ma', k.ma_ktv, 'ten', k.ten_hien_thi)) FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(users.email)) AS ktv_json
        FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM users WHERE ${where}`).bind(...binds).first<{ cnt: number }>(),
   ]);
-  return c.json({ users: results, total: totalRow?.cnt ?? 0 });
+  // 05/11/2026 - "ưu tiên hiện thị tên trên app linh-kien-app (theo mã ktv - ví dụ (id.ktv) tên ktv": tai khoan co trong
+  // danh ba KTV -> ten_ktv = "(ma) Ten" (nhieu ma cung email: "(ma1, ma2) Ten").
+  const users = (results as Array<Record<string, unknown>>).map(({ ktv_json, ...u }) => {
+    let ds: Array<{ ma: string | null; ten: string | null }> = [];
+    try {
+      ds = JSON.parse(String(ktv_json || "[]"));
+    } catch {
+      ds = [];
+    }
+    ds = ds.filter((k) => k && k.ma);
+    if (!ds.length) return { ...u, ten_ktv: null };
+    const ma = [...new Set(ds.map((k) => k.ma as string))].join(", ");
+    const ten = ds.map((k) => (k.ten ? tenGonKtv(k.ten) : "")).find((t) => !!t) || (u.ten as string) || "";
+    return { ...u, ten_ktv: `(${ma}) ${ten}`.trim() };
+  });
+  return c.json({ users, total: totalRow?.cnt ?? 0 });
 });
 
 // GET /api/users/nv-sua-chua - danh sach rut gon (email, ten) cac tai khoan la_nv_sua_chua=1, dung

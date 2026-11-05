@@ -20,6 +20,7 @@ export interface AppUser {
   mien?: "MB" | "MN" | "ALL" | null;
   // 16/10/2026: trang thai tren ETX nhan su (chi tra o GET /users) - 'on' dang lam / 'off' da nghi / null khong co tren ETX.
   etx_trang_thai?: "on" | "off" | null;
+  ten_ktv?: string | null;
   khoa_boi_etx?: number;
 }
 

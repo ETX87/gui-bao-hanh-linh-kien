@@ -175,7 +175,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-[var(--ink)] truncate">
-                      {u.ten || "—"}
+                      {u.ten_ktv || u.ten || "—"}
                       {u.email === currentEmail && <span className="ml-1.5 text-xs text-[var(--ink-faint)]">(bạn)</span>}
                       <EtxTag u={u} />
                     </p>
@@ -246,7 +246,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                 return (
                   <tr key={u.email} className={`border-b border-[var(--line)] last:border-0 ${rowDirty ? "bg-[var(--accent-soft)]" : ""}`}>
                     <td className="">
-                      <span className="font-medium text-[var(--ink)]">{u.ten || "—"}</span>
+                      <span className="font-medium text-[var(--ink)]">{u.ten_ktv || u.ten || "—"}</span>
                       {u.email === currentEmail && <span className="ml-1 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
                       <span className="ml-1.5 text-xs text-[var(--ink-soft)] font-mono">{u.email}</span>
                       <EtxTag u={u} />
