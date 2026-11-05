@@ -900,6 +900,17 @@ async function hoanTacDonVi(db: D1Database, id: string, actor: string, lyDo: str
     den = "cho_phan_loai";
     await db.prepare("UPDATE de_xuat_linh_kien_bh SET trang_thai = 'huy', ly_do_tu_choi = 'Tự huỷ: Admin BH lùi đơn về chờ phân loại', updated_at = ? WHERE unit_id = ? AND trang_thai = 'cho_cap'").bind(now, id).run();
     await db.prepare(`UPDATE phieu_sua_chua_bh_ct SET ${RESET_PL}, trang_thai = ?, updated_at = ? WHERE id = ?`).bind(den, now, id).run();
+  } else if (u.trang_thai === "cho_admin_xac_nhan") {
+    // 05/11/2026 - "cho admin đẩy lùi lại bước sửa cho đúng quy trình": NV da bao ket qua -> ve lai Cho NV sua (giu NV),
+    // xoa ket qua NV de NV nop lai (VD can them linh kien de xuat). Chua co NV thi ve Cho phan loai.
+    const nv = await db.prepare("SELECT nguoi_sua_chua FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ nguoi_sua_chua: string | null }>();
+    if (nv?.nguoi_sua_chua) {
+      den = "cho_chan_doan";
+      await db.prepare("UPDATE phieu_sua_chua_bh_ct SET ket_qua_nv = NULL, ket_qua_chan_doan = NULL, admin_xac_nhan_hoan_tat = 0, trang_thai = ?, updated_at = ? WHERE id = ?").bind(den, now, id).run();
+    } else {
+      den = "cho_phan_loai";
+      await db.prepare(`UPDATE phieu_sua_chua_bh_ct SET ${RESET_PL}, trang_thai = ?, updated_at = ? WHERE id = ?`).bind(den, now, id).run();
+    }
   } else if (u.trang_thai === "san_sang_gom_phieu_tra") {
     if (u.phieu_tra_id) {
       const t = await db.prepare("SELECT trang_thai FROM phieu_tra_bh WHERE id = ?").bind(u.phieu_tra_id).first<{ trang_thai: string }>();

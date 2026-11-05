@@ -24,9 +24,11 @@ export function HoanTacModal({
   const toast = useToast();
   const [lyDo, setLyDo] = useState("");
   const [busy, setBusy] = useState(false);
-  const den = trangThai === "san_sang_gom_phieu_tra" && quaNv ? "Chờ xác nhận hoàn tất" : "Chờ phân loại";
+  const den = trangThai === "cho_admin_xac_nhan" ? "Chờ NV sửa" : trangThai === "san_sang_gom_phieu_tra" && quaNv ? "Chờ xác nhận hoàn tất" : "Chờ phân loại";
   const moTa =
-    trangThai === "ket_thuc_tu_choi" || trangThai === "ket_thuc_chuyen_kho"
+    trangThai === "cho_admin_xac_nhan"
+      ? "Đơn quay về bước NV sửa (giữ NV phụ trách), xoá kết quả NV đã nộp. Sau đó đề xuất thêm linh kiện nếu cần, NV nộp lại kết quả."
+      : trangThai === "ket_thuc_tu_choi" || trangThai === "ket_thuc_chuyen_kho"
       ? "Đơn đã huỷ / chuyển kho sẽ quay về Chờ phân loại, xoá hướng xử lý đã chọn."
       : trangThai === "cho_chan_doan"
         ? "Đơn đang chờ NV sửa sẽ quay về Chờ phân loại. Đề xuất linh kiện đang chờ cấp (nếu có) tự huỷ."

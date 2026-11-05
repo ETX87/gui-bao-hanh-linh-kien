@@ -6379,3 +6379,9 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(a) Nguyên văn:** *"không thêm được linh kiện đề xuất cho ID đó"* (DH-002735-1).
 **(b) Nguyên nhân + đã làm:** đơn ở `cho_admin_xac_nhan` (NV đã báo "Đã sửa xong"); `POST /de-xuat/don-vi/:unitId` và nút "+ Đề xuất" (`DeXuatLinhKien.tsx`) chỉ cho khi đơn `cho_chan_doan` → Admin BH (`nguyenphuongtuyentv`) phải lùi lại / xác nhận nhiều lần mà vẫn không thêm được phin lọc. Nay Admin BH / qtri được tạo đề xuất cả khi đơn `cho_admin_xac_nhan` (NV vẫn chỉ ở bước sửa); đề xuất đi tiếp luồng Kế toán → Kho như thường, không phải trả đơn về NV.
 **(c)/(d):** typecheck 0 lỗi. Chưa thử trên bản thật. **Deploy (05/11/2026):** Version ID `43159f2f`.
+
+## Admin lùi đơn "Chờ xác nhận hoàn tất" về bước NV sửa (05/11/2026) — v1.084, thay v1.083
+
+**(a) Nguyên văn:** *"nếu vậy thì cho admin đẩy lùi lại bước sửa cho đúng quy trình"* (sau khi v1.083 cho Admin đề xuất linh kiện ngay ở bước "Chờ Admin xác nhận hoàn tất").
+**(b) Đã làm:** **hoàn tác v1.083** — đề xuất linh kiện lại chỉ tạo được khi đơn ở bước NV sửa (`cho_chan_doan`). Thay vào đó "↩ Lùi lại" (`POST /admin/don-vi/:id/hoan-tac`, `hoanTacDonVi`) nhận thêm `cho_admin_xac_nhan` → `cho_chan_doan`: giữ NV phụ trách, xoá `ket_qua_nv` / `ket_qua_chan_doan` để NV nộp lại; đơn chưa có NV thì về Chờ phân loại. Nút "↩ Lùi lại" hiện trong UI chi tiết đơn ở trạng thái này; hộp xác nhận ghi "↩ Lùi về Chờ NV sửa". Sau khi lùi: Admin "+ Đề xuất hộ NV" (hoặc NV tự đề xuất) → NV nộp lại kết quả. "Yêu cầu làm lại" có sẵn trong hộp Xác nhận hoàn tất vẫn giữ (cũng về NV, đếm số lần làm lại).
+**(c)/(d):** typecheck 0 lỗi. Chưa thử trên bản thật.

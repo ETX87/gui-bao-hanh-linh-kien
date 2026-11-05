@@ -203,7 +203,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   // 03/11/2026: lui lai don huy nham / da phan loai (duyet) khi giai doan sau chua thuc hien.
   if (
     (user.la_admin_bh || user.la_qtri) &&
-    ["ket_thuc_tu_choi", "ket_thuc_chuyen_kho", "cho_chan_doan", "san_sang_gom_phieu_tra"].includes(u.trang_thai) &&
+    ["ket_thuc_tu_choi", "ket_thuc_chuyen_kho", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra"].includes(u.trang_thai) &&
     (!u.phieu_tra_id || pt?.trang_thai === "nhap")
   ) {
     buttons.push({ label: "↩ Lùi lại", onClick: () => setSub("hoan-tac") });

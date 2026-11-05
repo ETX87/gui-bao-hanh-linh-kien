@@ -89,9 +89,7 @@ deXuat.post("/don-vi/:unitId", async (c) => {
   const unitId = c.req.param("unitId");
   const u = await unitOf(c.env.DB, unitId);
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
-  // 05/11/2026: Admin BH bo sung linh kien sau khi NV bao xong (don "Cho Admin xac nhan hoan tat") khong can tra don ve NV.
-  const choPhep = u.trang_thai === "cho_chan_doan" || (u.trang_thai === "cho_admin_xac_nhan" && isAdmin(user));
-  if (!choPhep) return c.json({ error: "WRONG_STATE" }, 400);
+  if (u.trang_thai !== "cho_chan_doan") return c.json({ error: "WRONG_STATE" }, 400);
   const thayNv = u.nguoi_sua_chua !== user.email;
   if (thayNv && !isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<{ items?: { ma_lk?: string; so_luong?: number; ghi_chu?: string }[] }>().catch(() => ({}) as { items?: { ma_lk?: string; so_luong?: number; ghi_chu?: string }[] });
