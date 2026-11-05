@@ -129,7 +129,7 @@ auth.get("/callback", async (c) => {
   // 04/11/2026: dong bo tai khoan voi danh ba KTV / ETX - ten cong ty thay ten Google, tai khoan chua co vai tro ma co trong danh ba KTV thi gan co KTV.
   await dongBoTaiKhoan(c.env.DB, userInfo.email).catch((e) => console.error("[dongBoTaiKhoan]", e));
 
-  if (!daCoTaiKhoan && !ktvMatch) {
+  if (!daCoTaiKhoan) {
     c.executionCtx.waitUntil(runUserKhuVucSync(c.env).then(() => undefined).catch(() => undefined));
   }
 

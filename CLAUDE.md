@@ -6361,3 +6361,9 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Phát hiện + đã làm:** đọc D1 production: 147 tài khoản KTV có khu vực trong danh bạ KTV (đồng bộ từ linh-kien-app) nhưng `users.mien` vẫn "Chưa gán" — bước tự suy miền (`lib/userKhuVucSync.ts`, v1.043, chạy mỗi giờ) chỉ đọc khu vực nhân sự (`user_khu_vuc`), chưa đọc khu vực KTV. Nay gộp thêm khu vực của các dòng danh bạ KTV cùng email đăng nhập (`mien_gan` ưu tiên hơn `khu_vuc_ma`); khu vực toàn MB → MB, toàn MN → MN, cả 2 → Cả 2 miền. Vẫn chỉ áp cho tài khoản chưa gán miền / miền tự suy — không đè miền Admin gán tay. Không ghi khu vực KTV vào `user_khu_vuc_bh` (bảng đó là phạm vi xem của View).
 **(c)/(d):** typecheck 0 lỗi. Kiểm tra sau deploy bằng lần chạy đồng bộ kế tiếp (mỗi giờ, hoặc nút "Đồng bộ ngay" ở Cài đặt › Đồng bộ ETX nhân sự).
 **Deploy (05/11/2026):** Version ID `1ef2a698`, không có migration.
+
+## KTV đăng nhập lần đầu: tự phân miền ngay (05/11/2026) — v1.081
+
+**(a) Nguyên văn câu hỏi:** *"bây giờ 1 ktv đăng nhập vào hệ thống (đã có sẵn tài khoản trên linh-kien-app)=> hệ thống có tự động duyệt và phân khu vực, hiện thị tên ktv, phân vai trò không?"*
+**(b) Trả lời (đọc code `routes/auth.ts`):** email khớp danh bạ KTV → tự "Đã duyệt" + vai trò KTV (danh bạ "Vệ tinh" → cờ Vệ tinh); tên công ty ghi ngay (`dongBoTaiKhoan`: họ tên ETX > tên danh bạ KTV), màn Người dùng hiện "(mã) Tên"; khu vực / miền của đơn tính theo khu vực KTV ngay. Chỗ hở: `users.mien` của KTV mới chỉ được suy ở lượt đồng bộ mỗi giờ vì lúc đăng nhập bỏ qua KTV (`!ktvMatch`) → bỏ điều kiện, tài khoản mới nào (cả KTV) cũng chạy `runUserKhuVucSync` nền ngay khi đăng nhập lần đầu.
+**(c)/(d):** typecheck 0 lỗi; chưa thử bằng đăng nhập Google thật.
