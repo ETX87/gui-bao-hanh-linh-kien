@@ -252,14 +252,14 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                       <EtxTag u={u} />
                     </td>
                     <td className="">
-                      <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs">
+                      <Select value={u.trang_thai_duyet} onChange={(e) => setTrangThai(u.email, e.target.value)} className="!py-1 !text-xs min-w-[108px]">
                         <option value="Cho duyet">Chờ duyệt</option>
                         <option value="Da duyet">Đã duyệt</option>
                         <option value="Tu choi">Từ chối</option>
                       </Select>
                     </td>
                     <td className="">
-                      <Select value={u.mien || ""} onChange={(e) => setMien(u.email, e.target.value)} className="!py-1 !text-xs" title="Miền phụ trách (Kho / Admin BH / NV / Kế toán)">
+                      <Select value={u.mien || ""} onChange={(e) => setMien(u.email, e.target.value)} className="!py-1 !text-xs min-w-[168px]" title="Miền phụ trách (Kho / Admin BH / NV / Kế toán)">
                         {MIEN_USER_OPTIONS.map((o) => (
                           <option key={o.value} value={o.value}>
                             {o.label}
