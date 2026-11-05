@@ -130,13 +130,19 @@ traCuu.get("/ktv-menu", async (c) => {
   } else if (user.la_nv_sua_chua) {
     extra = " AND x.nguoi_sua_chua = ?";
   } else return c.json({ error: "FORBIDDEN" }, 403);
-  const gd = [...DANG_CHO, "tra_khieu_nai_van_chuyen"];
-  const binds: unknown[] = [...scopeBinds, ...scopeBinds, ...gd];
+  // 05/11/2026 - "số lượng đếm sẽ phụ thuộc vào tab người dùng đang chọn": ?gd=a,b (giai doan cua tab dang mo),
+  // ?gd=* = moi giai doan (tab "Moi giai doan"); khong truyen = cac giai doan dang cho xu ly nhu cu.
+  const gdq = (c.req.query("gd") || "").trim();
+  const tatCa = gdq === "*";
+  const gdTab = tatCa ? [] : gdq.split(",").map((x) => x.trim()).filter((x) => /^[a-z_]{2,40}$/.test(x)).slice(0, 20);
+  const gd = gdTab.length ? gdTab : [...DANG_CHO, "tra_khieu_nai_van_chuyen"];
+  const binds: unknown[] = [...scopeBinds, ...scopeBinds, ...(tatCa ? [] : gd)];
   if (extra) binds.push(user.email);
+  const gdWhere = tatCa ? "1=1" : `x.giai_doan IN (${gd.map(() => "?").join(",")})`;
   const { results } = await c.env.DB.prepare(
     `SELECT COALESCE(x.ktv, '') AS ktv, COUNT(DISTINCT x.parent_id) AS so_don, COUNT(*) AS so_dong,
        SUM(CASE WHEN x.updated_at < ? THEN 1 ELSE 0 END) AS qua_han
-     FROM ${allRowsSql(scopeWhere)} WHERE x.giai_doan IN (${gd.map(() => "?").join(",")})${extra}
+     FROM ${allRowsSql(scopeWhere)} WHERE ${gdWhere}${extra}
      GROUP BY COALESCE(x.ktv, '') ORDER BY so_don DESC`
   ).bind(slaCutoffVn(24), ...binds).all();
   return c.json({ ktv: results });

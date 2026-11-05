@@ -6385,3 +6385,14 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(a) Nguyên văn:** *"nếu vậy thì cho admin đẩy lùi lại bước sửa cho đúng quy trình"* (sau khi v1.083 cho Admin đề xuất linh kiện ngay ở bước "Chờ Admin xác nhận hoàn tất").
 **(b) Đã làm:** **hoàn tác v1.083** — đề xuất linh kiện lại chỉ tạo được khi đơn ở bước NV sửa (`cho_chan_doan`). Thay vào đó "↩ Lùi lại" (`POST /admin/don-vi/:id/hoan-tac`, `hoanTacDonVi`) nhận thêm `cho_admin_xac_nhan` → `cho_chan_doan`: giữ NV phụ trách, xoá `ket_qua_nv` / `ket_qua_chan_doan` để NV nộp lại; đơn chưa có NV thì về Chờ phân loại. Nút "↩ Lùi lại" hiện trong UI chi tiết đơn ở trạng thái này; hộp xác nhận ghi "↩ Lùi về Chờ NV sửa". Sau khi lùi: Admin "+ Đề xuất hộ NV" (hoặc NV tự đề xuất) → NV nộp lại kết quả. "Yêu cầu làm lại" có sẵn trong hộp Xác nhận hoàn tất vẫn giữ (cũng về NV, đếm số lần làm lại).
 **(c)/(d):** typecheck 0 lỗi. Chưa thử trên bản thật. **Deploy (05/11/2026):** Version ID `86dbe3a2`.
+
+## Menu KTV (menu 2) đếm theo tab đang mở (05/11/2026) — v1.085
+
+**(a) Nguyên văn:** *"số lượng đếm sẽ phụ thuộc vào tab người dùng đang chọn ví dụ chọn tab "Chờ phân loại" => chỉ hiện danh sách KTV đang có đơn trong chờ phân loại và số lượng tự ứng"* (ảnh: tab Chờ phân loại, menu KTV vẫn đếm Đinh Quang Hải ×141 trong khi bảng lọc ra 4 đơn).
+**(b) Đã làm:** `GET /tra-cuu/ktv-menu` nhận `?gd=a,b` (giai đoạn của tab, `*` = mọi giai đoạn; không truyền = các giai đoạn đang chờ như cũ). `layout/KtvMenu.tsx` bảng `TAB_GD` (màn + `?tab=`) → giai đoạn, tự tải lại khi đổi tab, tiêu đề menu hiện tên tab (VD "Chờ phân loại"):
+- Đơn BH: Chờ phân loại = chờ xác nhận SL + chờ phân loại + cần xem lại + chờ KTV bổ sung; Việc sửa / Đang sửa (NV) = chờ NV sửa; Chờ xác nhận hoàn tất; Mọi giai đoạn = tất cả.
+- Thùng hàng: Thùng nháp / Đang gửi về Kho / Kho đã nhận — chờ Admin.
+- Phiếu trả: Chờ tạo phiếu / Nháp (+ KT trả lại) / Chờ KT duyệt / Chờ Kho in + đã in / KTV báo không nhận / Đang gửi KTV / Đã kết thúc / Tất cả.
+- Tab khác (Thiếu hàng, Kho nhận gần đây, Cấp linh kiện, KT đã xử lý) và màn khác: giữ cách đếm cũ.
+**(c) Ghi nhận:** số trên menu luôn là số **đơn** (đơn cha) của KTV ở giai đoạn đó, kể cả ở tab thùng / phiếu trả (không phải số thùng / số phiếu).
+**(d):** typecheck 0 lỗi. Chưa xem bằng mắt trên bản thật.
