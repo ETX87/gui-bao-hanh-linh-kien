@@ -6354,3 +6354,9 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Đã làm:** `GET /api/users` trả thêm `ten_ktv` = "(mã) Tên" lấy từ danh bạ KTV (`ktv_lien_he_bh`, đồng bộ từ linh-kien-app) theo email đăng nhập; 1 email nhiều mã → "(mã1, mã2) Tên". Màn Người dùng (bảng + thẻ mobile) hiện `ten_ktv` trước, không có thì `users.ten` (ETX / Google). Ô tìm khớp cả mã KTV + tên danh bạ. Chỉ áp ở màn này — tên ở nơi khác vẫn theo quy tắc v1.066/v1.075.
 **(c)/(d):** typecheck 0 lỗi; chạy thử câu SQL trên D1 production (chỉ đọc) ra đúng 2 mã của karofibinhduong01. Chưa xem bằng mắt.
 **Deploy (05/11/2026):** Version ID `a4921bef`.
+
+## Tự phân miền cho tài khoản KTV theo khu vực bên linh-kien-app (05/11/2026) — v1.080
+
+**(a) Nguyên văn:** *"dựa theo khu vực của gmail được phân ở linh kiện app => tự động phân khu vực cho họ"*
+**(b) Phát hiện + đã làm:** đọc D1 production: 147 tài khoản KTV có khu vực trong danh bạ KTV (đồng bộ từ linh-kien-app) nhưng `users.mien` vẫn "Chưa gán" — bước tự suy miền (`lib/userKhuVucSync.ts`, v1.043, chạy mỗi giờ) chỉ đọc khu vực nhân sự (`user_khu_vuc`), chưa đọc khu vực KTV. Nay gộp thêm khu vực của các dòng danh bạ KTV cùng email đăng nhập (`mien_gan` ưu tiên hơn `khu_vuc_ma`); khu vực toàn MB → MB, toàn MN → MN, cả 2 → Cả 2 miền. Vẫn chỉ áp cho tài khoản chưa gán miền / miền tự suy — không đè miền Admin gán tay. Không ghi khu vực KTV vào `user_khu_vuc_bh` (bảng đó là phạm vi xem của View).
+**(c)/(d):** typecheck 0 lỗi. Kiểm tra sau deploy bằng lần chạy đồng bộ kế tiếp (mỗi giờ, hoặc nút "Đồng bộ ngay" ở Cài đặt › Đồng bộ ETX nhân sự).

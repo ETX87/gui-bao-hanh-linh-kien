@@ -65,6 +65,18 @@ export async function runUserKhuVucSync(env: Env): Promise<UserKhuVucSyncResult>
       db.prepare("SELECT user_email, khu_vuc_ma FROM user_khu_vuc_bh").all<Row>(),
       loadTuKhoa(db),
     ]);
+    // 05/11/2026 - "dựa theo khu vực của gmail được phân ở linh kiện app => tự động phân khu vực cho họ": tai khoan KTV / Tram
+    // lay them khu vuc cua minh trong danh ba KTV (dong bo tu linh-kien-app) de tu suy mien (mien_gan uu tien hon khu vuc).
+    const { results: ktvKv } = await db
+      .prepare("SELECT LOWER(email_dang_nhap) AS e, khu_vuc_ma, mien_gan FROM ktv_lien_he_bh WHERE email_dang_nhap IS NOT NULL AND (khu_vuc_ma IS NOT NULL OR mien_gan IS NOT NULL)")
+      .all<{ e: string; khu_vuc_ma: string | null; mien_gan: string | null }>();
+    const ktvMien = new Map<string, Set<Mien>>();
+    for (const k of ktvKv) {
+      const m = (k.mien_gan === "MB" || k.mien_gan === "MN" ? k.mien_gan : k.khu_vuc_ma ? detectMien(k.khu_vuc_ma, tk) : null) as Mien | null;
+      if (!m) continue;
+      if (!ktvMien.has(k.e)) ktvMien.set(k.e, new Set());
+      ktvMien.get(k.e)!.add(m);
+    }
     const userByLower = new Map(users.map((u) => [u.email.toLowerCase(), u]));
     const kvSet = new Set(kvs.map((k) => k.ma));
 
@@ -103,15 +115,12 @@ export async function runUserKhuVucSync(env: Env): Promise<UserKhuVucSyncResult>
       const tuDong = u.mien === null || u.mien_tu_dong === 1;
       if (!tuDong) continue;
       const s = want.get(u.email);
-      let target: string | null = null;
-      if (s && s.size) {
-        const ms = new Set<Mien>();
-        for (const ma of s) {
-          const m = detectMien(ma, tk);
-          if (m) ms.add(m);
-        }
-        target = ms.size === 2 ? "ALL" : ms.size === 1 ? [...ms][0] : null;
+      const ms = new Set<Mien>(ktvMien.get(u.email.toLowerCase()) ?? []);
+      if (s) for (const ma of s) {
+        const m = detectMien(ma, tk);
+        if (m) ms.add(m);
       }
+      const target: string | null = ms.size === 2 ? "ALL" : ms.size === 1 ? [...ms][0] : null;
       if (target) {
         if (u.mien !== target || u.mien_tu_dong !== 1) {
           stmts.push(db.prepare("UPDATE users SET mien = ?, mien_tu_dong = 1, updated_at = ? WHERE email = ?").bind(target, luc, u.email));
