@@ -19,6 +19,7 @@ import ktvLienHeRoutes from "./routes/ktvLienHe";
 import khovanLookupRoutes from "./routes/khovanLookup";
 import khuVucRoutes from "./routes/khuVuc";
 import partnerKhoRoutes from "./routes/partnerKho";
+import partnerCaseRoutes from "./routes/partnerCase";
 import workloadRoutes from "./routes/workload";
 import odooDonRoutes from "./routes/odooDon";
 import mienRoutes from "./routes/mien";
@@ -68,6 +69,8 @@ app.route("/api/ktv-lien-he", ktvLienHeRoutes);
 app.route("/api/partner/box-lookup", khovanLookupRoutes);
 app.route("/api/khu-vuc", khuVucRoutes);
 app.route("/api/partner/kho-action", partnerKhoRoutes);
+// 06/11/2026: dvbh doc luong gui bao hanh cua 1 ca (CaseDetail tab "Gui BH") - routes/partnerCase.ts.
+app.route("/api/partner/v1", partnerCaseRoutes);
 app.route("/api/workload", workloadRoutes);
 app.route("/api/odoo-don", odooDonRoutes);
 app.route("/api/mien", mienRoutes);
