@@ -101,7 +101,7 @@ export function CaseSnapshotPanel({ caseId, canSync, soThangBh }: { caseId: stri
     <section className="rounded-xl border border-[var(--line)] px-3 py-2.5">
       <div className="flex items-center gap-2 mb-1.5">
         <p className="text-xs font-bold text-[var(--accent-ink)] uppercase tracking-wide shrink-0">📎 Khách hàng & case</p>
-        <span className="text-[11px] font-mono text-[var(--ink-soft)] truncate">{caseId}</span>
+        <span className="select-all rounded-md border border-[var(--brand-200,#bbf7d0)] bg-[var(--brand-50,#f0fdf4)] px-2 py-0.5 font-mono text-[15px] font-bold tracking-wide text-[var(--accent-ink)] truncate" title="Mã case">{caseId}</span>
         <CopyBtn text={caseId} title="Sao chép mã case" />
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {data && <CrmLink url={data.link_crm} />}
