@@ -6472,3 +6472,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - `POST /kho {pxk:["XK-100"], da_in}` chuyển cả 2 dòng; số đếm và workload cập nhật đúng.
 - `lich-su?q=sc2611030124` ra đúng đơn.
 - Giao diện: tab hiện "1 ca / 2 PXK …"; khối XK-100 mở ra 2 đơn bảo hành, có nút "Đã xuất cả phiếu".
+
+**Deploy (06/11/2026):** `npm run deploy` (Version ID `1a198842`), không có migration mới.
