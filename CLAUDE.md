@@ -6475,4 +6475,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **Deploy (06/11/2026):** `npm run deploy` (Version ID `1a198842`), không có migration mới.
 
-**Bổ sung (06/11/2026, v1.092)** — nguyên văn: *"không đã xuất không cần đếm, chỉ cần đêm nhưng vị trí còn cần thao tác để tiết kiệm lượt đọc D1"*. `GET /de-xuat/dem` chỉ đếm 4 tab còn việc (Chờ Admin cấp, Chờ KT xác nhận, Chờ Kho in, Kho đã in) — bỏ Kho đã xuất / Từ chối / Đã huỷ (các tab này không còn huy hiệu số). Số đếm chỉ tải khi mở màn + sau mỗi thao tác, không tải lại khi đổi tab.
+**Bổ sung (06/11/2026, v1.092)** — nguyên văn: *"không đã xuất không cần đếm, chỉ cần đêm nhưng vị trí còn cần thao tác để tiết kiệm lượt đọc D1"*. `GET /de-xuat/dem` chỉ đếm 4 tab còn việc (Chờ Admin cấp, Chờ KT xác nhận, Chờ Kho in, Kho đã in) — bỏ Kho đã xuất / Từ chối / Đã huỷ (các tab này không còn huy hiệu số). Số đếm chỉ tải khi mở màn + sau mỗi thao tác, không tải lại khi đổi tab. Deploy: Version ID `6a422dcb`, không có migration.
