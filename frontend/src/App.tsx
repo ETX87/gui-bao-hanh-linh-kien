@@ -4,6 +4,7 @@ import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
 import { RouterProvider, useRoute } from "./router/Router";
 import { consumePendingDeepLinkHash } from "./lib/deepLink";
+import { MoTheoId } from "./screens/shared/MoTheoId";
 import { WorkloadProvider } from "./hooks/useWorkload";
 import { ToastProvider } from "./ui/Toast";
 import { Shell } from "./layout/Shell";
@@ -74,6 +75,7 @@ function AuthedApp({ user }: { user: AppUser }) {
     <WorkloadProvider user={user}>
       <Shell user={user}>
         <Routed user={user} />
+        <MoTheoId user={user} />
       </Shell>
     </WorkloadProvider>
   );

@@ -148,4 +148,33 @@ traCuu.get("/ktv-menu", async (c) => {
   return c.json({ ktv: results });
 });
 
+// 06/11/2026: link mo thang theo ID (/DH-002957-1, /DH-002957, /BH-000458, /TR-000506 - frontend MoTheoId.tsx). Chi
+// cho biet ID thuoc LOAI nao de frontend mo dung modal chi tiet san co; KHONG tra du lieu - quyen xem do route chi tiet
+// (/admin/don-vi/:id, /phieu-gui/:id, /phieu-tra/:id) tu kiem tra. Don cha: da tach don vi -> don vi dau; chua -> thung gui.
+traCuu.get("/mo-theo-id/:id", async (c) => {
+  const id = c.req.param("id").trim().toUpperCase();
+  const db = c.env.DB;
+  if (/^TR-\d+$/.test(id)) {
+    const t = await db.prepare("SELECT id FROM phieu_tra_bh WHERE id = ?").bind(id).first();
+    return t ? c.json({ loai: "phieu_tra", id }) : c.json({ error: "NOT_FOUND" }, 404);
+  }
+  if (/^BH-\d+$/.test(id)) {
+    const g = await db.prepare("SELECT id FROM phieu_gui_bh WHERE id = ?").bind(id).first();
+    return g ? c.json({ loai: "phieu_gui", id }) : c.json({ error: "NOT_FOUND" }, 404);
+  }
+  if (/^DH-\d+-\d+$/.test(id)) {
+    const u = await db.prepare("SELECT id FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first();
+    return u ? c.json({ loai: "don_vi", id }) : c.json({ error: "NOT_FOUND" }, 404);
+  }
+  if (/^DH-\d+$/.test(id)) {
+    const p = await db.prepare("SELECT phieu_gui_id FROM phieu_sua_chua_bh WHERE id = ?").bind(id).first<{ phieu_gui_id: string | null }>();
+    if (!p) return c.json({ error: "NOT_FOUND" }, 404);
+    const u = await db.prepare("SELECT id FROM phieu_sua_chua_bh_ct WHERE parent_id = ? ORDER BY so_thu_tu LIMIT 1").bind(id).first<{ id: string }>();
+    if (u) return c.json({ loai: "don_vi", id: u.id });
+    if (p.phieu_gui_id) return c.json({ loai: "phieu_gui", id: p.phieu_gui_id });
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
+  return c.json({ error: "INVALID_ID" }, 400);
+});
+
 export default traCuu;
