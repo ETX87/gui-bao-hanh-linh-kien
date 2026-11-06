@@ -6476,3 +6476,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **Deploy (06/11/2026):** `npm run deploy` (Version ID `1a198842`), không có migration mới.
 
 **Bổ sung (06/11/2026, v1.092)** — nguyên văn: *"không đã xuất không cần đếm, chỉ cần đêm nhưng vị trí còn cần thao tác để tiết kiệm lượt đọc D1"*. `GET /de-xuat/dem` chỉ đếm 4 tab còn việc (Chờ Admin cấp, Chờ KT xác nhận, Chờ Kho in, Kho đã in) — bỏ Kho đã xuất / Từ chối / Đã huỷ (các tab này không còn huy hiệu số). Số đếm chỉ tải khi mở màn + sau mỗi thao tác, không tải lại khi đổi tab. Deploy: Version ID `6a422dcb`, không có migration.
+
+**Sửa lỗi (06/11/2026, v1.093)** — nguyên văn: *"vai trò kho (ivy3690.in@gmail.com) khi ấn mở xem thông tin đơn PXK trong Cấp lK => Kho đã in thì chỉ thấy màn hình chỉ trắng xóa"*. Nguyên nhân: `GET /admin/don-vi/:id` (UI chi tiết đơn) chỉ cho Admin BH / qtri / Giám sát / View / NV được giao → Kho, Kế toán nhận 403, còn `UnitDetailModal` không bắt lỗi nên quay mãi. Sửa: cho `la_kho`, `la_ke_toan` xem (nút thao tác trong chi tiết vẫn theo vai trò); modal báo "Không mở được đơn này: …" khi API lỗi thay vì quay vô hạn. Typecheck 0 lỗi.

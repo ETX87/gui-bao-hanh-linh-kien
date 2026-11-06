@@ -147,7 +147,15 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const [chat, setChat] = useState("");
   const [sending, setSending] = useState(false);
 
-  const load = () => api.get<DetailResponse>(`/admin/don-vi/${curId}`).then(setData);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const load = () =>
+    api
+      .get<DetailResponse>(`/admin/don-vi/${curId}`)
+      .then((r) => {
+        setLoadErr(null);
+        setData(r);
+      })
+      .catch((e) => setLoadErr(errorMessage(e)));
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps

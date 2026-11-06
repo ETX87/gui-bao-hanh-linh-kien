@@ -389,7 +389,8 @@ adminBH.get("/don-vi/:id", async (c) => {
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   const uRow = u as { parent_id: string; nguoi_sua_chua: string | null };
   const p = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh WHERE id = ?").bind(uRow.parent_id).first<{ phieu_gui_id: string | null; ma_lk: string | null; loai_doi_tru_de_xuat: string | null }>();
-  const allowed = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || uRow.nguoi_sua_chua === user.email;
+  // 06/11/2026: Kho / Ke toan cung xem duoc chi tiet don (mo tu Cap linh kien / Phieu tra) - chi xem, nut thao tac van theo vai tro.
+  const allowed = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_ke_toan || uRow.nguoi_sua_chua === user.email;
   if (!allowed) return c.json({ error: "FORBIDDEN" }, 403);
 
   // Ghep them 2 truong cua don cha (ma_lk/loai_doi_tru_de_xuat) truc tiep vao don_vi tra ve - de
