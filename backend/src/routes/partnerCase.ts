@@ -9,6 +9,7 @@ import {
   GIAI_DOAN_VI,
 } from "../lib/partnerCaseLabels";
 import { LBL } from "../lib/constants";
+import { tinhLuong, logThuocDon, type RawLog } from "../lib/partnerCaseFlow";
 
 // 06/11/2026: API doi tac cho dvbh (CaseDetail tab "Gui BH") - "lien ket luong thong tin gui bao hanh,
 // keo api tu app gui-bao-hanh-linh-kien ve hien thi tren UI". dvbh goi THEO YEU CAU khi mo 1 ca (khong
@@ -80,7 +81,7 @@ partnerCase.get("/case-timeline", async (c) => {
       db,
       (ph) => `SELECT u.id, u.parent_id, u.so_thu_tu, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan) AS ma_lk_thuc_te, lk.ten_lk AS ten_lk_thuc_te,
                       u.loai_bao_hanh, u.huong_xu_ly, u.loai_doi_tru, u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.trang_thai,
-                      u.ly_do_tu_choi, u.ghi_chu_admin, u.ghi_chu_nv, u.phieu_tra_id, u.that_lac, u.updated_at,
+                      u.ly_do_tu_choi, u.ghi_chu_admin, u.ghi_chu_nv, u.phieu_tra_id, u.that_lac, u.updated_at, u.created_at,
                       COALESCE(nv.ten, CASE WHEN u.nguoi_sua_chua IS NOT NULL THEN 'NV sửa chữa' END) AS nv_sua_chua
                FROM phieu_sua_chua_bh_ct u
                LEFT JOIN linh_kien_bh lk ON lk.ma_lk = COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan)
@@ -162,10 +163,55 @@ partnerCase.get("/case-timeline", async (c) => {
           : g.trang_thai === "da_tiep_nhan" && !g.admin_tiep_nhan
             ? "thung_cho_admin_nhan"
             : "cho_xac_nhan_so_luong";
+    // Nhat ky lien quan: don cha + don vi + thung + phieu tra; cap thung/phieu tra dung chung chi giu dong doi
+    // trang thai hoac nhac dung ma don nay (06/11/2026 vong 2: TR-000506 hien log "gop them" cua ca khac).
+    const maDon = [String(p.id), ...us.map((u) => String(u.id))];
+    const relIds = new Set<string>(maDon);
+    if (g) relIds.add(String(g.id));
+    for (const u of us) if (u.phieu_tra_id) relIds.add(String(u.phieu_tra_id));
+    const rawLogs = (logs as unknown as RawLog[])
+      .filter((l) => relIds.has(String(l.entity_id)) && logThuocDon(l, maDon))
+      .sort((a, b) => String(a.thoi_gian).localeCompare(String(b.thoi_gian)) || Number(a.id) - Number(b.id));
+    const vanChuyen = g
+      ? [lbl(HINH_THUC_GUI_VI, g.hinh_thuc_gui), s(g.don_vi_van_chuyen), g.ma_van_don ? `Vận đơn ${g.ma_van_don}` : null, s(g.ma_xe_hoac_tai_xe)].filter(Boolean).join(" · ") || null
+      : null;
+    const guiFlow = g
+      ? {
+          id: String(g.id),
+          trang_thai: String(g.trang_thai),
+          ngay_gui_xe: s(g.ngay_gui_xe),
+          thoi_gian_nhan_kho: s(g.thoi_gian_nhan_kho),
+          admin_thoi_gian_nhan: s(g.admin_thoi_gian_nhan),
+          ktv_ten: s(g.ktv_ten),
+          kho_nhan_ten: s(g.kho_nhan_ten),
+          admin_nhan_ten: s(g.admin_nhan_ten),
+          van_chuyen: vanChuyen,
+        }
+      : null;
+    const parentFlow = { id: String(p.id), created_at: s(p.created_at), trang_thai_cha: String(p.trang_thai_cha) };
     const donVi = us.map((u) => {
       const t = u.phieu_tra_id ? traMap.get(String(u.phieu_tra_id)) : undefined;
       const gd = t ? `tra_${t.trang_thai}` : String(u.trang_thai);
+      const luong = tinhLuong({
+        parent: parentFlow,
+        gui: guiFlow,
+        unit: {
+          id: String(u.id),
+          trang_thai: String(u.trang_thai),
+          giai_doan: gd,
+          created_at: s(u.created_at),
+          huong_xu_ly: s(u.huong_xu_ly),
+          huong_label: lbl(HUONG_XU_LY_LABELS_VI, u.huong_xu_ly),
+          nv_sua_chua: s(u.nv_sua_chua),
+          ket_qua: lbl({}, u.ket_qua_nv ?? u.ket_qua_chan_doan),
+          ly_do_tu_choi: s(u.ly_do_tu_choi),
+        },
+        tra: t ? { id: String(t.id), trang_thai: String(t.trang_thai), created_at: s(t.created_at), ma_van_don: s(t.ma_van_don), khong_nhan_duoc_ghi_chu: s(t.khong_nhan_duoc_ghi_chu) } : null,
+        giaiDoanCha: null,
+        logs: rawLogs.filter((l) => l.entity_type !== "phieu_sc_ct" || l.entity_id === String(u.id)).filter((l) => l.entity_type !== "phieu_tra" || l.entity_id === s(u.phieu_tra_id)),
+      });
       return {
+        luong,
         id: u.id,
         so_thu_tu: u.so_thu_tu,
         giai_doan: gd,
@@ -204,12 +250,7 @@ partnerCase.get("/case-timeline", async (c) => {
           : null,
       };
     });
-    const relIds = new Set<string>([String(p.id), ...us.map((u) => String(u.id))]);
-    if (g) relIds.add(String(g.id));
-    for (const u of us) if (u.phieu_tra_id) relIds.add(String(u.phieu_tra_id));
-    const timeline = logs
-      .filter((l) => relIds.has(String(l.entity_id)))
-      .sort((a, b) => String(a.thoi_gian).localeCompare(String(b.thoi_gian)) || Number(a.id) - Number(b.id))
+    const timeline = rawLogs
       .map((l) => {
         const map = l.entity_type === "phieu_gui" ? TRANG_THAI_GUI_VI : l.entity_type === "phieu_tra" ? TRANG_THAI_TRA_VI : l.entity_type === "phieu_sc" ? TRANG_THAI_CHA_VI : TRANG_THAI_UNIT_VI;
         return {
@@ -238,6 +279,8 @@ partnerCase.get("/case-timeline", async (c) => {
       giai_doan: donVi.length === 0 ? giaiDoanCha : null,
       giai_doan_label: donVi.length === 0 && giaiDoanCha ? GIAI_DOAN_VI[giaiDoanCha] : null,
       tao_luc: s(p.created_at),
+      // Don chua tach don vi: luong cap don (toi buoc xac nhan so luong). Co don vi -> xem luong tung don vi.
+      luong: donVi.length === 0 ? tinhLuong({ parent: parentFlow, gui: guiFlow, unit: null, tra: null, giaiDoanCha, logs: rawLogs }) : null,
       phieu_gui: g
         ? {
             id: g.id,
