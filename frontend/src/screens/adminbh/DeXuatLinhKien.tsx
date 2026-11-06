@@ -83,9 +83,11 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   // 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": so ca (tab Kho: so phieu PXK) cua MOI tab.
   const [dem, setDem] = useState<Dem>({});
   const loadDem = () => api.get<{ dem: Dem }>("/de-xuat/dem").then((r) => setDem(r.dem)).catch(() => {});
+  // Chi tai khi mo man + sau moi thao tac (khong tai lai khi doi tab) - tiet kiem luot doc D1.
   useEffect(() => {
     loadDem();
-  }, [tab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const pxkTab = PXK_TABS.includes(tab);
   const toast = useToast();
   const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);

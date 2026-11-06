@@ -39,7 +39,8 @@ function ttWhere(tt: string): { sql: string; binds: unknown[] } {
 // tab Kho dem theo PHIEU PXK (ma MISA; chua co MISA thi moi de xuat la 1 phieu rieng).
 const CA_KEY = "COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)";
 const PXK_KEY = "COALESCE(NULLIF(TRIM(d.ma_misa), ''), d.id)";
-const ALL_TABS = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in", "kho_da_xuat", "tu_choi", "huy"];
+// 06/11/2026 - "đã xuất không cần đếm, chỉ cần đếm những vị trí còn cần thao tác để tiết kiệm lượt đọc D1": chi dem 4 tab con viec.
+const ALL_TABS = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in"];
 const canSee = (u: AppUser, tt: string) => isAdmin(u) || (isKt(u) && KT_XEM.includes(tt)) || (isKho(u) && KHO_XEM.includes(tt));
 
 interface DxRow {
