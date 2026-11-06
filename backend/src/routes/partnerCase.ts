@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { normCaseId } from "../lib/caseNgay";
 import type { Env } from "../types";
 import {
   HUONG_XU_LY_LABELS_VI,
@@ -58,7 +59,7 @@ async function allIn<T>(db: D1Database, sql: (ph: string) => string, ids: string
 }
 
 partnerCase.get("/case-timeline", async (c) => {
-  const caseId = (c.req.query("id") ?? "").trim();
+  const caseId = normCaseId(c.req.query("id"));
   if (!caseId || caseId.length > 64) return c.json({ error: "INVALID_ID" }, 400);
   const db = c.env.DB;
 

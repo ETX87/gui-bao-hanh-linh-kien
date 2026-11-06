@@ -35,6 +35,13 @@ function ttWhere(tt: string): { sql: string; binds: unknown[] } {
   return { sql: "d.trang_thai = ?", binds: [tt] };
 }
 
+// 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": dem theo CA (case, khong co case thi theo don vi),
+// tab Kho dem theo PHIEU PXK (ma MISA; chua co MISA thi moi de xuat la 1 phieu rieng).
+const CA_KEY = "COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)";
+const PXK_KEY = "COALESCE(NULLIF(TRIM(d.ma_misa), ''), d.id)";
+const ALL_TABS = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in", "kho_da_xuat", "tu_choi", "huy"];
+const canSee = (u: AppUser, tt: string) => isAdmin(u) || (isKt(u) && KT_XEM.includes(tt)) || (isKho(u) && KHO_XEM.includes(tt));
+
 interface DxRow {
   id: string;
   unit_id: string;
@@ -65,6 +72,24 @@ deXuat.get("/", async (c) => {
   const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   const fw = `FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE ${tw.sql}${ms.sql}`;
+  // 06/11/2026 - Kho: "tổng hợp theo mã PXK => kho vào 1 phiếu pxk sẽ xem được danh sách các đơn bảo hành bên trong":
+  // group=pxk -> phan trang theo PHIEU PXK, tra du moi dong cua cac phieu trong trang.
+  if (KHO_TAB[tt] && c.req.query("group") === "pxk") {
+    const kOrder = tt === "kho_da_xuat" ? "MAX(COALESCE(d.kho_xuat_luc, d.updated_at)) DESC" : "MIN(COALESCE(d.kho_in_luc, d.kt_luc, d.updated_at))";
+    const [{ results: keys }, cntRow] = await Promise.all([
+      c.env.DB.prepare(`SELECT ${PXK_KEY} AS k ${fw} GROUP BY ${PXK_KEY} ORDER BY ${kOrder} LIMIT ? OFFSET ?`).bind(...tw.binds, ...ms.binds, limit, offset).all<{ k: string }>(),
+      c.env.DB.prepare(`SELECT COUNT(DISTINCT ${PXK_KEY}) AS cnt ${fw}`).bind(...tw.binds, ...ms.binds).first<{ cnt: number }>(),
+    ]);
+    const ks = keys.map((x) => x.k);
+    if (!ks.length) return c.json({ de_xuat: [], total: cntRow?.cnt ?? 0 });
+    const { results } = await c.env.DB.prepare(
+      `SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv, ${PXK_KEY} AS pxk
+       ${fw} AND ${PXK_KEY} IN (${ks.map(() => "?").join(",")}) ORDER BY d.unit_id, d.id`,
+    ).bind(...tw.binds, ...ms.binds, ...ks).all<Record<string, unknown>>();
+    const pos = new Map(ks.map((k, i) => [k, i]));
+    results.sort((a, b) => (pos.get(a.pxk as string) ?? 0) - (pos.get(b.pxk as string) ?? 0));
+    return c.json({ de_xuat: results, total: cntRow?.cnt ?? 0 });
+  }
   const order = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in"].includes(tt) ? (KHO_TAB[tt] ? "COALESCE(d.kho_in_luc, d.kt_luc, d.updated_at)" : "d.created_at") : "d.updated_at DESC";
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT d.*, u.trang_thai AS unit_trang_thai, u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk AS unit_ma_lk, p.mo_ta_loi, p.case_id, p.mien, g.nguoi_tao AS ktv ${fw} ORDER BY ${order} LIMIT ? OFFSET ?`)
@@ -73,6 +98,25 @@ deXuat.get("/", async (c) => {
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fw}`).bind(...tw.binds, ...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ de_xuat: results, total: totalRow?.cnt ?? 0 });
+});
+
+// So dem tung tab (06/11/2026): { tab: { ca, pxk, dong } } - chi cac tab nguoi xem duoc phep xem, theo mien.
+deXuat.get("/dem", async (c) => {
+  const user = c.get("user");
+  const ms = mienScope(user, "p");
+  const tabs = ALL_TABS.filter((t) => canSee(user, t));
+  const out: Record<string, { ca: number; pxk: number; dong: number }> = {};
+  await Promise.all(
+    tabs.map(async (t) => {
+      const tw = ttWhere(t);
+      const r = await c.env.DB.prepare(
+        `SELECT COUNT(DISTINCT ${CA_KEY}) AS ca, COUNT(DISTINCT ${PXK_KEY}) AS pxk, COUNT(*) AS dong
+         FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${tw.sql}${ms.sql}`,
+      ).bind(...tw.binds, ...ms.binds).first<{ ca: number; pxk: number; dong: number }>();
+      out[t] = { ca: r?.ca ?? 0, pxk: r?.pxk ?? 0, dong: r?.dong ?? 0 };
+    }),
+  );
+  return c.json({ dem: out });
 });
 
 // 05/11/2026 - "bên menu cấp lk chưa nhảy đúng số lượng và danh sách người nhận hàng": menu KTV (menu 2) dem
@@ -84,7 +128,7 @@ deXuat.get("/ktv-menu", async (c) => {
   const ms = mienScope(user, "p");
   const tw = ttWhere(tt);
   const { results } = await c.env.DB.prepare(
-    `SELECT COALESCE(g.nguoi_tao, '') AS ktv, COUNT(*) AS so_don, COUNT(*) AS so_dong,
+    `SELECT COALESCE(g.nguoi_tao, '') AS ktv, COUNT(DISTINCT ${CA_KEY}) AS so_don, COUNT(*) AS so_dong,
        SUM(CASE WHEN d.created_at < ? THEN 1 ELSE 0 END) AS qua_han
      FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE ${tw.sql}${ms.sql}
@@ -252,12 +296,24 @@ deXuat.post("/:id/tu-choi", async (c) => {
 deXuat.post("/kho", async (c) => {
   const user = c.get("user");
   if (!isKho(user)) return c.json({ error: "FORBIDDEN" }, 403);
-  const body = await c.req.json<{ ids?: string[]; hanh_dong?: string }>().catch(() => ({}) as { ids?: string[]; hanh_dong?: string });
-  const ids = [...new Set((body.ids || []).filter((x) => typeof x === "string"))].slice(0, 200);
-  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const body = await c.req.json<{ ids?: string[]; pxk?: string[]; hanh_dong?: string }>().catch(() => ({}) as { ids?: string[]; pxk?: string[]; hanh_dong?: string });
   const hd = body.hanh_dong;
   const TU: Record<string, string[]> = { da_in: ["cho_in"], chua_in: ["da_in"], da_xuat: ["cho_in", "da_in"] };
   if (!hd || !TU[hd]) return c.json({ error: "INVALID_HANH_DONG" }, 400);
+  const idSet = new Set((body.ids || []).filter((x) => typeof x === "string"));
+  // 06/11/2026: "Kho sẽ xử lý tất cả các đơn trong cùng 1 phiếu" - pxk[] -> moi de xuat cung ma PXK dang o dung giai doan Kho (theo mien).
+  const pxks = [...new Set((body.pxk || []).filter((x) => typeof x === "string" && x.trim()))].slice(0, 100);
+  if (pxks.length) {
+    const ms = mienScope(user, "p");
+    const { results } = await c.env.DB.prepare(
+      `SELECT d.id FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') IN (${TU[hd].map(() => "?").join(",")})
+         AND ${PXK_KEY} IN (${pxks.map(() => "?").join(",")})${ms.sql}`,
+    ).bind(...TU[hd], ...pxks, ...ms.binds).all<{ id: string }>();
+    results.forEach((r) => idSet.add(r.id));
+  }
+  const ids = [...idSet].slice(0, 500);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
   const now = nowVN();
   let ok = 0;
   const loi: { id: string; error: string }[] = [];

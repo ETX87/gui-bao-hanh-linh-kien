@@ -150,8 +150,8 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   kho_cho_dong_goi: "phiếu chờ đóng gói",
   kho_cho_in: "phiếu chờ in",
   kho_da_in: "phiếu đã in, chờ gửi",
-  kho_lk_cho_in: "phiếu cấp linh kiện chờ in",
-  kho_lk_da_in: "phiếu cấp linh kiện đã in, chờ xuất",
+  kho_lk_cho_in: "phiếu PXK cấp linh kiện chờ in",
+  kho_lk_da_in: "phiếu PXK cấp linh kiện đã in, chờ xuất",
   kho_cho_ban_giao: "thùng chờ bàn giao Admin",
   kho_khieu_nai: "khiếu nại chưa đánh giá",
   admin_cho_tiep_nhan_noi_bo: "thùng chờ nhận nội bộ",
@@ -159,12 +159,12 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   admin_cho_phan_loai: "đơn chờ phân loại",
   admin_cho_xac_nhan_hoan_tat: "đơn chờ xác nhận hoàn tất",
   admin_san_sang_gom: "đơn chờ gộp phiếu trả",
-  admin_de_xuat_cho_cap: "đề xuất linh kiện chờ cấp",
+  admin_de_xuat_cho_cap: "ca xin linh kiện chờ cấp",
   admin_thieu_hang_da_ve: "yêu cầu thiếu hàng có kết quả (hàng về / từ chối)",
   admin_phieu_tra_tu_choi: "phiếu trả Kế toán trả lại",
   nv_cho_chan_doan: "đơn chờ chẩn đoán",
   ketoan_cho_duyet: "phiếu chờ duyệt",
-  ketoan_de_xuat_lk: "đề xuất linh kiện chờ KT xác nhận",
+  ketoan_de_xuat_lk: "ca cấp linh kiện chờ KT xác nhận",
 };
 
 export function countBreakdown(it: RouteItem, counts: WorkloadCounts): string {

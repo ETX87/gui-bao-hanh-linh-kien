@@ -117,13 +117,13 @@ workload.get("/", async (c) => {
       }),
       // 04/11/2026: phieu cap linh kien KT da xac nhan - Kho in / xuat.
       one(
-        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') = 'cho_in'${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(d.ma_misa), ''), d.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') = 'cho_in'${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.kho_lk_cho_in = r?.cnt ?? 0;
       }),
       one(
-        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND d.kho_tt = 'da_in'${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(d.ma_misa), ''), d.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'da_cap' AND d.kho_tt = 'da_in'${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.kho_lk_da_in = r?.cnt ?? 0;
@@ -171,7 +171,7 @@ workload.get("/", async (c) => {
       }),
       // 12/10/2026: de xuat linh kien NV cho Admin len MISA cap.
       one(
-        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_cap'${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_cap'${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.admin_de_xuat_cho_cap = r?.cnt ?? 0;
@@ -207,7 +207,7 @@ workload.get("/", async (c) => {
       }),
       // 02/11/2026: de xuat linh kien Admin da dong y cap, cho Ke toan nhap MISA + xac nhan.
       one(
-        `SELECT COUNT(*) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_ke_toan'${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_ke_toan'${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.ketoan_de_xuat_lk = r?.cnt ?? 0;

@@ -193,6 +193,7 @@ export interface DeXuatLk {
   case_id?: string | null;
   mien?: Mien | null;
   ktv?: string | null;
+  pxk?: string; // 06/11/2026: khoa phieu PXK (ma MISA, chua co thi = id) - GET /de-xuat?group=pxk
 }
 
 export interface PhieuTra {

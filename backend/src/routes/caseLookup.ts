@@ -26,10 +26,10 @@ async function computeKhopKtv(db: D1Database, p: { ky_thuat_vien: string | null;
   return caseThuocKtv(db, p, ktvEmail);
 }
 
-import { laCaseHomNay } from "../lib/caseNgay";
+import { laCaseHomNay, normCaseId } from "../lib/caseNgay";
 
 caseLookup.get("/", async (c) => {
-  const id = (c.req.query("id") || "").trim();
+  const id = normCaseId(c.req.query("id"));
   if (!id) return c.json({ error: "MISSING_ID" }, 400);
   const r = await lookupCaseEx(id, c.env);
   const preview = r.status === "found" ? r.preview : null;
@@ -57,7 +57,7 @@ function msSinceVN(tsVN: string): number {
 // don qua POST /phieu-gui/:id/don) - CHI doc cache, KHONG tu goi lai API doi tac (dung dung tinh
 // than yeu cau "tránh việc phải gọi API liên tục... mỗi khi có người xem thông tin").
 caseLookup.get("/detail/:id", async (c) => {
-  const id = c.req.param("id").trim();
+  const id = normCaseId(c.req.param("id"));
   const cached = await c.env.DB.prepare("SELECT data, synced_at FROM case_lookup_snapshot WHERE case_id = ?").bind(id).first<{ data: string; synced_at: string }>();
   if (!cached) return c.json({ found: false, data: null, synced_at: null });
   return c.json({ found: true, data: JSON.parse(cached.data), synced_at: cached.synced_at });
@@ -68,7 +68,7 @@ caseLookup.get("/detail/:id", async (c) => {
 caseLookup.post("/detail/:id/sync", async (c) => {
   const user = c.get("user");
   if (!(user.la_admin_bh || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
-  const id = c.req.param("id").trim();
+  const id = normCaseId(c.req.param("id"));
   const cached = await c.env.DB.prepare("SELECT data, synced_at FROM case_lookup_snapshot WHERE case_id = ?").bind(id).first<{ data: string; synced_at: string }>();
   if (cached && msSinceVN(cached.synced_at) < MIN_SYNC_MS) {
     return c.json({ error: "TOO_SOON", retry_after_ms: MIN_SYNC_MS - msSinceVN(cached.synced_at) }, 429);

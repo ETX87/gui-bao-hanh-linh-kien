@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { normCaseId } from "../lib/caseNgay";
 import type { Env, AppUser } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
@@ -963,6 +964,7 @@ adminBH.post("/don-dich-vu", async (c) => {
   const user = c.get("user");
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<DonDichVuBody>().catch(() => ({}) as DonDichVuBody);
+  body.case_id = normCaseId(body.case_id) || null; // 06/11/2026: sc... -> SC...
   if (!body.case_id) {
     if (!body.ten_khach_hang?.trim() || !body.sdt_khach_hang?.trim() || !body.san_pham_bh?.trim()) return c.json({ error: "MISSING_KHACH_LE_INFO" }, 400);
   }

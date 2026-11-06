@@ -1,5 +1,5 @@
 import { maKtvCuaEmail, caseThuocKtv, laKtvTaoHo } from "../lib/ktvMa";
-import { laCaseHomNay } from "../lib/caseNgay";
+import { laCaseHomNay, normCaseId } from "../lib/caseNgay";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
 import type { Env } from "../types";
@@ -425,7 +425,7 @@ phieuGui.post("/:id/don", async (c) => {
   const soLuong = body.so_luong_khai ?? 1;
   if (!Number.isInteger(soLuong) || soLuong < 1) return c.json({ error: "INVALID_SO_LUONG" }, 400);
   if (!body.mo_ta_loi?.trim()) return c.json({ error: "MISSING_MO_TA_LOI" }, 400);
-  const caseId = body.case_id?.trim();
+  const caseId = normCaseId(body.case_id) || undefined;
   if (!caseId) return c.json({ error: "MISSING_CASE_ID" }, 400);
 
   // 30/10/2026: tach "khong tim thay case" (chan cung) voi "DVBH loi / khong phan hoi" (cho tao neu nguoi

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { normCaseId } from "../lib/caseNgay";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
@@ -36,8 +37,8 @@ interface ParentRow {
 lichSu.get("/", async (c) => {
   const user = c.get("user");
   const db = c.env.DB;
-  const q = (c.req.query("q") || "").trim();
-  const caseId = (c.req.query("case_id") || "").trim();
+  const q = normCaseId(c.req.query("q"));
+  const caseId = normCaseId(c.req.query("case_id"));
   const exclude = (c.req.query("exclude") || "").trim();
   if (!q && !caseId) return c.json({ don: [], case_info: [] });
   if (q && q.length < 3) return c.json({ error: "QUERY_TOO_SHORT" }, 400);

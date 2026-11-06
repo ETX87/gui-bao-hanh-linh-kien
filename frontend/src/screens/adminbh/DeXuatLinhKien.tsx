@@ -34,6 +34,16 @@ const TABS = [
   { key: "huy", label: "Đã huỷ", kt: false, kho: false },
 ];
 const KHO_TABS = ["cho_kho_in", "kho_da_in"];
+// 06/11/2026: 3 tab Kho gom theo phieu PXK (ma MISA).
+const PXK_TABS = ["cho_kho_in", "kho_da_in", "kho_da_xuat"];
+// Tab co viec cua nguoi xem -> so dem to do.
+const VIEC_TAB: Record<string, (u: AppUser) => boolean> = {
+  cho_cap: (u) => !!(u.la_admin_bh || u.la_qtri),
+  cho_ke_toan: (u) => !!(u.la_ke_toan || u.la_qtri),
+  cho_kho_in: (u) => !!(u.la_kho || u.la_qtri),
+  kho_da_in: (u) => !!(u.la_kho || u.la_qtri),
+};
+type Dem = Record<string, { ca: number; pxk: number; dong: number }>;
 
 const DEFS: FilterDef[] = [
   { key: "nguoi_de_xuat", label: "Người đề xuất", kind: "person" },
@@ -70,11 +80,18 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     window.location.replace(`#${pth}?${p.toString()}`);
   }, [tab]);
   const [khoBusy, setKhoBusy] = useState(false);
+  // 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": so ca (tab Kho: so phieu PXK) cua MOI tab.
+  const [dem, setDem] = useState<Dem>({});
+  const loadDem = () => api.get<{ dem: Dem }>("/de-xuat/dem").then((r) => setDem(r.dem)).catch(() => {});
+  useEffect(() => {
+    loadDem();
+  }, [tab]);
+  const pxkTab = PXK_TABS.includes(tab);
   const toast = useToast();
   const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);
   const [traLaiFor, setTraLaiFor] = useState<DeXuatLk | null>(null);
   const flt = useListFilters(`/de-xuat?trang_thai=${tab}`, DEFS.map((d) => d.key));
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DeXuatLk>(withQuery(`/de-xuat?trang_thai=${tab}`, flt.query), "de_xuat", tab === "cho_ke_toan" ? 200 : undefined);
+  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DeXuatLk>(withQuery(`/de-xuat?trang_thai=${tab}${pxkTab ? "&group=pxk" : ""}`, flt.query), "de_xuat", tab === "cho_ke_toan" ? 200 : undefined);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [capFor, setCapFor] = useState<DeXuatLk[] | null>(null);
   const [tuChoiFor, setTuChoiFor] = useState<DeXuatLk | null>(null);
@@ -84,13 +101,14 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const khoTab = KHO_TABS.includes(tab) && isKho;
   const choCap = (tab === "cho_cap" && isAdmin) || choKt || khoTab;
   // Kho: da_in (in phieu) | chua_in (doi lai) | da_xuat (xuat luon, khong can in).
-  const khoLam = async (ids: string[], hanhDong: "da_in" | "chua_in" | "da_xuat") => {
-    if (hanhDong === "da_xuat" && !window.confirm(`Xác nhận Kho đã xuất ${ids.length} phiếu cấp linh kiện?`)) return;
+  // 06/11/2026: Kho xu ly ca phieu PXK (pxk[]) - backend gom moi de xuat cung ma PXK.
+  const khoLam = async (pxk: string[], hanhDong: "da_in" | "chua_in" | "da_xuat") => {
+    if (hanhDong === "da_xuat" && !window.confirm(`Xác nhận Kho đã xuất ${pxk.length} phiếu PXK (toàn bộ linh kiện bên trong)?`)) return;
     setKhoBusy(true);
     try {
-      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>("/de-xuat/kho", { ids, hanh_dong: hanhDong });
+      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>("/de-xuat/kho", { pxk, hanh_dong: hanhDong });
       const nd = hanhDong === "da_in" ? "đã in phiếu" : hanhDong === "chua_in" ? "chuyển về chờ in" : "đã xuất";
-      toast(r.loi.length ? `${r.ok} phiếu ${nd}, ${r.loi.length} lỗi (${r.loi.map((x) => x.id).join(", ")})` : `${r.ok} phiếu ${nd}.`, r.loi.length ? "error" : "ok");
+      toast(r.loi.length ? `${pxk.length} PXK (${r.ok} linh kiện) ${nd}, ${r.loi.length} lỗi (${r.loi.map((x) => x.id).join(", ")})` : `${pxk.length} PXK (${r.ok} linh kiện) ${nd}.`, r.loi.length ? "error" : "ok");
       setSelected(new Set());
       after();
     } catch (e) {
@@ -109,6 +127,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const after = () => {
     reload();
     refresh();
+    loadDem();
   };
 
   const cols: Column<DeXuatLk>[] = [
@@ -126,22 +145,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
       key: "act",
       header: "",
       render: (r) =>
-        r.trang_thai === "da_cap" && isKho && (r.kho_tt || "cho_in") !== "da_xuat" ? (
-          <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {(r.kho_tt || "cho_in") === "cho_in" ? (
-              <Btn size="sm" disabled={khoBusy} onClick={() => khoLam([r.id], "da_in")}>
-                🖨 Đã in
-              </Btn>
-            ) : (
-              <Btn size="sm" variant="ghost" disabled={khoBusy} onClick={() => khoLam([r.id], "chua_in")}>
-                ↩ Chưa in
-              </Btn>
-            )}
-            <Btn size="sm" variant="success" disabled={khoBusy} onClick={() => khoLam([r.id], "da_xuat")}>
-              📦 Đã xuất
-            </Btn>
-          </span>
-        ) : r.trang_thai === "cho_ke_toan" && isKt ? (
+        r.trang_thai === "cho_ke_toan" && isKt ? (
           <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
             <Btn size="sm" variant="success" onClick={() => setKtFor([r])}>
               Duyệt
@@ -196,35 +200,27 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
               className={`rounded-full px-3 py-1 text-xs font-semibold border ${tab === t.key ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "bg-white text-[var(--ink-body)] border-[var(--line)]"}`}
             >
               {t.label}
-              {tab === t.key ? ` (${total})` : ""}
+              {dem[t.key] && (PXK_TABS.includes(t.key) ? dem[t.key].pxk : dem[t.key].ca) > 0 && (
+                <span
+                  className={`ml-1 rounded-full px-1.5 text-[11px] font-bold ${tab === t.key ? "bg-white/25 text-white" : VIEC_TAB[t.key]?.(user) ? "bg-[var(--red-600,#dc2626)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-soft)]"}`}
+                  title={`${PXK_TABS.includes(t.key) ? `${dem[t.key].pxk} phiếu PXK · ` : ""}${dem[t.key].ca} ca · ${dem[t.key].dong} linh kiện`}
+                >
+                  {PXK_TABS.includes(t.key) ? `${dem[t.key].pxk} PXK` : `${dem[t.key].ca} ca`}
+                </span>
+              )}
             </button>
           ))}
         </div>
-        {choCap && rows.length > 0 && (
+        {choCap && !pxkTab && rows.length > 0 && (
           <label className="flex items-center gap-1 text-xs text-[var(--ink-soft)] cursor-pointer">
             <input type="checkbox" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} />
             Chọn tất cả đang hiển thị
           </label>
         )}
-        {selected.size > 0 && (
+        {selected.size > 0 && !pxkTab && (
           <div className="ml-auto flex items-center gap-2">
             <Badge tone="blue">{selected.size} đã chọn</Badge>
-            {khoTab ? (
-              <>
-                {tab === "cho_kho_in" ? (
-                  <Btn disabled={khoBusy} onClick={() => khoLam([...selected], "da_in")}>
-                    🖨 Đã in {selected.size} phiếu
-                  </Btn>
-                ) : (
-                  <Btn variant="ghost" disabled={khoBusy} onClick={() => khoLam([...selected], "chua_in")}>
-                    ↩ Chưa in
-                  </Btn>
-                )}
-                <Btn variant="success" disabled={khoBusy} onClick={() => khoLam([...selected], "da_xuat")}>
-                  📦 Đã xuất {selected.size} phiếu
-                </Btn>
-              </>
-            ) : choKt ? (
+            {choKt ? (
               <Btn variant="success" onClick={() => setKtFor(rows.filter((r) => selected.has(r.id)))}>
                 ✔ Duyệt {selected.size} đề xuất (nhập MISA)
               </Btn>
@@ -237,11 +233,13 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
         )}
       </div>
       {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Bấm "Cấp", nhập mã đơn hàng (mã MISA tuỳ chọn) → đề xuất chuyển sang Kế toán xác nhận. Bấm dòng để mở đơn bảo hành.</p>}
-      {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA. Kho in phiếu xuất rồi bấm "🖨 Đã in", hoặc xuất luôn bằng "📦 Đã xuất".</p>}
-      {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in").</p>}
+      {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA — mỗi khối là 1 phiếu PXK. Bấm khối để xem các đơn bảo hành bên trong; "🖨 Đã in" / "📦 Đã xuất" áp cho toàn bộ phiếu.</p>}
+      {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu PXK — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in"), áp cho toàn bộ phiếu.</p>}
       {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
-      {choKt ? (
+      {pxkTab ? (
+        <PxkGroups rows={rows} nameOf={nameOf} canAct={isKho && KHO_TABS.includes(tab)} tab={tab} busy={khoBusy} onLam={khoLam} onOpen={setDetailId} />
+      ) : choKt ? (
         <KtCaseGroups
           rows={rows}
           nameOf={nameOf}
@@ -385,6 +383,181 @@ function KtCaseGroups({
                 </li>
               ))}
             </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// 06/11/2026 - "tab chờ in phiếu, đã in phiếu, đã xuất, tổng hợp theo mã PXK => kho vào 1 phiếu pxk sẽ xem được danh sách các
+// đơn bảo hành bên trong pxk đó, Kho sẽ xử lý tất cả các đơn trong cùng 1 phiếu."
+function PxkGroups({
+  rows,
+  nameOf,
+  canAct,
+  tab,
+  busy,
+  onLam,
+  onOpen,
+}: {
+  rows: DeXuatLk[];
+  nameOf: (ma: string | null | undefined) => string;
+  canAct: boolean;
+  tab: string;
+  busy: boolean;
+  onLam: (pxk: string[], hd: "da_in" | "chua_in" | "da_xuat") => void;
+  onOpen: (unitId: string) => void;
+}) {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setSel(new Set());
+  }, [rows]);
+  const groups: { key: string; coMisa: boolean; items: DeXuatLk[] }[] = [];
+  for (const r of rows) {
+    const key = r.pxk || r.ma_misa || r.id;
+    let g = groups.find((x) => x.key === key);
+    if (!g) groups.push((g = { key, coMisa: !!(r.ma_misa && r.ma_misa.trim()), items: [] }));
+    g.items.push(r);
+  }
+  if (!rows.length) return <p className="text-sm text-[var(--ink-soft)] py-6 text-center">Không có phiếu PXK nào.</p>;
+  const flip = (set: Set<string>, k: string) => {
+    const n = new Set(set);
+    if (n.has(k)) n.delete(k);
+    else n.add(k);
+    return n;
+  };
+  const allOpen = groups.every((g) => open.has(g.key));
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {canAct && (
+          <label className="flex items-center gap-1 text-[var(--ink-soft)] cursor-pointer">
+            <input type="checkbox" checked={sel.size === groups.length} onChange={(e) => setSel(e.target.checked ? new Set(groups.map((g) => g.key)) : new Set())} />
+            Chọn tất cả {groups.length} phiếu đang hiển thị
+          </label>
+        )}
+        <button className="text-[var(--link)] font-semibold" onClick={() => setOpen(allOpen ? new Set() : new Set(groups.map((g) => g.key)))}>
+          {allOpen ? "▾ Thu gọn tất cả" : "▸ Mở tất cả"}
+        </button>
+        {canAct && sel.size > 0 && (
+          <span className="ml-auto flex items-center gap-2">
+            <Badge tone="blue">{sel.size} phiếu PXK</Badge>
+            {tab === "cho_kho_in" ? (
+              <Btn size="sm" disabled={busy} onClick={() => onLam([...sel], "da_in")}>
+                🖨 Đã in {sel.size} phiếu
+              </Btn>
+            ) : (
+              <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onLam([...sel], "chua_in")}>
+                ↩ Chưa in
+              </Btn>
+            )}
+            <Btn size="sm" variant="success" disabled={busy} onClick={() => onLam([...sel], "da_xuat")}>
+              📦 Đã xuất {sel.size} phiếu
+            </Btn>
+          </span>
+        )}
+      </div>
+      {groups.map((g) => {
+        const isOpen = open.has(g.key);
+        const units = new Map<string, DeXuatLk[]>();
+        g.items.forEach((r) => units.set(r.unit_id, [...(units.get(r.unit_id) || []), r]));
+        const ktvs = [...new Set(g.items.map((r) => r.ktv).filter(Boolean))] as string[];
+        const tongSl = g.items.reduce((a, r) => a + (r.so_luong || 0), 0);
+        const r0 = g.items[0];
+        const since = (tab === "kho_da_in" ? r0.kho_in_luc : null) || r0.kt_luc || r0.updated_at;
+        return (
+          <div key={g.key} className="rounded-lg border border-[var(--line)] overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 cursor-pointer" onClick={() => setOpen((o) => flip(o, g.key))}>
+              {canAct && <input type="checkbox" className="w-4 h-4" checked={sel.has(g.key)} onClick={(e) => e.stopPropagation()} onChange={() => setSel((x) => flip(x, g.key))} aria-label={`Chọn phiếu ${g.key}`} />}
+              <span className="text-[var(--ink-soft)] w-3">{isOpen ? "▾" : "▸"}</span>
+              <span className="font-mono text-[13px] font-bold text-[var(--ink)]">{g.coMisa ? `🧾 PXK ${g.key}` : `🧾 Chưa có mã PXK · ${g.key}`}</span>
+              <span className="text-xs text-[var(--ink-soft)]">
+                · {units.size} đơn bảo hành · {g.items.length} linh kiện{tongSl !== g.items.length ? ` (SL ${tongSl})` : ""}
+              </span>
+              {ktvs.length > 0 && (
+                <span className="text-xs text-[var(--ink-soft)] min-w-0 truncate max-w-[260px]">
+                  · KTV <UserName email={ktvs[0]} />
+                  {ktvs.length > 1 ? ` +${ktvs.length - 1}` : ""}
+                </span>
+              )}
+              <MienBadge mien={r0.mien} short />
+              {tab === "kho_da_xuat" ? (
+                <span className="text-xs text-[var(--ink-soft)]">
+                  · Xuất {fmtDate(r0.kho_xuat_luc || r0.kt_luc)}
+                  {r0.kho_xuat_boi ? (
+                    <>
+                      {" "}
+                      · <UserName email={r0.kho_xuat_boi} />
+                    </>
+                  ) : null}
+                </span>
+              ) : (
+                <SlaBadge since={since} />
+              )}
+              {canAct && (
+                <span className="ml-auto flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {tab === "cho_kho_in" ? (
+                    <Btn size="sm" disabled={busy} onClick={() => onLam([g.key], "da_in")}>
+                      🖨 Đã in
+                    </Btn>
+                  ) : (
+                    <Btn size="sm" variant="ghost" disabled={busy} onClick={() => onLam([g.key], "chua_in")}>
+                      ↩ Chưa in
+                    </Btn>
+                  )}
+                  <Btn size="sm" variant="success" disabled={busy} onClick={() => onLam([g.key], "da_xuat")}>
+                    📦 Đã xuất cả phiếu
+                  </Btn>
+                </span>
+              )}
+            </div>
+            {!isOpen && (
+              <p className="px-2.5 py-1 text-xs text-[var(--ink-soft)] truncate" title={g.items.map((r) => nameOf(r.ma_lk)).join(", ")}>
+                {g.items.map((r) => `${nameOf(r.ma_lk)} ×${r.so_luong}`).join(" · ")}
+              </p>
+            )}
+            {isOpen && (
+              <ul className="divide-y divide-[var(--line)]">
+                {[...units.entries()].map(([unitId, list]) => (
+                  <li key={unitId} className="px-2.5 py-1.5 text-[13px] cursor-pointer hover:bg-[var(--surface-2)]" onClick={() => onOpen(unitId)}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-[var(--link)]">{unitId}</span>
+                      {list[0].case_id && <span className="font-mono text-xs text-[var(--ink-soft)]">Case {list[0].case_id}</span>}
+                      {list[0].ktv && (
+                        <span className="text-xs text-[var(--ink-soft)]">
+                          · <UserName email={list[0].ktv} />
+                        </span>
+                      )}
+                      {list[0].mo_ta_loi && (
+                        <span className="text-xs text-[var(--ink-soft)] min-w-0 truncate max-w-[280px]" title={list[0].mo_ta_loi}>
+                          · {list[0].mo_ta_loi}
+                        </span>
+                      )}
+                    </div>
+                    {list.map((r) => (
+                      <div key={r.id} className="flex flex-wrap items-center gap-2 pl-4 text-xs">
+                        <span className="font-mono text-[var(--ink-soft)]">{r.id}</span>
+                        <span className="min-w-0 max-w-[360px] truncate font-semibold text-[var(--ink)]" title={nameOf(r.ma_lk)}>
+                          {nameOf(r.ma_lk)}
+                        </span>
+                        <b>×{r.so_luong}</b>
+                        <span className="text-[var(--ink-soft)]">
+                          NV <UserName email={r.nguoi_de_xuat} />
+                        </span>
+                        {r.ma_don_hang && <span className="text-[var(--ink-soft)]">ĐH {r.ma_don_hang}</span>}
+                        {r.ghi_chu && (
+                          <span className="text-[var(--ink-soft)] truncate max-w-[220px]" title={r.ghi_chu}>
+                            · {r.ghi_chu}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         );
       })}

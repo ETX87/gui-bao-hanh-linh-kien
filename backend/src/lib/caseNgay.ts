@@ -30,3 +30,10 @@ export function conChoDongBo(caseId: string): boolean {
   return !!d && d >= yymmddVN(1) && d <= yymmddVN(0);
 }
 
+
+/** 06/11/2026 - "hỗ trợ tìm kiếm ID case cả viết hoa và viết thường ví dụ Sc2611030124": ma case dang chu + so
+ * (SC..., T...) luon viet hoa (DVBH luu viet hoa, so khop dung nguyen van). Ma khac giu nguyen. */
+export function normCaseId(s: string | null | undefined): string {
+  const t = (s || "").trim();
+  return /^[a-z]{1,4}\d+$/i.test(t) ? t.toUpperCase() : t;
+}
