@@ -24,7 +24,7 @@ export function AddDonModal({ guiId, ktvEmail, onClose, onDone }: { guiId: strin
           {f.lyDoKhoa && !f.busy && <span className="mr-auto text-xs font-semibold text-[var(--amber-800)]">⚠ {f.lyDoKhoa}</span>}
           <Btn onClick={onClose}>Huỷ</Btn>
           <Btn variant="primary" disabled={!f.valid || f.busy} onClick={f.submit}>
-            Thêm vào phiếu
+            {f.busy ? "Đang gửi…" : "Thêm vào phiếu"}
           </Btn>
         </>
       }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api, errorMessage } from "../../lib/api";
+import { api, ApiError, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { useLinhKien } from "../../hooks/useLinhKien";
@@ -47,25 +47,44 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
           ? "Nhập mô tả lỗi."
           : "";
 
+  // 08/11/2026 - "bấm Thêm vào phiếu thì nút mờ đi, màn hình đứng yên, không báo gì" (iPhone): truoc day
+  // khong buoc nao co gioi han thoi gian (doc anh, gui request, backend tra case DVBH) -> 1 buoc treo la busy
+  // ket true mai mai. Gio: doc anh toi da 20s/anh (fileToDataUrl), request toi da 60s, het han -> bao loi ro +
+  // mo lai nut. Het han KHONG chac la chua tao (server co the da ghi xong) -> nhac kiem tra phieu truoc khi bam lai.
   const submit = async () => {
+    if (busy) return;
     setBusy(true);
     try {
-      const anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
-      await api.post(`/phieu-gui/${guiId}/don`, {
-        case_id: caseId.trim(),
-        ma_lk: maLk || null,
-        so_luong_khai: Number(soLuong),
-        mo_ta_loi: moTa.trim(),
-        loai_doi_tru_de_xuat: loaiDoiTru,
-        anh,
-        xac_nhan_khac_ktv: allowOverride && override,
-        // 30/10/2026: cung o tich "override" dung cho truong hop DVBH khong phan hoi (backend chi xet khi DVBH loi).
-        xac_nhan_chua_xac_minh: override,
-      });
+      let anh: string[] = [];
+      try {
+        anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
+      } catch (e) {
+        toast(e instanceof Error ? e.message : "Không đọc được ảnh — bỏ ảnh đó rồi chụp/chọn lại.", "error");
+        return;
+      }
+      await api.post(
+        `/phieu-gui/${guiId}/don`,
+        {
+          case_id: caseId.trim(),
+          ma_lk: maLk || null,
+          so_luong_khai: Number(soLuong),
+          mo_ta_loi: moTa.trim(),
+          loai_doi_tru_de_xuat: loaiDoiTru,
+          anh,
+          xac_nhan_khac_ktv: allowOverride && override,
+          // 30/10/2026: cung o tich "override" dung cho truong hop DVBH khong phan hoi (backend chi xet khi DVBH loi).
+          xac_nhan_chua_xac_minh: override,
+        },
+        { timeoutMs: 60000 },
+      );
       toast("Đã thêm đơn vào phiếu.", "ok");
       onDone();
     } catch (e) {
-      toast(errorMessage(e), "error");
+      if (e instanceof ApiError && e.code === "TIMEOUT") {
+        toast("Gửi đơn quá lâu (mạng chậm). Đơn có thể đã được thêm — đóng hộp này, kiểm tra danh sách đơn trong phiếu rồi mới thêm lại.", "error");
+      } else {
+        toast(errorMessage(e), "error");
+      }
     } finally {
       setBusy(false);
     }

@@ -13,18 +13,37 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method,
-    credentials: "include",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+// 08/11/2026 - "bấm Thêm vào phiếu thì nút mờ đi, màn hình đứng yên": fetch() khong co gioi han thoi gian, mang
+// dien thoai cham/rot giua chung thi promise treo vo han -> nut "dang gui" khong bao gio mo lai. timeoutMs (tuy chon)
+// huy request bang AbortController va nem ApiError("TIMEOUT"); loi mang (fetch reject) nem ApiError("NETWORK").
+export interface RequestOpts {
+  timeoutMs?: number;
+}
+
+async function request<T>(method: string, path: string, body?: unknown, opts?: RequestOpts): Promise<T> {
+  const ctrl = opts?.timeoutMs ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), opts!.timeoutMs) : null;
+  let res: Response;
   let json: unknown = null;
   try {
-    json = await res.json();
-  } catch {
-    /* no body */
+    res = await fetch(`/api${path}`, {
+      method,
+      credentials: "include",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: ctrl?.signal,
+    });
+    try {
+      json = await res.json();
+    } catch {
+      /* no body */
+    }
+  } catch (e) {
+    if (ctrl?.signal.aborted) throw new ApiError("TIMEOUT", 0);
+    if (e instanceof ApiError) throw e;
+    throw new ApiError("NETWORK", 0);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   if (!res.ok) {
     const code = (json as { error?: string } | null)?.error || `HTTP_${res.status}`;
@@ -35,7 +54,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
+  post: <T>(path: string, body?: unknown, opts?: RequestOpts) => request<T>("POST", path, body ?? {}, opts),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body ?? {}),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body ?? {}),
   delete: <T>(path: string) => request<T>("DELETE", path),
@@ -114,6 +133,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   OUT_OF_KHU_VUC: "KTV này không thuộc Khu vực bạn phụ trách.",
   GS_KHONG_HOP_LE: "Có tài khoản không mang vai trò Giám sát — kiểm tra lại danh sách.",
   TOO_SOON: "Vừa mới đồng bộ — vui lòng thử lại sau ít phút.",
+  TIMEOUT: "Máy chủ phản hồi quá lâu (mạng chậm hoặc mất kết nối) — kiểm tra lại rồi thử lần nữa.",
+  NETWORK: "Không kết nối được máy chủ — kiểm tra mạng (Wi-Fi/4G) rồi thử lại.",
 };
 
 export function errorMessage(e: unknown): string {

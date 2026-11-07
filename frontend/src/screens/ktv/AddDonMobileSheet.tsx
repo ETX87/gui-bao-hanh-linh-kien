@@ -95,7 +95,7 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
           Huỷ
         </Btn>
         <Btn variant="primary" disabled={!f.valid || f.busy} onClick={f.submit} className="flex-[2]">
-          Thêm vào phiếu
+          {f.busy ? "Đang gửi…" : "Thêm vào phiếu"}
         </Btn>
         </div>
       </div>

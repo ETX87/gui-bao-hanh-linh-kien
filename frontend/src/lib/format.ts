@@ -76,11 +76,26 @@ export function fmtDateOnly(iso: string | null | undefined): string {
 }
 
 // Doc anh -> base64 data URL (KHONG dung R2 - quyet dinh da chot cho he nay, xem CLAUDE.md).
+// 08/11/2026: co gioi han thoi gian (mac dinh 20s) - FileReader tren iOS co the khong goi onload/onerror
+// (anh iCloud chua tai ve may...) -> promise treo, nut "Thêm vào phiếu" ket o trang thai dang gui.
+// Khong nhan tham so thoi gian: noi goi dung `.map(fileToDataUrl)` (tham so 2 = chi so mang).
+const DOC_ANH_TOI_DA_MS = 20000;
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
+    const timer = setTimeout(() => {
+      try { reader.abort(); } catch { /* bo qua */ }
+      reject(new Error("Đọc ảnh quá lâu — bỏ ảnh đó rồi chụp/chọn lại."));
+    }, DOC_ANH_TOI_DA_MS);
+    reader.onload = () => {
+      clearTimeout(timer);
+      if (typeof reader.result === "string" && reader.result) resolve(reader.result);
+      else reject(new Error("Không đọc được ảnh — bỏ ảnh đó rồi chụp/chọn lại."));
+    };
+    reader.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Không đọc được ảnh — bỏ ảnh đó rồi chụp/chọn lại."));
+    };
     reader.readAsDataURL(file);
   });
 }

@@ -51,7 +51,9 @@ export async function lookupCaseEx(id: string, env: Env): Promise<CaseLookupResu
   try {
     // Service Binding (khong fetch() thang URL) - 2 Worker cung 1 tai khoan Cloudflare bi chan loi
     // 1042 (chong SSRF) neu fetch() mang that, dung nhu dvbh<->linh-kien-app - xem wrangler.jsonc.
-    const res = await env.CASE_LOOKUP_SERVICE.fetch(url, { headers: { "X-API-Key": env.CASE_LOOKUP_API_KEY } });
+    // 08/11/2026: gioi han 12s - DVBH treo thi POST /phieu-gui/:id/don (them don) treo theo, nut "Thêm vào phiếu"
+    // tren dien thoai ket "dang gui". Het han = "error" (nguoi dung tich "Vẫn tạo đơn", cron xac minh lai).
+    const res = await env.CASE_LOOKUP_SERVICE.fetch(url, { headers: { "X-API-Key": env.CASE_LOOKUP_API_KEY }, signal: AbortSignal.timeout(12000) });
     if (!res.ok || !(res.headers.get("Content-Type") ?? "").includes("application/json")) {
       console.error("[caseLookup] fetch that bai", res.status, res.headers.get("Content-Type"));
       return { status: "error" };
