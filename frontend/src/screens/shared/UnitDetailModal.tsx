@@ -725,8 +725,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       {sub === "chan-doan" && <ChanDoanModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "hoan-tac" && <HoanTacModal unitId={u.id} trangThai={u.trang_thai} quaNv={!!u.ket_qua_nv && !!u.admin_xac_nhan_hoan_tat} phieuTraId={u.phieu_tra_id} onClose={() => setSub(null)} onDone={afterAction} />}
       {suaLk && <SuaLinhKienModal unitId={u.id} maLkKtv={p.ma_lk} maLkNhan={u.ma_lk_nhan ?? null} maLkThucTe={u.ma_lk_thuc_te} onClose={() => setSuaLk(false)} onDone={() => { setSuaLk(false); onChanged(); load(); }} />}
-      {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}
-      {openPt && pt && <PhieuTraDetailModal traId={pt.id} user={user} nested onClose={() => setOpenPt(false)} onChanged={() => { onChanged(); load(); }} />}
+      {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onOpenUnit={(id) => { setOpenPg(false); setCurId(id); }} onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}
+      {openPt && pt && <PhieuTraDetailModal traId={pt.id} user={user} nested onOpenUnit={(id) => { setOpenPt(false); setCurId(id); }} onClose={() => setOpenPt(false)} onChanged={() => { onChanged(); load(); }} />}
     </>
   );
 }

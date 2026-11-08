@@ -49,7 +49,7 @@ const MIEN_TEN = (m: string | null | undefined) => (m === "MB" ? "Miền Bắc" 
 
 // actions (21/10/2026): nut thao tac cua man goi (VD Kho "Xác nhận tiếp nhận", Admin "Xác nhận đã nhận") hien o
 // footer khi thung khong con nhap - mo thung xem ben trong roi tiep nhan ngay trong chi tiet.
-export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions }: { guiId: string; onClose: () => void; onChanged: () => void; nested?: boolean; actions?: ReactNode }) {
+export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions, onOpenUnit }: { guiId: string; onClose: () => void; onChanged: () => void; nested?: boolean; actions?: ReactNode; onOpenUnit?: (unitId: string) => void }) {
   const toast = useToast();
   const isMobile = useIsMobile();
   const auth = useAuth();
@@ -165,7 +165,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const g = data.phieu_gui;
   const isNhap = g.trang_thai === "nhap";
   // 08/11/2026: moi nguoi xem duoc thung deu bam duoc don de mo UI chi tiet (backend kiem quyen; KTV chu thung xem duoc don cua minh).
-  const canOpenUnit = !nested && !!user;
+  // 08/11/2026: mo long (tu chi tiet don) thi bam don se chuyen chi tiet don dang mo sang don do (onOpenUnit), khong chong lop thu 3.
+  const canOpenUnit = (!nested || !!onOpenUnit) && !!user;
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
   // 30/10/2026 (ra soat UX mobile KTV, de xuat 4): KTV / dien thoai -> danh sach don len dau, van chuyen
   // thu gon 1 dong, chi 1 nut luu (o day), nhan trang thai theo goc nhin KTV, an Mien / SLA / doi tru.
@@ -391,7 +392,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   return (
                     <div
                       key={d.id}
-                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : setOpenUnit(`${d.id}-1`)) : undefined}
+                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : onOpenUnit ? onOpenUnit(`${d.id}-1`) : setOpenUnit(`${d.id}-1`)) : undefined}
                       className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
                       title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
                     >
@@ -699,7 +700,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                   return (
                     <div
                       key={d.id}
-                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : setOpenUnit(`${d.id}-1`)) : undefined}
+                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : onOpenUnit ? onOpenUnit(`${d.id}-1`) : setOpenUnit(`${d.id}-1`)) : undefined}
                       className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
                       title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
                     >

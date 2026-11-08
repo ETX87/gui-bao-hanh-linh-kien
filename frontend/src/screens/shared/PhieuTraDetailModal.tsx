@@ -123,7 +123,7 @@ function DienGiaiMisa({ units, mien, ktvTen }: { units: ReturnUnit[]; mien: stri
 // de mo chi tiet don); phai: nhat ky + anh dong goi. Kho o buoc "cho dong goi" nhap duoc Ma van don
 // (truoc day o nay chi hien luc "nhap" nen Kho bam "Gui hang" khong nhap duoc van don).
 
-export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void; nested?: boolean }) {
+export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested, onOpenUnit }: { traId: string; user: AppUser; onClose: () => void; onChanged: () => void; nested?: boolean; onOpenUnit?: (unitId: string) => void }) {
   const toast = useToast();
   const { nameOf } = useLkName();
   const [data, setData] = useState<DetailResponse | null>(null);
@@ -198,7 +198,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   const batBuocMa = false;
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
   // 08/11/2026: moi vai tro (ca KTV nhan hang, Kho, Ke toan) bam don trong phieu de mo UI chi tiet; backend kiem quyen.
-  const canOpenUnit = !nested;
+  const canOpenUnit = !nested || !!onOpenUnit;
 
   const luuMisaKT = () => run(async () => { await api.post(`/phieu-tra/${traId}/ma-misa`, { ma_misa: maMisa }); toast("Đã lưu mã MISA.", "ok"); });
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });
@@ -573,7 +573,7 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
               simple={ktvView}
               units={data.don_vi}
               xacMode={isDoiTacKey(t.ktv_nhan)}
-              onOpen={canOpenUnit ? (u) => setOpenUnit(u.id) : undefined}
+              onOpen={canOpenUnit ? (u) => (onOpenUnit ? onOpenUnit(u.id) : setOpenUnit(u.id)) : undefined}
               emptyText="Phiếu chưa có đơn nào."
               rowExtra={
                 canEdit
