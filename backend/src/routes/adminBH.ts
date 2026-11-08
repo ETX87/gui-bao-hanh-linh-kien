@@ -390,7 +390,17 @@ adminBH.get("/don-vi/:id", async (c) => {
   const uRow = u as { parent_id: string; nguoi_sua_chua: string | null };
   const p = await c.env.DB.prepare("SELECT * FROM phieu_sua_chua_bh WHERE id = ?").bind(uRow.parent_id).first<{ phieu_gui_id: string | null; ma_lk: string | null; loai_doi_tru_de_xuat: string | null }>();
   // 06/11/2026: Kho / Ke toan cung xem duoc chi tiet don (mo tu Cap linh kien / Phieu tra) - chi xem, nut thao tac van theo vai tro.
-  const allowed = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_ke_toan || uRow.nguoi_sua_chua === user.email;
+  let allowed = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_ke_toan || uRow.nguoi_sua_chua === user.email;
+  // 08/11/2026 - "danh sách đơn bảo hành trong phiếu, cho phép người dùng click vào để mở UI chi tiết": KTV so huu / tao ho
+  // thung chua don, hoac KTV nhan phieu tra chua don vi, cung xem duoc (chi xem; bao cao sai / thu hoi van an).
+  let laKtvXem = false;
+  if (!allowed) {
+    const own = await c.env.DB.prepare(
+      `SELECT 1 AS ok FROM phieu_gui_bh g WHERE g.id = ? AND (LOWER(g.nguoi_tao) = LOWER(?) OR LOWER(COALESCE(g.nguoi_tao_ho, '')) = LOWER(?))
+       UNION ALL SELECT 1 FROM phieu_tra_bh t WHERE t.id = ? AND LOWER(t.ktv_nhan) = LOWER(?) LIMIT 1`,
+    ).bind(p?.phieu_gui_id ?? "", user.email, user.email, (u as { phieu_tra_id: string | null }).phieu_tra_id ?? "", user.email).first();
+    allowed = laKtvXem = !!own;
+  }
   if (!allowed) return c.json({ error: "FORBIDDEN" }, 403);
 
   // Ghep them 2 truong cua don cha (ma_lk/loai_doi_tru_de_xuat) truc tiep vao don_vi tra ve - de
@@ -423,7 +433,7 @@ adminBH.get("/don-vi/:id", async (c) => {
   // 11/10/2026 - UI chi tiet "tat ca trong mot": tom tat chung tu lien ket (xem nhanh tai cho, khong goi
   // them API khi bam), thong tin KTV (danh ba), don Odoo + lan bao dvbh, trao doi cua phieu gui.
   const pFull = p as { phieu_gui_id: string | null; odoo_id: number | null; email_gs: string | null } | null;
-  const canGhiChu = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_nv_sua_chua;
+  const canGhiChu = user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view || user.la_kho || user.la_nv_sua_chua || laKtvXem;
   const [phieuGui, phieuTra, odoo, ktvInfo, ghiChu] = await Promise.all([
     pFull?.phieu_gui_id
       ? c.env.DB.prepare(

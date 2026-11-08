@@ -1,4 +1,5 @@
 import type { Env } from "../types";
+import { normCaseId } from "./caseNgay";
 
 // Diem noi toi he DVBH goc (tra cuu case_dvbh theo ID, CHI DOC) - port DUNG tu
 // linh-kien-app/backend/src/lib/caseLookupClient.ts (doc truc tiep file do truoc khi viet, khong doan
@@ -46,7 +47,9 @@ export type CaseLookupResult =
   | { status: "not_found" }
   | { status: "error" };
 
-export async function lookupCaseEx(id: string, env: Env): Promise<CaseLookupResult> {
+export async function lookupCaseEx(rawId: string, env: Env): Promise<CaseLookupResult> {
+  // 08/11/2026: chuan hoa ngay tai day (sc… -> SC…) de MOI duong goi (them don, cron xac minh, dong bo bang chung) deu dung.
+  const id = normCaseId(rawId);
   const url = `${env.CASE_LOOKUP_BASE_URL.replace(/\/$/, "")}/api/partner/case-lookup?id=${encodeURIComponent(id)}`;
   try {
     // Service Binding (khong fetch() thang URL) - 2 Worker cung 1 tai khoan Cloudflare bi chan loi

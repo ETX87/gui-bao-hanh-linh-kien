@@ -197,7 +197,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested }:
   // 20/10/2026: "mã misa ko bắt buộc ở bước admin bh (mã misa là bước của kế toán - admin bh có thể nhập hoặc không)".
   const batBuocMa = false;
   // Xem chi tiet tung don vi: vai tro duoc GET /admin/don-vi/:id (KTV khong co quyen).
-  const canOpenUnit = !nested && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
+  // 08/11/2026: moi vai tro (ca KTV nhan hang, Kho, Ke toan) bam don trong phieu de mo UI chi tiet; backend kiem quyen.
+  const canOpenUnit = !nested;
 
   const luuMisaKT = () => run(async () => { await api.post(`/phieu-tra/${traId}/ma-misa`, { ma_misa: maMisa }); toast("Đã lưu mã MISA.", "ok"); });
   const saveCodes = () => run(async () => { await api.patch(`/phieu-tra/${traId}`, { ma_don_hang: maDonHang, ma_misa: maMisa, ma_van_don: maVanDon }); toast("Đã lưu mã.", "ok"); });

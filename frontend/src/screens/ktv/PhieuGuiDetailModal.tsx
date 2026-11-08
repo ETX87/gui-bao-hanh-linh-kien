@@ -164,7 +164,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   }
   const g = data.phieu_gui;
   const isNhap = g.trang_thai === "nhap";
-  const canOpenUnit = !nested && !!user && (user.la_admin_bh || user.la_qtri || user.la_giam_sat || user.la_view);
+  // 08/11/2026: moi nguoi xem duoc thung deu bam duoc don de mo UI chi tiet (backend kiem quyen; KTV chu thung xem duoc don cua minh).
+  const canOpenUnit = !nested && !!user;
   const tienDoOf = (parentId: string) => (data.tien_do ?? []).filter((x) => x.parent_id === parentId);
   // 30/10/2026 (ra soat UX mobile KTV, de xuat 4): KTV / dien thoai -> danh sach don len dau, van chuyen
   // thu gon 1 dong, chi 1 nut luu (o day), nhan trang thai theo goc nhin KTV, an Mien / SLA / doi tru.

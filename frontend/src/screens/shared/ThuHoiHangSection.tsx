@@ -22,7 +22,8 @@ export function ThuHoiHangSection({ unit, user, onSaved }: { unit: DonVi; user: 
   const [ghiChu, setGhiChu] = useState(unit.thu_hoi_hang_ghi_chu || "");
   const [busy, setBusy] = useState(false);
 
-  if (!canEdit && !coSoLieu) return null;
+  // KTV mo chi tiet don cua minh (08/11/2026) khong xem so tien thu hoi tu hang.
+  if (!canEdit && (!coSoLieu || !(user.la_giam_sat || user.la_view || user.la_kho))) return null;
 
   const digits = soTien.replace(/[^\d]/g, "");
   const save = async () => {
