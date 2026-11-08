@@ -6516,3 +6516,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** script Node sửa file không khớp chuỗi vì file CRLF → dùng Edit / chuẩn hoá xuống dòng trước khi so.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Kiểm tra trên D1 production: DH-004670 đã là mã chữ hoa và đang chờ xác minh lại. Chưa bấm thử giao diện bằng tài khoản KTV thật.
+
+**Deploy (08/11/2026):** `npm run deploy` (Version ID `fd1973fc`), không có migration mới.
