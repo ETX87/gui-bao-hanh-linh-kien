@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select, SectionLabel } from "../../ui/primitives";
+import { Btn, Field, Input, Select, SectionLabel, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
@@ -36,6 +36,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [loaiDoiTru, setLoaiDoiTru] = useState(unit.loai_doi_tru || unit.loai_doi_tru_de_xuat || "doi_tra");
   const [huongXuLy, setHuongXuLy] = useState(unit.huong_xu_ly || "");
   const [nguoiSuaChua, setNguoiSuaChua] = useState(unit.nguoi_sua_chua || "");
+  const [ghiChuHuy, setGhiChuHuy] = useState(unit.ghi_chu_huy || "");
   const [lyDoTuChoi, setLyDoTuChoi] = useState(unit.ly_do_tu_choi || "");
   // 29/10/2026: B = linh kien thuc te gui ve (mac dinh = A KTV chon), C = linh kien doi moi (trong = giong B).
   const [maLkNhan, setMaLkNhan] = useState(unit.ma_lk_nhan || unit.ma_lk || "");
@@ -61,6 +62,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         huong_xu_ly: huongXuLy,
         nguoi_sua_chua: needsNv ? nguoiSuaChua : undefined,
         ly_do_tu_choi: needsTuChoi ? lyDoTuChoi : undefined,
+        ghi_chu_huy: needsTuChoi ? ghiChuHuy : undefined,
         // "" = bo (B ve giong A, C ve giong B).
         ma_lk_nhan: maLkNhan && maLkNhan !== unit.ma_lk ? maLkNhan : "",
         ma_lk_thuc_te: maLkThucTe && maLkThucTe !== maLkNhan ? maLkThucTe : "",
@@ -165,6 +167,11 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
                 </option>
               ))}
             </Select>
+          </Field>
+        )}
+        {needsTuChoi && (
+          <Field label="Ghi chú huỷ (tuỳ chọn)">
+            <Textarea rows={2} value={ghiChuHuy} onChange={(e) => setGhiChuHuy(e.target.value)} placeholder="Mô tả thêm lý do huỷ / từ chối…" />
           </Field>
         )}
         {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} />}

@@ -608,6 +608,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                   {u.ma_phe_duyet && <Kv k="Mã phê duyệt" v={u.ma_phe_duyet} />}
                   {u.so_lan_yeu_cau_lam_lai > 0 && <Kv k="Số lần làm lại" v={u.so_lan_yeu_cau_lam_lai} />}
                   {u.ly_do_tu_choi && <Kv k="Lý do huỷ" v={u.ly_do_tu_choi} wide />}
+                  {u.ghi_chu_huy && <Kv k="Ghi chú huỷ" v={u.ghi_chu_huy} wide />}
                 </dl>
               ) : (
                 <p className="text-[13px] text-[var(--ink-soft)]">

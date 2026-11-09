@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select } from "../../ui/primitives";
+import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
 import { FAST_ACTION_ICONS } from "../../lib/constants";
 import { isOverdue } from "../../lib/format";
 import { useNvList } from "../../hooks/useNvList";
@@ -78,8 +78,10 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   const overdue = overdueCount > 0;
   const needsNv = meta.huong && ["sua_chua", "dich_vu_tinh_phi"].includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";
-  // "Từ chối" (khong co ly do huy dat san) phai hoi ly do huy (ra soat Admin BH 05/10/2026).
-  const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
+  // "Từ chối" phai hoi ly do huy (ra soat Admin BH 05/10/2026). 09/11/2026: "Khi admin BH hủy hoặc từ
+  // chối 1 đơn bh, phải chọn lý do hủy và ghi chú (tùy chọn)" -> MOI nut huy deu mo form (ke ca "Huỷ do
+  // không có hàng": ly do chon san, doi duoc) + o ghi chu tuy chon.
+  const needsLyDoTuChoi = meta.huong === "tu_choi";
   // Doi moi (20/10/2026): "Khi duyệt nhanh, trả xác mặc định là trả đối tác (đi tắt qua luôn). Admin bh
   // có thể thay đổi sau." -> khong hoi xu ly xac nua, backend tu ghi tra_doi_tac (doi lai trong UI chi tiet).
   const needsXuLyXac = false;
@@ -89,7 +91,8 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   const [mailPd, setMailPd] = useState("");
   const [maPd, setMaPd] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
-  const [lyDoTuChoi, setLyDoTuChoi] = useState("");
+  const [lyDoTuChoi, setLyDoTuChoi] = useState(meta.lyDoTuChoi || "");
+  const [ghiChuHuy, setGhiChuHuy] = useState("");
   const xuLyXac = "";
   const [busy, setBusy] = useState(false);
 
@@ -109,6 +112,7 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
       ma_phe_duyet: maPd || undefined,
       ly_do_cham: overdue ? lyDoCham : undefined,
       ly_do_tu_choi: needsLyDoTuChoi ? lyDoTuChoi : undefined,
+      ghi_chu_huy: needsLyDoTuChoi ? ghiChuHuy : undefined,
       xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
     };
     try {
@@ -158,12 +162,17 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
           <Field label="Lý do huỷ" required>
             <Select value={lyDoTuChoi} onChange={(e) => setLyDoTuChoi(e.target.value)}>
               <option value="">— Chọn lý do —</option>
-              {lyDoTuChoiList.filter((l) => !!l.bat_tat).map((l) => (
+              {lyDoTuChoiList.filter((l) => !!l.bat_tat || l.noi_dung === lyDoTuChoi).map((l) => (
                 <option key={l.id} value={l.noi_dung}>
                   {l.noi_dung}
                 </option>
               ))}
             </Select>
+          </Field>
+        )}
+        {needsLyDoTuChoi && (
+          <Field label="Ghi chú huỷ (tuỳ chọn)">
+            <Textarea rows={2} value={ghiChuHuy} onChange={(e) => setGhiChuHuy(e.target.value)} placeholder="Mô tả thêm lý do huỷ / từ chối…" />
           </Field>
         )}
         {needsMailPd && (

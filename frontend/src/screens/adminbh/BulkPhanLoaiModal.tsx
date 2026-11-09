@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
-import { Btn, Field, Input, Select, SectionLabel } from "../../ui/primitives";
+import { Btn, Field, Input, Select, SectionLabel, Textarea } from "../../ui/primitives";
 import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV } from "../../lib/constants";
 import { useLyDoTuChoi, useLyDoCham } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
@@ -32,6 +32,7 @@ export function BulkPhanLoaiModal({ unitIds, units = [], onClose, onDone }: { un
   const [loaiDoiTru, setLoaiDoiTru] = useState("theo_de_xuat"); // moi don theo de xuat cua KTV (giong FAST)
   const [huongXuLy, setHuongXuLy] = useState("");
   const [nguoiSuaChua, setNguoiSuaChua] = useState("");
+  const [ghiChuHuy, setGhiChuHuy] = useState("");
   const [lyDoTuChoi, setLyDoTuChoi] = useState("");
   const [xuLyXac, setXuLyXac] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
@@ -55,6 +56,7 @@ export function BulkPhanLoaiModal({ unitIds, units = [], onClose, onDone }: { un
         huong_xu_ly: huongXuLy,
         nguoi_sua_chua: needsNv ? nguoiSuaChua : undefined,
         ly_do_tu_choi: needsTuChoi ? lyDoTuChoi : undefined,
+        ghi_chu_huy: needsTuChoi ? ghiChuHuy : undefined,
         xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
         ly_do_cham: lyDoCham || undefined,
       });
@@ -167,6 +169,11 @@ export function BulkPhanLoaiModal({ unitIds, units = [], onClose, onDone }: { un
                 </option>
               ))}
             </Select>
+          </Field>
+        )}
+        {needsTuChoi && (
+          <Field label="Ghi chú huỷ (tuỳ chọn)">
+            <Textarea rows={2} value={ghiChuHuy} onChange={(e) => setGhiChuHuy(e.target.value)} placeholder="Mô tả thêm lý do huỷ / từ chối…" />
           </Field>
         )}
         {needsXuLyXac && <XuLyXacField value={xuLyXac} onChange={setXuLyXac} count={unitIds.length} />}

@@ -492,6 +492,7 @@ interface PhanLoaiBody {
   huong_xu_ly?: HuongXuLy;
   nguoi_sua_chua?: string;
   ly_do_tu_choi?: string;
+  ghi_chu_huy?: string; // 09/11/2026 - ghi chu tuy chon khi huy
   ma_lk_thuc_te?: string | null; // C - linh kien doi moi / thay the (NULL = giong B)
   ma_lk_nhan?: string | null; // B - linh kien thuc te gui ve, Admin xac nhan (NULL = giong A cua don cha)
   ly_do_cham?: string;
@@ -529,7 +530,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     .prepare(
       `UPDATE phieu_sua_chua_bh_ct SET
          loai_bao_hanh = ?, thong_tin_mail_pd = ?, ma_phe_duyet = ?, huong_xu_ly = ?, loai_doi_tru = ?,
-         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ma_lk_thuc_te = CASE WHEN ? IS NULL THEN ma_lk_thuc_te ELSE NULLIF(?, '') END, ma_lk_nhan = CASE WHEN ? IS NULL THEN ma_lk_nhan ELSE NULLIF(?, '') END, xu_ly_xac = ?, trang_thai = ?, updated_at = ?
+         nguoi_sua_chua = ?, ly_do_tu_choi = ?, ghi_chu_huy = ?, ma_lk_thuc_te = CASE WHEN ? IS NULL THEN ma_lk_thuc_te ELSE NULLIF(?, '') END, ma_lk_nhan = CASE WHEN ? IS NULL THEN ma_lk_nhan ELSE NULLIF(?, '') END, xu_ly_xac = ?, trang_thai = ?, updated_at = ?
        WHERE id = ?`,
     )
     .bind(
@@ -540,6 +541,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       body.loai_doi_tru,
       HUONG_CAN_NV.includes(body.huong_xu_ly) ? body.nguoi_sua_chua : null,
       body.huong_xu_ly === "tu_choi" ? body.ly_do_tu_choi : null,
+      body.huong_xu_ly === "tu_choi" ? body.ghi_chu_huy?.trim().slice(0, 2000) || null : null,
       // undefined/null = giu nguyen, "" = bo (ve mac dinh).
       body.ma_lk_thuc_te ?? null,
       body.ma_lk_thuc_te ?? null,
@@ -559,7 +561,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     trangThaiMoi,
     actor,
     `Admin BH phân loại: ${LBL[body.loai_bao_hanh] || body.loai_bao_hanh} / ${LBL[body.huong_xu_ly] || body.huong_xu_ly} / Đối trừ: ${LBL[body.loai_doi_tru] || body.loai_doi_tru}` +
-      (body.huong_xu_ly === "tu_choi" ? ` | Lý do huỷ: ${body.ly_do_tu_choi}` : "") +
+      (body.huong_xu_ly === "tu_choi" ? ` | Lý do huỷ: ${body.ly_do_tu_choi}` + (body.ghi_chu_huy?.trim() ? ` | Ghi chú: ${body.ghi_chu_huy.trim().slice(0, 2000)}` : "") : "") +
       (body.huong_xu_ly === "doi_moi" ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
       (body.ma_lk_nhan ? ` | LK thực tế gửi về: ${body.ma_lk_nhan}` : "") +
       (body.ma_lk_thuc_te ? ` | LK đổi mới: ${body.ma_lk_thuc_te}` : "") +
@@ -900,7 +902,7 @@ async function hoanTacDonVi(db: D1Database, id: string, actor: string, lyDo: str
   if (!u) return { error: "NOT_FOUND" };
   const now = nowVN();
   const RESET_PL =
-    "huong_xu_ly = NULL, loai_bao_hanh = NULL, loai_doi_tru = NULL, nguoi_sua_chua = NULL, ly_do_tu_choi = NULL, xu_ly_xac = NULL, thong_tin_mail_pd = NULL, ma_phe_duyet = NULL, ket_qua_chan_doan = NULL, ket_qua_nv = NULL, ghi_chu_nv = NULL, admin_xac_nhan_hoan_tat = 0, phieu_tra_id = NULL";
+    "huong_xu_ly = NULL, loai_bao_hanh = NULL, loai_doi_tru = NULL, nguoi_sua_chua = NULL, ly_do_tu_choi = NULL, ghi_chu_huy = NULL, xu_ly_xac = NULL, thong_tin_mail_pd = NULL, ma_phe_duyet = NULL, ket_qua_chan_doan = NULL, ket_qua_nv = NULL, ghi_chu_nv = NULL, admin_xac_nhan_hoan_tat = 0, phieu_tra_id = NULL";
   let den: string;
   let ghi = "";
   if (u.trang_thai === "ket_thuc_tu_choi" || u.trang_thai === "ket_thuc_chuyen_kho") {
@@ -1037,6 +1039,7 @@ interface FastActionBody {
   mail_pd?: string;
   ma_phe_duyet?: string;
   ly_do_tu_choi?: string;
+  ghi_chu_huy?: string;
   ly_do_cham?: string;
   xu_ly_xac?: string;
 }
@@ -1081,6 +1084,7 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
   if (!["cho_phan_loai", "admin_can_xem_lai"].includes(unit.trang_thai)) return { error: "WRONG_STATE" };
   const needsNv = meta.huong && HUONG_CAN_NV.includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";
+  // 09/11/2026: huy luon co ly do - nut co ly do dat san (Huy do khong co hang) dung lam mac dinh, Admin doi duoc.
   const needsLyDoTuChoi = meta.huong === "tu_choi" && !meta.lyDoTuChoi;
   if (needsNv && !body.nv) return { error: "REQUIRE_NV" };
   if (needsMailPd && !body.mail_pd?.trim()) return { error: "REQUIRE_MAIL_PD" };
@@ -1098,7 +1102,8 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
       loai_doi_tru: loaiDoiTru,
       huong_xu_ly: meta.huong,
       nguoi_sua_chua: body.nv,
-      ly_do_tu_choi: meta.lyDoTuChoi || body.ly_do_tu_choi,
+      ly_do_tu_choi: body.ly_do_tu_choi?.trim() || meta.lyDoTuChoi,
+      ghi_chu_huy: body.ghi_chu_huy,
       ly_do_cham: body.ly_do_cham,
       // 20/10/2026: FAST Doi moi khong hoi xu ly xac - mac dinh "tra doi tac", Admin doi lai sau.
       xu_ly_xac: meta.huong === "doi_moi" ? body.xu_ly_xac || "tra_doi_tac" : body.xu_ly_xac,

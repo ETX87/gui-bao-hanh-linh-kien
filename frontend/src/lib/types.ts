@@ -115,6 +115,7 @@ export interface DonVi {
   loai_doi_tru: string | null;
   nguoi_sua_chua: string | null;
   ly_do_tu_choi: string | null;
+  ghi_chu_huy?: string | null; // 09/11/2026
   xu_ly_xac: string | null;
   ket_qua_chan_doan: string | null;
   ket_qua_nv?: string | null; // 12/10/2026: da_sua_xong | khong_sua_duoc | khong_loi | kiem_tra_tu_van
