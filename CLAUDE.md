@@ -6536,3 +6536,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** `backend/src/routes/adminBH.ts` đang có thay đổi dở của 1 phiên khác (sửa mã case, `lib/kiemTraCase.ts`) → chỉ commit phần của đợt này (dựng bản stage = HEAD + bản vá riêng), deploy từ git worktree sạch.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi (cả bản đang làm lẫn bản commit trong worktree). Chưa bấm thử giao diện / gọi API local.
+
+**Deploy (09/11/2026):** áp migration 0029 lên D1 production và `npm run deploy` từ git worktree sạch (Version ID `5239b3d8`).
