@@ -216,8 +216,10 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   ) {
     buttons.push({ label: "↩ Lùi lại", onClick: () => setSub("hoan-tac") });
   }
-  if (user.la_nv_sua_chua && u.trang_thai === "cho_chan_doan" && u.nguoi_sua_chua === user.email) {
-    buttons.push({ label: "🔧 Nộp kết quả sửa chữa", onClick: () => setSub("chan-doan"), variant: "primary" });
+  if (u.trang_thai === "cho_chan_doan") {
+    if (user.la_nv_sua_chua && u.nguoi_sua_chua === user.email) buttons.push({ label: "🔧 Nộp kết quả sửa chữa", onClick: () => setSub("chan-doan"), variant: "primary" });
+    // 10/11/2026: Admin BH / qtri nop ket qua HO NV (giong "Đề xuất hộ NV").
+    else if (user.la_admin_bh || user.la_qtri) buttons.push({ label: "🔧 Nộp kết quả hộ NV", onClick: () => setSub("chan-doan"), variant: "primary" });
   }
 
   const daPhanLoai = !!(u.loai_bao_hanh || u.huong_xu_ly);

@@ -70,11 +70,15 @@ interface ChanDoanBody {
 
 nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   const user = c.get("user");
-  if (!requireNv(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  // 10/11/2026: "sao admin không thấy hiện các nút chức năng như nhân viên sửa chữa?" -> Admin BH / qtri nop ket qua HO NV.
+  const laAdmin = user.la_admin_bh || user.la_qtri;
+  if (!requireNv(c) && !laAdmin) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
   const u = await c.env.DB.prepare("SELECT trang_thai, updated_at, nguoi_sua_chua FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; updated_at: string; nguoi_sua_chua: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
-  if (u.trang_thai !== "cho_chan_doan" || u.nguoi_sua_chua !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  if (u.trang_thai !== "cho_chan_doan") return c.json({ error: "WRONG_STATE" }, 400);
+  const hoNv = u.nguoi_sua_chua !== user.email;
+  if (hoNv && !laAdmin) return c.json({ error: "FORBIDDEN" }, 403);
 
   const body = await c.req.json<ChanDoanBody>().catch(() => ({}) as ChanDoanBody);
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
@@ -96,7 +100,7 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   for (const url of body.anh_loi_thuc_te || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'loi_thuc_te', ?)").bind(id, url));
   if (statements.length) await c.env.DB.batch(statements);
 
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, "NV nộp kết quả: " + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (ghiChu ? ` | Ghi chú: ${ghiChu}` : "") + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, (hoNv ? `Admin BH nộp kết quả hộ NV ${u.nguoi_sua_chua || "(chưa gán)"}: ` : "NV nộp kết quả: ") + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (ghiChu ? ` | Ghi chú: ${ghiChu}` : "") + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
 
   // 20/10/2026: "ktv sửa chữa sửa xong => đẩy sang kho luôn (tự tạo 1 phiếu trả hàng và đẩy qua kho, bỏ qua
   // admin bh xác nhận, bỏ qua kế toán duyệt)". Ket qua "Đã sửa xong" -> tu hoan tat + vao phieu tra trang
