@@ -6565,3 +6565,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** thư mục làm việc còn thay đổi dở của phiên khác (`adminBH.ts`, `phieuGui.ts`, `api.ts`, `lib/kiemTraCase.ts`) → chỉ commit file của đợt này, deploy từ git worktree sạch.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa bấm thử giao diện / gọi API local.
+
+**Deploy (10/11/2026):** `npm run deploy` từ git worktree sạch (Version ID `1ca6d581`), không có migration mới.
