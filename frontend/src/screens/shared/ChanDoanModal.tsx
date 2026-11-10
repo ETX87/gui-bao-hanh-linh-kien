@@ -37,12 +37,15 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
       .catch(() => undefined);
   }, [unit.id]);
 
-  const submit = async () => {
+  const [xacNhanBanGiao, setXacNhanBanGiao] = useState(false);
+
+  const submit = async (banGiao = false) => {
     setBusy(true);
     try {
       const [anh_truoc, anh_sau, anh_loi_thuc_te] = await Promise.all([filesToDataUrls(anhTruoc), filesToDataUrls(anhSau), filesToDataUrls(anhLoi)]);
-      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: ketQua, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined });
-      toast(r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
+      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: banGiao ? "da_sua_xong" : ketQua, ban_giao: banGiao || undefined, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined });
+      setXacNhanBanGiao(false);
+      toast(banGiao ? "Đã bàn giao máy — đơn đã kết thúc." : r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -52,16 +55,20 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   };
 
   const valid = ketQua && (!overdue || lyDoCham);
+  const validBanGiao = !overdue || lyDoCham;
 
   return (
     <Modal
       title={`Nộp kết quả sửa chữa — ${unit.id}`}
       onClose={onClose}
-      maxWidthClass="max-w-md"
+      maxWidthClass="max-w-lg"
       footerActions={
         <>
           <Btn onClick={onClose}>Huỷ</Btn>
-          <Btn variant="primary" disabled={!valid || busy} onClick={submit}>
+          <Btn variant="success" disabled={!validBanGiao || busy} onClick={() => setXacNhanBanGiao(true)} title="Máy đã sửa xong và đã giao lại — kết thúc toàn bộ quy trình">
+            ✔ Đã bàn giao máy (kết thúc luôn)
+          </Btn>
+          <Btn variant="primary" disabled={!valid || busy} onClick={() => submit(false)}>
             Nộp kết quả
           </Btn>
         </>
@@ -87,7 +94,7 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
             Còn {soChoCap} đề xuất linh kiện chưa được cấp — nộp kết quả sẽ tự huỷ các đề xuất này.
           </p>
         )}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 [&>*]:min-w-0">
           <Field label="Ảnh trước sửa">
             <ImagePicker compact onChange={setAnhTruoc} />
           </Field>
@@ -99,6 +106,30 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
           </Field>
         </div>
       </div>
+      {xacNhanBanGiao && (
+        <Modal
+          title="Xác nhận đã bàn giao máy"
+          onClose={() => setXacNhanBanGiao(false)}
+          maxWidthClass="max-w-md"
+          footerActions={
+            <>
+              <Btn onClick={() => setXacNhanBanGiao(false)}>Quay lại</Btn>
+              <Btn variant="danger" disabled={busy} onClick={() => submit(true)}>
+                {busy ? "Đang lưu…" : "Xác nhận kết thúc"}
+              </Btn>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm">
+            <p className="rounded-lg bg-[var(--red-100)] px-3 py-2 font-semibold text-[var(--red-700)]">
+              ⚠ Xác nhận này sẽ KẾT THÚC TẤT CẢ luồng quy trình của đơn {unit.id}.
+            </p>
+            <p>Máy này sẽ được tính là <b>đã sửa xong</b> và <b>đã bàn giao xong</b> — không qua Admin xác nhận, Kế toán duyệt hay Kho gửi trả nữa.</p>
+            {soChoCap > 0 && <p className="text-[var(--amber-800)]">{soChoCap} đề xuất linh kiện chưa cấp sẽ tự huỷ.</p>}
+            <p className="text-[var(--ink-soft)]">Bạn có chắc chắn không?</p>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 }

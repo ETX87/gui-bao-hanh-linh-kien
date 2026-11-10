@@ -66,6 +66,8 @@ interface ChanDoanBody {
   anh_loi_thuc_te?: string[];
   ly_do_cham?: string;
   ghi_chu?: string;
+  // 10/11/2026: "Đã bàn giao máy (kết thúc luôn)" - tinh la da sua xong + da ban giao, ket thuc toan bo luong.
+  ban_giao?: boolean;
 }
 
 nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
@@ -81,6 +83,7 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (hoNv && !laAdmin) return c.json({ error: "FORBIDDEN" }, 403);
 
   const body = await c.req.json<ChanDoanBody>().catch(() => ({}) as ChanDoanBody);
+  if (body.ban_giao) body.ket_qua_chan_doan = "da_sua_xong";
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
   if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
@@ -106,12 +109,38 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   // admin bh xác nhận, bỏ qua kế toán duyệt)". Ket qua "Đã sửa xong" -> tu hoan tat + vao phieu tra trang
   // thai "da_duyet_ke_toan" (cho Kho dong goi/gui). Gop vao phieu NV nay da tu tao trong ngay cho cung KTV +
   // loai doi tru neu Kho chua dong goi; khong thi tao phieu moi + bao sang khovan.
+  if (body.ban_giao) {
+    const r = await banGiaoKetThuc(c.env.DB, id, user.email, ghiChu);
+    return c.json({ ok: true, phieu_tra_id: r, ban_giao: true });
+  }
   if (body.ket_qua_chan_doan === "da_sua_xong") {
     const r = await dayThangSangKho(c.env, id, user.email);
     return c.json({ ok: true, phieu_tra_id: r });
   }
   return c.json({ ok: true });
 });
+
+// 10/11/2026: NV da ban giao may truc tiep -> ket thuc toan bo luong: don vi hoan tat + 1 phieu tra rieng o
+// trang thai ket thuc "ktv_da_nhan" (giai doan "Hoàn tất", bao dvbh hoan_tat). Khong qua Kho / Ke toan, khong bao khovan.
+async function banGiaoKetThuc(db: D1Database, unitId: string, actor: string, ghiChu: string | null): Promise<string | null> {
+  const u = await db
+    .prepare(`SELECT u.loai_doi_tru, u.phieu_tra_id, g.nguoi_tao AS ktv FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE u.id = ?`)
+    .bind(unitId)
+    .first<{ loai_doi_tru: string | null; phieu_tra_id: string | null; ktv: string | null }>();
+  if (!u || u.phieu_tra_id) return null;
+  const ktvKey = u.ktv ?? KHACH_LE_KEY;
+  const loai = u.loai_doi_tru === "tru_cong_no" ? "tru_cong_no" : "doi_tra";
+  const now = nowVN();
+  await db.prepare("UPDATE phieu_sua_chua_bh_ct SET admin_xac_nhan_hoan_tat = 1, trang_thai = 'san_sang_gom_phieu_tra', updated_at = ? WHERE id = ?").bind(now, unitId).run();
+  const id = await nextSequentialId(db, "phieu_tra_bh", "TR");
+  const danhGia = "Đã bàn giao máy trực tiếp (NV sửa chữa xác nhận, kết thúc luôn)" + (ghiChu ? ` | ${ghiChu}` : "");
+  await db.prepare("INSERT INTO phieu_tra_bh (id, ktv_nhan, nguoi_tao, trang_thai, loai_doi_tru, ma_don_hang, danh_gia_ktv, created_at, updated_at) VALUES (?, ?, ?, 'ktv_da_nhan', ?, ?, ?, ?, ?)").bind(id, ktvKey, actor, loai, id, danhGia, now, now).run();
+  await db.prepare("UPDATE phieu_sua_chua_bh_ct SET phieu_tra_id = ? WHERE id = ?").bind(id, unitId).run();
+  await syncPhieuTraMien(db, id);
+  await addLog(db, "phieu_sc_ct", unitId, "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", actor, `Đã bàn giao máy (kết thúc luôn) — tính đã sửa xong + đã bàn giao, phiếu ${id}`);
+  await addLog(db, "phieu_tra", id, null, "ktv_da_nhan", actor, `Bàn giao trực tiếp đơn vị ${unitId} — kết thúc luôn, không qua Kho / Kế toán`);
+  return id;
+}
 
 async function dayThangSangKho(env: Env, unitId: string, actor: string): Promise<string | null> {
   const db = env.DB;

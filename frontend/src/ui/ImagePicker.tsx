@@ -88,12 +88,12 @@ export function ImagePicker({ onChange, label = "Ảnh", compact = false }: { on
   };
 
   const btn = `focus-within:ring-[3px] focus-within:ring-[rgba(21,128,63,0.15)] flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--brand-300)] bg-[var(--accent-soft)] px-3 text-[var(--accent-ink)] transition-colors hover:border-[var(--accent)] ${
-    compact ? "min-h-[56px] py-2" : "min-h-[72px] py-2.5"
+    compact ? "min-h-[44px] min-w-0 py-1.5 px-2" : "min-h-[72px] py-2.5"
   }`;
 
   return (
     <div>
-      <div className="flex gap-2">
+      <div className={compact ? "flex flex-col gap-1.5" : "flex gap-2"}>
         <label htmlFor={camId} className={btn} title={label}>
           <span className="text-xl leading-none">📷</span>
           <span className="text-sm font-semibold">Chụp ảnh</span>
@@ -101,7 +101,7 @@ export function ImagePicker({ onChange, label = "Ảnh", compact = false }: { on
         </label>
         <label htmlFor={libId} className={btn} title={label}>
           <span className="text-xl leading-none">🖼</span>
-          <span className="text-sm font-semibold">Chọn ảnh có sẵn</span>
+          <span className="text-sm font-semibold">{compact ? "Chọn ảnh" : "Chọn ảnh có sẵn"}</span>
           <input id={libId} type="file" accept="image/*" multiple className="sr-only" onChange={(e) => { const l = e.target.files; void add(l).finally(() => { e.target.value = ""; }); }} />
         </label>
       </div>
