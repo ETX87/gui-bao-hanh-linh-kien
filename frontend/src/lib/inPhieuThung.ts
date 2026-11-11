@@ -95,15 +95,24 @@ export function buildPhieuThungHtml(p: PhieuThungIn): string {
   td.c,th.c{text-align:center}td.b{font-weight:700;font-size:14px}
   .mono{font-family:Consolas,"Courier New",monospace;font-size:12px;white-space:nowrap}
   .gc{font-size:11.5px}
-  th.ck,td.ck{width:13mm}
+  tfoot{display:table-row-group}
   tfoot td{font-weight:700;background:#f5f5f5}
   .ky{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;text-align:center}
   .ky div{border:1px solid #999;border-radius:6px;padding:6px 6px 46px;font-size:12px}
   .ky b{display:block}.ky i{font-size:10.5px;color:#666}
   .note{margin-top:10px;font-size:11px;color:#444}
   tr{break-inside:avoid}thead{display:table-header-group}
-  @media print{body{background:#fff}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}}
-  @media (max-width:640px){.page{margin:0;padding:12px}.info{grid-template-columns:1fr 1fr}.head .id{font-size:22px}.mono{white-space:normal;word-break:break-all}}
+  table{table-layout:fixed}
+  @media print{
+    body{background:#fff;font-size:11.5px}
+    .bar{display:none}
+    .page{box-shadow:none;margin:0;padding:0;max-width:none;width:auto}
+    .info{grid-template-columns:repeat(3,1fr)}
+    .head .id{font-size:28px}
+    th,td{padding:4px 5px}
+    .mono{white-space:nowrap;word-break:normal;font-size:11px}
+  }
+  @media screen and (max-width:640px){.page{margin:0;padding:12px}.info{grid-template-columns:1fr 1fr}.head .id{font-size:22px}.mono{white-space:normal;word-break:break-all}}
 </style></head><body>
 <div class="bar"><button class="p" onclick="window.print()">🖨 In phiếu / Lưu PDF</button><button class="x" onclick="window.close()">Đóng</button></div>
 <div class="page">
@@ -128,9 +137,10 @@ export function buildPhieuThungHtml(p: PhieuThungIn): string {
     ${tt("In lúc", bayGio())}
   </div>
   <table>
+    <colgroup><col style="width:8mm"><col style="width:24mm"><col style="width:24mm"><col><col style="width:10mm"><col style="width:28mm"><col style="width:42mm"><col style="width:12mm"></colgroup>
     <thead><tr>
-      <th class="c" style="width:8mm">STT</th><th>ID đơn</th><th>Mã LK</th><th>Tên linh kiện</th>
-      <th class="c" style="width:11mm">SL</th><th>Mã SC</th><th>Ghi chú</th><th class="c ck">Kho ✓</th>
+      <th class="c">STT</th><th>ID đơn</th><th>Mã LK</th><th>Tên linh kiện</th>
+      <th class="c">SL</th><th>Mã SC</th><th>Ghi chú</th><th class="c ck">Kho ✓</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td colspan="4" style="text-align:right">Tổng cộng ${p.dong.length} đơn</td><td class="c">${tongSl}</td><td colspan="3"></td></tr></tfoot>
