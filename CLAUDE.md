@@ -6589,3 +6589,13 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** 1 mũi tên trong sơ đồ đè lên chữ → dời điểm đầu.
 
 **(d) Kiểm thử:** mở bằng Browser pane, xem bằng mắt phần đầu + sơ đồ luồng. Không đổi code → không tăng phiên bản, không deploy.
+
+## Tài liệu HTML mô tả luồng quy trình tổng của dự án (11/11/2026) — không đổi code
+
+**(a) Nguyên văn yêu cầu:** *"tạo file mô tả luồng quy trình tổng của dự án đổi trả bảo hành này, yêu cầu tương tự bản mô tả trước"* (bản trước = `Luong-Cap-Linh-Kien-Bao-Hanh.html`).
+
+**(b) Đã làm:** `du an sua chua bao hanh/Luong-Quy-Trinh-Tong-Bao-Hanh.html` — 1 file HTML tự chứa, cùng phong cách bản cấp linh kiện. 11 mục: tổng quan 5 chặng (Gửi hàng → Tiếp nhận → Phân loại → Xử lý → Trả hàng); đối tượng dữ liệu (thùng BH / đơn cha DH / đơn vị DH-…-n / phiếu trả TR / đề xuất DX); sơ đồ luồng 6 làn vai trò; vai trò + chức năng (KTV, Kho, Admin BH, NV, Kế toán, Giám sát · View · Admin hệ thống); 13 bước theo chặng; bảng 7 hướng xử lý; vòng đời trạng thái thùng / đơn vị / phiếu trả + tiến trình 5 bước KTV thấy; bảng 8 đường đi tắt; 4 hình minh hoạ màn hình; kết nối DVBH / linh-kien-app / khovan / MISA; quy tắc SLA, miền, linh kiện A/B/C, kiểm soát. 9 hình SVG vẽ tay mô phỏng (không phải ảnh chụp thật), nội dung theo hệ thống hiện hành v1.102.
+
+**(c) Vấn đề:** 2 nhãn trong sơ đồ luồng đè lên khung → dời chỗ.
+
+**(d) Kiểm thử:** mở bằng Browser pane, xem bằng mắt phần đầu + sơ đồ luồng (9 SVG render). Không đổi code → không tăng phiên bản, không deploy.

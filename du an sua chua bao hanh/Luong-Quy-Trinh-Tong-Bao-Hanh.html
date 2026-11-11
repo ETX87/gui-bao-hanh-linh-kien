@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luồng quy trình tổng — Bảo hành đổi trả 3T</title>
+<style>
+  :root{
+    --brand:#15803f; --brand-d:#116a34; --brand-50:#ecf8f0; --brand-100:#d3efdc;
+    --ink:#14261b; --body:#334a3c; --soft:#5f7568; --line:#d7e3db; --bg:#f4f8f5; --card:#fff;
+    --blue:#2563eb; --blue-50:#eaf1fe; --amber:#b7791f; --amber-50:#fdf6e3;
+    --violet:#7c3aed; --violet-50:#f2ecfe; --orange:#ea580c; --orange-50:#fff1e8;
+    --red:#dc2626; --red-50:#fdecec; --slate:#64748b; --slate-50:#f1f5f9; --teal:#0d9488; --teal-50:#e6f7f5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Plus Jakarta Sans","Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--body);line-height:1.6;font-size:15px}
+  header.hero{background:linear-gradient(135deg,#0f5a2d,#15803f 55%,#2a9d5a);color:#fff;padding:44px 24px 36px}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+  .hero h1{margin:0 0 8px;font-size:30px;line-height:1.25}
+  .hero p{margin:0;opacity:.92;max-width:820px}
+  .hero .meta{margin-top:14px;font-size:13px;opacity:.8}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .kpis span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600}
+  nav.toc{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  nav.toc .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px}
+  nav.toc a{font-size:13px;text-decoration:none;color:var(--brand-d);background:var(--brand-50);padding:5px 11px;border-radius:999px;font-weight:600}
+  nav.toc a:hover{background:var(--brand-100)}
+  section{padding:30px 0 6px}
+  h2{color:var(--ink);font-size:22px;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  h2 .n{background:var(--brand);color:#fff;font-size:14px;width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  h3{color:var(--ink);font-size:17px;margin:20px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(20,38,27,.04),0 6px 18px rgba(20,38,27,.05);margin-bottom:16px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .figure{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0 18px;overflow-x:auto}
+  .figure svg{display:block;width:100%;height:auto;min-width:760px}
+  .figure.small svg{min-width:0}
+  .cap{font-size:13px;color:var(--soft);text-align:center;margin-top:8px}
+  .role{border-radius:14px;padding:16px 18px;border:1px solid var(--line);background:#fff}
+  .role h4{margin:0 0 4px;font-size:16px;color:var(--ink)}
+  .role .where{font-size:12.5px;color:var(--soft);margin-bottom:8px}
+  .role ul{margin:0;padding-left:18px}
+  .role li{margin:3px 0}
+  .tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .t-gray{background:var(--slate-50);color:var(--slate)}
+  .t-blue{background:var(--blue-50);color:var(--blue)}
+  .t-amber{background:var(--amber-50);color:var(--amber)}
+  .t-violet{background:var(--violet-50);color:var(--violet)}
+  .t-orange{background:var(--orange-50);color:var(--orange)}
+  .t-green{background:var(--brand-50);color:var(--brand-d)}
+  .t-red{background:var(--red-50);color:var(--red)}
+  .t-teal{background:var(--teal-50);color:var(--teal)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--brand-50);color:var(--brand-d);font-weight:700;font-size:13px}
+  tr:last-child td{border-bottom:none}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps>li{counter-increment:s;position:relative;padding:12px 14px 12px 54px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:10px}
+  .steps>li::before{content:counter(s);position:absolute;left:14px;top:12px;width:28px;height:28px;border-radius:8px;background:var(--brand);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .steps b{color:var(--ink)}
+  .steps .who{float:right;margin-left:8px}
+  .note{border-left:4px solid var(--amber);background:var(--amber-50);padding:10px 14px;border-radius:8px;font-size:14px;margin:10px 0}
+  .note.green{border-color:var(--brand);background:var(--brand-50)}
+  code{background:var(--slate-50);padding:1px 6px;border-radius:5px;font-size:13px}
+  footer{padding:30px 0 40px;color:var(--soft);font-size:13px;text-align:center}
+  @media (max-width:640px){.hero h1{font-size:23px} .card{padding:16px} .steps .who{float:none;display:block;margin:4px 0 0}}
+  @media print{nav.toc{display:none} .card,.figure,.steps>li{break-inside:avoid} body{background:#fff}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>🔁 Luồng quy trình tổng — Bảo hành đổi trả 3T</h1>
+    <p>Mô tả toàn bộ hành trình của một linh kiện / máy lỗi: từ khi KTV hiện trường gửi về, Kho tiếp nhận, Admin bảo hành phân loại và xử lý (sửa chữa, đổi mới, trừ công nợ, huỷ…), tới khi hàng được trả lại KTV và kết thúc. Kèm vai trò tham gia, chức năng từng vai trò, trạng thái và các đường đi tắt.</p>
+    <div class="kpis"><span>8 vai trò</span><span>4 đối tượng chính: Thùng · Đơn · Phiếu trả · Đề xuất LK</span><span>SLA 24h / bước (bỏ Chủ nhật)</span><span>Chia 2 miền MB / MN</span></div>
+    <div class="meta">Áp dụng từ phiên bản 1.102 · suachua.dichvu3t.workers.dev · Cập nhật 11/11/2026</div>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#tongquan">1. Tổng quan</a>
+  <a href="#doituong">2. Đối tượng dữ liệu</a>
+  <a href="#luong">3. Sơ đồ luồng</a>
+  <a href="#vaitro">4. Vai trò</a>
+  <a href="#buoc">5. Các bước</a>
+  <a href="#huong">6. Hướng xử lý</a>
+  <a href="#trangthai">7. Trạng thái</a>
+  <a href="#tat">8. Đường đi tắt</a>
+  <a href="#manhinh">9. Màn hình</a>
+  <a href="#tichhop">10. Kết nối hệ thống</a>
+  <a href="#quytac">11. Quy tắc</a>
+</div></nav>
+
+<main class="wrap">
+
+<!-- 1 -->
+<section id="tongquan">
+  <h2><span class="n">1</span>Tổng quan</h2>
+  <div class="card">
+    <p style="margin-top:0">Hệ thống thay thế quy trình cũ trên AppSheet / Google Sheets (dừng 01/11/2026). Mỗi linh kiện lỗi đi qua <b>5 chặng lớn</b>; mỗi chặng có 1 vai trò chịu trách nhiệm, có hạn xử lý 24 giờ và được ghi nhật ký đầy đủ.</p>
+  </div>
+  <div class="figure">
+    <svg viewBox="0 0 1100 200" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="14">
+      <defs><marker id="a0" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8aa596"/></marker></defs>
+      <g>
+        <rect x="10" y="40" width="190" height="104" rx="16" fill="#eaf1fe" stroke="#2563eb"/>
+        <text x="105" y="72" text-anchor="middle" font-size="26">📦</text>
+        <text x="105" y="100" text-anchor="middle" font-weight="700" fill="#14261b">1 · Gửi hàng</text>
+        <text x="105" y="120" text-anchor="middle" font-size="12" fill="#5f7568">KTV đóng thùng, gửi xe</text>
+      </g>
+      <line x1="204" y1="92" x2="226" y2="92" stroke="#8aa596" stroke-width="2.5" marker-end="url(#a0)"/>
+      <g>
+        <rect x="232" y="40" width="190" height="104" rx="16" fill="#fff1e8" stroke="#ea580c"/>
+        <text x="327" y="72" text-anchor="middle" font-size="26">🏬</text>
+        <text x="327" y="100" text-anchor="middle" font-weight="700" fill="#14261b">2 · Tiếp nhận</text>
+        <text x="327" y="120" text-anchor="middle" font-size="12" fill="#5f7568">Kho nhận thùng → Admin</text>
+      </g>
+      <line x1="426" y1="92" x2="448" y2="92" stroke="#8aa596" stroke-width="2.5" marker-end="url(#a0)"/>
+      <g>
+        <rect x="454" y="40" width="190" height="104" rx="16" fill="#f2ecfe" stroke="#7c3aed"/>
+        <text x="549" y="72" text-anchor="middle" font-size="26">🛡️</text>
+        <text x="549" y="100" text-anchor="middle" font-weight="700" fill="#14261b">3 · Phân loại</text>
+        <text x="549" y="120" text-anchor="middle" font-size="12" fill="#5f7568">Admin BH chọn hướng xử lý</text>
+      </g>
+      <line x1="648" y1="92" x2="670" y2="92" stroke="#8aa596" stroke-width="2.5" marker-end="url(#a0)"/>
+      <g>
+        <rect x="676" y="40" width="190" height="104" rx="16" fill="#e6f7f5" stroke="#0d9488"/>
+        <text x="771" y="72" text-anchor="middle" font-size="26">🔧</text>
+        <text x="771" y="100" text-anchor="middle" font-weight="700" fill="#14261b">4 · Xử lý</text>
+        <text x="771" y="120" text-anchor="middle" font-size="12" fill="#5f7568">Sửa / đổi mới / trừ nợ / huỷ</text>
+      </g>
+      <line x1="870" y1="92" x2="892" y2="92" stroke="#8aa596" stroke-width="2.5" marker-end="url(#a0)"/>
+      <g>
+        <rect x="898" y="40" width="190" height="104" rx="16" fill="#ecf8f0" stroke="#15803f" stroke-width="2"/>
+        <text x="993" y="72" text-anchor="middle" font-size="26">🚚</text>
+        <text x="993" y="100" text-anchor="middle" font-weight="700" fill="#14261b">5 · Trả hàng</text>
+        <text x="993" y="120" text-anchor="middle" font-size="12" fill="#5f7568">KT duyệt · Kho gửi · KTV nhận</text>
+      </g>
+      <text x="550" y="22" text-anchor="middle" font-size="13" fill="#5f7568">Mỗi chặng có người chịu trách nhiệm, hạn 24h và nhật ký riêng</text>
+      <text x="550" y="182" text-anchor="middle" font-size="12.5" fill="#15803f" font-weight="700">Thùng hàng (BH-…) → Đơn bảo hành (DH-… / DH-…-n) → Phiếu trả (TR-…)</text>
+    </svg>
+    <div class="cap">Hình 1 — 5 chặng lớn của một đơn bảo hành.</div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="doituong">
+  <h2><span class="n">2</span>Các đối tượng dữ liệu chính</h2>
+  <div class="figure">
+    <svg viewBox="0 0 1100 260" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="13">
+      <defs><marker id="a1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker></defs>
+      <rect x="20" y="30" width="230" height="120" rx="14" fill="#eaf1fe" stroke="#2563eb"/>
+      <text x="135" y="58" text-anchor="middle" font-weight="700" fill="#14261b" font-size="15">📦 Thùng hàng (phiếu gửi)</text>
+      <text x="135" y="80" text-anchor="middle" fill="#2563eb" font-family="Consolas" font-weight="700">BH-000973</text>
+      <text x="135" y="102" text-anchor="middle" fill="#5f7568">1 KTV · vận chuyển · QR dán thùng</text>
+      <text x="135" y="122" text-anchor="middle" fill="#5f7568">chứa nhiều đơn bảo hành</text>
+
+      <rect x="300" y="30" width="230" height="120" rx="14" fill="#f2ecfe" stroke="#7c3aed"/>
+      <text x="415" y="58" text-anchor="middle" font-weight="700" fill="#14261b" font-size="15">🧾 Đơn bảo hành (đơn cha)</text>
+      <text x="415" y="80" text-anchor="middle" fill="#7c3aed" font-family="Consolas" font-weight="700">DH-005648</text>
+      <text x="415" y="102" text-anchor="middle" fill="#5f7568">mã case CRM · linh kiện A</text>
+      <text x="415" y="122" text-anchor="middle" fill="#5f7568">SL khai · mô tả lỗi · ảnh</text>
+
+      <rect x="580" y="30" width="230" height="120" rx="14" fill="#e6f7f5" stroke="#0d9488"/>
+      <text x="695" y="58" text-anchor="middle" font-weight="700" fill="#14261b" font-size="15">🔹 Đơn vị (đơn con)</text>
+      <text x="695" y="80" text-anchor="middle" fill="#0d9488" font-family="Consolas" font-weight="700">DH-005648-1, -2…</text>
+      <text x="695" y="102" text-anchor="middle" fill="#5f7568">1 cái linh kiện thật</text>
+      <text x="695" y="122" text-anchor="middle" fill="#5f7568">hướng xử lý riêng · LK B / C</text>
+
+      <rect x="860" y="30" width="220" height="120" rx="14" fill="#ecf8f0" stroke="#15803f"/>
+      <text x="970" y="58" text-anchor="middle" font-weight="700" fill="#14261b" font-size="15">🚚 Phiếu trả</text>
+      <text x="970" y="80" text-anchor="middle" fill="#15803f" font-family="Consolas" font-weight="700">TR-000506</text>
+      <text x="970" y="102" text-anchor="middle" fill="#5f7568">1 người nhận + 1 loại đối trừ</text>
+      <text x="970" y="122" text-anchor="middle" fill="#5f7568">mã ĐH · MISA · vận đơn</text>
+
+      <line x1="250" y1="90" x2="296" y2="90" stroke="#5f7568" stroke-width="2" marker-end="url(#a1)"/>
+      <text x="273" y="82" text-anchor="middle" fill="#5f7568" font-size="11">1–N</text>
+      <line x1="530" y1="90" x2="576" y2="90" stroke="#5f7568" stroke-width="2" marker-end="url(#a1)"/>
+      <text x="553" y="82" text-anchor="middle" fill="#5f7568" font-size="11">tách N</text>
+      <line x1="810" y1="90" x2="856" y2="90" stroke="#5f7568" stroke-width="2" marker-end="url(#a1)"/>
+      <text x="833" y="82" text-anchor="middle" fill="#5f7568" font-size="11">gộp</text>
+
+      <rect x="580" y="180" width="230" height="64" rx="14" fill="#fff1e8" stroke="#ea580c"/>
+      <text x="695" y="206" text-anchor="middle" font-weight="700" fill="#14261b">🔩 Đề xuất linh kiện (DX-…)</text>
+      <text x="695" y="226" text-anchor="middle" fill="#5f7568">NV xin vật tư cho 1 đơn vị</text>
+      <line x1="695" y1="150" x2="695" y2="176" stroke="#ea580c" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a1)"/>
+      <text x="300" y="212" fill="#5f7568" font-size="12">Đơn vị = đơn vị xử lý thực tế: 1 đơn cha ×3 có thể</text>
+      <text x="300" y="230" fill="#5f7568" font-size="12">1 cái sửa được, 2 cái đổi mới, nằm ở 2 phiếu trả khác nhau.</text>
+    </svg>
+    <div class="cap">Hình 2 — Quan hệ giữa thùng hàng, đơn cha, đơn vị, phiếu trả và đề xuất linh kiện.</div>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table>
+      <tr><th>Đối tượng</th><th>Mã</th><th>Ai tạo</th><th>Ghi chú</th></tr>
+      <tr><td><b>Thùng hàng</b></td><td><code>BH-xxxxxx</code></td><td>KTV (hoặc GS / Admin BH / KTV được gán tạo hộ)</td><td>Gửi về kho theo miền; có QR dán thùng để Kho quét</td></tr>
+      <tr><td><b>Đơn cha</b></td><td><code>DH-xxxxxx</code></td><td>KTV thêm vào thùng (thủ công hoặc chọn từ đơn Odoo); Admin BH tạo đơn dịch vụ khách lẻ</td><td>Bắt buộc mã case CRM đúng KTV (Trạm hoặc KTV triển khai)</td></tr>
+      <tr><td><b>Đơn vị</b></td><td><code>DH-xxxxxx-n</code></td><td>Tự sinh khi Admin BH xác nhận số lượng thực nhận</td><td>Mang 3 linh kiện: A (KTV chọn) · B (thực tế gửi về) · C (đổi mới / thay thế)</td></tr>
+      <tr><td><b>Phiếu trả</b></td><td><code>TR-xxxxxx</code></td><td>Admin BH (tay / tự động gộp / FAST) hoặc NV "Đã sửa xong"</td><td>Mã đơn hàng mặc định = mã phiếu; MISA do Kế toán xác nhận</td></tr>
+      <tr><td><b>Đề xuất linh kiện</b></td><td><code>DX-xxxxxx</code></td><td>NV sửa chữa (hoặc Admin BH đề xuất hộ)</td><td>Luồng con riêng — xem tài liệu "Luồng cấp linh kiện bảo hành"</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="luong">
+  <h2><span class="n">3</span>Sơ đồ luồng quy trình (theo làn vai trò)</h2>
+  <div class="figure">
+    <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12.5">
+      <defs>
+        <marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker>
+        <marker id="mr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker>
+        <marker id="mg" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#15803f"/></marker>
+      </defs>
+      <!-- lanes -->
+      <rect x="0" y="0" width="1200" height="125" fill="#eaf1fe" opacity=".55"/>
+      <rect x="0" y="125" width="1200" height="125" fill="#fff1e8" opacity=".6"/>
+      <rect x="0" y="250" width="1200" height="190" fill="#f2ecfe" opacity=".55"/>
+      <rect x="0" y="440" width="1200" height="110" fill="#e6f7f5" opacity=".7"/>
+      <rect x="0" y="550" width="1200" height="105" fill="#fdf6e3" opacity=".75"/>
+      <rect x="0" y="655" width="1200" height="105" fill="#ecf8f0" opacity=".9"/>
+      <g font-weight="700" fill="#14261b" font-size="13">
+        <text x="12" y="22">👷 KTV</text>
+        <text x="12" y="147">🏬 Kho</text>
+        <text x="12" y="272">🛡️ Admin BH</text>
+        <text x="12" y="462">🔧 NV sửa chữa</text>
+        <text x="12" y="572">🧾 Kế toán</text>
+        <text x="12" y="677">🏬 Kho / 👷 KTV</text>
+      </g>
+      <line x1="150" y1="0" x2="150" y2="760" stroke="#d7e3db"/>
+
+      <!-- KTV lane -->
+      <rect x="170" y="38" width="170" height="60" rx="11" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="255" y="62" text-anchor="middle" font-weight="700" fill="#14261b">Tạo thùng nháp</text>
+      <text x="255" y="81" text-anchor="middle" fill="#5f7568">chọn đơn Odoo / thêm tay</text>
+      <rect x="370" y="38" width="170" height="60" rx="11" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="455" y="62" text-anchor="middle" font-weight="700" fill="#14261b">Kiểm tra mã case</text>
+      <text x="455" y="81" text-anchor="middle" fill="#5f7568">phải đúng KTV trên CRM</text>
+      <rect x="570" y="38" width="170" height="60" rx="11" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="655" y="62" text-anchor="middle" font-weight="700" fill="#14261b">Xác nhận gửi xe</text>
+      <text x="655" y="81" text-anchor="middle" fill="#5f7568">nhà xe / giao trực tiếp</text>
+      <line x1="340" y1="68" x2="366" y2="68" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <line x1="540" y1="68" x2="566" y2="68" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <rect x="800" y="38" width="190" height="60" rx="11" fill="#fff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <text x="895" y="62" text-anchor="middle" font-weight="700" fill="#7c3aed">✍️ Bổ sung thông tin</text>
+      <text x="895" y="81" text-anchor="middle" fill="#5f7568">khi Admin yêu cầu</text>
+
+      <!-- Kho lane -->
+      <rect x="570" y="160" width="170" height="60" rx="11" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="655" y="184" text-anchor="middle" font-weight="700" fill="#14261b">Tiếp nhận thùng</text>
+      <text x="655" y="203" text-anchor="middle" fill="#5f7568">quét QR · báo sự cố</text>
+      <line x1="655" y1="98" x2="655" y2="156" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <rect x="770" y="160" width="190" height="60" rx="11" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="865" y="184" text-anchor="middle" font-weight="700" fill="#14261b">Bàn giao Admin BH</text>
+      <text x="865" y="203" text-anchor="middle" fill="#5f7568">thùng chờ nhận nội bộ</text>
+      <line x1="740" y1="190" x2="766" y2="190" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+
+      <!-- Admin lane -->
+      <rect x="770" y="270" width="190" height="56" rx="11" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="865" y="293" text-anchor="middle" font-weight="700" fill="#14261b">Tiếp nhận nội bộ</text>
+      <text x="865" y="311" text-anchor="middle" fill="#5f7568">→ báo khovan "đã bàn giao"</text>
+      <line x1="865" y1="220" x2="865" y2="266" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <rect x="560" y="270" width="180" height="56" rx="11" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="650" y="293" text-anchor="middle" font-weight="700" fill="#14261b">Xác nhận SL thực nhận</text>
+      <text x="650" y="311" text-anchor="middle" fill="#5f7568">tách N đơn vị</text>
+      <line x1="770" y1="298" x2="744" y2="298" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <polygon points="430,262 525,300 430,338 335,300" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="430" y="296" text-anchor="middle" font-weight="700" fill="#14261b">Phân loại</text>
+      <text x="430" y="313" text-anchor="middle" fill="#5f7568">trong / ngoài BH</text>
+      <line x1="560" y1="298" x2="529" y2="300" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <path d="M 430 262 Q 600 150 860 102" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#m)"/>
+      <text x="170" y="238" fill="#7c3aed" font-size="11.5">↗ Admin yêu cầu KTV bổ sung</text>
+
+      <rect x="170" y="360" width="150" height="56" rx="11" fill="#fdecec" stroke="#dc2626"/>
+      <text x="245" y="383" text-anchor="middle" font-weight="700" fill="#dc2626">✖ Huỷ / từ chối</text>
+      <text x="245" y="401" text-anchor="middle" fill="#5f7568" font-size="11.5">lý do bắt buộc</text>
+      <line x1="370" y1="322" x2="300" y2="358" stroke="#dc2626" stroke-width="1.8" marker-end="url(#mr)"/>
+
+      <rect x="560" y="360" width="200" height="56" rx="11" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="660" y="383" text-anchor="middle" font-weight="700" fill="#14261b">Đổi mới / Trừ nợ / Trả lại</text>
+      <text x="660" y="401" text-anchor="middle" fill="#5f7568">→ sẵn sàng tạo phiếu trả</text>
+      <line x1="500" y1="318" x2="560" y2="370" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+
+      <rect x="900" y="360" width="200" height="56" rx="11" fill="#fff" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="1000" y="383" text-anchor="middle" font-weight="700" fill="#14261b">Xác nhận hoàn tất</text>
+      <text x="1000" y="401" text-anchor="middle" fill="#5f7568">hoặc yêu cầu làm lại</text>
+
+      <!-- NV lane -->
+      <rect x="370" y="460" width="190" height="60" rx="11" fill="#fff" stroke="#0d9488" stroke-width="1.5"/>
+      <text x="465" y="484" text-anchor="middle" font-weight="700" fill="#14261b">Sửa chữa</text>
+      <text x="465" y="503" text-anchor="middle" fill="#5f7568">xin linh kiện (DX) nếu cần</text>
+      <line x1="430" y1="338" x2="455" y2="456" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <text x="385" y="410" fill="#5f7568" font-size="11.5">Sửa chữa /</text>
+      <text x="385" y="424" fill="#5f7568" font-size="11.5">dịch vụ tính phí</text>
+      <rect x="610" y="460" width="230" height="60" rx="11" fill="#fff" stroke="#0d9488" stroke-width="1.5"/>
+      <text x="725" y="484" text-anchor="middle" font-weight="700" fill="#14261b">Nộp kết quả (4 loại)</text>
+      <text x="725" y="503" text-anchor="middle" fill="#5f7568">sửa xong / không sửa được…</text>
+      <line x1="560" y1="490" x2="606" y2="490" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <line x1="840" y1="480" x2="960" y2="420" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <path d="M 840 500 Q 1150 520 1140 690" fill="none" stroke="#15803f" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#mg)"/>
+      <text x="1000" y="540" fill="#15803f" font-size="11.5" font-weight="700">"Đã sửa xong" → thẳng Kho</text>
+
+      <!-- Phiếu trả creation (admin) -> KT -->
+      <rect x="560" y="565" width="200" height="60" rx="11" fill="#fff" stroke="#b7791f" stroke-width="1.5"/>
+      <text x="660" y="589" text-anchor="middle" font-weight="700" fill="#14261b">Kế toán duyệt phiếu trả</text>
+      <text x="660" y="608" text-anchor="middle" fill="#5f7568">xác nhận MISA</text>
+      <line x1="660" y1="416" x2="660" y2="561" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <line x1="980" y1="416" x2="740" y2="563" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <text x="800" y="605" fill="#5f7568" font-size="11.5">← Admin tạo / gộp phiếu trả, gửi KT</text>
+      <rect x="230" y="565" width="200" height="60" rx="11" fill="#fdecec" stroke="#dc2626"/>
+      <text x="330" y="589" text-anchor="middle" font-weight="700" fill="#dc2626">↩ Từ chối / trả Admin</text>
+      <text x="330" y="608" text-anchor="middle" fill="#5f7568">hoặc 💳 Trừ công nợ (kết thúc)</text>
+      <line x1="560" y1="595" x2="434" y2="595" stroke="#dc2626" stroke-width="1.8" marker-end="url(#mr)"/>
+
+      <!-- Kho + KTV final -->
+      <rect x="560" y="675" width="200" height="60" rx="11" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="660" y="699" text-anchor="middle" font-weight="700" fill="#14261b">Kho in · đóng gói · gửi</text>
+      <text x="660" y="718" text-anchor="middle" fill="#5f7568">nhập mã vận đơn</text>
+      <line x1="660" y1="625" x2="660" y2="671" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <rect x="820" y="675" width="200" height="60" rx="11" fill="#ecf8f0" stroke="#15803f" stroke-width="2"/>
+      <text x="920" y="699" text-anchor="middle" font-weight="700" fill="#14261b">✔ KTV xác nhận nhận</text>
+      <text x="920" y="718" text-anchor="middle" fill="#5f7568">→ hoàn tất</text>
+      <line x1="760" y1="705" x2="816" y2="705" stroke="#5f7568" stroke-width="2" marker-end="url(#m)"/>
+      <rect x="300" y="675" width="200" height="60" rx="11" fill="#fdecec" stroke="#dc2626"/>
+      <text x="400" y="699" text-anchor="middle" font-weight="700" fill="#dc2626">⚠ Báo thiếu từng món</text>
+      <text x="400" y="718" text-anchor="middle" fill="#5f7568">Kho đánh giá thất lạc</text>
+      <path d="M 880 735 Q 650 770 404 737" fill="none" stroke="#dc2626" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#mr)"/>
+    </svg>
+    <div class="cap">Hình 3 — Luồng đầy đủ theo 6 làn vai trò. Nét đứt tím = yêu cầu bổ sung; nét đứt xanh = đi tắt; đỏ = nhánh huỷ / trả lại / khiếu nại.</div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="vaitro">
+  <h2><span class="n">4</span>Vai trò tham gia và chức năng</h2>
+  <div class="grid2">
+    <div class="role" style="border-top:4px solid var(--blue)">
+      <h4>👷 KTV / Trạm / CTV (Vệ tinh)</h4>
+      <div class="where">Điện thoại · 4 tab: Việc của tôi · Gửi hàng · Đơn của tôi · Nhận hàng</div>
+      <ul>
+        <li>Tạo thùng: chọn đơn Odoo của mình (tự điền case / linh kiện / SL) hoặc thêm tay theo mã case.</li>
+        <li>Mã case phải thuộc mình (Trạm hoặc KTV triển khai); case trong ngày chưa đồng bộ vẫn tạo được (chờ xác minh).</li>
+        <li>Điền vận chuyển (nhớ lần trước), xác nhận gửi xe / giao trực tiếp, chọn kho miền gửi về.</li>
+        <li>Bổ sung thông tin + ảnh khi Admin yêu cầu; huỷ đơn Odoo lỗi / mở lại.</li>
+        <li>Theo dõi tiến độ 5 bước; nhận hàng trả, báo thiếu theo từng món.</li>
+        <li>Có thể được gán tạo hộ đơn cho KTV khác.</li>
+      </ul>
+    </div>
+    <div class="role" style="border-top:4px solid var(--orange)">
+      <h4>🏬 Kho</h4>
+      <div class="where">Menu Thùng hàng · Phiếu trả · Cấp linh kiện</div>
+      <ul>
+        <li>Tiếp nhận thùng ở mức thùng (quét QR), báo sự cố (chỉ cảnh báo, không chặn).</li>
+        <li>Nhận trực tiếp thùng nháp khi KTV mang tới.</li>
+        <li>Bàn giao thùng cho Admin BH.</li>
+        <li>Phiếu trả: Chờ in → Đã in → đóng gói (ảnh tuỳ chọn) → gửi (mã vận đơn); đẩy ngược về Admin nếu lên nhầm.</li>
+        <li>Đánh giá khiếu nại "không nhận được": gửi thành công / thất bại (thất lạc) + phương án xử lý.</li>
+        <li>In / xuất phiếu cấp linh kiện theo mã PXK.</li>
+      </ul>
+    </div>
+    <div class="role" style="border-top:4px solid var(--violet)">
+      <h4>🛡️ Admin bảo hành</h4>
+      <div class="where">Menu Thùng hàng · Đơn bảo hành · Cấp linh kiện · Phiếu trả · Quản trị danh mục</div>
+      <ul>
+        <li>Tiếp nhận thùng nội bộ (1 hoặc nhiều), nhận hộ Kho, xác nhận SL thực nhận (hàng loạt được).</li>
+        <li>Phân loại: trong / ngoài BH, hướng xử lý, loại đối trừ, linh kiện B / C, NV phụ trách.</li>
+        <li>⚡ 10 nút xử lý nhanh, xử lý hàng loạt, xem theo KTV / theo linh kiện.</li>
+        <li>Yêu cầu KTV bổ sung, ghi nhận báo cáo sai, lùi lại đơn khi bước sau chưa làm.</li>
+        <li>Xác nhận hoàn tất / yêu cầu làm lại; nộp kết quả hộ NV; cấp linh kiện.</li>
+        <li>Tạo / gộp / sửa phiếu trả tới khi KT duyệt; trả trực tiếp KTV / giao trực tiếp Kho.</li>
+        <li>Tạo đơn dịch vụ tính phí cho khách lẻ; ghi số tiền thu hồi từ hãng.</li>
+      </ul>
+    </div>
+    <div class="role" style="border-top:4px solid var(--teal)">
+      <h4>🔧 NV sửa chữa</h4>
+      <div class="where">Menu Đơn bảo hành › Việc sửa của tôi</div>
+      <ul>
+        <li>Nhận đơn được Admin giao; đề xuất linh kiện cần cấp (không giới hạn số lần).</li>
+        <li>Nộp 1 trong 4 kết quả: Đã sửa xong / Không sửa được / Không có lỗi / Chỉ kiểm tra tư vấn (+ ảnh, ghi chú).</li>
+        <li>"Đã sửa xong" → đơn tự sang Kho để trả, bỏ qua Admin xác nhận và Kế toán.</li>
+        <li>"Đã bàn giao máy (kết thúc luôn)" khi giao trực tiếp cho khách.</li>
+      </ul>
+    </div>
+    <div class="role" style="border-top:4px solid var(--amber)">
+      <h4>🧾 Kế toán</h4>
+      <div class="where">Menu Phiếu trả (gồm tab 🔩 Cấp linh kiện)</div>
+      <ul>
+        <li>Duyệt / từ chối từng phiếu trả (không duyệt hàng loạt — kiểm soát nội bộ).</li>
+        <li>Nhập / sửa mã MISA trước khi Kho xử lý; 💳 Trừ công nợ kết thúc phiếu không gửi KTV.</li>
+        <li>Huỷ duyệt, trả Admin khi phát hiện sai; tab "Đã xử lý" xem lại lịch sử.</li>
+        <li>Xác nhận MISA cho phiếu cấp linh kiện (theo case).</li>
+      </ul>
+    </div>
+    <div class="role" style="border-top:4px solid var(--slate)">
+      <h4>👁 Giám sát · View · Admin hệ thống</h4>
+      <div class="where">Trang chủ (tổng quan) · Đơn bảo hành › Mọi giai đoạn · Quản trị</div>
+      <ul>
+        <li><b>Giám sát (GS chính / phụ):</b> xem đơn của KTV khu vực mình, tạo hộ thùng cho KTV khu vực.</li>
+        <li><b>View:</b> chỉ xem theo khu vực được gán, không thao tác.</li>
+        <li><b>Admin hệ thống:</b> đi qua mọi cổng vai trò; quản lý người dùng, danh bạ KTV, khu vực – GS, danh mục lý do, chia miền, đồng bộ; Chế độ test (xem theo vai trò / theo gmail).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="buoc">
+  <h2><span class="n">5</span>Các bước triển khai chi tiết</h2>
+  <h3>Chặng 1 · Gửi hàng</h3>
+  <ol class="steps">
+    <li><span class="tag t-blue who">KTV</span><b>Tạo thùng.</b> Tab Gửi hàng → chọn đơn Odoo mới (tick nhiều → "Tạo thùng") hoặc "+ Tạo thùng mới" rồi "+ Thêm đơn". Mỗi đơn cần mã case CRM đúng của KTV, linh kiện lỗi (A), số lượng, mô tả lỗi, ảnh (tuỳ chọn), loại đối trừ đề xuất.</li>
+    <li><span class="tag t-blue who">KTV</span><b>Điền vận chuyển &amp; gửi.</b> Hình thức gửi (Nhà xe / Xe nội bộ / Bưu điện / Giao trực tiếp), ngày gửi, mã xe, đơn vị vận chuyển, vận đơn → "Xác nhận đã gửi xe". Chưa gửi thật thì "Lưu nháp, gửi sau" (Kho chưa thấy). Thùng nháp rỗng tự xoá.</li>
+  </ol>
+  <h3>Chặng 2 · Tiếp nhận</h3>
+  <ol class="steps" start="3" style="counter-reset:s 2">
+    <li><span class="tag t-orange who">Kho</span><b>Kho tiếp nhận thùng.</b> Thùng hàng › Đang gửi về Kho → quét QR hoặc bấm thùng → "Xác nhận tiếp nhận". Hư hỏng thì "Báo sự cố" (chỉ cảnh báo, ghi vào trao đổi).</li>
+    <li><span class="tag t-violet who">Admin BH</span><b>Tiếp nhận nội bộ.</b> Thùng hàng › Kho đã nhận — chờ Admin → xác nhận đã nhận (1 hoặc nhiều thùng). Hệ thống báo kho vận "Đã bàn giao".</li>
+    <li><span class="tag t-violet who">Admin BH</span><b>Xác nhận số lượng thực nhận.</b> Mặc định = SL KTV khai; lệch thì bắt buộc lý do. Hệ thống tách N đơn vị <code>DH-…-1…N</code>.</li>
+  </ol>
+  <h3>Chặng 3 · Phân loại</h3>
+  <ol class="steps" start="6" style="counter-reset:s 5">
+    <li><span class="tag t-violet who">Admin BH</span><b>Phân loại từng đơn vị.</b> Trong / ngoài BH (ngoài BH cần mail phê duyệt; hết hạn BH chỉ cảnh báo đỏ), hướng xử lý (mục 6), loại đối trừ (mặc định theo đề xuất KTV), linh kiện B / C, xử lý xác (khi Đổi mới), NV (khi Sửa chữa). Dùng ⚡ Xử lý nhanh / hàng loạt cho đơn giống nhau.</li>
+    <li><span class="tag t-violet who">Admin BH</span><b>Nếu thiếu thông tin.</b> "Yêu cầu bổ sung" → đơn về KTV (vẫn hiện trong bảng Admin, màu tím); KTV sửa linh kiện / mô tả / ảnh → quay lại chờ phân loại.</li>
+  </ol>
+  <h3>Chặng 4 · Xử lý</h3>
+  <ol class="steps" start="8" style="counter-reset:s 7">
+    <li><span class="tag t-teal who">NV sửa chữa</span><b>Sửa chữa.</b> Xin linh kiện khi cần (Admin cấp → KT xác nhận MISA → Kho xuất), rồi nộp kết quả. "Đã sửa xong" đi thẳng sang Kho; kết quả khác chờ Admin xác nhận.</li>
+    <li><span class="tag t-violet who">Admin BH</span><b>Xác nhận hoàn tất.</b> Hoặc "Yêu cầu làm lại" (về NV, đếm số lần) / "Lùi lại". Đơn Đổi mới, Trừ nợ, Trả lại KTV đi thẳng tới bước sẵn sàng trả.</li>
+  </ol>
+  <h3>Chặng 5 · Trả hàng</h3>
+  <ol class="steps" start="10" style="counter-reset:s 9">
+    <li><span class="tag t-violet who">Admin BH</span><b>Tạo phiếu trả.</b> Phiếu trả › Chờ tạo phiếu: bảng nhóm theo KTV, tick đơn → "Tạo phiếu trả" (tự tách theo KTV × loại đối trừ) hoặc "⚡ Tự động gộp". Thêm / bớt đơn, đổi linh kiện C tới khi KT duyệt → "Gửi duyệt Kế toán" (MISA không bắt buộc ở bước này).</li>
+    <li><span class="tag t-amber who">Kế toán</span><b>Duyệt phiếu.</b> Nhập / kiểm MISA → Duyệt; hoặc Từ chối (lý do, về Admin) / 💳 Trừ công nợ (kết thúc, không gửi KTV).</li>
+    <li><span class="tag t-orange who">Kho</span><b>In, đóng gói, gửi.</b> Chờ in → Đã in → đóng gói (ảnh tuỳ chọn) → "Gửi hàng" + mã vận đơn. Có thể xác nhận kết thúc thay KTV khi chắc chắn hàng đã tới.</li>
+    <li><span class="tag t-blue who">KTV</span><b>Nhận hàng.</b> "Đã nhận hàng" → hoàn tất; thiếu thì "Không nhận được" chọn đúng món thiếu → Kho đánh giá thành công / thất lạc.</li>
+  </ol>
+</section>
+
+<!-- 6 -->
+<section id="huong">
+  <h2><span class="n">6</span>Hướng xử lý của đơn vị</h2>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table>
+      <tr><th>Hướng xử lý</th><th>Ý nghĩa</th><th>Qua NV?</th><th>Có phiếu trả?</th><th>Ghi chú</th></tr>
+      <tr><td><span class="tag t-teal">Sửa chữa</span></td><td>Sửa linh kiện trong / ngoài BH</td><td>✔</td><td>✔ (sau khi sửa)</td><td>"Đã sửa xong" đi thẳng Kho</td></tr>
+      <tr><td><span class="tag t-violet">Dịch vụ tính phí</span></td><td>Sửa trả phí cho khách lẻ (Admin tự tạo đơn)</td><td>✔</td><td>✔</td><td>Tiền do Kế toán ghi nhận ngoài hệ thống</td></tr>
+      <tr><td><span class="tag t-green">Đổi mới</span></td><td>Đổi linh kiện mới cho KTV</td><td>—</td><td>✔</td><td>Bắt buộc xử lý xác: trả đối tác (mặc định) / tiêu huỷ / lưu kho — tính theo LK B</td></tr>
+      <tr><td><span class="tag t-orange">Xác nhận LK, trừ công nợ</span></td><td>Xác nhận lỗi, trừ công nợ KTV</td><td>—</td><td>✔ (loại Trừ công nợ)</td><td>Loại đối trừ luôn là Trừ công nợ</td></tr>
+      <tr><td><span class="tag t-blue">Trả lại KTV</span></td><td>Trả nguyên trạng về KTV</td><td>—</td><td>✔</td><td></td></tr>
+      <tr><td><span class="tag t-red">Từ chối / huỷ</span></td><td>Không bảo hành</td><td>—</td><td>—</td><td>Lý do bắt buộc + ghi chú; lùi lại được khi huỷ nhầm</td></tr>
+      <tr><td><span class="tag t-gray">Chuyển kho</span></td><td>Chuyển hàng sang kho khác</td><td>—</td><td>—</td><td>Kết thúc trong hệ thống</td></tr>
+    </table>
+  </div>
+  <div class="note green">Một đơn cha ×N có thể có N hướng xử lý khác nhau. Mỗi phiếu trả chỉ chứa <b>1 người nhận + 1 loại đối trừ</b> (Đổi trả hoặc Trừ công nợ).</div>
+</section>
+
+<!-- 7 -->
+<section id="trangthai">
+  <h2><span class="n">7</span>Trạng thái theo từng đối tượng</h2>
+  <div class="figure">
+    <svg viewBox="0 0 1100 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12.5">
+      <defs><marker id="s" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker></defs>
+      <text x="10" y="30" font-weight="700" fill="#14261b" font-size="14">📦 Thùng</text>
+      <g font-weight="700">
+        <rect x="130" y="12" width="130" height="30" rx="15" fill="#f1f5f9" stroke="#64748b"/><text x="195" y="32" text-anchor="middle" fill="#64748b">Nháp</text>
+        <rect x="290" y="12" width="130" height="30" rx="15" fill="#eaf1fe" stroke="#2563eb"/><text x="355" y="32" text-anchor="middle" fill="#2563eb">Đã gửi</text>
+        <rect x="450" y="12" width="150" height="30" rx="15" fill="#fff1e8" stroke="#ea580c"/><text x="525" y="32" text-anchor="middle" fill="#ea580c">Kho đã nhận</text>
+        <rect x="630" y="12" width="190" height="30" rx="15" fill="#ecf8f0" stroke="#15803f"/><text x="725" y="32" text-anchor="middle" fill="#116a34">Admin đã nhận nội bộ</text>
+      </g>
+      <line x1="260" y1="27" x2="286" y2="27" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="420" y1="27" x2="446" y2="27" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="600" y1="27" x2="626" y2="27" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+
+      <text x="10" y="110" font-weight="700" fill="#14261b" font-size="14">🔹 Đơn vị</text>
+      <g font-weight="700" font-size="12">
+        <rect x="130" y="92" width="120" height="30" rx="15" fill="#f2ecfe" stroke="#7c3aed"/><text x="190" y="112" text-anchor="middle" fill="#7c3aed">Chờ phân loại</text>
+        <rect x="270" y="92" width="120" height="30" rx="15" fill="#e6f7f5" stroke="#0d9488"/><text x="330" y="112" text-anchor="middle" fill="#0d9488">Chờ NV sửa</text>
+        <rect x="410" y="92" width="150" height="30" rx="15" fill="#f2ecfe" stroke="#7c3aed"/><text x="485" y="112" text-anchor="middle" fill="#7c3aed">Chờ Admin xác nhận</text>
+        <rect x="580" y="92" width="160" height="30" rx="15" fill="#fdf6e3" stroke="#b7791f"/><text x="660" y="112" text-anchor="middle" fill="#b7791f">Sẵn sàng tạo phiếu trả</text>
+        <rect x="760" y="92" width="140" height="30" rx="15" fill="#ecf8f0" stroke="#15803f"/><text x="830" y="112" text-anchor="middle" fill="#116a34">Theo phiếu trả</text>
+        <rect x="130" y="140" width="150" height="28" rx="14" fill="#f2ecfe" stroke="#7c3aed" stroke-dasharray="4 3"/><text x="205" y="159" text-anchor="middle" fill="#7c3aed">Chờ KTV bổ sung</text>
+        <rect x="300" y="140" width="160" height="28" rx="14" fill="#fdecec" stroke="#dc2626"/><text x="380" y="159" text-anchor="middle" fill="#dc2626">Huỷ / chuyển kho</text>
+      </g>
+      <line x1="250" y1="107" x2="266" y2="107" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="390" y1="107" x2="406" y2="107" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="560" y1="107" x2="576" y2="107" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="740" y1="107" x2="756" y2="107" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <path d="M 250 100 Q 410 60 576 100" fill="none" stroke="#8aa596" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#s)"/>
+      <text x="410" y="70" text-anchor="middle" fill="#5f7568" font-size="11">đổi mới / trừ nợ / trả lại</text>
+
+      <text x="10" y="225" font-weight="700" fill="#14261b" font-size="14">🚚 Phiếu trả</text>
+      <g font-weight="700" font-size="12">
+        <rect x="130" y="207" width="90" height="30" rx="15" fill="#f1f5f9" stroke="#64748b"/><text x="175" y="227" text-anchor="middle" fill="#64748b">Nháp</text>
+        <rect x="240" y="207" width="130" height="30" rx="15" fill="#fdf6e3" stroke="#b7791f"/><text x="305" y="227" text-anchor="middle" fill="#b7791f">Chờ KT duyệt</text>
+        <rect x="390" y="207" width="150" height="30" rx="15" fill="#fff1e8" stroke="#ea580c"/><text x="465" y="227" text-anchor="middle" fill="#ea580c">KT duyệt · chờ Kho</text>
+        <rect x="560" y="207" width="130" height="30" rx="15" fill="#eaf1fe" stroke="#2563eb"/><text x="625" y="227" text-anchor="middle" fill="#2563eb">Đang gửi KTV</text>
+        <rect x="710" y="207" width="130" height="30" rx="15" fill="#ecf8f0" stroke="#15803f" stroke-width="2"/><text x="775" y="227" text-anchor="middle" fill="#116a34">KTV đã nhận ✔</text>
+        <rect x="560" y="260" width="160" height="28" rx="14" fill="#fdecec" stroke="#dc2626"/><text x="640" y="279" text-anchor="middle" fill="#dc2626">KTV báo không nhận</text>
+        <rect x="740" y="260" width="160" height="28" rx="14" fill="#fdecec" stroke="#dc2626"/><text x="820" y="279" text-anchor="middle" fill="#dc2626">Gửi thất bại (thất lạc)</text>
+        <rect x="240" y="260" width="200" height="28" rx="14" fill="#f1f5f9" stroke="#64748b"/><text x="340" y="279" text-anchor="middle" fill="#64748b">Kết thúc không gửi (trừ nợ)</text>
+      </g>
+      <line x1="220" y1="222" x2="236" y2="222" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="370" y1="222" x2="386" y2="222" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="540" y1="222" x2="556" y2="222" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="690" y1="222" x2="706" y2="222" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="625" y1="237" x2="635" y2="257" stroke="#dc2626" stroke-width="1.5" marker-end="url(#s)"/>
+      <line x1="720" y1="274" x2="736" y2="274" stroke="#dc2626" stroke-width="1.5" marker-end="url(#s)"/>
+      <line x1="305" y1="237" x2="320" y2="257" stroke="#64748b" stroke-width="1.5" marker-end="url(#s)"/>
+      <text x="130" y="315" fill="#5f7568" font-size="11.5">Phiếu còn Nháp / Chờ KT duyệt vẫn sửa được (thêm / bớt đơn, đổi LK C). KT / Kho có thể đẩy ngược phiếu đã duyệt về Nháp kèm lý do.</text>
+    </svg>
+    <div class="cap">Hình 4 — Vòng đời trạng thái của thùng, đơn vị và phiếu trả.</div>
+  </div>
+  <div class="card">
+    <b>Tiến trình KTV nhìn thấy (5 bước):</b> Gửi đi → Kho nhận → Xử lý → Trả về → Đã nhận. Nhãn hiển thị theo góc nhìn KTV: "Chưa gửi", "Đang trên xe về Kho", "Cần bạn bổ sung", "Đang xử lý", "Xử lý xong, đang chuẩn bị trả", "Đang trả về bạn", "Đã nhận lại", "Không bảo hành (đã huỷ)".
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="tat">
+  <h2><span class="n">8</span>Đường đi tắt (khi thực tế không cần đủ bước)</h2>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table>
+      <tr><th>Tình huống</th><th>Ai thao tác</th><th>Bỏ qua bước</th></tr>
+      <tr><td>Admin BH tạo hộ thùng rồi bấm gửi</td><td>Admin BH</td><td>Kho tiếp nhận + tiếp nhận nội bộ (tự xác nhận SL)</td></tr>
+      <tr><td>Hàng đã tới tay Admin (KTV giao trực tiếp)</td><td>Admin BH "Nhận hộ Kho"</td><td>Kho tiếp nhận</td></tr>
+      <tr><td>KTV mang thùng nháp tới, chưa bấm gửi</td><td>Kho / Admin BH "Nhận thùng"</td><td>KTV xác nhận gửi xe</td></tr>
+      <tr><td>NV báo "Đã sửa xong"</td><td>NV</td><td>Admin xác nhận hoàn tất + Kế toán duyệt (phiếu tự sang Kho)</td></tr>
+      <tr><td>NV "Đã bàn giao máy (kết thúc luôn)"</td><td>NV / Admin hộ</td><td>Toàn bộ chặng trả hàng</td></tr>
+      <tr><td>⚡ Trả trực tiếp KTV / Giao trực tiếp Kho</td><td>Admin BH</td><td>Gộp phiếu + Kế toán duyệt</td></tr>
+      <tr><td>💳 Trừ công nợ</td><td>Kế toán</td><td>Kho gửi + KTV nhận (kết thúc không gửi)</td></tr>
+      <tr><td>Kho biết chắc hàng đã tới KTV</td><td>Kho</td><td>KTV tự xác nhận nhận</td></tr>
+    </table>
+  </div>
+  <div class="note">Mọi đường tắt vẫn ghi nhật ký rõ ai làm thay, làm lúc nào. Đơn có thể "↩ Lùi lại" khi huỷ nhầm / phân loại nhầm, miễn bước sau chưa làm.</div>
+</section>
+
+<!-- 9 -->
+<section id="manhinh">
+  <h2><span class="n">9</span>Hình ảnh minh hoạ màn hình</h2>
+  <div class="grid2">
+    <div class="figure small">
+      <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12">
+        <rect x="150" y="0" width="220" height="340" rx="26" fill="#14261b"/>
+        <rect x="160" y="12" width="200" height="316" rx="18" fill="#f4f8f5"/>
+        <rect x="160" y="12" width="200" height="40" rx="18" fill="#15803f"/>
+        <text x="260" y="37" text-anchor="middle" fill="#fff" font-weight="700">Việc của tôi</text>
+        <rect x="170" y="62" width="180" height="58" rx="10" fill="#fff" stroke="#7c3aed"/>
+        <text x="180" y="80" font-weight="700" fill="#7c3aed">✍️ Cần bạn bổ sung (1)</text>
+        <text x="180" y="98" fill="#5f7568">DH-005601 · đã quá 24h</text>
+        <rect x="250" y="102" width="92" height="14" rx="7" fill="#7c3aed"/><text x="296" y="113" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="700">Bổ sung ngay</text>
+        <rect x="170" y="128" width="180" height="58" rx="10" fill="#fff" stroke="#15803f"/>
+        <text x="180" y="146" font-weight="700" fill="#116a34">📬 Hàng trả về (2)</text>
+        <text x="180" y="164" fill="#5f7568">TR-000506 · 3 món</text>
+        <rect x="250" y="168" width="92" height="14" rx="7" fill="#15803f"/><text x="296" y="179" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="700">Đã nhận hàng</text>
+        <rect x="170" y="194" width="180" height="48" rx="10" fill="#fff" stroke="#2563eb"/>
+        <text x="180" y="212" font-weight="700" fill="#2563eb">📦 Thùng chưa gửi (1)</text>
+        <text x="180" y="230" fill="#5f7568">Còn 1 bước: xác nhận gửi xe</text>
+        <text x="172" y="262" font-weight="700" fill="#14261b">📍 Đang theo dõi</text>
+        <rect x="170" y="268" width="180" height="20" rx="6" fill="#fff" stroke="#d7e3db"/>
+        <circle cx="185" cy="278" r="4" fill="#15803f"/><circle cx="215" cy="278" r="4" fill="#15803f"/><circle cx="245" cy="278" r="5" fill="#ea580c"/><circle cx="275" cy="278" r="4" fill="#cbd5d0"/><circle cx="305" cy="278" r="4" fill="#cbd5d0"/>
+        <rect x="160" y="296" width="200" height="32" rx="0" fill="#fff"/>
+        <text x="185" y="317" text-anchor="middle" font-size="10" fill="#15803f" font-weight="700">Việc</text>
+        <text x="230" y="317" text-anchor="middle" font-size="10" fill="#5f7568">Gửi</text>
+        <text x="280" y="317" text-anchor="middle" font-size="10" fill="#5f7568">Đơn</text>
+        <text x="330" y="317" text-anchor="middle" font-size="10" fill="#5f7568">Nhận</text>
+        <text x="10" y="40" fill="#5f7568">KTV dùng</text>
+        <text x="10" y="58" fill="#5f7568">điện thoại:</text>
+        <text x="10" y="76" fill="#5f7568">việc gấp</text>
+        <text x="10" y="94" fill="#5f7568">luôn lên đầu</text>
+      </svg>
+      <div class="cap">Hình 5 — KTV: màn "Việc của tôi" trên điện thoại.</div>
+    </div>
+
+    <div class="figure small">
+      <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="11.5">
+        <rect x="0" y="0" width="520" height="340" rx="14" fill="#fff" stroke="#d7e3db"/>
+        <text x="14" y="26" font-weight="700" font-size="14" fill="#14261b">Đơn bảo hành › Chờ phân loại</text>
+        <rect x="14" y="36" width="80" height="20" rx="10" fill="#f2ecfe"/><text x="54" y="50" text-anchor="middle" fill="#7c3aed" font-weight="700">☰ Danh sách</text>
+        <rect x="100" y="36" width="80" height="20" rx="10" fill="#f1f5f9"/><text x="140" y="50" text-anchor="middle" fill="#64748b">👷 Theo KTV</text>
+        <rect x="186" y="36" width="90" height="20" rx="10" fill="#f1f5f9"/><text x="231" y="50" text-anchor="middle" fill="#64748b">🔩 Theo LK</text>
+        <rect x="330" y="34" width="176" height="24" rx="8" fill="#15803f"/><text x="418" y="50" text-anchor="middle" fill="#fff" font-weight="700">⚡ Xử lý nhanh hàng loạt (3)</text>
+        <rect x="14" y="66" width="492" height="22" fill="#ecf8f0"/>
+        <text x="34" y="81" font-weight="700" fill="#116a34">ID</text><text x="120" y="81" font-weight="700" fill="#116a34">Trạng thái</text><text x="215" y="81" font-weight="700" fill="#116a34">SLA</text><text x="260" y="81" font-weight="700" fill="#116a34">Nguồn</text><text x="350" y="81" font-weight="700" fill="#116a34">Linh kiện</text>
+        <g fill="#334a3c">
+          <rect x="20" y="96" width="10" height="10" rx="2" fill="#15803f"/><text x="36" y="105" fill="#2563eb" font-family="Consolas">DH-5601-1</text>
+          <rect x="118" y="94" width="86" height="15" rx="7" fill="#f2ecfe"/><text x="161" y="105" text-anchor="middle" fill="#7c3aed" font-size="10">Chờ phân loại</text>
+          <rect x="212" y="94" width="38" height="15" rx="7" fill="#dc2626"/><text x="231" y="105" text-anchor="middle" fill="#fff" font-size="10">80h</text>
+          <text x="260" y="105">KTV Thanh</text><text x="350" y="105">Bơm tăng áp 24V</text>
+          <line x1="14" y1="114" x2="506" y2="114" stroke="#eef2ef"/>
+          <rect x="20" y="122" width="10" height="10" rx="2" fill="#15803f"/><text x="36" y="131" fill="#2563eb" font-family="Consolas">DH-5602 ×3</text>
+          <rect x="118" y="120" width="86" height="15" rx="7" fill="#f2ecfe"/><text x="161" y="131" text-anchor="middle" fill="#7c3aed" font-size="10">3 Chờ PL</text>
+          <rect x="212" y="120" width="38" height="15" rx="7" fill="#fdf6e3"/><text x="231" y="131" text-anchor="middle" fill="#b7791f" font-size="10">30h</text>
+          <text x="260" y="131">KTV An</text><text x="350" y="131">Van điện từ</text>
+          <line x1="14" y1="140" x2="506" y2="140" stroke="#eef2ef"/>
+          <rect x="20" y="148" width="10" height="10" rx="2" fill="#15803f"/><text x="36" y="157" fill="#2563eb" font-family="Consolas">DH-5610-1</text>
+          <rect x="118" y="146" width="86" height="15" rx="7" fill="#f2ecfe"/><text x="161" y="157" text-anchor="middle" fill="#7c3aed" font-size="10">Chờ phân loại</text>
+          <rect x="212" y="146" width="38" height="15" rx="7" fill="#ecf8f0"/><text x="231" y="157" text-anchor="middle" fill="#116a34" font-size="10">3h</text>
+          <text x="260" y="157">Khách lẻ</text><text x="350" y="157">Lõi lọc PP 5µ</text>
+        </g>
+        <text x="14" y="190" font-weight="700" fill="#14261b">⚡ Xử lý nhanh</text>
+        <g font-size="10" text-anchor="middle" fill="#14261b">
+          <circle cx="40" cy="225" r="18" fill="#ecf8f0" stroke="#15803f"/><text x="40" y="229">🔄</text><text x="40" y="258">Đổi mới</text>
+          <circle cx="110" cy="225" r="18" fill="#fff1e8" stroke="#ea580c"/><text x="110" y="229">💳</text><text x="110" y="258">Trừ nợ</text>
+          <circle cx="180" cy="225" r="18" fill="#e6f7f5" stroke="#0d9488"/><text x="180" y="229">🔧</text><text x="180" y="258">Sửa chữa</text>
+          <circle cx="250" cy="225" r="18" fill="#f2ecfe" stroke="#7c3aed"/><text x="250" y="229">✍️</text><text x="250" y="258">Bổ sung</text>
+          <circle cx="320" cy="225" r="18" fill="#fdecec" stroke="#dc2626"/><text x="320" y="229">✖</text><text x="320" y="258">Từ chối</text>
+          <circle cx="390" cy="225" r="18" fill="#fdecec" stroke="#dc2626"/><text x="390" y="229">📭</text><text x="390" y="258">Không hàng</text>
+          <circle cx="460" cy="225" r="18" fill="#fdf6e3" stroke="#b7791f"/><text x="460" y="229">📧</text><text x="460" y="258">Có PD…</text>
+        </g>
+        <text x="14" y="300" fill="#5f7568">Badge SLA 3 mức: xanh ≤24h · vàng 24–72h · đỏ đặc &gt;72h (bấm để ghi lý do chậm).</text>
+        <text x="14" y="320" fill="#5f7568">Nhóm ×N gộp 1 dòng, bấm để sổ ra từng đơn vị.</text>
+      </svg>
+      <div class="cap">Hình 6 — Admin BH: bảng Chờ phân loại + lưới ⚡ Xử lý nhanh.</div>
+    </div>
+
+    <div class="figure small">
+      <svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="11.5">
+        <rect x="0" y="0" width="520" height="300" rx="14" fill="#fff" stroke="#d7e3db"/>
+        <rect x="0" y="0" width="520" height="40" rx="14" fill="#ecf8f0"/>
+        <text x="14" y="26" font-weight="700" font-size="14" fill="#14261b">Chi tiết đơn DH-005602-2</text>
+        <g font-size="10" text-anchor="middle">
+          <line x1="40" y1="70" x2="480" y2="70" stroke="#cbd5d0" stroke-width="3"/>
+          <line x1="40" y1="70" x2="290" y2="70" stroke="#15803f" stroke-width="3"/>
+          <circle cx="40" cy="70" r="8" fill="#15803f"/><text x="40" y="94" fill="#14261b">KTV gửi</text>
+          <circle cx="103" cy="70" r="8" fill="#15803f"/><text x="103" y="94" fill="#14261b">Kho nhận</text>
+          <circle cx="166" cy="70" r="8" fill="#15803f"/><text x="166" y="94" fill="#14261b">Admin nhận</text>
+          <circle cx="229" cy="70" r="8" fill="#15803f"/><text x="229" y="94" fill="#14261b">Phân loại</text>
+          <circle cx="292" cy="70" r="10" fill="#ea580c"/><text x="292" y="94" fill="#ea580c" font-weight="700">Sửa chữa</text>
+          <circle cx="355" cy="70" r="8" fill="#cbd5d0"/><text x="355" y="94" fill="#5f7568">Hoàn tất</text>
+          <circle cx="418" cy="70" r="8" fill="#cbd5d0"/><text x="418" y="94" fill="#5f7568">Phiếu trả</text>
+          <circle cx="480" cy="70" r="8" fill="#cbd5d0"/><text x="480" y="94" fill="#5f7568">KTV nhận</text>
+        </g>
+        <text x="14" y="122" fill="#14261b"><tspan font-weight="700">Đang ở:</tspan> NV Khương — đang sửa chữa (12h)</text>
+        <rect x="14" y="134" width="300" height="150" rx="10" fill="#f8faf9" stroke="#d7e3db"/>
+        <text x="24" y="154" font-weight="700" fill="#14261b">Van điện từ Karofi (2009010161)</text>
+        <text x="24" y="172" fill="#5f7568">KTV chọn A · Thực tế gửi về B · Đổi mới C</text>
+        <rect x="24" y="182" width="120" height="20" rx="8" fill="#ecf8f0" stroke="#15803f"/><text x="84" y="196" text-anchor="middle" fill="#116a34" font-family="Consolas" font-weight="700">SC2611030124</text>
+        <text x="24" y="222" fill="#5f7568">Khách: Trần Thị Mai · Serial K24…</text>
+        <text x="24" y="240" fill="#5f7568">Hạn BH: còn đến 05/2027</text>
+        <text x="24" y="262" fill="#5f7568">Người liên quan: KTV, GS, Kho, Admin, NV</text>
+        <rect x="326" y="134" width="180" height="150" rx="10" fill="#fff" stroke="#d7e3db"/>
+        <text x="336" y="154" font-weight="700" fill="#14261b">🕘 Nhật ký &amp; trao đổi</text>
+        <g fill="#5f7568" font-size="10.5">
+          <text x="336" y="176">10/11 09:12 · Admin phân loại</text>
+          <text x="336" y="194">09/11 16:40 · Admin nhận nội bộ</text>
+          <text x="336" y="212">09/11 08:05 · Kho tiếp nhận</text>
+          <text x="336" y="230">08/11 17:20 · KTV gửi xe</text>
+        </g>
+        <rect x="336" y="248" width="160" height="24" rx="7" fill="#f4f8f5" stroke="#d7e3db"/><text x="344" y="264" fill="#8aa596">Viết trao đổi…</text>
+      </svg>
+      <div class="cap">Hình 7 — UI chi tiết đơn: tiến trình 8 bước, "Đang ở", thông tin case, nhật ký gộp.</div>
+    </div>
+
+    <div class="figure small">
+      <svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="11.5">
+        <rect x="0" y="0" width="520" height="300" rx="14" fill="#fff" stroke="#d7e3db"/>
+        <text x="14" y="26" font-weight="700" font-size="14" fill="#14261b">Phiếu trả › Chờ tạo phiếu</text>
+        <g font-size="10.5">
+          <rect x="14" y="36" width="96" height="20" rx="10" fill="#fdf6e3"/><text x="62" y="50" text-anchor="middle" fill="#b7791f" font-weight="700">Chờ tạo phiếu 12</text>
+          <rect x="116" y="36" width="80" height="20" rx="10" fill="#f1f5f9"/><text x="156" y="50" text-anchor="middle" fill="#64748b">Chờ KT 4</text>
+          <rect x="202" y="36" width="80" height="20" rx="10" fill="#f1f5f9"/><text x="242" y="50" text-anchor="middle" fill="#64748b">Chờ Kho in 3</text>
+          <rect x="288" y="36" width="96" height="20" rx="10" fill="#f1f5f9"/><text x="336" y="50" text-anchor="middle" fill="#64748b">Đang gửi KTV</text>
+        </g>
+        <rect x="14" y="66" width="492" height="26" rx="6" fill="#ecf8f0"/>
+        <rect x="22" y="73" width="11" height="11" rx="2" fill="#15803f"/>
+        <text x="40" y="83" font-weight="700" fill="#116a34">👷 KTV Lò Văn Thanh ×3 · Đổi trả</text>
+        <rect x="380" y="70" width="120" height="18" rx="6" fill="#15803f"/><text x="440" y="83" text-anchor="middle" fill="#fff" font-weight="700" font-size="10">Tạo phiếu (3 đơn)</text>
+        <g fill="#334a3c">
+          <text x="40" y="112" fill="#2563eb" font-family="Consolas">DH-5590-1</text><text x="140" y="112">Bơm tăng áp 24V</text><text x="300" y="112">Đổi mới</text><text x="380" y="112">SC261103…</text>
+          <text x="40" y="132" fill="#2563eb" font-family="Consolas">DH-5591-1</text><text x="140" y="132">Van điện từ</text><text x="300" y="132">Sửa chữa</text><text x="380" y="132">SC261104…</text>
+          <text x="40" y="152" fill="#2563eb" font-family="Consolas">DH-5591-2</text><text x="140" y="152">Van điện từ</text><text x="300" y="152">Đổi mới</text><text x="380" y="152">SC261104…</text>
+        </g>
+        <rect x="14" y="166" width="492" height="26" rx="6" fill="#fff1e8"/>
+        <text x="40" y="183" font-weight="700" fill="#ea580c">👷 KTV Nguyễn Văn An ×1 · Trừ công nợ</text>
+        <rect x="14" y="206" width="492" height="80" rx="10" fill="#f8faf9" stroke="#d7e3db"/>
+        <text x="24" y="226" font-weight="700" fill="#14261b">📝 Diễn giải MISA (trong chi tiết phiếu)</text>
+        <text x="24" y="246" fill="#5f7568" font-family="Consolas" font-size="10.5">Tổng đơn: 2 (tổng : 3 linh kiện)</text>
+        <text x="24" y="262" fill="#5f7568" font-family="Consolas" font-size="10.5">6803 xuất kho bảo hành cho KTV (thanhlv2.dvkh)…</text>
+        <text x="24" y="278" fill="#5f7568" font-family="Consolas" font-size="10.5">theo MYC: SC261103… SC261104…</text>
+      </svg>
+      <div class="cap">Hình 8 — Admin BH: gom đơn thành phiếu trả theo KTV × loại đối trừ.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="tichhop">
+  <h2><span class="n">10</span>Kết nối với các hệ thống khác</h2>
+  <div class="figure">
+    <svg viewBox="0 0 1100 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12.5">
+      <defs><marker id="t" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker></defs>
+      <rect x="420" y="100" width="260" height="100" rx="18" fill="#ecf8f0" stroke="#15803f" stroke-width="2"/>
+      <text x="550" y="140" text-anchor="middle" font-weight="700" font-size="16" fill="#14261b">🛠 Bảo hành đổi trả 3T</text>
+      <text x="550" y="162" text-anchor="middle" fill="#5f7568">suachua.dichvu3t.workers.dev</text>
+      <text x="550" y="182" text-anchor="middle" fill="#5f7568">Cloudflare Workers + D1</text>
+
+      <rect x="30" y="30" width="270" height="110" rx="14" fill="#eaf1fe" stroke="#2563eb"/>
+      <text x="165" y="56" text-anchor="middle" font-weight="700" fill="#14261b">📋 DVBH (CRM / Odoo)</text>
+      <text x="165" y="78" text-anchor="middle" fill="#5f7568">→ tra mã case, bằng chứng case</text>
+      <text x="165" y="96" text-anchor="middle" fill="#5f7568">→ kéo đơn bảo hành Odoo (15 phút)</text>
+      <text x="165" y="114" text-anchor="middle" fill="#5f7568">← trạng thái gửi sửa, luồng của ca</text>
+
+      <rect x="30" y="170" width="270" height="110" rx="14" fill="#fff1e8" stroke="#ea580c"/>
+      <text x="165" y="196" text-anchor="middle" font-weight="700" fill="#14261b">🔩 Đặt mua linh kiện (linh-kien-app)</text>
+      <text x="165" y="218" text-anchor="middle" fill="#5f7568">→ danh bạ KTV, khu vực, GS, ETX</text>
+      <text x="165" y="236" text-anchor="middle" fill="#5f7568">→ danh mục linh kiện (mỗi giờ)</text>
+      <text x="165" y="254" text-anchor="middle" fill="#5f7568">↔ phân loại LK · ticket thiếu hàng</text>
+
+      <rect x="800" y="30" width="270" height="110" rx="14" fill="#f2ecfe" stroke="#7c3aed"/>
+      <text x="935" y="56" text-anchor="middle" font-weight="700" fill="#14261b">🏭 Kho vận (khovan)</text>
+      <text x="935" y="78" text-anchor="middle" fill="#5f7568">← báo thùng sắp về khi KTV gửi xe</text>
+      <text x="935" y="96" text-anchor="middle" fill="#5f7568">← "Đã bàn giao" khi Admin nhận</text>
+      <text x="935" y="114" text-anchor="middle" fill="#5f7568">← phiếu trả KT đã duyệt</text>
+
+      <rect x="800" y="170" width="270" height="110" rx="14" fill="#fdf6e3" stroke="#b7791f"/>
+      <text x="935" y="196" text-anchor="middle" font-weight="700" fill="#14261b">🧾 MISA (ngoài hệ thống)</text>
+      <text x="935" y="218" text-anchor="middle" fill="#5f7568">Mã phiếu xuất ghi tay vào phiếu trả</text>
+      <text x="935" y="236" text-anchor="middle" fill="#5f7568">và phiếu cấp linh kiện</text>
+      <text x="935" y="254" text-anchor="middle" fill="#5f7568">File import kết quả về Odoo (xlsx)</text>
+
+      <line x1="300" y1="90" x2="416" y2="130" stroke="#5f7568" stroke-width="2" marker-end="url(#t)"/>
+      <line x1="300" y1="225" x2="416" y2="175" stroke="#5f7568" stroke-width="2" marker-end="url(#t)"/>
+      <line x1="684" y1="130" x2="796" y2="90" stroke="#5f7568" stroke-width="2" marker-end="url(#t)"/>
+      <line x1="684" y1="175" x2="796" y2="225" stroke="#5f7568" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#t)"/>
+    </svg>
+    <div class="cap">Hình 9 — Các hệ thống liên kết. Dữ liệu tham chiếu (KTV, khu vực, linh kiện, nhân sự) không nhập tay mà đồng bộ tự động.</div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="quytac">
+  <h2><span class="n">11</span>Quy tắc cần nhớ</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">⏱ Hạn xử lý (SLA)</h3>
+      <ul style="margin:0;padding-left:20px">
+        <li>Mỗi bước có hạn <b>24 giờ liên tục, không tính Chủ nhật</b>, tính từ lúc việc chuyển sang tay mình.</li>
+        <li>Quá hạn thì phải chọn <b>lý do chậm</b> mới thao tác tiếp; bấm số giờ quá hạn để ghi lý do riêng.</li>
+        <li>Badge: xanh ≤24h · vàng 24–72h · đỏ đặc &gt;72h.</li>
+        <li>Lý do "Không có linh kiện" / "Hết hàng tồn kho" tự tạo ticket thiếu hàng bên linh-kien-app.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🗺 Miền &amp; phạm vi</h3>
+      <ul style="margin:0;padding-left:20px">
+        <li>Đơn tự gán miền <b>MB / MN</b> theo khu vực KTV; KTV có thể chọn gửi về kho miền khác cho từng thùng.</li>
+        <li>Kho / Admin BH / Kế toán thấy đơn đúng miền mình + đơn "Chưa khai báo".</li>
+        <li>Giám sát thấy KTV khu vực mình phụ trách (GS chính + GS phụ); View theo khu vực được gán.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔩 Linh kiện A / B / C</h3>
+      <ul style="margin:0;padding-left:20px">
+        <li><b>A</b> — KTV chọn lúc gửi; sửa được khi thùng còn nháp hoặc khi Admin yêu cầu bổ sung.</li>
+        <li><b>B</b> — Admin xác nhận thực tế gửi về; quản lý xác tính theo B.</li>
+        <li><b>C</b> — linh kiện đổi mới / thay thế; phiếu trả và đối trừ theo C.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔐 Kiểm soát</h3>
+      <ul style="margin:0;padding-left:20px">
+        <li>Mã case phải đúng KTV (Trạm hoặc KTV triển khai); Admin / GS tạo hộ lệch KTV phải tích xác nhận.</li>
+        <li>Kế toán duyệt từng phiếu, không duyệt hàng loạt.</li>
+        <li>Mọi thao tác ghi nhật ký (insert-only): ai, lúc nào, từ trạng thái nào sang trạng thái nào.</li>
+        <li>Mở nhanh bằng link: <code>/DH-…</code>, <code>/BH-…</code>, <code>/TR-…</code> (vẫn kiểm quyền xem).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note green">Xem thêm: <b>Luong-Cap-Linh-Kien-Bao-Hanh.html</b> (luồng con cấp linh kiện sửa chữa) · tài liệu hướng dẫn KTV / Admin BH trong thư mục dự án.</div>
+</section>
+
+</main>
+
+<footer>Bảo hành đổi trả 3T · Tài liệu mô tả luồng quy trình tổng · 11/11/2026</footer>
+</body>
+</html>
