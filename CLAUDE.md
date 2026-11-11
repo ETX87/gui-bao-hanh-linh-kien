@@ -6579,3 +6579,13 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck 0 lỗi; xác nhận trên D1 production DH-005648 có 1 ảnh, 0 đơn vị con. Chưa bấm thử xoá trên bản thật.
 
 **Deploy (11/11/2026):** `npm run deploy` từ git worktree sạch (Version ID `fa1ee574`), không có migration mới.
+
+## Tài liệu HTML mô tả luồng cấp linh kiện bảo hành (11/11/2026) — không đổi code
+
+**(a) Nguyên văn yêu cầu:** *"xây dụng bản html mô tả luồng quy trình cấp linh kiện bảo hành, bao gồm luồng quy trình triển khai như thế nào, các vai trò nào tham gia, tham gia với chức năng gì kèm vài hình ảnh mô tả"*
+
+**(b) Đã làm:** `du an sua chua bao hanh/Luong-Cap-Linh-Kien-Bao-Hanh.html` — 1 file HTML tự chứa (không thư viện ngoài, mở trực tiếp, in được). 8 mục: tổng quan, sơ đồ luồng theo 4 làn vai trò (NV sửa chữa / Admin BH / Kế toán / Kho), vai trò + chức năng + ma trận quyền, 6 bước triển khai, vòng đời trạng thái (Chờ Admin cấp → Chờ KT xác nhận → Chờ Kho in → Kho đã in → Kho đã xuất; Từ chối / Đã huỷ), minh hoạ màn hình, tình huống đặc biệt (KT trả lại, tự huỷ khi NV nộp kết quả, lùi lại để xin thêm, thiếu hàng → ticket linh-kien-app), quy tắc cần nhớ. 7 hình là SVG vẽ tay mô phỏng giao diện (không phải ảnh chụp thật), nội dung theo luồng hiện hành v1.029 / v1.036 / v1.066 / v1.069 / v1.073 / v1.091.
+
+**(c) Vấn đề:** 1 mũi tên trong sơ đồ đè lên chữ → dời điểm đầu.
+
+**(d) Kiểm thử:** mở bằng Browser pane, xem bằng mắt phần đầu + sơ đồ luồng. Không đổi code → không tăng phiên bản, không deploy.
