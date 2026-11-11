@@ -6660,3 +6660,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** khi Kho đã in phiếu (tab "Kho đã in") thì Kế toán không sửa được — Kho bấm "↩ Chưa in" để trả về rồi Kế toán mới sửa.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), 3 đề xuất (2 cùng PXK chờ in, 1 đã in): mã rỗng → `REQUIRE_MA_MISA`; sửa phiếu đã in → `KHO_DA_XU_LY` (cả theo phiếu lẫn theo dòng); tách riêng 1 dòng → phiếu mới; sửa cả phiếu → đúng; nhật ký ghi đủ. Giao diện: tab Chờ Kho in hiện "✎ Sửa mã PXK" ở mỗi khối, nút "Lưu" khoá khi chưa đổi; nhập XK-0099 → lưu → khối đổi thành "🧾 PXK XK-0099".
+
+**Deploy (11/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `9802da47`), không có migration mới.
