@@ -6680,3 +6680,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Nguyên nhân + đã sửa** (`frontend/src/lib/inPhieuThung.ts`): v1.106 đặt độ rộng cột cố định bằng mm (tổng 148mm) — khi khổ giấy / tỉ lệ in của máy người dùng hẹp hơn A4 (máy in Canon đặt khổ khác, hoặc in thu nhỏ) thì cột "Tên linh kiện" (cột tự co) gần như mất chỗ. Sửa: độ rộng cột theo **%** (STT 5 · ID 12 · Mã LK 12 · Tên 24 · SL 5 · Mã SC 13 · Ghi chú 22 · Kho 7) dùng chung cho màn hình và bản in → bản in cùng tỉ lệ với bản xem; bỏ khối CSS in riêng (đổi cỡ chữ / lưới) của v1.106, khi in chỉ ẩn thanh nút + bóng; cỡ chữ ô và mã tự co theo khổ giấy (`min(12.5px, 1.75vw)`, `min(12px, 1.6vw)`) để giấy nhỏ không bị đè chữ. Nên chọn khổ giấy A4 trong hộp in (More settings › Paper size).
 
 **(d) Kiểm thử:** phiếu 32 đơn giống ảnh, in PDF bằng Chrome headless: A4 2 trang, bố cục khớp bản xem trên màn hình (tên linh kiện 1–2 dòng, mã 1 dòng); khổ A5 3 trang, không đè chữ. Typecheck 0 lỗi. Chưa in trên máy in thật.
+
+**Deploy (11/11/2026):** `npm run deploy` (Version ID `b644de0c`), không có migration mới.
