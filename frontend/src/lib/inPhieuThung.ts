@@ -90,10 +90,10 @@ export function buildPhieuThungHtml(p: PhieuThungIn): string {
   .kv span{display:block;font-size:10.5px;color:#555;text-transform:uppercase;letter-spacing:.03em}
   .kv b{display:block;font-size:13px;word-break:break-word}
   table{width:100%;border-collapse:collapse;margin-top:6px}
-  th,td{border:1px solid #444;padding:5px 6px;vertical-align:top;text-align:left}
+  th,td{border:1px solid #444;padding:5px 6px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
   th{background:#e7f2ea;font-size:11.5px}
   td.c,th.c{text-align:center}td.b{font-weight:700;font-size:14px}
-  .mono{font-family:Consolas,"Courier New",monospace;font-size:12px;white-space:nowrap}
+  .mono{font-family:Consolas,"Courier New",monospace;font-size:12px;white-space:normal;overflow-wrap:anywhere}
   .gc{font-size:11.5px}
   tfoot{display:table-row-group}
   tfoot td{font-weight:700;background:#f5f5f5}
