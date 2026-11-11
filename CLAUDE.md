@@ -6672,3 +6672,11 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** dựng phiếu 32 đơn giống ảnh (tên LK dài, ghi chú 2 dòng), in ra PDF bằng Chrome headless: 2 trang A4 (trước 9), tiêu đề cột lặp lại trang 2, mã ID / LK / SC trên 1 dòng, ô ký + ghi chú ở cuối trang 2. Typecheck 0 lỗi.
 
 **Deploy (11/11/2026):** `npm run deploy` (Version ID `fa0ba0ed`), không có migration mới.
+
+## Phiếu in thùng: in ra giống hệt bản xem trên web (11/11/2026) — v1.107
+
+**(a) Nguyên văn:** *"vẫn không chuẩn, tôi cần in ra giống hệt đang hiện trên html"* (ảnh bản in v1.106: cột "Tên linh kiện" bị ép còn vài ký tự, SL đè lên tên, cột Ghi chú rất rộng; so với ảnh bản HTML trên màn hình đúng).
+
+**(b) Nguyên nhân + đã sửa** (`frontend/src/lib/inPhieuThung.ts`): v1.106 đặt độ rộng cột cố định bằng mm (tổng 148mm) — khi khổ giấy / tỉ lệ in của máy người dùng hẹp hơn A4 (máy in Canon đặt khổ khác, hoặc in thu nhỏ) thì cột "Tên linh kiện" (cột tự co) gần như mất chỗ. Sửa: độ rộng cột theo **%** (STT 5 · ID 12 · Mã LK 12 · Tên 24 · SL 5 · Mã SC 13 · Ghi chú 22 · Kho 7) dùng chung cho màn hình và bản in → bản in cùng tỉ lệ với bản xem; bỏ khối CSS in riêng (đổi cỡ chữ / lưới) của v1.106, khi in chỉ ẩn thanh nút + bóng; cỡ chữ ô và mã tự co theo khổ giấy (`min(12.5px, 1.75vw)`, `min(12px, 1.6vw)`) để giấy nhỏ không bị đè chữ. Nên chọn khổ giấy A4 trong hộp in (More settings › Paper size).
+
+**(d) Kiểm thử:** phiếu 32 đơn giống ảnh, in PDF bằng Chrome headless: A4 2 trang, bố cục khớp bản xem trên màn hình (tên linh kiện 1–2 dòng, mã 1 dòng); khổ A5 3 trang, không đè chữ. Typecheck 0 lỗi. Chưa in trên máy in thật.

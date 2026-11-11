@@ -103,15 +103,8 @@ export function buildPhieuThungHtml(p: PhieuThungIn): string {
   .note{margin-top:10px;font-size:11px;color:#444}
   tr{break-inside:avoid}thead{display:table-header-group}
   table{table-layout:fixed}
-  @media print{
-    body{background:#fff;font-size:11.5px}
-    .bar{display:none}
-    .page{box-shadow:none;margin:0;padding:0;max-width:none;width:auto}
-    .info{grid-template-columns:repeat(3,1fr)}
-    .head .id{font-size:28px}
-    th,td{padding:4px 5px}
-    .mono{white-space:nowrap;word-break:normal;font-size:11px}
-  }
+  /* In: giu NGUYEN bo cuc nhu ban xem tren man hinh (cot theo %, co dan theo kho giay), chi bo thanh nut / bong. */
+  @media print{body{background:#fff}.bar{display:none}.page{box-shadow:none;margin:0;padding:0;max-width:none;width:auto}.mono{font-size:min(12px,1.6vw)}td,th{font-size:min(12.5px,1.75vw)}}
   @media screen and (max-width:640px){.page{margin:0;padding:12px}.info{grid-template-columns:1fr 1fr}.head .id{font-size:22px}.mono{white-space:normal;word-break:break-all}}
 </style></head><body>
 <div class="bar"><button class="p" onclick="window.print()">🖨 In phiếu / Lưu PDF</button><button class="x" onclick="window.close()">Đóng</button></div>
@@ -137,7 +130,7 @@ export function buildPhieuThungHtml(p: PhieuThungIn): string {
     ${tt("In lúc", bayGio())}
   </div>
   <table>
-    <colgroup><col style="width:8mm"><col style="width:24mm"><col style="width:24mm"><col><col style="width:10mm"><col style="width:28mm"><col style="width:42mm"><col style="width:12mm"></colgroup>
+    <colgroup><col style="width:5%"><col style="width:12%"><col style="width:12%"><col style="width:24%"><col style="width:5%"><col style="width:13%"><col style="width:22%"><col style="width:7%"></colgroup>
     <thead><tr>
       <th class="c">STT</th><th>ID đơn</th><th>Mã LK</th><th>Tên linh kiện</th>
       <th class="c">SL</th><th>Mã SC</th><th>Ghi chú</th><th class="c ck">Kho ✓</th>
