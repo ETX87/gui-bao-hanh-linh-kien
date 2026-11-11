@@ -349,4 +349,56 @@ deXuat.post("/kho", async (c) => {
   return c.json({ ok, loi });
 });
 
+// 11/11/2026 ("Khi kế toán duyệt đơn mà kho chưa xử lý, cho phép kế toán sửa mã PXK hoặc bổ sung mã PXK"):
+// Ke toan sua / nhap ma PXK (ma_misa) cho de xuat da duyet ma Kho CHUA in / xuat (kho_tt = cho_in).
+// pxk = sua ca phieu (moi dong cung ma PXK, theo mien); ids = sua le tung dong (tach sang phieu khac).
+deXuat.post("/kt-sua-pxk", async (c) => {
+  const user = c.get("user");
+  if (!isKt(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ ids?: string[]; pxk?: string; ma_misa?: string }>().catch(() => ({}) as { ids?: string[]; pxk?: string; ma_misa?: string });
+  const moi = (body.ma_misa ?? "").trim().slice(0, 200);
+  if (!moi) return c.json({ error: "REQUIRE_MA_MISA" }, 400);
+  const idSet = new Set((body.ids || []).filter((x) => typeof x === "string"));
+  const pxk = typeof body.pxk === "string" ? body.pxk.trim() : "";
+  if (pxk) {
+    const ms = mienScope(user, "p");
+    const { results } = await c.env.DB.prepare(
+      `SELECT d.id FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE d.trang_thai = 'da_cap' AND COALESCE(d.kho_tt, 'cho_in') = 'cho_in' AND ${PXK_KEY} = ?${ms.sql}`,
+    ).bind(pxk, ...ms.binds).all<{ id: string }>();
+    results.forEach((r) => idSet.add(r.id));
+  }
+  const ids = [...idSet].slice(0, 500);
+  if (!ids.length) return c.json({ error: pxk ? "KHO_DA_XU_LY" : "MISSING_IDS" }, 400);
+  const now = nowVN();
+  let ok = 0;
+  const loi: { id: string; error: string }[] = [];
+  for (const id of ids) {
+    const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(id).first<DxRow & { kho_tt: string | null; ma_misa: string | null }>();
+    if (!d) {
+      loi.push({ id, error: "NOT_FOUND" });
+      continue;
+    }
+    if (d.trang_thai !== "da_cap" || (d.kho_tt || "cho_in") !== "cho_in") {
+      loi.push({ id, error: "KHO_DA_XU_LY" });
+      continue;
+    }
+    if ((d.ma_misa || "").trim() === moi) {
+      ok++;
+      continue;
+    }
+    const res = await c.env.DB.prepare(
+      "UPDATE de_xuat_linh_kien_bh SET ma_misa = ?, updated_at = ? WHERE id = ? AND trang_thai = 'da_cap' AND COALESCE(kho_tt, 'cho_in') = 'cho_in'",
+    ).bind(moi, now, id).run();
+    if (!res.meta.changes) {
+      loi.push({ id, error: "KHO_DA_XU_LY" });
+      continue;
+    }
+    const u = await unitOf(c.env.DB, d.unit_id);
+    await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, u?.trang_thai ?? null, u?.trang_thai ?? null, user.email, `Kế toán ${d.ma_misa ? "sửa" : "nhập"} mã PXK cấp linh kiện ${d.id} (${d.ma_lk} ×${d.so_luong}): ${d.ma_misa || "(trống)"} → ${moi}`);
+    ok++;
+  }
+  return c.json({ ok, loi });
+});
+
 export default deXuat;

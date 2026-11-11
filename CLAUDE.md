@@ -6644,3 +6644,19 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** "ngày giờ gửi" — hệ thống chỉ lưu ngày gửi xe (không giờ) nên phiếu ghi ngày gửi + giờ in.
 
 **(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), thùng nháp mẫu 3 đơn: nút hiện trong chi tiết thùng (khổ điện thoại là "🖨 thùng"); phiếu sinh đủ mã thùng, mã LK, tên LK, SC, ghi chú Odoo, nhà xe, vận đơn, tên KTV, tổng 4 linh kiện, không lộ "AppSheet ID"; khổ 820px mọi phần (QR, bảng) nằm trong trang A4, khổ điện thoại 375px không tràn ngang. Chưa thử in ra giấy / lưu PDF thật và chưa thử trên điện thoại thật (PWA iOS).
+
+**Deploy (11/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `5db5e6e9`), không có migration mới.
+
+## Kế toán sửa / bổ sung mã PXK cấp linh kiện khi Kho chưa xử lý (11/11/2026) — v1.105
+
+**(a) Nguyên văn yêu cầu:** *"2. Khi kế toán duyệt đơn mà kho chưa xử lý, cho phép kế toán sửa mã PXK hoặc bổ sung mã PXK"*
+
+**(b) Đã làm:**
+- Hiểu "mã PXK" = mã MISA phiếu xuất kho của **phiếu cấp linh kiện sửa chữa** (`de_xuat_linh_kien_bh.ma_misa`, các khối "🧾 PXK …" ở màn Cấp linh kiện). Trước đây sau khi Kế toán duyệt, không ai sửa được mã này. Phiếu trả đã có sẵn tính năng tương tự từ v1.063 (Kế toán sửa mã MISA tới khi Kho đóng gói) — không đổi.
+- Backend `POST /api/de-xuat/kt-sua-pxk {pxk? | ids?, ma_misa}` (Kế toán / qtri): chỉ áp cho đề xuất **đã KT duyệt mà Kho chưa in, chưa xuất** (`trang_thai='da_cap'`, `kho_tt='cho_in'`). `pxk` = sửa cả phiếu (mọi dòng cùng mã PXK, theo miền); `ids` = sửa riêng 1 dòng (tách sang phiếu khác). Mã mới bắt buộc; Kho đã in / xuất → `KHO_DA_XU_LY`; mỗi dòng ghi nhật ký đơn vị "Kế toán sửa/nhập mã PXK cấp linh kiện DX-…: cũ → mới".
+- Giao diện (`screens/adminbh/DeXuatLinhKien.tsx`): tab "🖨 Chờ Kho in" — với Kế toán / qtri, mỗi khối PXK có nút "✎ Sửa mã PXK" (khối chưa có mã: "＋ Nhập mã PXK"); mở khối ra, dòng linh kiện có "✎ PXK riêng" khi phiếu có >1 linh kiện. Hộp "Sửa mã PXK" có ô nhập, hiện cũ → mới. Nút ở tiêu đề khối dùng được cả ở tab "Cấp linh kiện" trong màn Phiếu trả của Kế toán. Không có migration.
+- Thông báo lỗi `KHO_DA_XU_LY` hiển thị riêng trong hộp này (không sửa `lib/api.ts` vì file đó đang có thay đổi dở của phiên khác).
+
+**(c) Ghi nhận:** khi Kho đã in phiếu (tab "Kho đã in") thì Kế toán không sửa được — Kho bấm "↩ Chưa in" để trả về rồi Kế toán mới sửa.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), 3 đề xuất (2 cùng PXK chờ in, 1 đã in): mã rỗng → `REQUIRE_MA_MISA`; sửa phiếu đã in → `KHO_DA_XU_LY` (cả theo phiếu lẫn theo dòng); tách riêng 1 dòng → phiếu mới; sửa cả phiếu → đúng; nhật ký ghi đủ. Giao diện: tab Chờ Kho in hiện "✎ Sửa mã PXK" ở mỗi khối, nút "Lưu" khoá khi chưa đổi; nhập XK-0099 → lưu → khối đổi thành "🧾 PXK XK-0099".

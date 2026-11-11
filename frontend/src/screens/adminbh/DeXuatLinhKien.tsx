@@ -4,7 +4,8 @@ import { useToast } from "../../ui/Toast";
 import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
-import { Badge, Btn, Card, Spinner } from "../../ui/primitives";
+import { Badge, Btn, Card, Field, Input, Spinner } from "../../ui/primitives";
+import { Modal } from "../../ui/Modal";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { MienBadge } from "../../ui/MienBadge";
 import { Table, type Column } from "../../ui/Table";
@@ -80,6 +81,8 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     window.location.replace(`#${pth}?${p.toString()}`);
   }, [tab]);
   const [khoBusy, setKhoBusy] = useState(false);
+  // 11/11/2026: Ke toan sua / nhap ma PXK khi Kho chua in / xuat.
+  const [suaPxk, setSuaPxk] = useState<SuaPxkTarget | null>(null);
   // 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": so ca (tab Kho: so phieu PXK) cua MOI tab.
   const [dem, setDem] = useState<Dem>({});
   const loadDem = () => api.get<{ dem: Dem }>("/de-xuat/dem").then((r) => setDem(r.dem)).catch(() => {});
@@ -240,7 +243,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
       {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
       <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
       {pxkTab ? (
-        <PxkGroups rows={rows} nameOf={nameOf} canAct={isKho && KHO_TABS.includes(tab)} tab={tab} busy={khoBusy} onLam={khoLam} onOpen={setDetailId} />
+        <PxkGroups rows={rows} nameOf={nameOf} canAct={isKho && KHO_TABS.includes(tab)} tab={tab} busy={khoBusy} onLam={khoLam} onOpen={setDetailId} onSuaPxk={isKt && tab === "cho_kho_in" ? setSuaPxk : undefined} />
       ) : choKt ? (
         <KtCaseGroups
           rows={rows}
@@ -298,6 +301,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
           }}
         />
       )}
+      {suaPxk && <SuaPxkModal target={suaPxk} onClose={() => setSuaPxk(null)} onDone={() => { setSuaPxk(null); after(); }} />}
       {detailId && <UnitDetailModal unitId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={after} />}
     </Card>
   );
@@ -402,6 +406,7 @@ function PxkGroups({
   busy,
   onLam,
   onOpen,
+  onSuaPxk,
 }: {
   rows: DeXuatLk[];
   nameOf: (ma: string | null | undefined) => string;
@@ -410,6 +415,7 @@ function PxkGroups({
   busy: boolean;
   onLam: (pxk: string[], hd: "da_in" | "chua_in" | "da_xuat") => void;
   onOpen: (unitId: string) => void;
+  onSuaPxk?: (t: SuaPxkTarget) => void;
 }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -498,6 +504,13 @@ function PxkGroups({
               ) : (
                 <SlaBadge since={since} />
               )}
+              {onSuaPxk && (
+                <span className={canAct ? "" : "ml-auto"} onClick={(e) => e.stopPropagation()}>
+                  <Btn size="sm" variant="ghost" title="Kế toán sửa / nhập mã PXK cho cả phiếu (Kho chưa in, chưa xuất)" onClick={() => onSuaPxk({ pxk: g.key, cu: g.coMisa ? g.key : "", moTa: `cả phiếu ${g.coMisa ? g.key : "chưa có mã"} — ${g.items.length} linh kiện` })}>
+                    {g.coMisa ? "✎ Sửa mã PXK" : "＋ Nhập mã PXK"}
+                  </Btn>
+                </span>
+              )}
               {canAct && (
                 <span className="ml-auto flex gap-1.5" onClick={(e) => e.stopPropagation()}>
                   {tab === "cho_kho_in" ? (
@@ -549,6 +562,19 @@ function PxkGroups({
                           NV <UserName email={r.nguoi_de_xuat} />
                         </span>
                         {r.ma_don_hang && <span className="text-[var(--ink-soft)]">ĐH {r.ma_don_hang}</span>}
+                        {onSuaPxk && g.items.length > 1 && (
+                          <button
+                            type="button"
+                            className="text-[var(--link)] font-semibold"
+                            title="Đổi mã PXK riêng linh kiện này (tách sang phiếu khác)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSuaPxk({ ids: [r.id], cu: r.ma_misa || "", moTa: `riêng ${r.id} · ${nameOf(r.ma_lk)} ×${r.so_luong}` });
+                            }}
+                          >
+                            ✎ PXK riêng
+                          </button>
+                        )}
                         {r.ghi_chu && (
                           <span className="text-[var(--ink-soft)] truncate max-w-[220px]" title={r.ghi_chu}>
                             · {r.ghi_chu}
@@ -564,5 +590,56 @@ function PxkGroups({
         );
       })}
     </div>
+  );
+}
+
+// 11/11/2026: "Khi kế toán duyệt đơn mà kho chưa xử lý, cho phép kế toán sửa mã PXK hoặc bổ sung mã PXK".
+type SuaPxkTarget = { pxk?: string; ids?: string[]; cu: string; moTa: string };
+
+function SuaPxkModal({ target, onClose, onDone }: { target: SuaPxkTarget; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const [ma, setMa] = useState(target.cu);
+  const [busy, setBusy] = useState(false);
+  const moi = ma.trim();
+  const coTheLuu = !busy && !!moi && moi !== target.cu;
+  const msg = (code: string) => (code === "KHO_DA_XU_LY" ? "Kho đã in / xuất" : code);
+  const luu = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ ok: number; loi: { id: string; error: string }[] }>("/de-xuat/kt-sua-pxk", { pxk: target.pxk, ids: target.ids, ma_misa: moi });
+      if (r.loi.length) toast(`Đã lưu ${r.ok} linh kiện, ${r.loi.length} không sửa được (${r.loi.map((x) => `${x.id}: ${msg(x.error)}`).join("; ")})`, "error");
+      else toast(`Đã lưu mã PXK ${moi} cho ${r.ok} linh kiện.`, "ok");
+      onDone();
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      toast(code === "KHO_DA_XU_LY" ? "Kho đã in / xuất phiếu này — không sửa mã PXK được nữa." : errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={target.cu ? "Sửa mã PXK" : "Nhập mã PXK"}
+      onClose={onClose}
+      maxWidthClass="max-w-md"
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Huỷ</Btn>
+          <Btn variant="primary" disabled={!coTheLuu} onClick={luu}>
+            Lưu mã PXK
+          </Btn>
+        </>
+      }
+    >
+      <p className="text-sm text-[var(--ink-soft)] mb-2">Áp cho {target.moTa}. Chỉ sửa được khi Kho chưa in, chưa xuất; mỗi thay đổi ghi vào nhật ký đơn.</p>
+      <Field label="Mã PXK (MISA)" required>
+        <Input autoFocus value={ma} onChange={(e) => setMa(e.target.value)} onKeyDown={(e) => e.key === "Enter" && coTheLuu && luu()} placeholder="VD XK00123" />
+      </Field>
+      {target.cu && moi && moi !== target.cu && (
+        <p className="text-xs text-[var(--ink-soft)] mt-1">
+          {target.cu} → <b>{moi}</b>
+        </p>
+      )}
+    </Modal>
   );
 }
