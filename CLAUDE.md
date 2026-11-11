@@ -6614,3 +6614,17 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** 1 dòng chữ tràn mép phải hình lịch, khung bước cron xuống dòng lẻ, thẻ việc 4+4+1 → đã chỉnh.
 
 **(d) Kiểm thử:** mở bằng Browser pane 1440px, kiểm bằng ảnh + đo DOM (không chữ SVG nào ra ngoài khung, bước cron 2 hàng × 4, thẻ việc 3 cột). Không đổi code → không tăng phiên bản, không deploy.
+
+## Màn "Logic hệ thống" trong web cho vai trò BO (11/11/2026) — v1.103
+
+**(a) Nguyên văn yêu cầu:** *"thêm vào web để các BO có thể đọc được logic hệ thống"*
+
+**(b) Đã làm:**
+- Màn mới `#/logic` (`frontend/src/screens/shared/LogicHeThong.tsx`), mục menu "📘 Logic hệ thống" (ngay trước Quản trị), hiện cho mọi tài khoản **không phải KTV thuần** (BO: Kho, Admin BH, NV, Kế toán, Giám sát, View, Admin hệ thống); route kiểm cùng điều kiện.
+- 2 tab: "🔁 Luồng quy trình tổng" (`Luong-Quy-Trinh-Tong-Bao-Hanh.html`, có mục 12 cho BO) và "🔩 Luồng cấp linh kiện" (`Luong-Cap-Linh-Kien-Bao-Hanh.html`); tab nằm trên URL (`#/logic?tab=cap_lk`).
+- **1 nguồn duy nhất:** nạp thẳng 2 file HTML trong thư mục tài liệu bằng `import("…?raw")` của Vite — tách chunk riêng (~108KB / 24KB gzip), chỉ tải khi mở màn, không làm nặng bundle chính. Sửa tài liệu rồi deploy là màn cập nhật theo.
+- Hiện bằng `<iframe srcDoc sandbox="allow-same-origin">` (CSS tài liệu không ảnh hưởng app). Không có migration, không đổi backend.
+
+**(c) Vấn đề phát hiện + đã sửa:** tài liệu trong srcdoc thừa hưởng base URL của app → bấm mục lục `#bo` làm iframe điều hướng sang chính trang app (trắng). Sandbox không cho chạy script bên trong nên app bắt click từ ngoài (`onLoad` → listener trên `contentDocument`): link `#…` cuộn tới mục, link http mở tab mới. Cuộn "smooth" không chạy khi trang ở nền → dùng cuộn tức thì. `wrangler dev` không tự nhận bản build mới + service worker giữ JS cũ → phải khởi động lại + xoá SW khi kiểm thử.
+
+**(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), tài khoản Admin hệ thống: menu có "Logic"; tab 1 hiện tài liệu, bấm "12. Logic & lịch chạy (BO)" → iframe vẫn `about:srcdoc`, cuộn đúng tới mục 12 (ảnh chụp 1440px); tab 2 đổi URL `?tab=cap_lk`, tải đúng tài liệu cấp linh kiện; khổ điện thoại hiện đủ, có thanh tab. Chưa thử bằng tài khoản KTV thuần (điều kiện ẩn dùng lại `isPureKtv` có sẵn).

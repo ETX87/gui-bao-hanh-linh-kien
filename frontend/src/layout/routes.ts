@@ -96,6 +96,7 @@ const CATALOG: CatalogItem[] = [
     show: (u) => u.la_admin_bh || u.la_ke_toan || u.la_kho || u.la_view || u.la_qtri,
   },
   { hash: "/lich-su", label: "Lịch sử Serial / Case", short: "Lịch sử", icon: "🔁", group: "", desc: "Tra lịch sử bảo hành theo Serial hoặc ID case", show: () => true },
+  { hash: "/logic", label: "Logic hệ thống", short: "Logic", icon: "📘", group: "", desc: "Luồng quy trình, logic tự động, lịch chạy — tài liệu cho BO", show: (u) => !isPureKtv(u) },
   { hash: "/quan-tri", label: "Quản trị & danh mục", short: "Quản trị", icon: "⚙️", group: "", desc: "Linh kiện, người dùng, KTV, khu vực, cài đặt", show: (u) => u.la_admin_bh || u.la_qtri },
 ];
 
