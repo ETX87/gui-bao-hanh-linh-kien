@@ -1,4 +1,5 @@
 import { Modal } from "../../ui/Modal";
+import { UploadBar, uploadBtnText } from "../../ui/UploadBar";
 import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
 import { lkOptions } from "../../hooks/useLinhKien";
@@ -22,9 +23,10 @@ export function AddDonModal({ guiId, ktvEmail, onClose, onDone }: { guiId: strin
       footerActions={
         <>
           {f.lyDoKhoa && !f.busy && <span className="mr-auto text-xs font-semibold text-[var(--amber-800)]">⚠ {f.lyDoKhoa}</span>}
+          {f.tienDo && <UploadBar p={f.tienDo} className="mr-auto w-64" />}
           <Btn onClick={onClose}>Huỷ</Btn>
           <Btn variant="primary" disabled={!f.valid || f.busy} onClick={f.submit}>
-            {f.busy ? "Đang gửi…" : "Thêm vào phiếu"}
+            {uploadBtnText(f.busy, f.tienDo, "Thêm vào phiếu")}
           </Btn>
         </>
       }

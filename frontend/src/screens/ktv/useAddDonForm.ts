@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { api, ApiError, errorMessage } from "../../lib/api";
+import { ApiError, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { useLinhKien } from "../../hooks/useLinhKien";
+import { postJsonWithProgress, type UploadProgress } from "../../lib/uploadProgress";
 import { useAuth } from "../../auth/AuthContext";
 
 // 1 nguon su that dung chung giua AddDonModal (desktop) va AddDonMobileSheet (mobile) - port dung
@@ -28,6 +29,7 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const [loaiDoiTru, setLoaiDoiTru] = useState("doi_tra");
   const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tienDo, setTienDo] = useState<UploadProgress | null>(null);
   // 05/10/2026 muc 9: Admin BH / Giam sat (/qtri) tao don HO cho KTV khac duoc tich xac nhan tao don du
   // case thuoc KTV khac tren he thong - KTV tu tao cho chinh minh KHONG co lua chon nay.
   const auth = useAuth();
@@ -62,7 +64,7 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
         toast(e instanceof Error ? e.message : "Không đọc được ảnh — bỏ ảnh đó rồi chụp/chọn lại.", "error");
         return;
       }
-      await api.post(
+      await postJsonWithProgress(
         `/phieu-gui/${guiId}/don`,
         {
           case_id: caseId.trim(),
@@ -75,20 +77,21 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
           // 30/10/2026: cung o tich "override" dung cho truong hop DVBH khong phan hoi (backend chi xet khi DVBH loi).
           xac_nhan_chua_xac_minh: override,
         },
-        { timeoutMs: 60000 },
+        setTienDo,
       );
       toast("Đã thêm đơn vào phiếu.", "ok");
       onDone();
     } catch (e) {
       if (e instanceof ApiError && e.code === "TIMEOUT") {
-        toast("Gửi đơn quá lâu (mạng chậm). Đơn có thể đã được thêm — đóng hộp này, kiểm tra danh sách đơn trong phiếu rồi mới thêm lại.", "error");
+        toast("Mạng bị ngắt khi đang gửi (không tải lên được thêm trong 45 giây). Đơn có thể đã được thêm — đóng hộp này, kiểm tra danh sách đơn trong phiếu rồi mới thêm lại.", "error");
       } else {
         toast(errorMessage(e), "error");
       }
     } finally {
       setBusy(false);
+      setTienDo(null);
     }
   };
 
-  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, valid, lyDoKhoa, submit };
+  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, tienDo, valid, lyDoKhoa, submit };
 }

@@ -9,7 +9,7 @@ import { useEffect, useId, useState } from "react";
 // 05/11/2026 - "khi up ảnh bị lỗi ảnh": anh trong thu vien dien thoai co the la HEIC (trinh duyet khong
 // hien duoc) hoac anh chua tai ve may (Google Photos tren may, file rong) -> doc that bang <img>, ve lai
 // ra JPEG (canh dai toi da 1600px, nhe hon nhieu khi luu data URL vao D1). Khong doc duoc thi bo + bao.
-const MAX_SIDE = 1600;
+const MAX_SIDE = 1280; // 11/11/2026: 1600px/0.85 ra ~300-600KB/anh, mang yeu gui rat lau -> 1280px/0.78 (~120-250KB)
 function normalizeImage(file: File): Promise<File | null> {
   return new Promise((resolve) => {
     if (!file || file.size === 0) return resolve(null);
@@ -31,7 +31,7 @@ function normalizeImage(file: File): Promise<File | null> {
           if (!b) return resolve(file);
           const name = (file.name || "anh").replace(/\.[^.]+$/, "") + ".jpg";
           resolve(new File([b], name, { type: "image/jpeg" }));
-        }, "image/jpeg", 0.85);
+        }, "image/jpeg", 0.78);
       } catch {
         URL.revokeObjectURL(url);
         resolve(file);

@@ -6709,3 +6709,17 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** dựng phiếu có dòng giống ảnh, in PDF bằng Chrome headless + tạo PDF bằng pdfmake: 4 mã xuống 4 dòng trong cột Mã LK, không đè cột khác; dòng mã đơn lẻ vẫn 1 dòng. Typecheck 0 lỗi.
 
 **Deploy (11/11/2026):** `npm run deploy` (Version ID `1502ef2e`), không có migration mới.
+
+## Gửi đơn có ảnh chờ lâu rồi báo lỗi + hiện % tải ảnh lên (11/11/2026) — v1.110
+
+**(a) Nguyên văn:** *"app bị lỗi khi KTV up ảnh rồi ấn tạo chờ rất lâu rồi báo lỗi"* (ảnh form "Thêm đơn bảo hành" mobile, nút "Đang gửi…" rồi toast "Gửi đơn quá lâu (mạng chậm)…") và gửi giữa lượt: *"cho hiện trạng tỷ lệ up ảnh lên server để ktv biết ảnh đang được up lên"*.
+
+**(b) Nguyên nhân + đã làm:** đọc D1 production: đơn có ảnh vẫn tạo được bình thường (mỗi ảnh 250–640 KB data URL), nên backend không lỗi. Lỗi nằm ở chỗ v1.096 chặn cứng tổng thời gian gửi 60 giây: mạng điện thoại yếu gửi 0,5–2 MB không kịp là báo lỗi, trong khi KTV không thấy tiến độ gì.
+- `frontend/src/lib/uploadProgress.ts` `postJsonWithProgress`: gửi bằng XMLHttpRequest để có `upload.onprogress`. Chỉ báo lỗi khi **45 giây liền không tải thêm được byte nào** (mạng đứt), không chặn theo tổng thời gian. Tải xong thì chờ server tối đa 45 giây.
+- `ui/UploadBar.tsx`: thanh tiến độ "Đang tải lên x KB / y KB · N%" → "Đã tải lên xong — đang lưu đơn…". Nút đổi chữ "Đang chuẩn bị ảnh…" / "Đang tải lên N%" / "Đang lưu đơn…". Áp cho form thêm đơn mobile (`AddDonMobileSheet`) và desktop (`AddDonModal`).
+- `ui/ImagePicker.tsx`: nén ảnh 1280px, chất lượng 0,78 (trước 1600px / 0,85), nhẹ khoảng 2–3 lần. Áp cho mọi ô ảnh.
+- Không đổi backend, không có migration.
+
+**(c) Ghi nhận:** chưa áp thanh tiến độ cho các form ảnh khác (KTV bổ sung, NV nộp kết quả, đơn dịch vụ) — các form đó vẫn dùng `api.post` cũ, nhưng ảnh đã nhẹ hơn nhờ nén.
+
+**(d) Kiểm thử:** typecheck + build sạch. Chưa thử trên điện thoại thật với mạng yếu.
