@@ -6670,3 +6670,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Nguyên nhân + đã sửa** (`frontend/src/lib/inPhieuThung.ts`): khổ in A4 trừ lề hẹp hơn ngưỡng 640px nên trình duyệt áp nhầm luật CSS dành cho điện thoại (`@media (max-width:640px)`: lưới 2 cột, mã bẻ ký tự `break-all`) → mỗi dòng cao gấp nhiều lần; thêm `tfoot` lặp lại ở mọi trang. Sửa: luật điện thoại chỉ áp cho màn hình (`@media screen and …`); khối `@media print` riêng (lưới 3 cột, mã không xuống dòng, chữ 11.5px); bảng `table-layout:fixed` + `<colgroup>` độ rộng cố định từng cột (STT 8 · ID 24 · Mã LK 24 · Tên tự giãn · SL 10 · Mã SC 28 · Ghi chú 42 · Kho 12 mm); dòng tổng chỉ in 1 lần ở cuối.
 
 **(d) Kiểm thử:** dựng phiếu 32 đơn giống ảnh (tên LK dài, ghi chú 2 dòng), in ra PDF bằng Chrome headless: 2 trang A4 (trước 9), tiêu đề cột lặp lại trang 2, mã ID / LK / SC trên 1 dòng, ô ký + ghi chú ở cuối trang 2. Typecheck 0 lỗi.
+
+**Deploy (11/11/2026):** `npm run deploy` (Version ID `fa0ba0ed`), không có migration mới.
