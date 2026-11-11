@@ -6723,3 +6723,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** chưa áp thanh tiến độ cho các form ảnh khác (KTV bổ sung, NV nộp kết quả, đơn dịch vụ) — các form đó vẫn dùng `api.post` cũ, nhưng ảnh đã nhẹ hơn nhờ nén.
 
 **(d) Kiểm thử:** typecheck + build sạch. Chưa thử trên điện thoại thật với mạng yếu.
+
+**Deploy (11/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `ac1a78f6`), không có migration mới.
