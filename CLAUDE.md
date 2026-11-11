@@ -6697,3 +6697,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** `backend/src/routes/phieuGui.ts` đang có thay đổi dở của phiên khác (kiểm tra mã case) → commit chỉ phần của đợt này (bản stage = HEAD + bản vá riêng), deploy khi tạm cất file dở.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá): `?pham_vi=nhap_ktv` với Admin trả 2 thùng nháp của 2 KTV (không gồm thùng đã gửi), tìm "BH-001000" ra 1, `loc_only` có KTV / miền; tab mới hiện đúng 2 thùng. PDF: phiếu 42 đơn tạo bằng node → 3 trang A4, tiêu đề cột lặp lại, có QR + số trang; trên bản build thật bấm "⬇ Tải PDF" sinh blob `%PDF-1.3` 35KB. Chưa thử tải PDF trên điện thoại thật.
+
+**Deploy (11/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `165e8bb6`), không có migration mới.
