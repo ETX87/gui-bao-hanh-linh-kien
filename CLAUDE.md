@@ -6577,3 +6577,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** `phieuGui.ts` còn thay đổi dở của phiên khác (kiểm tra mã case) → chỉ commit đúng đoạn sửa (bản stage = HEAD + bản vá riêng), deploy từ git worktree sạch.
 
 **(d) Kiểm thử:** typecheck 0 lỗi; xác nhận trên D1 production DH-005648 có 1 ảnh, 0 đơn vị con. Chưa bấm thử xoá trên bản thật.
+
+**Deploy (11/11/2026):** `npm run deploy` từ git worktree sạch (Version ID `fa1ee574`), không có migration mới.
