@@ -6707,3 +6707,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Đã sửa** (`frontend/src/lib/inPhieuThung.ts`, phiếu HTML để in): cột mã (`.mono`) trước để `white-space:nowrap` nên đơn có nhiều mã linh kiện gộp tràn sang cột bên cạnh → đổi thành tự xuống dòng (`white-space:normal; overflow-wrap:anywhere`), mọi ô bảng thêm `overflow-wrap:anywhere` để không chữ nào tràn ô. Mã ngắn vẫn nằm trên 1 dòng. Bản PDF (pdfmake) vốn tự xuống dòng, không cần sửa.
 
 **(d) Kiểm thử:** dựng phiếu có dòng giống ảnh, in PDF bằng Chrome headless + tạo PDF bằng pdfmake: 4 mã xuống 4 dòng trong cột Mã LK, không đè cột khác; dòng mã đơn lẻ vẫn 1 dòng. Typecheck 0 lỗi.
+
+**Deploy (11/11/2026):** `npm run deploy` (Version ID `1502ef2e`), không có migration mới.
