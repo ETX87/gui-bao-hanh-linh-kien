@@ -26,6 +26,7 @@ import { readNhaXe, saveNhaXe, sortHinhThuc } from "../../lib/nhaXeCache";
 import { isPureKtv } from "../../layout/routes";
 import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
+import { moPhieuThung } from "../../lib/inPhieuThung";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -180,6 +181,37 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   // thung, khong cho sua.
   const nguoiGiao = giaoTrucTiep ? displayName(g.nguoi_tao) : maXe;
   const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: nguoiGiao, don_vi_van_chuyen: giaoTrucTiep ? "" : dvvc, ma_van_don: giaoTrucTiep ? "" : maVanDon, mien_gui: mienGui };
+  // 11/11/2026: in phieu danh sach don gui kem trong thung (KTV dat vao thung truoc khi gui ve Kho).
+  const inPhieu = () =>
+    moPhieuThung({
+      id: g.id,
+      nguoi_gui: displayName(g.nguoi_tao),
+      nguoi_tao_ho: g.nguoi_tao_ho ? displayName(g.nguoi_tao_ho) : null,
+      ngay_gui: ngayGuiXe || g.ngay_gui_xe || null,
+      hinh_thuc_gui: header.hinh_thuc_gui || g.hinh_thuc_gui,
+      ma_xe_hoac_tai_xe: header.ma_xe_hoac_tai_xe || g.ma_xe_hoac_tai_xe,
+      don_vi_van_chuyen: header.don_vi_van_chuyen || g.don_vi_van_chuyen,
+      ma_van_don: header.ma_van_don || g.ma_van_don,
+      mien: g.mien ?? null,
+      trang_thai: g.trang_thai,
+      dong: data.don_cha.map((d) => {
+        const gc = (d as DonCha & { ghi_chu?: string | null }).ghi_chu?.trim() || "";
+        return {
+          id: d.id,
+          ma_lk: d.ma_lk,
+          ten_lk: d.ma_lk ? lkItems.find((l) => l.ma_lk === d.ma_lk)?.ten_lk || "" : "Cả sản phẩm",
+          so_luong: d.so_luong_khai,
+          case_id: d.case_id,
+          ghi_chu: [d.mo_ta_loi?.trim(), gc && !/AppSheet ID/i.test(gc) ? gc : ""].filter(Boolean).join(" · "),
+        };
+      }),
+    });
+  const nutIn =
+    data.don_cha.length > 0 ? (
+      <Btn size="sm" onClick={inPhieu} title="Mở phiếu danh sách đơn để in / lưu PDF, đặt kèm trong thùng gửi về Kho">
+        🖨 <span className="hidden sm:inline">In phiếu </span>thùng
+      </Btn>
+    ) : null;
   const nhoCache = () => saveNhaXe(g.nguoi_tao, hinhThuc, nguoiGiao, giaoTrucTiep ? "" : dvvc);
   // Doi hinh thuc gui: lay lai thong tin da nhap rieng cho hinh thuc do (neu co tren may nay).
   const doiHinhThuc = (v: string) => {
@@ -372,6 +404,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             right={
               isNhap ? (
                 <>
+                  {nutIn}
                   <Btn size="sm" onClick={() => setOdooOpen(true)}>
                     🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
                   </Btn>
@@ -379,7 +412,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                     + Thêm<span className="hidden sm:inline"> đơn</span>
                   </Btn>
                 </>
-              ) : undefined
+              ) : (
+                nutIn ?? undefined
+              )
             }
           >
             {data.don_cha.length === 0 ? (
@@ -680,6 +715,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             right={
               isNhap ? (
                 <>
+                  {nutIn}
                   <Btn size="sm" onClick={() => setOdooOpen(true)}>
                     🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
                   </Btn>
@@ -687,7 +723,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
                     + Thêm<span className="hidden sm:inline"> đơn</span>
                   </Btn>
                 </>
-              ) : undefined
+              ) : (
+                nutIn ?? undefined
+              )
             }
           >
             {data.don_cha.length === 0 ? (

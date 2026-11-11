@@ -6630,3 +6630,17 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), tài khoản Admin hệ thống: menu có "Logic"; tab 1 hiện tài liệu, bấm "12. Logic & lịch chạy (BO)" → iframe vẫn `about:srcdoc`, cuộn đúng tới mục 12 (ảnh chụp 1440px); tab 2 đổi URL `?tab=cap_lk`, tải đúng tài liệu cấp linh kiện; khổ điện thoại hiện đủ, có thanh tab. Chưa thử bằng tài khoản KTV thuần (điều kiện ẩn dùng lại `isPureKtv` có sẵn).
 
 **Deploy (11/11/2026):** `npm run deploy` khi các file dở của phiên khác (`adminBH.ts`, `phieuGui.ts`, `api.ts`, `kiemTraCase.ts`) được tạm cất (git stash) để production khớp commit, xong trả lại nguyên trạng (Version ID `d35960da`), không có migration mới. Bundle production mang 1.103, có chunk tài liệu riêng.
+
+## In phiếu danh sách đơn gửi kèm thùng hàng (11/11/2026) — v1.104
+
+**(a) Nguyên văn yêu cầu:** *"trong thùng hàng, thêm nút tải danh sách đơn gửi trong thùng để KTV có thể in phiếu vào gửi kèm trong thùng hàng khi gửi về kho: Thông tin thiết kế dạng phiếu in dạng danh sách gồm các thông tin cơ bản như ID, mã LK, tên lK, số lượng, mã SC, ghi chú. Tiêu đề là mã thùng hàng, tem QR, ngày giờ gửi, người gửi...."*
+
+**(b) Đã làm:**
+- Nút **"🖨 In phiếu thùng"** ở tiêu đề khối "Đơn trong thùng" của chi tiết thùng (`PhieuGuiDetailModal`, cả bản gọn KTV lẫn bản đầy đủ), hiện khi thùng có ≥1 đơn, ở mọi trạng thái (nháp in trước khi gửi; đã gửi in lại được). Mọi người mở được chi tiết thùng đều in được.
+- `frontend/src/lib/inPhieuThung.ts`: dựng 1 trang HTML A4 riêng (CSS độc lập), mở tab mới bằng Blob URL — trang có nút "🖨 In phiếu / Lưu PDF" (hộp in của trình duyệt, điện thoại thì Chia sẻ / In); tab bị chặn thì tải về file `Phieu-thung-<mã>.html`.
+- Nội dung phiếu: tiêu đề mã thùng (chữ lớn) + **tem QR** (cùng `renderQrSvg` với tem dán thùng, Kho quét được), số đơn + tổng linh kiện + miền gửi về, nhãn "Thùng chưa xác nhận gửi" nếu còn nháp; thông tin người gửi (tên KTV), ngày gửi / ngày giao, hình thức gửi, mã xe / người giao, đơn vị vận chuyển, mã vận đơn, người tạo hộ, giờ in. Bảng: STT · ID đơn · Mã LK · Tên linh kiện · SL (khai) · Mã SC (case) · Ghi chú (mô tả lỗi + ghi chú đơn, bỏ ghi chú "AppSheet ID" khi nhập dữ liệu cũ) · ô "Kho ✓" để tick khi kiểm; dòng tổng; 3 ô ký Người gửi / Nhà xe / Kho nhận.
+- Thùng nháp: thông tin vận chuyển lấy theo form đang nhập (chưa cần lưu). Không có migration, không đổi backend.
+
+**(c) Ghi nhận:** "ngày giờ gửi" — hệ thống chỉ lưu ngày gửi xe (không giờ) nên phiếu ghi ngày gửi + giờ in.
+
+**(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), thùng nháp mẫu 3 đơn: nút hiện trong chi tiết thùng (khổ điện thoại là "🖨 thùng"); phiếu sinh đủ mã thùng, mã LK, tên LK, SC, ghi chú Odoo, nhà xe, vận đơn, tên KTV, tổng 4 linh kiện, không lộ "AppSheet ID"; khổ 820px mọi phần (QR, bảng) nằm trong trang A4, khổ điện thoại 375px không tràn ngang. Chưa thử in ra giấy / lưu PDF thật và chưa thử trên điện thoại thật (PWA iOS).
