@@ -605,7 +605,12 @@ phieuGui.delete("/don/:donId", async (c) => {
   if (!don) return c.json({ error: "NOT_FOUND" }, 404);
   if (!ownsPhieuGui(user, don)) return c.json({ error: "FORBIDDEN" }, 403);
   if (don.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
-  await c.env.DB.prepare("DELETE FROM phieu_sua_chua_bh WHERE id = ?").bind(donId).run();
+  // 11/11/2026: anh / bao cao sai co FOREIGN KEY toi don cha -> xoa cung luc (truoc day don co anh xoa bi INTERNAL_ERROR).
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM phieu_sua_chua_bh_anh WHERE parent_id = ?").bind(donId),
+    c.env.DB.prepare("DELETE FROM phieu_sua_chua_bh_baocaosai WHERE parent_id = ?").bind(donId),
+    c.env.DB.prepare("DELETE FROM phieu_sua_chua_bh WHERE id = ?").bind(donId),
+  ]);
   return c.json({ ok: true });
 });
 
