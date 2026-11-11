@@ -26,7 +26,7 @@ import { readNhaXe, saveNhaXe, sortHinhThuc } from "../../lib/nhaXeCache";
 import { isPureKtv } from "../../layout/routes";
 import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
-import { moPhieuThung } from "../../lib/inPhieuThung";
+import { moPhieuThung, taiPdfPhieuThung } from "../../lib/inPhieuThung";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -74,6 +74,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [suaDon, setSuaDon] = useState<DonSua | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   // 02/11/2026: Kho / Admin BH nhan truc tiep thung nhap cua KTV (bo qua buoc gui).
   const [nhanVaiTro, setNhanVaiTro] = useState<"kho" | "admin" | null>(null);
   const [nhanGhiChu, setNhanGhiChu] = useState("");
@@ -144,7 +145,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   // Dong modal ma phieu con "nhap" VA chua co don nao -> tu dong xoa luon (yeu cau 07/09/2026 "không
   // tạo ra phiếu nháp thừa"), trung dieu kien nut "Xoá phiếu" thu cong.
   const handleClose = () => {
-    if (data && data.phieu_gui.trang_thai === "nhap" && data.don_cha.length === 0) {
+    // 11/11/2026: chi tu xoa khi chinh KTV / nguoi tao ho mo - Admin / Kho xem thung nhap rong cua KTV thi khong xoa.
+    const cuaMinh = !!user && (user.email === data?.phieu_gui.nguoi_tao || user.email === data?.phieu_gui.nguoi_tao_ho);
+    if (data && cuaMinh && data.phieu_gui.trang_thai === "nhap" && data.don_cha.length === 0) {
       api
         .delete(`/phieu-gui/${data.phieu_gui.id}`)
         .then(() => {
@@ -182,8 +185,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const nguoiGiao = giaoTrucTiep ? displayName(g.nguoi_tao) : maXe;
   const header = { hinh_thuc_gui: hinhThuc, ma_xe_hoac_tai_xe: nguoiGiao, don_vi_van_chuyen: giaoTrucTiep ? "" : dvvc, ma_van_don: giaoTrucTiep ? "" : maVanDon, mien_gui: mienGui };
   // 11/11/2026: in phieu danh sach don gui kem trong thung (KTV dat vao thung truoc khi gui ve Kho).
-  const inPhieu = () =>
-    moPhieuThung({
+  const phieuData = () => ({
       id: g.id,
       nguoi_gui: displayName(g.nguoi_tao),
       nguoi_tao_ho: g.nguoi_tao_ho ? displayName(g.nguoi_tao_ho) : null,
@@ -206,11 +208,27 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
         };
       }),
     });
+  const inPhieu = () => moPhieuThung(phieuData());
+  const taiPdf = async () => {
+    setPdfBusy(true);
+    try {
+      await taiPdfPhieuThung(phieuData());
+    } catch (e) {
+      toast("Không tạo được file PDF: " + (e instanceof Error ? e.message : String(e)), "error");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
   const nutIn =
     data.don_cha.length > 0 ? (
-      <Btn size="sm" onClick={inPhieu} title="Mở phiếu danh sách đơn để in / lưu PDF, đặt kèm trong thùng gửi về Kho">
-        🖨 <span className="hidden sm:inline">In phiếu </span>thùng
-      </Btn>
+      <>
+        <Btn size="sm" disabled={pdfBusy} onClick={taiPdf} title="Tải thẳng file PDF phiếu danh sách đơn (khổ A4) để in kèm thùng gửi về Kho">
+          {pdfBusy ? "Đang tạo…" : <>⬇ <span className="hidden sm:inline">Tải </span>PDF</>}
+        </Btn>
+        <Btn size="sm" onClick={inPhieu} title="Mở phiếu danh sách đơn để in, đặt kèm trong thùng gửi về Kho">
+          🖨 <span className="hidden sm:inline">In phiếu</span>
+        </Btn>
+      </>
     ) : null;
   const nhoCache = () => saveNhaXe(g.nguoi_tao, hinhThuc, nguoiGiao, giaoTrucTiep ? "" : dvvc);
   // Doi hinh thuc gui: lay lai thong tin da nhap rieng cho hinh thuc do (neu co tren may nay).

@@ -8,9 +8,9 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
-import { computeEmailGs, isGsOfKtv } from "../lib/gs";
+import { computeEmailGs, isGsOfKtv, GS_KTV_SUBQUERY } from "../lib/gs";
 import { parsePage } from "../lib/pagination";
-import { mienOfKtv, mienAllowed } from "../lib/mien";
+import { mienOfKtv, mienAllowed, mienScope } from "../lib/mien";
 import { lookupCaseEx } from "../lib/caseLookupClient";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
@@ -57,7 +57,18 @@ phieuGui.get("/", async (c) => {
   // 05/11/2026: KTV thay ca thung minh tao ho KTV khac (nguoi_tao_ho = minh).
   let col: string;
   let colBinds: unknown[];
-  if (isRealKtv) { col = "(nguoi_tao = ? OR nguoi_tao_ho = ?)"; colBinds = [user.email, user.email]; }
+  // 11/11/2026 ("sao tôi là admin nhưng không tìm thấy thùng hàng này"): ?pham_vi=nhap_ktv - MOI thung
+  // nhap KTV dang lam (chua bam gui), de Admin BH / Kho nhan truc tiep (v1.062) hoac nhac KTV gui.
+  // Admin / Kho / qtri: theo mien; Giam sat: KTV khu vuc minh phu trach + thung minh tao ho.
+  const phamVi = c.req.query("pham_vi");
+  if (phamVi === "nhap_ktv" && (user.la_admin_bh || user.la_qtri || user.la_kho)) {
+    const ms = mienScope(user, "phieu_gui_bh");
+    col = `trang_thai = 'nhap'${ms.sql}`;
+    colBinds = ms.binds;
+  } else if (phamVi === "nhap_ktv" && user.la_giam_sat) {
+    col = `trang_thai = 'nhap' AND (nguoi_tao IN (${GS_KTV_SUBQUERY}) OR nguoi_tao_ho = ?)`;
+    colBinds = [user.email, user.email];
+  } else if (isRealKtv) { col = "(nguoi_tao = ? OR nguoi_tao_ho = ?)"; colBinds = [user.email, user.email]; }
   else if (canTaoHo(user)) { col = "nguoi_tao_ho = ?"; colBinds = [user.email]; }
   else if (isKtv(user)) { col = "nguoi_tao = ?"; colBinds = [user.email]; } // qtri fallback (khong xay ra thuc te vi canTaoHo() da gom qtri, giu de an toan)
   else return c.json({ error: "FORBIDDEN" }, 403);

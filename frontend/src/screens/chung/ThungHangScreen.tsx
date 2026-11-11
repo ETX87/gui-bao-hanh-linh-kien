@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TabScreen, type TabDef } from "../../ui/TabScreen";
 import { KtvTaoPhieuScreen } from "../ktv/TaoPhieu";
+import { ThungNhapKtvList } from "./ThungNhapKtv";
 import { KhoTiepNhanScreen } from "../kho/TiepNhan";
 import { ThungDangGuiCard } from "../adminbh/NhanHoKho";
 import { ThungChoNhanNoiBoCard } from "../adminbh/ThungNoiBo";
@@ -25,6 +26,13 @@ function NhanHoKhoTab() {
 export function ThungHangScreen({ user }: { user: AppUser }) {
   const tabs: TabDef[] = [
     { key: "nhap", label: "Thùng nháp / tạo hộ", show: taoHo, countKeys: ["ktv_phieu_nhap"], hint: "Tạo thùng hộ KTV, thêm đơn, xác nhận gửi", render: () => <KtvTaoPhieuScreen user={user} /> },
+    {
+      key: "nhap_ktv",
+      label: "Thùng nháp của KTV",
+      show: (u) => kho(u) || admin(u) || u.la_giam_sat,
+      hint: "Mọi thùng KTV đang tạo, chưa bấm gửi — xem, in phiếu, hoặc nhận trực tiếp",
+      render: () => <ThungNhapKtvList />,
+    },
     {
       key: "dang_gui",
       label: "Đang gửi về Kho",

@@ -164,3 +164,113 @@ export function moPhieuThung(p: PhieuThungIn) {
   }
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
+
+// 11/11/2026 ("thêm nút tải pdf trực tiếp thay vì chuyển chế độ in"): tao file PDF ngay tren may bang
+// pdfmake (phong Roboto co san du dau tieng Viet, bang tu lap tieu de khi sang trang, QR dung san) - khong
+// qua hop in cua trinh duyet nen khong phu thuoc kho giay / ti le in. Thu vien (~1MB) chi tai khi bam nut.
+export async function taiPdfPhieuThung(p: PhieuThungIn): Promise<void> {
+  const [pm, vfsMod] = await Promise.all([import("pdfmake/build/pdfmake"), import("pdfmake/build/vfs_fonts")]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake: any = (pm as any).default ?? pm;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const v: any = (vfsMod as any).default ?? vfsMod;
+  pdfMake.vfs = v?.pdfMake?.vfs ?? v?.vfs ?? v;
+
+  const tongSl = p.dong.reduce((s, d) => s + (d.so_luong || 0), 0);
+  const giaoTrucTiep = p.hinh_thuc_gui === "giao_truc_tiep";
+  const hinhThuc = p.hinh_thuc_gui ? HINH_THUC_GUI_LABELS[p.hinh_thuc_gui] ?? p.hinh_thuc_gui : "";
+  const kv = (k: string, val: string | null | undefined) => ({
+    stack: [
+      { text: k.toUpperCase(), fontSize: 7.5, color: "#555555" },
+      { text: val || " ", bold: true, fontSize: 10, margin: [0, 1, 0, 0] },
+    ],
+    margin: [0, 0, 0, 6],
+  });
+  const info = [
+    kv("Người gửi (KTV)", p.nguoi_gui),
+    kv(giaoTrucTiep ? "Ngày giao" : "Ngày gửi", ngayVn(p.ngay_gui)),
+    kv("Hình thức gửi", hinhThuc),
+    kv(giaoTrucTiep ? "Người giao hàng" : "Mã xe / Tài xế", p.ma_xe_hoac_tai_xe),
+    ...(giaoTrucTiep ? [] : [kv("Đơn vị vận chuyển", p.don_vi_van_chuyen), kv("Mã vận đơn", p.ma_van_don)]),
+    ...(p.nguoi_tao_ho ? [kv("Tạo hộ bởi", p.nguoi_tao_ho)] : []),
+    kv("In lúc", bayGio()),
+  ];
+  const infoRows: unknown[][] = [];
+  for (let i = 0; i < info.length; i += 3) infoRows.push([info[i], info[i + 1] ?? { text: "" }, info[i + 2] ?? { text: "" }]);
+
+  const th = (t: string, center = false) => ({ text: t, bold: true, fontSize: 8.5, fillColor: "#e7f2ea", alignment: center ? "center" : "left" });
+  const body: unknown[][] = [
+    [th("STT", true), th("ID đơn"), th("Mã LK"), th("Tên linh kiện"), th("SL", true), th("Mã SC"), th("Ghi chú"), th("Kho", true)],
+    ...p.dong.map((d, i) => [
+      { text: String(i + 1), alignment: "center" },
+      { text: d.id, fontSize: 8 },
+      { text: d.ma_lk || "—", fontSize: 8 },
+      { text: d.ten_lk },
+      { text: String(d.so_luong), alignment: "center", bold: true, fontSize: 10 },
+      { text: d.case_id || "—", fontSize: 8 },
+      { text: d.ghi_chu, fontSize: 8 },
+      { text: "" },
+    ]),
+    [
+      { text: `Tổng cộng ${p.dong.length} đơn`, colSpan: 4, alignment: "right", bold: true, fillColor: "#f5f5f5" },
+      {},
+      {},
+      {},
+      { text: String(tongSl), alignment: "center", bold: true, fillColor: "#f5f5f5" },
+      { text: "", colSpan: 3, fillColor: "#f5f5f5" },
+      {},
+      {},
+    ],
+  ];
+  const kyO = (t: string, sub: string) => ({
+    table: { widths: ["*"], heights: [62], body: [[{ stack: [{ text: t, bold: true, alignment: "center" }, { text: sub, italics: true, fontSize: 7.5, color: "#666666", alignment: "center" }] }]] },
+    layout: { hLineColor: () => "#999999", vLineColor: () => "#999999" },
+  });
+
+  const dd = {
+    pageSize: "A4",
+    pageMargins: [28, 30, 28, 34],
+    info: { title: `Phiếu thùng ${p.id}` },
+    defaultStyle: { font: "Roboto", fontSize: 9, lineHeight: 1.1 },
+    footer: (cur: number, total: number) => ({ text: `${p.id} · Trang ${cur}/${total}`, alignment: "right", fontSize: 7.5, color: "#777777", margin: [0, 8, 28, 0] }),
+    content: [
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: "BẢO HÀNH ĐỔI TRẢ 3T", bold: true, fontSize: 8.5, color: "#116a34" },
+              { text: "PHIẾU DANH SÁCH ĐƠN BẢO HÀNH GỬI KÈM THÙNG", bold: true, fontSize: 12, margin: [0, 2, 0, 2] },
+              { text: p.id, bold: true, fontSize: 24 },
+              {
+                text: `${p.dong.length} đơn · Tổng ${tongSl} linh kiện${p.mien ? ` · Gửi về kho miền ${p.mien === "MB" ? "Bắc" : p.mien === "MN" ? "Nam" : p.mien}` : ""}`,
+                fontSize: 9,
+                color: "#444444",
+                margin: [0, 3, 0, 0],
+              },
+              ...(p.trang_thai === "nhap" ? [{ text: "Thùng chưa xác nhận gửi trên hệ thống", fontSize: 8, bold: true, color: "#b45309", margin: [0, 3, 0, 0] }] : []),
+            ],
+          },
+          { width: 92, stack: [{ qr: p.id, fit: 86, eccLevel: "M", alignment: "center" }, { text: p.id, bold: true, fontSize: 8, alignment: "center", margin: [0, 2, 0, 0] }] },
+        ],
+      },
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 539, y2: 0, lineWidth: 1.5 }], margin: [0, 6, 0, 8] },
+      { table: { widths: ["*", "*", "*"], body: infoRows }, layout: "noBorders" },
+      {
+        table: { headerRows: 1, dontBreakRows: true, widths: ["5%", "12%", "12%", "*", "5%", "13%", "22%", "7%"], body },
+        layout: { hLineColor: () => "#444444", vLineColor: () => "#444444", hLineWidth: () => 0.6, vLineWidth: () => 0.6, paddingTop: () => 3, paddingBottom: () => 3 },
+        margin: [0, 4, 0, 0],
+      },
+      {
+        columns: [kyO("Người gửi (KTV)", "Ký, ghi rõ họ tên"), kyO("Nhà xe / Người giao", "Ký, ghi rõ họ tên"), kyO("Kho nhận", "Ký, ghi rõ họ tên · ngày nhận")],
+        columnGap: 10,
+        margin: [0, 14, 0, 0],
+        unbreakable: true,
+      },
+      { text: `Phiếu đặt trong thùng hàng gửi về Kho. Kho quét mã QR hoặc nhập mã thùng ${p.id} để tiếp nhận; đánh dấu cột "Kho" khi kiểm đủ từng đơn.`, fontSize: 8, color: "#444444", margin: [0, 8, 0, 0] },
+    ],
+  };
+  await new Promise<void>((resolve) => {
+    pdfMake.createPdf(dd).download(`Phieu-thung-${p.id}.pdf`, () => resolve());
+  });
+}

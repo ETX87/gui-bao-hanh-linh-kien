@@ -6682,3 +6682,18 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** phiếu 32 đơn giống ảnh, in PDF bằng Chrome headless: A4 2 trang, bố cục khớp bản xem trên màn hình (tên linh kiện 1–2 dòng, mã 1 dòng); khổ A5 3 trang, không đè chữ. Typecheck 0 lỗi. Chưa in trên máy in thật.
 
 **Deploy (11/11/2026):** `npm run deploy` (Version ID `b644de0c`), không có migration mới.
+
+## Admin không tìm thấy thùng nháp của KTV + nút tải PDF phiếu thùng (11/11/2026) — v1.108
+
+**(a) Nguyên văn:** *"sao tôi là admin nhưng không tìm thấy thùng hàng này"* (ảnh phiếu thùng BH-001000, 42 đơn, KTV Lê Đăng Phong, "Thùng chưa xác nhận gửi trên hệ thống") và *"thêm nút tải pdf trực tiếp thay vì chuyển chế độ in ở mục in thùng phiếu"*.
+
+**(b) Đã làm:**
+1. **Nguyên nhân:** BH-001000 là thùng **nháp** KTV tự tạo (`nguoi_tao_ho` trống, chưa bấm gửi). Tab "Thùng nháp / tạo hộ" của Admin chỉ liệt kê thùng *chính Admin tạo hộ* (`GET /phieu-gui` lọc `nguoi_tao_ho = mình`), còn các tab Kho / Admin chỉ có thùng đã gửi → thùng nháp KTV không hiện ở danh sách nào (chỉ mở được bằng link `/BH-…` hoặc tìm ở Đơn bảo hành › Mọi giai đoạn).
+   - Backend `GET /api/phieu-gui?pham_vi=nhap_ktv`: Admin BH / Kho / qtri thấy **mọi thùng nháp** (theo miền); Giám sát thấy thùng nháp của KTV khu vực mình + thùng mình tạo hộ. Có tìm kiếm + lọc (KTV, hình thức gửi, miền, thời gian).
+   - Màn Thùng hàng có tab mới **"Thùng nháp của KTV"** (`screens/chung/ThungNhapKtv.tsx`): mã thùng, KTV, số đơn, tạo lúc, thời gian để nháp (SLA), hình thức gửi, tạo hộ bởi, miền; bấm mở chi tiết thùng → xem đơn, in / tải phiếu, hoặc "Kho nhận thùng" / "Admin BH nhận thùng" (v1.062). Không có số việc trên tab (đây là việc của KTV).
+   - Chốt an toàn: đóng chi tiết thùng nháp **rỗng** chỉ tự xoá khi người mở là chủ thùng / người tạo hộ (trước đây Admin hệ thống mở thùng nháp rỗng của KTV rồi đóng sẽ xoá luôn thùng đó).
+2. **Tải PDF trực tiếp:** khối "Đơn trong thùng" có thêm nút **"⬇ Tải PDF"** (cạnh "🖨 In phiếu"). `taiPdfPhieuThung` trong `frontend/src/lib/inPhieuThung.ts` tạo file PDF A4 ngay trên máy bằng **pdfmake 0.2** (npm, phông Roboto có dấu tiếng Việt, QR dựng sẵn) — không qua hộp in nên không phụ thuộc khổ giấy / tỉ lệ in. Cùng nội dung phiếu in; bảng tự lặp tiêu đề cột mỗi trang, chân trang "BH-… · Trang x/y", tên file `Phieu-thung-<mã>.pdf`. Thư viện (~1MB gzip) tách chunk riêng, chỉ tải khi bấm nút. Cột "Kho ✓" trong PDF ghi "Kho" (phông Roboto không có ký tự ✓).
+
+**(c) Vấn đề:** `backend/src/routes/phieuGui.ts` đang có thay đổi dở của phiên khác (kiểm tra mã case) → commit chỉ phần của đợt này (bản stage = HEAD + bản vá riêng), deploy khi tạm cất file dở.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá): `?pham_vi=nhap_ktv` với Admin trả 2 thùng nháp của 2 KTV (không gồm thùng đã gửi), tìm "BH-001000" ra 1, `loc_only` có KTV / miền; tab mới hiện đúng 2 thùng. PDF: phiếu 42 đơn tạo bằng node → 3 trang A4, tiêu đề cột lặp lại, có QR + số trang; trên bản build thật bấm "⬇ Tải PDF" sinh blob `%PDF-1.3` 35KB. Chưa thử tải PDF trên điện thoại thật.
