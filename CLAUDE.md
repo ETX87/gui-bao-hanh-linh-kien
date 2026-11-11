@@ -6599,3 +6599,18 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Vấn đề:** 2 nhãn trong sơ đồ luồng đè lên khung → dời chỗ.
 
 **(d) Kiểm thử:** mở bằng Browser pane, xem bằng mắt phần đầu + sơ đồ luồng (9 SVG render). Không đổi code → không tăng phiên bản, không deploy.
+
+## Mục 12 "Logic vận hành & lịch chạy tự động" cho vai trò BO (11/11/2026) — không đổi code
+
+**(a) Nguyên văn yêu cầu:** *"thêm 1 một thêm mục logic thể hiện toàn bộ luồng chức năng, logic, lịch chạy app 1 cách đẹp đẽ đầy đủ cho các vai trò BO"*
+
+**(b) Đã làm:** thêm mục 12 vào `du an sua chua bao hanh/Luong-Quy-Trinh-Tong-Bao-Hanh.html` (BO = Kho, Admin BH, NV sửa chữa, Kế toán, Admin hệ thống, Giám sát / View):
+- 12.1 hình lịch chạy 24 giờ (cron 15 phút, việc mỗi giờ, linh-kien-app đẩy :00, các đợt Odoo → dvbh 7h/9h/13h/14h30/19h, ETX 01:00, top LK 02:00, Chủ nhật dừng SLA);
+- 12.2 thứ tự 8 bước của 1 lần cron 15 phút; 12.3 thẻ 9 việc tự chạy (tần suất + việc BO cần làm);
+- 12.4 bảng 9 sự kiện tức thời "khi … hệ thống tự …"; 12.5 cây quyết định phân loại của Admin BH;
+- 12.6 thẻ từng vai trò BO (nhận việc → thao tác → hệ thống đẩy tiếp); 12.7 bảng cổng kiểm soát (SLA, miền, mã case, ngoài BH, đúng người, giai đoạn sau, chế độ xem như).
+- Nội dung đối chiếu với `backend/src/index.ts scheduled()`, `lib/odooSync.ts`, `etxSync.ts`, `userKhuVucSync.ts`, `topLinhKien.ts`, `canhBao.ts`. Dải "khung BO thao tác 8h–17h30" ghi rõ là tham khảo.
+
+**(c) Vấn đề:** 1 dòng chữ tràn mép phải hình lịch, khung bước cron xuống dòng lẻ, thẻ việc 4+4+1 → đã chỉnh.
+
+**(d) Kiểm thử:** mở bằng Browser pane 1440px, kiểm bằng ảnh + đo DOM (không chữ SVG nào ra ngoài khung, bước cron 2 hàng × 4, thẻ việc 3 cột). Không đổi code → không tăng phiên bản, không deploy.

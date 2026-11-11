@@ -63,6 +63,31 @@
   .note.green{border-color:var(--brand);background:var(--brand-50)}
   code{background:var(--slate-50);padding:1px 6px;border-radius:5px;font-size:13px}
   footer{padding:30px 0 40px;color:var(--soft);font-size:13px;text-align:center}
+  .sub{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-d);background:var(--brand-50);padding:3px 10px;border-radius:6px;margin:22px 0 8px}
+  .job{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px 16px;position:relative;overflow:hidden}
+  .job::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c,var(--brand))}
+  .job .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .job .h b{color:var(--ink);font-size:15px}
+  .job .f{font-size:12px;font-weight:800;color:var(--c,var(--brand));white-space:nowrap}
+  .job p{margin:6px 0 0;font-size:13.5px}
+  .job .bo{margin-top:8px;font-size:12.5px;color:var(--soft)}
+  .pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0}
+  .pipe .st{flex:1 1 22%;min-width:170px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;position:relative}
+  .pipe .st b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+  .pipe .st i{display:block;margin-top:3px;font-style:normal;font-size:11.5px;color:var(--soft)}
+  .pipe .st .k{position:absolute;top:-9px;left:10px;background:var(--brand);color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:0 7px}
+  .bo-role{border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden}
+  .bo-role .top{padding:12px 16px;display:flex;align-items:center;gap:10px;background:var(--bg2,var(--brand-50));border-bottom:1px solid var(--line)}
+  .bo-role .top .ic{font-size:24px}
+  .bo-role .top b{color:var(--ink);font-size:16px}
+  .bo-role .top span{display:block;font-size:12px;color:var(--soft)}
+  .bo-role .body{padding:12px 16px;font-size:13.5px}
+  .bo-role .lbl{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);margin:10px 0 4px}
+  .bo-role .lbl:first-child{margin-top:0}
+  .bo-role ul{margin:0;padding-left:18px}
+  .bo-role li{margin:2px 0}
+  .rule td:first-child{width:38%}
+  .rule td .tag{margin-right:4px}
   @media (max-width:640px){.hero h1{font-size:23px} .card{padding:16px} .steps .who{float:none;display:block;margin:4px 0 0}}
   @media print{nav.toc{display:none} .card,.figure,.steps>li{break-inside:avoid} body{background:#fff}}
 </style>
@@ -73,7 +98,7 @@
   <div class="wrap">
     <h1>🔁 Luồng quy trình tổng — Bảo hành đổi trả 3T</h1>
     <p>Mô tả toàn bộ hành trình của một linh kiện / máy lỗi: từ khi KTV hiện trường gửi về, Kho tiếp nhận, Admin bảo hành phân loại và xử lý (sửa chữa, đổi mới, trừ công nợ, huỷ…), tới khi hàng được trả lại KTV và kết thúc. Kèm vai trò tham gia, chức năng từng vai trò, trạng thái và các đường đi tắt.</p>
-    <div class="kpis"><span>8 vai trò</span><span>4 đối tượng chính: Thùng · Đơn · Phiếu trả · Đề xuất LK</span><span>SLA 24h / bước (bỏ Chủ nhật)</span><span>Chia 2 miền MB / MN</span></div>
+    <div class="kpis"><span>8 vai trò</span><span>4 đối tượng chính: Thùng · Đơn · Phiếu trả · Đề xuất LK</span><span>SLA 24h / bước (bỏ Chủ nhật)</span><span>Chia 2 miền MB / MN</span><span>Cron 15 phút + lịch đêm</span></div>
     <div class="meta">Áp dụng từ phiên bản 1.102 · suachua.dichvu3t.workers.dev · Cập nhật 11/11/2026</div>
   </div>
 </header>
@@ -90,6 +115,7 @@
   <a href="#manhinh">9. Màn hình</a>
   <a href="#tichhop">10. Kết nối hệ thống</a>
   <a href="#quytac">11. Quy tắc</a>
+  <a href="#bo">12. Logic &amp; lịch chạy (BO)</a>
 </div></nav>
 
 <main class="wrap">
@@ -767,6 +793,421 @@
     </div>
   </div>
   <div class="note green">Xem thêm: <b>Luong-Cap-Linh-Kien-Bao-Hanh.html</b> (luồng con cấp linh kiện sửa chữa) · tài liệu hướng dẫn KTV / Admin BH trong thư mục dự án.</div>
+</section>
+
+<!-- 12 -->
+<section id="bo">
+  <h2><span class="n">12</span>Logic vận hành &amp; lịch chạy tự động — dành cho vai trò BO</h2>
+  <div class="card">
+    <p style="margin-top:0">Mục này dành cho các vai trò <b>Back Office (BO)</b>: <b>Kho</b>, <b>Admin bảo hành</b>, <b>NV sửa chữa</b>, <b>Kế toán</b>, <b>Admin hệ thống</b> và <b>Giám sát / View</b>. Trả lời 4 câu hỏi: <i>hệ thống tự chạy những gì và khi nào</i>, <i>bấm nút xong thì hệ thống tự làm gì tiếp</i>, <i>mỗi vai trò nhận việc từ đâu và đẩy việc đi đâu</i>, <i>những cổng nào sẽ chặn thao tác</i>.</p>
+    <div class="kpis" style="margin-top:6px">
+      <span class="tag t-green">⏱ 1 cron mỗi 15 phút</span>
+      <span class="tag t-blue">🔁 3 việc mỗi giờ</span>
+      <span class="tag t-amber">🌙 2 việc mỗi đêm</span>
+      <span class="tag t-violet">⚡ 9 sự kiện tức thời</span>
+      <span class="tag t-red">🛑 SLA dừng Chủ nhật</span>
+    </div>
+  </div>
+
+  <span class="sub">12.1 · Lịch chạy trong 24 giờ</span>
+  <div class="figure">
+      <svg viewBox="0 0 1100 430" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="13">
+      <rect x="460" y="38" width="368.125" height="345" rx="8" fill="#ecf8f0"/>
+      <text x="644.0625" y="54" text-anchor="middle" font-size="12" font-weight="700" fill="#116a34">Khung BO thường thao tác (tham khảo)</text>
+      <line x1="150" y1="62" x2="150" y2="383" stroke="#c3d3c8" stroke-width="1"/>
+      <text x="150" y="402" text-anchor="middle" font-size="12" fill="#5f7568">00h</text>
+      <line x1="188.75" y1="62" x2="188.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="227.5" y1="62" x2="227.5" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="227.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">02h</text>
+      <line x1="266.25" y1="62" x2="266.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="305" y1="62" x2="305" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="305" y="402" text-anchor="middle" font-size="12" fill="#5f7568">04h</text>
+      <line x1="343.75" y1="62" x2="343.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="382.5" y1="62" x2="382.5" y2="383" stroke="#c3d3c8" stroke-width="1"/>
+      <text x="382.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">06h</text>
+      <line x1="421.25" y1="62" x2="421.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="460" y1="62" x2="460" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="460" y="402" text-anchor="middle" font-size="12" fill="#5f7568">08h</text>
+      <line x1="498.75" y1="62" x2="498.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="537.5" y1="62" x2="537.5" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="537.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">10h</text>
+      <line x1="576.25" y1="62" x2="576.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="615" y1="62" x2="615" y2="383" stroke="#c3d3c8" stroke-width="1"/>
+      <text x="615" y="402" text-anchor="middle" font-size="12" fill="#5f7568">12h</text>
+      <line x1="653.75" y1="62" x2="653.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="692.5" y1="62" x2="692.5" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="692.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">14h</text>
+      <line x1="731.25" y1="62" x2="731.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="770" y1="62" x2="770" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="770" y="402" text-anchor="middle" font-size="12" fill="#5f7568">16h</text>
+      <line x1="808.75" y1="62" x2="808.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="847.5" y1="62" x2="847.5" y2="383" stroke="#c3d3c8" stroke-width="1"/>
+      <text x="847.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">18h</text>
+      <line x1="886.25" y1="62" x2="886.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="925" y1="62" x2="925" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="925" y="402" text-anchor="middle" font-size="12" fill="#5f7568">20h</text>
+      <line x1="963.75" y1="62" x2="963.75" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="1002.5" y1="62" x2="1002.5" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <text x="1002.5" y="402" text-anchor="middle" font-size="12" fill="#5f7568">22h</text>
+      <line x1="1041.25" y1="62" x2="1041.25" y2="383" stroke="#e3ece6" stroke-width="1"/>
+      <line x1="1080" y1="62" x2="1080" y2="383" stroke="#c3d3c8" stroke-width="1"/>
+      <text x="1080" y="402" text-anchor="middle" font-size="12" fill="#5f7568">24h</text>
+      <text x="12" y="93" font-weight="700" fill="#14261b">Cron suachua</text>
+      <text x="12" y="109" font-size="11.5" fill="#5f7568">mỗi 15 phút</text>
+      <line x1="150" y1="92" x2="1080" y2="92" stroke="#15803f" stroke-opacity=".25" stroke-width="2"/>
+      <text x="12" y="143" font-weight="700" fill="#14261b">Việc mỗi giờ</text>
+      <text x="12" y="159" font-size="11.5" fill="#5f7568">trong cron 15'</text>
+      <line x1="150" y1="142" x2="1080" y2="142" stroke="#2563eb" stroke-opacity=".25" stroke-width="2"/>
+      <text x="12" y="193" font-weight="700" fill="#14261b">linh-kien-app đẩy</text>
+      <text x="12" y="209" font-size="11.5" fill="#5f7568">KTV · khu vực · LK</text>
+      <line x1="150" y1="192" x2="1080" y2="192" stroke="#7c3aed" stroke-opacity=".25" stroke-width="2"/>
+      <text x="12" y="243" font-weight="700" fill="#14261b">Odoo → dvbh</text>
+      <text x="12" y="259" font-size="11.5" fill="#5f7568">auto qs nhập đợt</text>
+      <line x1="150" y1="242" x2="1080" y2="242" stroke="#ea580c" stroke-opacity=".25" stroke-width="2"/>
+      <text x="12" y="293" font-weight="700" fill="#14261b">Việc 1 lần/ngày</text>
+      <text x="12" y="309" font-size="11.5" fill="#5f7568">từ khung giờ</text>
+      <line x1="150" y1="292" x2="1080" y2="292" stroke="#b7791f" stroke-opacity=".25" stroke-width="2"/>
+      <text x="12" y="343" font-weight="700" fill="#14261b">Chủ nhật</text>
+      <text x="12" y="359" font-size="11.5" fill="#5f7568">không tính SLA</text>
+      <line x1="150" y1="342" x2="1080" y2="342" stroke="#dc2626" stroke-opacity=".25" stroke-width="2"/>
+      <line x1="150" y1="83" x2="150" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="159.6875" y1="87" x2="159.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="169.375" y1="87" x2="169.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="179.0625" y1="87" x2="179.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="188.75" y1="83" x2="188.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="198.4375" y1="87" x2="198.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="208.125" y1="87" x2="208.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="217.8125" y1="87" x2="217.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="227.5" y1="83" x2="227.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="237.1875" y1="87" x2="237.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="246.875" y1="87" x2="246.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="256.5625" y1="87" x2="256.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="266.25" y1="83" x2="266.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="275.9375" y1="87" x2="275.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="285.625" y1="87" x2="285.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="295.3125" y1="87" x2="295.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="305" y1="83" x2="305" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="314.6875" y1="87" x2="314.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="324.375" y1="87" x2="324.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="334.0625" y1="87" x2="334.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="343.75" y1="83" x2="343.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="353.4375" y1="87" x2="353.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="363.125" y1="87" x2="363.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="372.8125" y1="87" x2="372.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="382.5" y1="83" x2="382.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="392.1875" y1="87" x2="392.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="401.875" y1="87" x2="401.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="411.5625" y1="87" x2="411.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="421.25" y1="83" x2="421.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="430.9375" y1="87" x2="430.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="440.625" y1="87" x2="440.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="450.3125" y1="87" x2="450.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="460" y1="83" x2="460" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="469.6875" y1="87" x2="469.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="479.375" y1="87" x2="479.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="489.0625" y1="87" x2="489.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="498.75" y1="83" x2="498.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="508.4375" y1="87" x2="508.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="518.125" y1="87" x2="518.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="527.8125" y1="87" x2="527.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="537.5" y1="83" x2="537.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="547.1875" y1="87" x2="547.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="556.875" y1="87" x2="556.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="566.5625" y1="87" x2="566.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="576.25" y1="83" x2="576.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="585.9375" y1="87" x2="585.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="595.625" y1="87" x2="595.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="605.3125" y1="87" x2="605.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="615" y1="83" x2="615" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="624.6875" y1="87" x2="624.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="634.375" y1="87" x2="634.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="644.0625" y1="87" x2="644.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="653.75" y1="83" x2="653.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="663.4375" y1="87" x2="663.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="673.125" y1="87" x2="673.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="682.8125" y1="87" x2="682.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="692.5" y1="83" x2="692.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="702.1875" y1="87" x2="702.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="711.875" y1="87" x2="711.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="721.5625" y1="87" x2="721.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="731.25" y1="83" x2="731.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="740.9375" y1="87" x2="740.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="750.625" y1="87" x2="750.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="760.3125" y1="87" x2="760.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="770" y1="83" x2="770" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="779.6875" y1="87" x2="779.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="789.375" y1="87" x2="789.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="799.0625" y1="87" x2="799.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="808.75" y1="83" x2="808.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="818.4375" y1="87" x2="818.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="828.125" y1="87" x2="828.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="837.8125" y1="87" x2="837.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="847.5" y1="83" x2="847.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="857.1875" y1="87" x2="857.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="866.875" y1="87" x2="866.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="876.5625" y1="87" x2="876.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="886.25" y1="83" x2="886.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="895.9375" y1="87" x2="895.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="905.625" y1="87" x2="905.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="915.3125" y1="87" x2="915.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="925" y1="83" x2="925" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="934.6875" y1="87" x2="934.6875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="944.375" y1="87" x2="944.375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="954.0625" y1="87" x2="954.0625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="963.75" y1="83" x2="963.75" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="973.4375" y1="87" x2="973.4375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="983.125" y1="87" x2="983.125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="992.8125" y1="87" x2="992.8125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1002.5" y1="83" x2="1002.5" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="1012.1875" y1="87" x2="1012.1875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1021.875" y1="87" x2="1021.875" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1031.5625" y1="87" x2="1031.5625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1041.25" y1="83" x2="1041.25" y2="101" stroke="#15803f" stroke-width="2"/>
+      <line x1="1050.9375" y1="87" x2="1050.9375" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1060.625" y1="87" x2="1060.625" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <line x1="1070.3125" y1="87" x2="1070.3125" y2="97" stroke="#15803f" stroke-width="1.3"/>
+      <circle cx="150" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="188.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="227.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="266.25" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="305" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="343.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="382.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="421.25" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="460" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="498.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="537.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="576.25" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="615" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="653.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="692.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="731.25" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="770" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="808.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="847.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="886.25" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="925" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="963.75" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="1002.5" cy="142" r="5" fill="#2563eb"/>
+      <circle cx="1041.25" cy="142" r="5" fill="#2563eb"/>
+      <rect x="145" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="183.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="222.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="261.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="300" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="338.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="377.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="416.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="455" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="493.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="532.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="571.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="610" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="648.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="687.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="726.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="765" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="803.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="842.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="881.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="920" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="958.75" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="997.5" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <rect x="1036.25" y="187" width="10" height="10" rx="2" fill="#7c3aed"/>
+      <path d="M421.25,232 l9,10 l-9,10 l-9,-10z" fill="#ea580c"/>
+      <path d="M425.25,242 Q435.90000000000003,170 430.9375,100" stroke="#ea580c" stroke-dasharray="3 3" fill="none" stroke-width="1.3"/>
+      <path d="M498.75,232 l9,10 l-9,10 l-9,-10z" fill="#ea580c"/>
+      <path d="M502.75,242 Q513.3999999999999,170 508.4375,100" stroke="#ea580c" stroke-dasharray="3 3" fill="none" stroke-width="1.3"/>
+      <path d="M653.75,232 l9,10 l-9,10 l-9,-10z" fill="#ea580c"/>
+      <path d="M657.75,242 Q668.3999999999999,170 663.4375,100" stroke="#ea580c" stroke-dasharray="3 3" fill="none" stroke-width="1.3"/>
+      <path d="M711.875,232 l9,10 l-9,10 l-9,-10z" fill="#ea580c"/>
+      <path d="M715.875,242 Q726.525,170 721.5625,100" stroke="#ea580c" stroke-dasharray="3 3" fill="none" stroke-width="1.3"/>
+      <path d="M886.25,232 l9,10 l-9,10 l-9,-10z" fill="#ea580c"/>
+      <path d="M890.25,242 Q900.9000000000001,170 895.9375,100" stroke="#ea580c" stroke-dasharray="3 3" fill="none" stroke-width="1.3"/>
+      <text x="1080" y="264" text-anchor="end" font-size="11.5" fill="#ea580c">→ suachua kéo về ở lần cron 15' kế tiếp</text>
+      <rect x="181.75" y="285" width="14" height="14" rx="3" fill="#b7791f"/>
+      <rect x="220.5" y="285" width="14" height="14" rx="3" fill="#b7791f"/>
+      <text x="188.75" y="318" font-size="11.5" fill="#7a5512" text-anchor="start">01:00 ETX nhân sự (tự duyệt / khoá / mở)</text>
+      <text x="239.5" y="290" font-size="11.5" fill="#7a5512">02:00 Top linh kiện 30 ngày (giờ chỉnh được)</text>
+      <rect x="150" y="334" width="930" height="16" rx="8" fill="#fdecec" stroke="#dc2626" stroke-dasharray="5 4"/>
+      <text x="615" y="346" text-anchor="middle" font-size="11.5" font-weight="700" fill="#dc2626">Cả ngày Chủ nhật: cron vẫn chạy, đồng hồ SLA dừng (24h liên tục bỏ Chủ nhật)</text>
+      <text x="550" y="22" text-anchor="middle" font-size="13" fill="#5f7568">Một ngày 24 giờ (giờ Việt Nam) — điều gì tự chạy và khi nào</text>
+      </svg>
+    <div class="cap">Hình 10 — Lịch tự chạy. Mọi việc nền đều nằm trong 1 cron 15 phút của suachua; việc "mỗi giờ / mỗi ngày" là cron tự kiểm tra đã tới hạn chưa rồi mới chạy. Dải xanh nhạt chỉ để tham khảo.</div>
+  </div>
+
+  <span class="sub">12.2 · Mỗi lần cron 15 phút làm gì (theo thứ tự)</span>
+  <div class="pipe">
+    <div class="st"><span class="k">1</span><b>Kéo đơn Odoo</b>Lấy đơn mới / đổi từ dvbh theo con trỏ<i>→ tab "Đơn Odoo mới" của KTV</i></div>
+    <div class="st"><span class="k">2</span><b>Bổ sung KTV</b>Hỏi lại đơn về trước case (chưa rõ KTV)<i>+ ID import, KTV triển khai</i></div>
+    <div class="st"><span class="k">3</span><b>Đẩy trạng thái</b>Báo tiến độ gửi sửa về dvbh<i>chỉ đơn có thay đổi</i></div>
+    <div class="st"><span class="k">4</span><b>Thiếu hàng</b>Gửi yêu cầu chờ + kéo trạng thái ticket<i>linh-kien-app ↔ suachua</i></div>
+    <div class="st"><span class="k">5</span><b>Phân loại LK</b>Đẩy phân loại vừa sửa về linh-kien-app<i>chỉ dòng có đổi</i></div>
+    <div class="st"><span class="k">6</span><b>Xác minh case</b>Đơn "case chưa xác minh" hỏi lại DVBH<i>≤30 đơn / lần</i></div>
+    <div class="st"><span class="k">7</span><b>Bằng chứng case</b>Bổ sung snapshot case + ngày SX<i>≤40 + 80 case / lần</i></div>
+    <div class="st"><span class="k">8</span><b>Chuỗi tìm kiếm</b>Tính lại chuỗi không dấu<i>≤400 đơn / lần</i></div>
+  </div>
+  <div class="note">Các bước chạy song song, bước này lỗi không chặn bước khác; lần sau tự làm tiếp từ chỗ dừng (con trỏ lưu trong <code>sync_state</code>). Admin hệ thống xem kết quả lần chạy gần nhất ở <b>Quản trị › Cài đặt</b> và có nút <b>"Đồng bộ ngay"</b> cho Odoo, ETX, khu vực nhân sự, thiếu hàng, top linh kiện.</div>
+
+  <span class="sub">12.3 · Danh sách việc tự chạy</span>
+  <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="job" style="--c:#15803f"><div class="h"><b>🧾 Đồng bộ đơn Odoo</b><span class="f">15 phút</span></div><p>Kéo đơn bảo hành Odoo từ dvbh; báo ngược trạng thái gửi sửa (chờ gửi → đang gửi → Kho nhận → đang xử lý → chờ trả → đang trả → hoàn tất / từ chối / hủy đơn lỗi).</p><div class="bo">BO: Admin BH xuất "File import Odoo" ở màn Phiếu trả.</div></div>
+    <div class="job" style="--c:#15803f"><div class="h"><b>📦 Thiếu hàng bảo hành</b><span class="f">15 phút + tức thời</span></div><p>Ticket THB bên linh-kien-app cho Kho / Mua hàng; trạng thái ticket báo về đơn gốc.</p><div class="bo">BO: Admin BH xem tab "📦 Thiếu hàng", bấm "Đã nắm".</div></div>
+    <div class="job" style="--c:#15803f"><div class="h"><b>🔎 Xác minh case + bằng chứng</b><span class="f">15 phút</span></div><p>Đơn tạo khi DVBH lỗi / case trong ngày chưa đồng bộ được hỏi lại; khớp → bỏ cảnh báo, sai → "Sai case".</p><div class="bo">BO: Admin BH thấy huy hiệu "Case chưa xác minh".</div></div>
+    <div class="job" style="--c:#2563eb"><div class="h"><b>🗺 Khu vực nhân sự + GS phụ</b><span class="f">mỗi giờ</span></div><p>Kéo khu vực phụ trách từ linh-kien-app, tự suy miền MB / MN cho tài khoản chưa gán tay, cập nhật GS chính / GS phụ.</p><div class="bo">BO: miền gán tay không bị ghi đè.</div></div>
+    <div class="job" style="--c:#2563eb"><div class="h"><b>📊 Thời gian xử lý TB</b><span class="f">mỗi giờ</span></div><p>Tính thời gian xử lý trung bình 30 ngày từng giai đoạn cho khối "Cảnh báo đơn tồn".</p><div class="bo">BO: Admin BH có nút "↻ Tính lại TB".</div></div>
+    <div class="job" style="--c:#7c3aed"><div class="h"><b>👷 Danh bạ KTV · khu vực · linh kiện</b><span class="f">mỗi giờ (:00)</span></div><p>linh-kien-app chủ động đẩy sang; KTV mới tự được duyệt + gán vai trò khi đăng nhập.</p><div class="bo">BO: không nhập tay danh bạ.</div></div>
+    <div class="job" style="--c:#b7791f"><div class="h"><b>👥 ETX nhân sự</b><span class="f">01:00 hằng ngày</span></div><p>Tự duyệt tài khoản đang làm, tự khoá khi nghỉ việc, tự mở khi đi làm lại; đổi tên tài khoản sang tên công ty.</p><div class="bo">BO: Admin hệ thống xem "Đang mở nhưng ETX báo nghỉ".</div></div>
+    <div class="job" style="--c:#b7791f"><div class="h"><b>🔥 Top linh kiện 30 ngày</b><span class="f">02:00 hằng ngày</span></div><p>Xếp linh kiện được xử lý thành công nhiều nhất lên đầu ô chọn linh kiện (đếm theo linh kiện gửi về B).</p><div class="bo">BO: đổi giờ chạy ở Cài đặt, bấm "Tính ngay".</div></div>
+    <div class="job" style="--c:#dc2626"><div class="h"><b>⏱ Đồng hồ SLA</b><span class="f">liên tục</span></div><p>Không phải việc nền: tính ngay khi mở màn hình. 24 giờ liên tục, bỏ trọn Chủ nhật; xanh ≤24h · vàng 24–72h · đỏ &gt;72h.</p><div class="bo">BO: bấm số giờ quá hạn để ghi lý do chậm.</div></div>
+  </div>
+
+  <span class="sub">12.4 · Sự kiện tức thời (xảy ra ngay khi bấm nút)</span>
+  <div class="card" style="padding:6px 8px">
+    <table class="rule">
+      <tr><th>Khi …</th><th>Hệ thống tự …</th></tr>
+      <tr><td><span class="tag t-blue">KTV</span> xác nhận đã gửi xe</td><td>Báo thùng "chờ xử lý" sang <b>khovan</b>; thùng hiện ở Kho tab "Đang gửi về Kho"; bắt đầu đồng hồ SLA của Kho.</td></tr>
+      <tr><td><span class="tag t-violet">Admin BH</span> tiếp nhận thùng / nhận hộ Kho</td><td>Báo khovan "Đã bàn giao" (Kho không xử lý tiếp bên khovan); thùng Admin tạo hộ thì tự tách đơn vị luôn.</td></tr>
+      <tr><td><span class="tag t-violet">Admin BH</span> xác nhận SL thực nhận</td><td>Tách N đơn vị con <code>DH-…-1..N</code>; lệch SL thì bắt lý do.</td></tr>
+      <tr><td><span class="tag t-violet">Admin BH</span> ⚡ Đổi mới / Trừ nợ / Trả lại</td><td>Ghi B = A nếu trống, xử lý xác = trả đối tác, <b>gộp vào phiếu trả "Nháp"</b> đúng KTV + loại đối trừ (chưa có thì tạo mới, mã ĐH = mã phiếu).</td></tr>
+      <tr><td><span class="tag t-teal">NV</span> nộp "Đã sửa xong"</td><td>Tự hoàn tất + đẩy <b>thẳng sang Kho</b> (phiếu "KT đã duyệt"), bỏ qua Admin xác nhận và Kế toán; đề xuất LK còn chờ cấp tự huỷ.</td></tr>
+      <tr><td><span class="tag t-teal">NV</span> "Đã bàn giao máy (kết thúc luôn)"</td><td>Đơn kết thúc ngay ở "KTV đã nhận", không qua Kho / KT, không báo khovan.</td></tr>
+      <tr><td><span class="tag t-amber">Kế toán</span> duyệt phiếu trả</td><td>Phiếu sang "Chờ Kho in phiếu"; báo khovan đơn xuất. "💳 Trừ công nợ" → kết thúc không gửi KTV.</td></tr>
+      <tr><td>Bất kỳ ai chọn lý do chậm <span class="tag t-red">Không có linh kiện</span> / <span class="tag t-red">Hết hàng tồn kho</span></td><td>Tự tạo ticket thiếu hàng THB bên linh-kien-app cho Kho / Mua hàng.</td></tr>
+      <tr><td><span class="tag t-violet">Admin BH</span> sửa phân loại linh kiện</td><td>Đẩy ngược phân loại về linh-kien-app ngay (lỗi thì cron 15' gửi lại).</td></tr>
+    </table>
+  </div>
+
+  <span class="sub">12.5 · Logic quyết định khi Admin BH phân loại</span>
+  <div class="figure">
+    <svg viewBox="0 0 1100 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="13">
+      <defs><marker id="dq" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker></defs>
+      <rect x="400" y="14" width="300" height="56" rx="14" fill="#f2ecfe" stroke="#7c3aed"/>
+      <text x="550" y="38" text-anchor="middle" font-weight="700" fill="#14261b">Đơn vị "Chờ phân loại"</text>
+      <text x="550" y="57" text-anchor="middle" font-size="12" fill="#5f7568">Admin BH mở: Phân loại / ⚡ Xử lý nhanh / hàng loạt</text>
+      <line x1="550" y1="70" x2="550" y2="96" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+      <path d="M550,100 l120,32 l-120,32 l-120,-32z" fill="#fff" stroke="#b7791f" stroke-width="2"/>
+      <text x="550" y="128" text-anchor="middle" font-weight="700" fill="#14261b">Quá 24h?</text>
+      <text x="550" y="146" text-anchor="middle" font-size="11.5" fill="#5f7568">giờ SLA, bỏ Chủ nhật</text>
+      <line x1="670" y1="132" x2="760" y2="132" stroke="#dc2626" stroke-width="2" marker-end="url(#dq)"/>
+      <text x="714" y="124" text-anchor="middle" font-size="11.5" fill="#dc2626">Có</text>
+      <rect x="764" y="108" width="320" height="48" rx="12" fill="#fdecec" stroke="#dc2626"/>
+      <text x="924" y="128" text-anchor="middle" font-size="12.5" fill="#14261b">Bắt chọn <tspan font-weight="700">lý do chậm</tspan></text>
+      <text x="924" y="146" text-anchor="middle" font-size="11.5" fill="#5f7568">"Không có LK" / "Hết hàng" → tự mở ticket thiếu hàng</text>
+      <line x1="550" y1="164" x2="550" y2="190" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+      <path d="M550,194 l140,32 l-140,32 l-140,-32z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+      <text x="550" y="222" text-anchor="middle" font-weight="700" fill="#14261b">Trong / Ngoài BH?</text>
+      <text x="550" y="240" text-anchor="middle" font-size="11.5" fill="#5f7568">hết hạn → chỉ cảnh báo đỏ</text>
+      <line x1="410" y1="226" x2="300" y2="226" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+      <text x="356" y="218" text-anchor="middle" font-size="11.5" fill="#5f7568">Ngoài BH</text>
+      <rect x="20" y="202" width="276" height="48" rx="12" fill="#fdf6e3" stroke="#b7791f"/>
+      <text x="158" y="222" text-anchor="middle" font-size="12.5" fill="#14261b">Bắt nhập <tspan font-weight="700">mail phê duyệt</tspan></text>
+      <text x="158" y="240" text-anchor="middle" font-size="11.5" fill="#5f7568">(mã phê duyệt tuỳ chọn)</text>
+      <line x1="550" y1="258" x2="550" y2="290" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+      <text x="560" y="280" font-size="11.5" fill="#5f7568">chọn hướng xử lý</text>
+      <line x1="90" y1="300" x2="1010" y2="300" stroke="#c3d3c8" stroke-width="2"/>
+      <g font-size="12">
+        <line x1="90" y1="300" x2="90" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="10" y="326" width="160" height="128" rx="12" fill="#e6f7f5" stroke="#0d9488"/>
+        <text x="90" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Sửa chữa</text>
+        <text x="90" y="366" text-anchor="middle" fill="#5f7568">/ Dịch vụ tính phí</text>
+        <text x="90" y="388" text-anchor="middle" fill="#14261b">Bắt chọn NV</text>
+        <text x="90" y="406" text-anchor="middle" fill="#14261b">→ Chờ NV sửa</text>
+        <text x="90" y="428" text-anchor="middle" font-size="11" fill="#5f7568">NV xin LK, nộp 1/4</text>
+        <text x="90" y="443" text-anchor="middle" font-size="11" fill="#5f7568">kết quả</text>
+
+        <line x1="275" y1="300" x2="275" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="190" y="326" width="170" height="128" rx="12" fill="#ecf8f0" stroke="#15803f"/>
+        <text x="275" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Đổi mới</text>
+        <text x="275" y="370" text-anchor="middle" fill="#14261b">Bắt chọn xử lý xác</text>
+        <text x="275" y="386" text-anchor="middle" font-size="11" fill="#5f7568">(⚡ tự = trả đối tác)</text>
+        <text x="275" y="408" text-anchor="middle" fill="#14261b">→ Sẵn sàng trả</text>
+        <text x="275" y="428" text-anchor="middle" font-size="11" fill="#5f7568">⚡ tự gộp phiếu nháp,</text>
+        <text x="275" y="443" text-anchor="middle" font-size="11" fill="#5f7568">B = A nếu trống</text>
+
+        <line x1="465" y1="300" x2="465" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="380" y="326" width="170" height="128" rx="12" fill="#eaf1fe" stroke="#2563eb"/>
+        <text x="465" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Trừ công nợ</text>
+        <text x="465" y="366" text-anchor="middle" fill="#5f7568">(xác nhận LK)</text>
+        <text x="465" y="388" text-anchor="middle" fill="#14261b">Ép đối trừ</text>
+        <text x="465" y="404" text-anchor="middle" fill="#14261b">= Trừ công nợ</text>
+        <text x="465" y="428" text-anchor="middle" font-size="11" fill="#5f7568">→ Sẵn sàng trả</text>
+        <text x="465" y="443" text-anchor="middle" font-size="11" fill="#5f7568">(trả xác về KTV)</text>
+
+        <line x1="655" y1="300" x2="655" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="570" y="326" width="170" height="128" rx="12" fill="#fff1e8" stroke="#ea580c"/>
+        <text x="655" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Trả lại KTV</text>
+        <text x="655" y="370" text-anchor="middle" fill="#14261b">Không sửa / đổi</text>
+        <text x="655" y="392" text-anchor="middle" fill="#14261b">→ Sẵn sàng trả</text>
+        <text x="655" y="428" text-anchor="middle" font-size="11" fill="#5f7568">đi phiếu trả như</text>
+        <text x="655" y="443" text-anchor="middle" font-size="11" fill="#5f7568">thường</text>
+
+        <line x1="835" y1="300" x2="835" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="760" y="326" width="150" height="128" rx="12" fill="#fdecec" stroke="#dc2626"/>
+        <text x="835" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Từ chối / Huỷ</text>
+        <text x="835" y="370" text-anchor="middle" fill="#14261b">Bắt chọn lý do</text>
+        <text x="835" y="386" text-anchor="middle" font-size="11" fill="#5f7568">+ ghi chú tuỳ chọn</text>
+        <text x="835" y="408" text-anchor="middle" fill="#14261b">→ Kết thúc</text>
+        <text x="835" y="428" text-anchor="middle" font-size="11" fill="#5f7568">lùi lại được nếu</text>
+        <text x="835" y="443" text-anchor="middle" font-size="11" fill="#5f7568">huỷ nhầm</text>
+
+        <line x1="1010" y1="300" x2="1010" y2="322" stroke="#5f7568" stroke-width="2" marker-end="url(#dq)"/>
+        <rect x="930" y="326" width="160" height="128" rx="12" fill="#f1f5f9" stroke="#64748b"/>
+        <text x="1010" y="348" text-anchor="middle" font-weight="700" fill="#14261b">Chuyển kho</text>
+        <text x="1010" y="370" text-anchor="middle" fill="#14261b">→ Kết thúc</text>
+        <text x="1010" y="392" text-anchor="middle" font-size="11" fill="#5f7568">không tạo phiếu trả</text>
+      </g>
+    </svg>
+    <div class="cap">Hình 11 — Cây quyết định phân loại. Đề xuất của KTV (loại đối trừ, linh kiện) chỉ là mặc định: Admin chốt khác thì hệ thống hỏi xác nhận "thay đổi đề xuất gốc của KTV".</div>
+  </div>
+
+  <span class="sub">12.6 · Mỗi vai trò BO: nhận việc từ đâu → làm gì → hệ thống đẩy đi đâu</span>
+  <div class="grid2">
+    <div class="bo-role" style="--bg2:#fff1e8"><div class="top"><span class="ic">🏬</span><div><b>Kho</b><span>Thùng hàng · Phiếu trả · Cấp linh kiện</span></div></div><div class="body">
+      <div class="lbl">Nhận việc</div><ul><li>Thùng KTV đã gửi xe (theo miền + "Chưa khai báo")</li><li>Phiếu trả KT đã duyệt · phiếu cấp LK KT đã xác nhận</li><li>KTV báo "không nhận được hàng"</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Quét QR / xác nhận tiếp nhận thùng, báo sự cố (chỉ cảnh báo)</li><li>Đánh dấu "Đã in" · đóng gói · gửi (nhập mã vận đơn)</li><li>Phiếu cấp LK: Đã in / Đã xuất cả phiếu PXK</li><li>Đánh giá khiếu nại: thành công / thất lạc (ghi phương án)</li><li>Đẩy ngược phiếu lên nhầm về Admin BH (bắt lý do)</li></ul>
+      <div class="lbl">Hệ thống đẩy tiếp</div><ul><li>Thùng → Admin BH "chờ tiếp nhận nội bộ" · phiếu → KTV "Đang trả về bạn"</li></ul>
+    </div></div>
+    <div class="bo-role" style="--bg2:#f2ecfe"><div class="top"><span class="ic">🛡️</span><div><b>Admin bảo hành</b><span>Thùng · Đơn bảo hành · Cấp LK · Phiếu trả</span></div></div><div class="body">
+      <div class="lbl">Nhận việc</div><ul><li>Thùng Kho đã nhận · đơn cha chờ xác nhận SL · đơn chờ phân loại / cần xem lại</li><li>NV nộp kết quả · đề xuất LK chờ cấp · KT / Kho trả lại phiếu · thiếu hàng đã về</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Tiếp nhận nội bộ (nhiều thùng), xác nhận SL hàng loạt</li><li>Phân loại / ⚡ nhanh / hàng loạt; sửa LK B · C; yêu cầu KTV bổ sung; ghi báo cáo sai</li><li>Cấp LK (mã ĐH), xác nhận hoàn tất, lùi lại khi nhầm</li><li>Tạo phiếu trả (tự tách theo KTV × đối trừ), gửi KT duyệt</li></ul>
+      <div class="lbl">Hệ thống đẩy tiếp</div><ul><li>→ NV (sửa) · Kế toán (phiếu trả, cấp LK) · KTV (bổ sung)</li></ul>
+    </div></div>
+    <div class="bo-role" style="--bg2:#e6f7f5"><div class="top"><span class="ic">🔧</span><div><b>NV sửa chữa</b><span>Đơn bảo hành › Việc sửa của tôi</span></div></div><div class="body">
+      <div class="lbl">Nhận việc</div><ul><li>Đơn Admin giao (hướng Sửa chữa / Dịch vụ tính phí)</li><li>Đơn Admin lùi về / yêu cầu làm lại</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Đề xuất linh kiện (không giới hạn số lần), huỷ đề xuất của mình</li><li>Nộp 1 / 4 kết quả: Đã sửa xong · Không sửa được · Không có lỗi · Chỉ kiểm tra</li><li>"Đã bàn giao máy" khi giao trực tiếp cho khách</li></ul>
+      <div class="lbl">Hệ thống đẩy tiếp</div><ul><li>Sửa xong → Kho (bỏ qua Admin + KT) · kết quả khác → Admin xác nhận</li></ul>
+    </div></div>
+    <div class="bo-role" style="--bg2:#fdf6e3"><div class="top"><span class="ic">🧮</span><div><b>Kế toán</b><span>Phiếu trả (mọi việc gom 1 menu)</span></div></div><div class="body">
+      <div class="lbl">Nhận việc</div><ul><li>Phiếu trả chờ KT duyệt (từng phiếu, không duyệt hàng loạt)</li><li>Tab "🔩 Cấp linh kiện": đề xuất Admin đã đồng ý cấp, nhóm theo case</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Duyệt / từ chối (bắt lý do) / huỷ duyệt; nhập / sửa mã MISA tới khi Kho đóng gói</li><li>💳 Trừ công nợ — kết thúc không gửi KTV</li><li>Cấp LK: nhập MISA → duyệt cả case hoặc lẻ; trả lại Admin / từ chối</li></ul>
+      <div class="lbl">Hệ thống đẩy tiếp</div><ul><li>→ Kho "Chờ in phiếu" · → Admin BH khi từ chối / trả lại</li></ul>
+    </div></div>
+    <div class="bo-role" style="--bg2:#f1f5f9"><div class="top"><span class="ic">⚙️</span><div><b>Admin hệ thống</b><span>Quản trị &amp; danh mục · Chế độ test</span></div></div><div class="body">
+      <div class="lbl">Theo dõi</div><ul><li>Kết quả các lần đồng bộ (Odoo, ETX, khu vực, thiếu hàng, top LK)</li><li>Tài khoản "đang mở nhưng ETX báo nghỉ"</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Gán vai trò / miền; danh bạ KTV, KTV tạo hộ; GS khu vực (nhiều GS)</li><li>Từ khoá miền MB / MN, lý do chậm / huỷ, giờ chạy top LK</li><li>🧪 Chế độ test: xem theo vai trò / xem như người dùng (chỉ đọc)</li></ul>
+      <div class="lbl">Quyền</div><ul><li>Đi qua mọi cổng vai trò; vẫn bị chặn ở việc "đúng người được giao"</li></ul>
+    </div></div>
+    <div class="bo-role" style="--bg2:#eaf1fe"><div class="top"><span class="ic">👀</span><div><b>Giám sát / View</b><span>Trang chủ tổng quan · Đơn bảo hành › Mọi giai đoạn</span></div></div><div class="body">
+      <div class="lbl">Phạm vi</div><ul><li>GS: KTV thuộc khu vực mình là GS chính hoặc GS phụ</li><li>View: khu vực được gán (chỉ đọc)</li></ul>
+      <div class="lbl">Thao tác</div><ul><li>Xem số theo giai đoạn + quá hạn SLA, bấm để lọc</li><li>GS: tạo hộ thùng cho KTV khu vực mình (đi qua Kho như thường)</li></ul>
+    </div></div>
+  </div>
+
+  <span class="sub">12.7 · Cổng kiểm soát — khi nào hệ thống chặn</span>
+  <div class="card" style="padding:6px 8px">
+    <table class="rule">
+      <tr><th>Cổng</th><th>Điều kiện chặn</th><th>Cách qua</th></tr>
+      <tr><td><span class="tag t-red">SLA</span></td><td>Việc đã quá 24h (giờ SLA)</td><td>Chọn lý do chậm ngay trong form</td></tr>
+      <tr><td><span class="tag t-blue">Miền</span></td><td>Đơn / thùng / phiếu khác miền người xử lý</td><td>Kho / Admin / KT đổi miền đơn (có thể chuyển luôn KTV)</td></tr>
+      <tr><td><span class="tag t-violet">Mã case</span></td><td>Case không có / không thuộc KTV (Trạm hoặc KTV triển khai)</td><td>Case trong ngày hoặc DVBH lỗi: tạo "chưa xác minh"; Admin / GS tạo hộ: tích xác nhận</td></tr>
+      <tr><td><span class="tag t-amber">Ngoài BH</span></td><td>Chọn "Ngoài BH" mà thiếu mail phê duyệt</td><td>Nhập mail phê duyệt</td></tr>
+      <tr><td><span class="tag t-teal">Đúng người</span></td><td>NV khác nộp kết quả · KTV khác nhận hàng</td><td>Admin BH "nộp hộ NV"; Kho "xác nhận kết thúc" thay KTV</td></tr>
+      <tr><td><span class="tag t-orange">Giai đoạn sau</span></td><td>Lùi lại đơn khi phiếu trả đã gửi KT / đề xuất đã chờ KT</td><td>Huỷ gửi duyệt / KT, Kho đẩy ngược trước</td></tr>
+      <tr><td><span class="tag t-gray">Chế độ xem như</span></td><td>Admin đang "xem như người dùng" bấm thao tác ghi</td><td>Thoát về Admin</td></tr>
+    </table>
+  </div>
+  <div class="note green">Nhịp gợi ý cho BO mỗi đầu ca: <b>Trang chủ</b> → khối "🔥 Việc của tôi" + "Cảnh báo đơn tồn" (đỏ trước) → làm theo menu có huy hiệu số → cuối ca kiểm tra không còn việc quá 72h. Menu KTV bên cạnh sidebar giúp lọc nhanh theo từng KTV.</div>
 </section>
 
 </main>
