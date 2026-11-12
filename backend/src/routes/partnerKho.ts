@@ -1,3 +1,4 @@
+import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { nowVN } from "../lib/vnTime";
@@ -48,7 +49,14 @@ partnerKho.post("/phieu-tra/:id/dong-goi", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.trang_thai !== "da_duyet_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
 
-  const statements = (body.anh || []).map((url) => c.env.DB.prepare("INSERT INTO phieu_tra_bh_anh (phieu_tra_id, anh_url) VALUES (?, ?)").bind(id, url));
+  // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link.
+  let anhUrls: string[];
+  try {
+    anhUrls = await chuanHoaAnh(c.env, body.anh, `dong_goi_khovan_${id}`);
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
+  const statements = anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_tra_bh_anh (phieu_tra_id, anh_url) VALUES (?, ?)").bind(id, url));
   if (statements.length) await c.env.DB.batch(statements);
   return c.json({ ok: true });
 });

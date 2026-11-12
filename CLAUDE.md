@@ -6777,3 +6777,27 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck + build sạch. Chạy câu đếm 3 nhóm trên D1 production (chỉ đọc): VD KTV karofibinhphuoc02 52 đang / 21 xong / 92 huỷ – từ chối, karofibinhduong01 168 / 157 / 25. Chưa xem bằng mắt trên điện thoại.
 
 **Deploy (12/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `fc5af53f`), không có migration mới.
+
+## Ảnh lưu trên Google Drive, không lưu trong D1 (12/11/2026) — v1.114 (+ linh-kien-app v1.481)
+
+**(a) Nguyên văn:** người dùng hỏi *"phân tích xem tại sao dung lượng lưu trữ trên D1 tăng cao nhanh như vậy trong khi app mới triển khai 10 ngày"*, rồi chốt: *"1. chuyển toàn bộ ảnh cũ sang R2 2. Ảnh trên toàn bộ hệ thống phải lưu trên link drive đã liên kết, không cho phép lưu trên R2 hoặc D1 của hệ thống"*. Hiểu 2 ý gộp lại: mọi ảnh (cũ lẫn mới) lưu trên Google Drive đã liên kết; không dùng R2.
+
+**Phân tích (đọc D1 production):** D1 462 MB, trong đó 412 MB (89%) là 301 ảnh base64 trong `phieu_sua_chua_bh_anh`. 86 ảnh ngày 03–04/11 là ảnh gốc 3,6–3,9 MB/tấm (trước khi có nén ảnh v1.088); riêng KTV `vanvi000578@gmail.com` 89 ảnh = 301 MB. Dữ liệu nghiệp vụ còn lại chỉ ~30–40 MB. Server trước đây không giới hạn kích thước ảnh.
+
+**(b) Đã làm:**
+- "Drive đã liên kết" = tài khoản Google Drive kết nối ở Cài đặt của linh-kien-app (`google_drive_oauth`, thư mục `1rOCmFaqR8x…`, smarttrade.vp). App này không có kết nối Drive riêng.
+- linh-kien-app v1.481: `POST /api/suachua-partner/anh?ten=` (X-Sync-Key dùng chung) nhận binary ảnh ≤10 MB, kiểm tra chữ ký file thật là ảnh, tải lên Drive bằng `uploadPublicImage` (chia sẻ công khai theo link), trả link thumbnail.
+- App này `lib/anhDrive.ts`:
+  - `chuanHoaAnh(env, anh[], tên)`: link Drive giữ nguyên; data URL → giải mã → tải lên Drive; link http khác (VD ảnh từ khovan) → tải về rồi đưa lên Drive; cái khác → lỗi. Tối đa 10 ảnh / lần, 6 MB / ảnh. Lỗi thì không ghi gì, trả mã lỗi (`DRIVE_KHONG_PHAN_HOI`, `ANH_QUA_LON`, `UPLOAD_FAILED`…, có câu tiếng Việt trong `lib/api.ts`).
+  - Áp ở MỌI chỗ ghi ảnh: thêm đơn KTV, KTV / GS bổ sung, đơn dịch vụ (Admin BH), NV nộp kết quả (3 loại ảnh), Kho đóng gói phiếu trả, khovan đóng gói. Ảnh được tải TRƯỚC khi tạo / ghi đơn.
+  - `chuyenAnhCuSangDrive`: cron 15 phút chuyển dần ảnh data URL cũ ở cả 3 bảng ảnh sang Drive (25 ảnh / lần), cập nhật `anh_url` thành link Drive. Ảnh hỏng / quá lớn bị bỏ qua (ghi `sync_state.anh_drive_bo_<bảng>`), lỗi mạng / Drive thì lần sau thử lại; kết quả ở `sync_state.anh_drive_last`.
+  - `routes/anh.ts`: `GET /api/anh/drive-status`, `POST /api/anh/chuyen-drive` (qtri). Thẻ "🖼 Ảnh lưu trên Google Drive" ở Cài đặt hệ thống (số ảnh trên Drive / còn trong D1 + "Chuyển ngay").
+- Ảnh đóng gói của Kho trong chi tiết phiếu trả nay cũng được nén như các ô ảnh khác (`normalizeImage` export từ `ui/ImagePicker.tsx`).
+- Không có migration.
+
+**(c) Vấn đề / ghi nhận:**
+- Rủi ro: khi Drive bên linh-kien-app lỗi / hết hạn uỷ quyền thì không tạo được đơn có ảnh (đúng yêu cầu "không lưu D1"); đơn không ảnh vẫn tạo bình thường.
+- Dung lượng D1 có thể không giảm ngay sau khi chuyển hết ảnh (SQLite giữ trang trống để dùng lại) — kiểm tra lại `database_size` sau khi cron chuyển xong.
+- Thư mục làm việc có thay đổi dở của phiên khác (`adminBH.ts`, `phieuGui.ts`, `api.ts` phần kiểm tra mã case, `lib/kiemTraCase.ts`) → commit chỉ phần của đợt này (dựng bản stage = HEAD + bản vá riêng), deploy từ git worktree sạch.
+
+**(d) Kiểm thử:** typecheck backend + frontend cả 2 repo 0 lỗi, build sạch. Xác nhận trên D1 linh-kien-app có kết nối Drive. Kiểm tra sau deploy: xem mục "Deploy" bên dưới.

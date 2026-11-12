@@ -1,3 +1,4 @@
+import { normalizeImage } from "../../ui/ImagePicker";
 import { isPureKtv } from "../../layout/routes";
 import { useEffect, useState } from "react";
 import { DoiMienBadge } from "../../ui/MienBadge";
@@ -229,7 +230,8 @@ export function PhieuTraDetailModal({ traId, user, onClose, onChanged, nested, o
   const tuChoi = () => run(async () => { await api.post(`/phieu-tra/${traId}/tu-choi`, { ly_do: lyDoTuChoi }); toast("Đã từ chối.", "ok"); setShowTuChoi(false); });
   const dongGoi = async (files: FileList | null) =>
     run(async () => {
-      const urls = files && files.length ? await Promise.all(Array.from(files).map(fileToDataUrl)) : [];
+      const nen = files && files.length ? (await Promise.all(Array.from(files).map(normalizeImage))).filter((f): f is File => !!f) : [];
+      const urls = await Promise.all(nen.map(fileToDataUrl));
       await api.post(`/phieu-tra/${traId}/dong-goi`, { anh: urls });
       toast("Đã đóng gói.", "ok");
     });

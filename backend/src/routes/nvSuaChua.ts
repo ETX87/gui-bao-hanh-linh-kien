@@ -1,3 +1,4 @@
+import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
@@ -87,6 +88,16 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
   if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
+  // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi ghi ket qua.
+  let anhTruoc: string[], anhSau: string[], anhLoi: string[];
+  try {
+    anhTruoc = await chuanHoaAnh(c.env, body.anh_truoc, `nv_${id}_truoc`);
+    anhSau = await chuanHoaAnh(c.env, body.anh_sau, `nv_${id}_sau`);
+    anhLoi = await chuanHoaAnh(c.env, body.anh_loi_thuc_te, `nv_${id}_loi`);
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
+
   const now = nowVN();
   const ghiChu = (body.ghi_chu || "").trim().slice(0, 2000) || null;
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET ket_qua_nv = ?, ket_qua_chan_doan = ?, ghi_chu_nv = ?, trang_thai = 'cho_admin_xac_nhan', updated_at = ? WHERE id = ?")
@@ -98,9 +109,9 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
     .run();
 
   const statements = [];
-  for (const url of body.anh_truoc || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'truoc', ?)").bind(id, url));
-  for (const url of body.anh_sau || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'sau', ?)").bind(id, url));
-  for (const url of body.anh_loi_thuc_te || []) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'loi_thuc_te', ?)").bind(id, url));
+  for (const url of anhTruoc) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'truoc', ?)").bind(id, url));
+  for (const url of anhSau) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'sau', ?)").bind(id, url));
+  for (const url of anhLoi) statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct_anh (unit_id, loai, anh_url) VALUES (?, 'loi_thuc_te', ?)").bind(id, url));
   if (statements.length) await c.env.DB.batch(statements);
 
   await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, (hoNv ? `Admin BH nộp kết quả hộ NV ${u.nguoi_sua_chua || "(chưa gán)"}: ` : "NV nộp kết quả: ") + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (ghiChu ? ` | Ghi chú: ${ghiChu}` : "") + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));

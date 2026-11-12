@@ -36,6 +36,8 @@ import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } f
 import { capNhatTimKiem } from "./lib/timKiem";
 import etxRoutes from "./routes/etx";
 import thieuHangRoutes from "./routes/thieuHang";
+import anhRoutes from "./routes/anh";
+import { chuyenAnhCuSangDrive } from "./lib/anhDrive";
 import { dongBoThieuHang, guiThieuHangCho, layVaXoaCoYeuCauMoi } from "./lib/thieuHang";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
@@ -84,6 +86,7 @@ app.route("/api/lich-su", lichSuRoutes);
 app.route("/api/de-xuat", deXuatRoutes);
 app.route("/api/etx", etxRoutes);
 app.route("/api/thieu-hang", thieuHangRoutes);
+app.route("/api/anh", anhRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -98,6 +101,8 @@ export default {
   // nguoc ve dvbh (lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
+    // 12/11/2026: chuyen dan anh cu (base64 trong D1) sang Google Drive, moi lan toi da 25 anh.
+    ctx.waitUntil(chuyenAnhCuSangDrive(env, 25, 120000).then(() => undefined).catch((e) => console.error("[anhDrive]", e instanceof Error ? e.message : e)));
     // 04/11/2026: thieu hang bao hanh - gui yeu cau con cho + keo trang thai ticket ben linh-kien-app.
     ctx.waitUntil(dongBoThieuHang(env).then(() => undefined).catch((e) => console.error("[thieuHang]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(pushPhanLoaiPending(env).then(() => undefined).catch(() => undefined));

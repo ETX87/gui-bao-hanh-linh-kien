@@ -495,6 +495,37 @@ function MienCard() {
   );
 }
 
+function AnhDriveCard() {
+  const toast = useToast();
+  const [st, setSt] = useState<{ con_lai: number; tren_drive: number; last: { chuyen: number; loi: number; loi_cuoi: string | null; luc: string } | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => api.get<typeof st>("/anh/drive-status").then(setSt).catch(() => undefined);
+  useEffect(() => { void load(); }, []);
+  const chuyen = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ chuyen: number; loi: number; con_lai: number }>("/anh/chuyen-drive", {});
+      toast(`Đã chuyển ${r.chuyen} ảnh${r.loi ? `, ${r.loi} ảnh lỗi` : ""} — còn ${r.con_lai} ảnh trong D1.`, r.loi ? "info" : "ok");
+      void load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card title="🖼 Ảnh lưu trên Google Drive" actions={<Btn size="sm" variant="primary" disabled={busy || !st?.con_lai} onClick={chuyen}>{busy ? "Đang chuyển…" : "Chuyển ngay"}</Btn>}>
+      <p className="text-sm text-[var(--ink-soft)]">Mọi ảnh mới được tải lên Google Drive đã kết nối bên app Đặt mua linh kiện; D1 chỉ giữ link. Ảnh cũ còn trong D1 được chuyển dần mỗi 15 phút (25 ảnh / lần).</p>
+      {st && (
+        <div className="mt-2 text-sm">
+          Trên Drive: <b>{st.tren_drive}</b> ảnh · Còn trong D1: <b className={st.con_lai ? "text-[var(--red-700)]" : ""}>{st.con_lai}</b> ảnh
+          {st.last && <div className="text-xs text-[var(--ink-faint)] mt-1">Lần gần nhất {st.last.luc}: chuyển {st.last.chuyen}, lỗi {st.last.loi}{st.last.loi_cuoi ? ` (${st.last.loi_cuoi})` : ""}</div>}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function QtriCaiDatScreen() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
@@ -503,6 +534,7 @@ export function QtriCaiDatScreen() {
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />
       <EtxSyncCard />
+      <AnhDriveCard />
       <TopLinhKienCard />
     </div>
   );

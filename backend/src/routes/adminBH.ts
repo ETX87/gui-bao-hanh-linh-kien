@@ -1,3 +1,4 @@
+import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { Hono } from "hono";
 import { normCaseId } from "../lib/caseNgay";
 import type { Env, AppUser } from "../types";
@@ -985,6 +986,13 @@ adminBH.post("/don-dich-vu", async (c) => {
   if (!Number.isInteger(soLuong) || soLuong < 1) return c.json({ error: "INVALID_SO_LUONG" }, 400);
   if (!body.mo_ta_loi?.trim()) return c.json({ error: "MISSING_MO_TA_LOI" }, 400);
 
+  // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi tao don.
+  let anhUrls: string[];
+  try {
+    anhUrls = await chuanHoaAnh(c.env, body.anh, "don_dich_vu");
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
   const now = nowVN();
   await c.env.DB.prepare(
@@ -998,7 +1006,6 @@ adminBH.post("/don-dich-vu", async (c) => {
     statements.push(c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_ct (id, parent_id, so_thu_tu, trang_thai, created_at, updated_at) VALUES (?, ?, ?, 'cho_phan_loai', ?, ?)").bind(`${id}-${i}`, id, i, now, now));
   }
   await c.env.DB.batch(statements);
-  const anhUrls = (body.anh || []).filter((u) => u && u.trim());
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
   }

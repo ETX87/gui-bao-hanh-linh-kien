@@ -17,6 +17,7 @@ import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
 import { capNhatTimKiem } from "../lib/timKiem";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
+import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { nhanHoThung } from "../lib/nhanHo";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
@@ -463,6 +464,13 @@ phieuGui.post("/:id/don", async (c) => {
   if (lechKtv && !(duocVuot && body.xac_nhan_khac_ktv === true)) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
   const xacNhanKhac = lechKtv ? user.email : null;
 
+  // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi tao don de loi anh khong tao don thieu anh.
+  let anhUrls: string[];
+  try {
+    anhUrls = await chuanHoaAnh(c.env, body.anh, `don_${guiId}`);
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
   // email_gs phai tinh theo KTV SO HUU thung (g.nguoi_tao), KHONG phai user.email dang thao tac - o
   // ban truoc 2 gia tri nay luon trung (chi chinh KTV moi them duoc don cho phieu cua ho), nhung tu
@@ -493,7 +501,6 @@ phieuGui.post("/:id/don", async (c) => {
       .bind(caseId, JSON.stringify(casePreview), nowVN())
       .run();
   }
-  const anhUrls = (body.anh || []).filter((u) => u && u.trim());
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(id, url)));
   }
@@ -719,10 +726,16 @@ phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
   if (u.trang_thai !== "cho_bo_sung_tt") return c.json({ error: "WRONG_STATE" }, 400);
 
   const body = await c.req.json<BoSungBody>().catch(() => ({}) as BoSungBody);
+  // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi ghi gi khac.
+  let anhUrls: string[];
+  try {
+    anhUrls = await chuanHoaAnh(c.env, body.anh, `bosung_${u.parent_id}`);
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
   const now = nowVN();
   if (body.mo_ta_loi !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET mo_ta_loi = ? WHERE id = ?").bind(body.mo_ta_loi.trim(), u.parent_id).run();
   if (body.ma_lk !== undefined) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh SET ma_lk = ? WHERE id = ?").bind(body.ma_lk, u.parent_id).run();
-  const anhUrls = (Array.isArray(body.anh) ? body.anh : []).filter((x) => typeof x === "string" && x.startsWith("data:image/")).slice(0, 10);
   if (anhUrls.length > 0) {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(u.parent_id, url)));
   }
