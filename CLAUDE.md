@@ -6801,3 +6801,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 - Thư mục làm việc có thay đổi dở của phiên khác (`adminBH.ts`, `phieuGui.ts`, `api.ts` phần kiểm tra mã case, `lib/kiemTraCase.ts`) → commit chỉ phần của đợt này (dựng bản stage = HEAD + bản vá riêng), deploy từ git worktree sạch.
 
 **(d) Kiểm thử:** typecheck backend + frontend cả 2 repo 0 lỗi, build sạch. Xác nhận trên D1 linh-kien-app có kết nối Drive. Kiểm tra sau deploy: xem mục "Deploy" bên dưới.
+
+**Kết quả chuyển ảnh cũ (12/11/2026):** cron chuyển xong lúc 18:31 — 328 ảnh đều là link Google Drive, 0 ảnh base64 còn trong D1, không ảnh nào lỗi / bị bỏ qua. D1 giảm từ 462 MB xuống **29,9 MB** (giải phóng ngay, không cần chạy thêm gì).
