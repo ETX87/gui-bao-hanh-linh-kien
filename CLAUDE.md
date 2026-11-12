@@ -6738,3 +6738,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** nút hiện cho mọi GS mở được đơn; GS không phụ trách khu vực của KTV bấm sẽ bị 403 (GS vốn chỉ thấy đơn khu vực mình ở Tra cứu). Chưa có số việc riêng "đơn chờ bổ sung" cho GS. `phieuGui.ts` còn thay đổi dở của phiên khác → commit chỉ đoạn route bổ sung (bản stage = HEAD + đoạn sửa).
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa chạy thử local / bấm giao diện.
+
+**Deploy (12/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `3145d5e1`), không có migration mới.
