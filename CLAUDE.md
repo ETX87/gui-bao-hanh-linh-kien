@@ -6776,3 +6776,4 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck + build sạch. Chạy câu đếm 3 nhóm trên D1 production (chỉ đọc): VD KTV karofibinhphuoc02 52 đang / 21 xong / 92 huỷ – từ chối, karofibinhduong01 168 / 157 / 25. Chưa xem bằng mắt trên điện thoại.
 
+**Deploy (12/11/2026):** `npm run deploy` khi file dở của phiên khác được tạm cất (Version ID `fc5af53f`), không có migration mới.
