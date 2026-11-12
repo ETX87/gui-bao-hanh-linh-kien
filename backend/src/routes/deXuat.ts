@@ -10,6 +10,7 @@ import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/fi
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope } from "../lib/mien";
 import { slaCutoffVn } from "../lib/sla";
+import { dayCapLkCho, demCapLkCho } from "../lib/capLkPush";
 
 // De xuat linh kien sua chua (12/10/2026) - nguyen van chot: "NV se tu bao linh kien can duoc cap, Admin
 // bao hanh se len misa de xuat tu kho sang. Cu de xuat den khi sua xong hoac xac dinh la khong sua
@@ -117,7 +118,18 @@ deXuat.get("/dem", async (c) => {
       out[t] = { ca: r?.ca ?? 0, pxk: r?.pxk ?? 0, dong: r?.dong ?? 0 };
     }),
   );
-  return c.json({ dem: out });
+  // 12/11/2026: so phieu cap linh kien chua dong bo sang linh-kien-app (Admin BH / Ke toan / Kho / qtri thay canh bao + nut gui lai).
+  const lk = user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_qtri ? await demCapLkCho(c.env.DB) : undefined;
+  return c.json({ dem: out, lk });
+});
+
+// POST /de-xuat/day-linh-kien - gui ngay cac phieu cap linh kien chua dong bo sang linh-kien-app (don "SỬA CHỮA TẠI KHO").
+deXuat.post("/day-linh-kien", async (c) => {
+  const user = c.get("user");
+  if (!(user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_qtri)) return c.json({ error: "FORBIDDEN" }, 403);
+  const r = await dayCapLkCho(c.env);
+  const dem = await demCapLkCho(c.env.DB);
+  return c.json({ da_day: r.da_day, loi: r.loi ?? null, cho: dem.cho, so_loi: dem.loi });
 });
 
 // 05/11/2026 - "bên menu cấp lk chưa nhảy đúng số lượng và danh sách người nhận hàng": menu KTV (menu 2) dem

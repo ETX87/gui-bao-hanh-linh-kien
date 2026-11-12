@@ -1,4 +1,5 @@
 import { pushPhanLoaiPending } from "./lib/linhKienPush";
+import { dayCapLkCho } from "./lib/capLkPush";
 import { maybeComputeTopLinhKien } from "./lib/topLinhKien";
 import { Hono } from "hono";
 import type { Env } from "./types";
@@ -50,6 +51,10 @@ app.use("/api/*", async (c, next) => {
   if (c.req.method !== "GET" && layVaXoaCoYeuCauMoi()) {
     c.executionCtx.waitUntil(guiThieuHangCho(c.env).then(() => undefined).catch((e) => console.error("[thieuHang gui]", e instanceof Error ? e.message : e)));
   }
+  // 12/11/2026 (v1.112): doi phieu cap linh kien (Ke toan xac nhan / Kho in / xuat / sua PXK) -> day ngay sang linh-kien-app.
+  if (c.req.method !== "GET" && c.req.path.startsWith("/api/de-xuat") && c.res.status < 400) {
+    c.executionCtx.waitUntil(dayCapLkCho(c.env).then(() => undefined).catch((e) => console.error("[capLk day]", e instanceof Error ? e.message : e)));
+  }
 });
 
 app.route("/api/auth", authRoutes);
@@ -96,6 +101,8 @@ export default {
     // 04/11/2026: thieu hang bao hanh - gui yeu cau con cho + keo trang thai ticket ben linh-kien-app.
     ctx.waitUntil(dongBoThieuHang(env).then(() => undefined).catch((e) => console.error("[thieuHang]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(pushPhanLoaiPending(env).then(() => undefined).catch(() => undefined));
+    // 12/11/2026: phieu cap linh kien -> don "SỬA CHỮA TẠI KHO" ben linh-kien-app (gui lai dong loi / bi lo).
+    ctx.waitUntil(dayCapLkCho(env).then(() => undefined).catch((e) => console.error("[capLk]", e instanceof Error ? e.message : e)));
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));

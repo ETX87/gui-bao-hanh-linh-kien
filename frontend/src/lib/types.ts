@@ -177,6 +177,9 @@ export interface DeXuatLk {
   kho_in_luc?: string | null;
   kho_xuat_boi?: string | null;
   kho_xuat_luc?: string | null;
+  lk_ddh_id?: string | null; // 12/11/2026: ma don "SỬA CHỮA TẠI KHO" ben linh-kien-app
+  lk_loi?: string | null;
+  lk_day_luc?: string | null;
   nguoi_de_xuat: string;
   created_at: string;
   ma_misa: string | null;

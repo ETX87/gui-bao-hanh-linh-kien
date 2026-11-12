@@ -406,6 +406,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 {nguoiSuaChua && d.nguoi_de_xuat !== nguoiSuaChua ? " (đề xuất hộ NV)" : ""} · {fmtDate(d.created_at)}
                 {d.ghi_chu ? ` · ${d.ghi_chu}` : ""}
                 {(d.trang_thai === "da_cap" || d.trang_thai === "cho_ke_toan") && `${d.ma_misa ? ` · MISA ${d.ma_misa}` : ""}${d.ma_don_hang ? ` · ĐH ${d.ma_don_hang}` : ""}`}
+                <LkSyncTag d={d} />
                 {d.trang_thai === "cho_cap" && d.ly_do_tu_choi ? ` · ↩ ${d.ly_do_tu_choi}` : ""}
                 {(d.trang_thai === "tu_choi" || d.trang_thai === "huy") && d.ly_do_tu_choi ? ` · ${d.ly_do_tu_choi}` : ""}
                 {d.nguoi_xu_ly && d.trang_thai !== "cho_cap" && (
@@ -471,4 +472,11 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
       )}
     </Section>
   );
+}
+
+// 12/11/2026: phieu cap linh kien da day sang linh-kien-app thanh don "SỬA CHỮA TẠI KHO" (chi xem) - hien ma don ben do / loi day.
+export function LkSyncTag({ d }: { d: DeXuatLk }) {
+  if (d.lk_loi) return <span className="ml-1 text-[11px] text-[var(--red-700,#b91c1c)]" title={`Chưa đồng bộ sang app Đặt linh kiện: ${d.lk_loi}`}>· ⚠ chưa đồng bộ Đặt LK</span>;
+  if (d.lk_ddh_id) return <span className="ml-1 text-[11px] text-[var(--ink-soft)]" title={`Đơn "Sửa chữa tại kho" bên app Đặt linh kiện${d.lk_day_luc && d.lk_day_luc !== d.updated_at ? " — đang chờ gửi thay đổi mới" : ""}`}>· Đặt LK {d.lk_ddh_id}{d.lk_day_luc && d.lk_day_luc !== d.updated_at ? " ⏳" : ""}</span>;
+  return null;
 }

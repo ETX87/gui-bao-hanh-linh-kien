@@ -14,7 +14,7 @@ import { useLkName } from "../../hooks/useLinhKien";
 import { UserName } from "../../hooks/useUserNames";
 import { fmtDate } from "../../lib/format";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
-import { CapLinhKienModal, DeXuatBadge, KtTraLaiDeXuatModal, KtXacNhanDeXuatModal, TuChoiDeXuatModal } from "../shared/DeXuatLinhKien";
+import { CapLinhKienModal, DeXuatBadge, KtTraLaiDeXuatModal, KtXacNhanDeXuatModal, LkSyncTag, TuChoiDeXuatModal } from "../shared/DeXuatLinhKien";
 import { useRoute } from "../../router/Router";
 import type { AppUser, DeXuatLk } from "../../lib/types";
 
@@ -85,7 +85,22 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const [suaPxk, setSuaPxk] = useState<SuaPxkTarget | null>(null);
   // 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": so ca (tab Kho: so phieu PXK) cua MOI tab.
   const [dem, setDem] = useState<Dem>({});
-  const loadDem = () => api.get<{ dem: Dem }>("/de-xuat/dem").then((r) => setDem(r.dem)).catch(() => {});
+  const [lkSync, setLkSync] = useState<{ cho: number; loi: number } | null>(null);
+  const [lkBusy, setLkBusy] = useState(false);
+  const loadDem = () => api.get<{ dem: Dem; lk?: { cho: number; loi: number } }>("/de-xuat/dem").then((r) => { setDem(r.dem); setLkSync(r.lk ?? null); }).catch(() => {});
+  // 12/11/2026: gui lai ngay cac phieu chua dong bo sang app Dat linh kien (don "Sua chua tai kho").
+  const guiLaiLk = async () => {
+    setLkBusy(true);
+    try {
+      const r = await api.post<{ da_day: number; loi?: string; cho: number }>("/de-xuat/day-linh-kien", {});
+      toast(r.loi ? `Chưa gửi được: ${r.loi}` : `Đã đồng bộ ${r.da_day} phiếu sang app Đặt linh kiện`, r.loi ? "error" : "ok");
+      loadDem();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setLkBusy(false);
+    }
+  };
   // Chi tai khi mo man + sau moi thao tac (khong tai lai khi doi tab) - tiet kiem luot doc D1.
   useEffect(() => {
     loadDem();
@@ -180,7 +195,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     { key: "nv", header: "NV đề xuất", render: (r) => <UserName email={r.nguoi_de_xuat} /> },
     { key: "gc", header: "Ghi chú", render: (r) => <span className="block max-w-[220px] truncate" title={r.ghi_chu || ""}>{r.ghi_chu || "—"}</span> },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}</span> },
+    { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}<LkSyncTag d={r} /></span> },
     tab === "cho_cap" || tab === "cho_ke_toan"
       ? { key: "sla", header: "Chờ", render: (r) => <span className="flex items-center gap-1"><SlaBadge since={tab === "cho_ke_toan" ? r.xu_ly_luc || r.created_at : r.created_at} />{r.ly_do_tu_choi && tab === "cho_cap" && <span className="text-xs text-[var(--red-700,#b91c1c)] truncate max-w-[200px]" title={r.ly_do_tu_choi}>↩ {r.ly_do_tu_choi}</span>}</span> }
       : KHO_TABS.includes(tab)
@@ -197,6 +212,12 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     <Card className="p-3">
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Cấp linh kiện sửa chữa</h3>
+        {lkSync && lkSync.loi > 0 && (
+          <span className="text-xs text-[var(--red-700,#b91c1c)]">
+            ⚠ {lkSync.loi} phiếu chưa đồng bộ sang app Đặt linh kiện ·{" "}
+            <button className="underline font-semibold" disabled={lkBusy} onClick={guiLaiLk}>{lkBusy ? "Đang gửi…" : "Gửi lại"}</button>
+          </span>
+        )}
         <div className="flex gap-1">
           {tabs.map((t) => (
             <button
@@ -643,3 +664,4 @@ function SuaPxkModal({ target, onClose, onDone }: { target: SuaPxkTarget; onClos
     </Modal>
   );
 }
+
