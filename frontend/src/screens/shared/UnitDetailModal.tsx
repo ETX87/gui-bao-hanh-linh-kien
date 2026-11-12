@@ -35,6 +35,7 @@ import { ThieuHangSection } from "./ThieuHang";
 import { TraTrucTiepModal } from "./TraTrucTiepModal";
 import { ChanDoanModal } from "./ChanDoanModal";
 import { HoanTacModal } from "./HoanTacModal";
+import { KtvBoSungModal } from "../ktv/KtvBoSungModal";
 import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import type { AppUser, DonCha, DonVi, GhiChuLog, LogRow } from "../../lib/types";
@@ -108,7 +109,7 @@ interface DetailResponse {
   co_the_trao_doi?: boolean;
 }
 
-type SubModal = "hoan-tac" | "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | "tra-ktv" | "tra-kho" | "chan-doan" | null;
+type SubModal = "ktv-bo-sung" | "hoan-tac" | "phan-loai" | "fast" | "bo-sung" | "bao-cao-sai" | "xac-nhan" | "tra-ktv" | "tra-kho" | "chan-doan" | null;
 type QuickKey = "pg" | "dc" | "pt" | "odoo" | null;
 
 const ODOO_SC_LABELS: Record<string, string> = {
@@ -215,6 +216,10 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
     (!u.phieu_tra_id || pt?.trang_thai === "nhap")
   ) {
     buttons.push({ label: "↩ Lùi lại", onClick: () => setSub("hoan-tac") });
+  }
+  // 12/11/2026: GS (va nguoi tao ho thung, qtri) bo sung thong tin THAY KTV khi Admin yeu cau bo sung.
+  if (u.trang_thai === "cho_bo_sung_tt" && !isKhachLe && (user.la_giam_sat || user.la_qtri || (!!pg?.nguoi_tao_ho && pg.nguoi_tao_ho === user.email))) {
+    buttons.push({ label: "✍️ Bổ sung thay KTV", onClick: () => setSub("ktv-bo-sung"), variant: "primary" });
   }
   if (u.trang_thai === "cho_chan_doan") {
     if (user.la_nv_sua_chua && u.nguoi_sua_chua === user.email) buttons.push({ label: "🔧 Nộp kết quả sửa chữa", onClick: () => setSub("chan-doan"), variant: "primary" });
@@ -707,6 +712,9 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
           onDone={afterAction}
           onNavigate={(special) => setSub(special === "bo_sung_tt" ? "bo-sung" : "bao-cao-sai")}
         />
+      )}
+      {sub === "ktv-bo-sung" && (
+        <KtvBoSungModal unit={{ ...u, mo_ta_loi: p.mo_ta_loi, ma_lk: p.ma_lk } as DonVi} thayKtv onClose={() => setSub(null)} onDone={afterAction} />
       )}
       {sub === "bo-sung" && <YeuCauBoSungModal parentId={p.id} onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "bao-cao-sai" && <BaoCaoSaiModal parentId={p.id} onClose={() => setSub(null)} onDone={afterAction} />}

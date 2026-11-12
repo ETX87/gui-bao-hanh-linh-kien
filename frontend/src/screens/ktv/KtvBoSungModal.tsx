@@ -13,7 +13,7 @@ import type { DonVi } from "../../lib/types";
 // KTV bo sung thong tin theo yeu cau Admin BH - port dung openBoSungModal(): hien ro ly do Admin da
 // yeu cau + cho doi ca linh kien (khong chi sua mo ta) - port dung "Phan hoi vong 4 muc 1".
 
-export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose: () => void; onDone: () => void }) {
+export function KtvBoSungModal({ unit, onClose, onDone, thayKtv }: { unit: DonVi; onClose: () => void; onDone: () => void; thayKtv?: boolean }) {
   const toast = useToast();
   const { items: linhKien } = useLinhKien();
   const [moTa, setMoTa] = useState(unit.mo_ta_loi || "");
@@ -30,7 +30,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
     try {
       const anh = anhFiles && anhFiles.length > 0 ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
       await api.patch(`/phieu-gui/don-vi/${unit.id}/bo-sung`, { mo_ta_loi: moTa, ma_lk: maLk, anh });
-      toast("Đã gửi bổ sung.", "ok");
+      toast(thayKtv ? "Đã bổ sung thay KTV — đơn quay về chờ Admin phân loại." : "Đã gửi bổ sung.", "ok");
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -41,7 +41,7 @@ export function KtvBoSungModal({ unit, onClose, onDone }: { unit: DonVi; onClose
 
   return (
     <Modal
-      title="Bổ sung thông tin theo yêu cầu Admin bảo hành"
+      title={thayKtv ? "Bổ sung thông tin thay KTV" : "Bổ sung thông tin theo yêu cầu Admin bảo hành"}
       onClose={onClose}
       maxWidthClass="max-w-md"
       footerActions={

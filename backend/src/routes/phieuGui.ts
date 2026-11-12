@@ -694,18 +694,22 @@ interface BoSungBody {
 // kien, port dung yeu cau "Phan hoi vong 4 muc 1": modal bo sung them duoc truong doi linh kien).
 phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
   const user = c.get("user");
-  if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const id = c.req.param("id");
   const u = await c.env.DB.prepare(
-    `SELECT u.trang_thai, p.id as parent_id, g.nguoi_tao FROM phieu_sua_chua_bh_ct u
+    `SELECT u.trang_thai, p.id as parent_id, g.nguoi_tao, g.nguoi_tao_ho FROM phieu_sua_chua_bh_ct u
      JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.id = ?`,
   )
     .bind(id)
-    .first<{ trang_thai: string; parent_id: string; nguoi_tao: string }>();
+    .first<{ trang_thai: string; parent_id: string; nguoi_tao: string; nguoi_tao_ho: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
-  if (u.nguoi_tao !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
+  // 12/11/2026: GS khu vuc cua KTV (va nguoi tao ho thung, qtri) bo sung thong tin THAY KTV.
+  const laChuThung = isKtv(user) && u.nguoi_tao === user.email;
+  const laTaoHo = !!u.nguoi_tao_ho && u.nguoi_tao_ho === user.email;
+  const laGs = !laChuThung && user.la_giam_sat && (await isGsOfKtv(c.env.DB, user.email, u.nguoi_tao));
+  const thayKtv = !laChuThung && (laTaoHo || laGs || user.la_qtri);
+  if (!laChuThung && !thayKtv) return c.json({ error: "FORBIDDEN" }, 403);
   if (u.trang_thai !== "cho_bo_sung_tt") return c.json({ error: "WRONG_STATE" }, 400);
 
   const body = await c.req.json<BoSungBody>().catch(() => ({}) as BoSungBody);
@@ -717,7 +721,7 @@ phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
     await c.env.DB.batch(anhUrls.map((url) => c.env.DB.prepare("INSERT INTO phieu_sua_chua_bh_anh (parent_id, anh_url) VALUES (?, ?)").bind(u.parent_id, url)));
   }
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_phan_loai', updated_at = ? WHERE id = ?").bind(now, id).run();
-  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, anhUrls.length > 0 ? `KTV đã bổ sung thông tin (kèm ${anhUrls.length} ảnh)` : "KTV đã bổ sung thông tin");
+  await addLog(c.env.DB, "phieu_sc_ct", id, "cho_bo_sung_tt", "cho_phan_loai", user.email, (thayKtv ? (laGs ? "GS bổ sung thông tin thay KTV" : "Bổ sung thông tin thay KTV") : "KTV đã bổ sung thông tin") + (anhUrls.length > 0 ? ` (kèm ${anhUrls.length} ảnh)` : ""));
   return c.json({ ok: true });
 });
 
