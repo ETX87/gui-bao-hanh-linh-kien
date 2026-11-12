@@ -18,7 +18,7 @@ import type { AppUser, DonVi } from "../../lib/types";
 export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
   const { nav } = useRoute();
   const { refresh } = useWorkload();
-  const [nhom, setNhom] = useState<"dang" | "xong">("dang");
+  const [nhom, setNhom] = useState<"dang" | "xong" | "huy">("dang");
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   useEffect(() => {
@@ -27,7 +27,7 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
   }, [qInput]);
   const path = `/phieu-gui/don-cua-toi?nhom=${nhom}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
   const { items, total, page, pageCount, setPage, loading, reload, raw } = usePagedApi<KtvDon>(path, "don");
-  const r = raw as { so_dang?: number; so_xong?: number } | null;
+  const r = raw as { so_dang?: number; so_xong?: number; so_huy?: number } | null;
   const [boSung, setBoSung] = useState<DonVi | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
   const [traId, setTraId] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
           [
             ["dang", "Đang xử lý", r?.so_dang],
             ["xong", "Đã xong", r?.so_xong],
+            ["huy", "Huỷ / từ chối", r?.so_huy],
           ] as const
         ).map(([k, label, n]) => (
           <button
@@ -51,7 +52,7 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
             role="tab"
             aria-selected={nhom === k}
             onClick={() => setNhom(k)}
-            className={`focus-ring flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${nhom === k ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-card" : "text-[var(--ink-soft)]"}`}
+            className={`focus-ring flex-1 whitespace-nowrap rounded-lg px-1 py-2.5 text-[13px] font-semibold transition-colors sm:text-sm ${nhom === k ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-card" : "text-[var(--ink-soft)]"}`}
           >
             {label}
             {n != null && <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] ${nhom === k ? "bg-[var(--accent-soft)]" : "bg-[var(--line)]"}`}>{n}</span>}
@@ -69,7 +70,7 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
       {loading && items.length === 0 ? (
         <Spinner />
       ) : items.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--ink-faint)]">{q ? "Không có đơn nào khớp." : nhom === "dang" ? "Chưa có đơn nào đang xử lý." : "Chưa có đơn nào đã xong."}</p>
+        <p className="py-8 text-center text-sm text-[var(--ink-faint)]">{q ? "Không có đơn nào khớp." : nhom === "dang" ? "Chưa có đơn nào đang xử lý." : nhom === "huy" ? "Chưa có đơn nào bị huỷ / từ chối." : "Chưa có đơn nào đã xong."}</p>
       ) : (
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {items.map((d) => (

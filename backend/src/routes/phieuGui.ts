@@ -97,11 +97,16 @@ phieuGui.get("/", async (c) => {
 // "xong" = don da tach va moi don vi da ket thuc (huy / chuyen kho / phieu tra KTV da nhan / gui that bai).
 const DON_VI_KET_THUC = "(u2.trang_thai IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho') OR EXISTS (SELECT 1 FROM phieu_tra_bh t2 WHERE t2.id = u2.phieu_tra_id AND t2.trang_thai IN ('ktv_da_nhan','gui_that_bai')))";
 const DON_XONG_SQL = `(EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id) AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id AND NOT ${DON_VI_KET_THUC}))`;
+// 12/11/2026 - "tách các đơn đã xong riêng ra đơn xong và đơn bị hủy, bị từ chối": don da xong ma MOI don vi
+// deu bi huy / tu choi / chuyen kho (khong mon nao tra ve KTV) -> nhom "huy"; con lai (co it nhat 1 mon tra ve) -> "xong".
+const DON_HUY_SQL = `(${DON_XONG_SQL} AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u6 WHERE u6.parent_id = p.id AND u6.trang_thai NOT IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho')))`;
+const DON_XONG_THAT_SQL = `(${DON_XONG_SQL} AND NOT ${DON_HUY_SQL})`;
 phieuGui.get("/don-cua-toi", async (c) => {
   const user = c.get("user");
   if (!isKtv(user)) return c.json({ error: "FORBIDDEN" }, 403);
   const { limit, offset } = parsePage(c);
-  const xong = c.req.query("nhom") === "xong";
+  const nhom = c.req.query("nhom");
+  const nhomSql = nhom === "xong" ? DON_XONG_THAT_SQL : nhom === "huy" ? DON_HUY_SQL : `NOT ${DON_XONG_SQL}`;
   const base = "FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE g.nguoi_tao = ?";
   const kw = kwClause(c.req.query("q"), [
     "p.id", "p.case_id", "p.ma_lk", "p.mo_ta_loi", "p.phieu_gui_id", tenLkOf("p.ma_lk"),
@@ -109,10 +114,10 @@ phieuGui.get("/don-cua-toi", async (c) => {
     "(SELECT group_concat(u3.id, ' ') FROM phieu_sua_chua_bh_ct u3 WHERE u3.parent_id = p.id)",
   ], ["p.tim_kiem"]);
   const f = joinF(eqFilters(c, { lk: "p.ma_lk" }), timeFilter(c, "p.created_at"));
-  const w = `${base} AND ${xong ? "" : "NOT "}${DON_XONG_SQL}${kw.sql}${f.sql}`;
+  const w = `${base} AND ${nhomSql}${kw.sql}${f.sql}`;
   const b = [user.email, ...kw.binds, ...f.binds];
   const CAN_BO_SUNG = "EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u4 WHERE u4.parent_id = p.id AND u4.trang_thai = 'cho_bo_sung_tt')";
-  const [{ results }, totalRow, dangRow, xongRow] = await Promise.all([
+  const [{ results }, totalRow, dangRow, xongRow, huyRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT p.id, p.case_id, p.ma_lk, p.mo_ta_loi, p.so_luong_khai, p.phieu_gui_id, p.odoo_id, p.created_at, p.case_xac_minh,
          g.trang_thai AS gui_trang_thai, g.ngay_gui_xe, g.updated_at AS gui_updated_at,
@@ -126,10 +131,11 @@ phieuGui.get("/don-cua-toi", async (c) => {
     ).bind(...b, limit, offset).all<Record<string, unknown>>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${w}`).bind(...b).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND NOT ${DON_XONG_SQL}`).bind(user.email).first<{ cnt: number }>(),
-    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_XONG_SQL}`).bind(user.email).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_XONG_THAT_SQL}`).bind(user.email).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_HUY_SQL}`).bind(user.email).first<{ cnt: number }>(),
   ]);
   const don = results.map(({ don_vi_json, ...r }) => ({ ...r, don_vi: JSON.parse((don_vi_json as string) || "[]") }));
-  return c.json({ don, total: totalRow?.cnt ?? 0, so_dang: dangRow?.cnt ?? 0, so_xong: xongRow?.cnt ?? 0 });
+  return c.json({ don, total: totalRow?.cnt ?? 0, so_dang: dangRow?.cnt ?? 0, so_xong: xongRow?.cnt ?? 0, so_huy: huyRow?.cnt ?? 0 });
 });
 
 interface CreatePhieuBody {
