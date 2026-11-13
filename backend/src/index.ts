@@ -28,6 +28,7 @@ import canhBaoRoutes from "./routes/canhBao";
 import lichSuRoutes from "./routes/lichSu";
 import baoCaoBoRoutes from "./routes/baoCaoBo";
 import deXuatRoutes from "./routes/deXuat";
+import xacRoutes from "./routes/xac";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
@@ -86,6 +87,8 @@ app.route("/api/canh-bao", canhBaoRoutes);
 app.route("/api/lich-su", lichSuRoutes);
 app.route("/api/bao-cao-bo", baoCaoBoRoutes);
 app.route("/api/de-xuat", deXuatRoutes);
+// 13/11/2026: module tra xac linh kien (thung tra xac cho nha may) - routes/xac.ts.
+app.route("/api/tra-xac", xacRoutes);
 app.route("/api/etx", etxRoutes);
 app.route("/api/thieu-hang", thieuHangRoutes);
 app.route("/api/anh", anhRoutes);

@@ -35,6 +35,10 @@ export interface WorkloadCounts {
   nv_cho_chan_doan: number;
   ketoan_cho_duyet: number;
   ketoan_de_xuat_lk: number;
+  admin_xac_cho_gom: number;
+  admin_thung_xac_nhap: number;
+  admin_thung_xac_tra_lai: number;
+  ketoan_thung_xac: number;
 }
 
 const EMPTY: WorkloadCounts = {
@@ -61,6 +65,10 @@ const EMPTY: WorkloadCounts = {
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
   ketoan_de_xuat_lk: 0,
+  admin_xac_cho_gom: 0,
+  admin_thung_xac_nhap: 0,
+  admin_thung_xac_tra_lai: 0,
+  ketoan_thung_xac: 0,
 };
 
 const WorkloadContext = createContext<{ counts: WorkloadCounts; loading: boolean; refresh: () => void }>({

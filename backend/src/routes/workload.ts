@@ -3,6 +3,7 @@ import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { mienScope } from "../lib/mien";
+import { XAC_CHO_GOM } from "../lib/xac";
 
 // GET /api/workload - dem "viec can lam" cho tung nhom vai tro trong 1 request duy nhat.
 //
@@ -42,6 +43,10 @@ const EMPTY = {
   nv_cho_chan_doan: 0,
   ketoan_cho_duyet: 0,
   ketoan_de_xuat_lk: 0,
+  admin_xac_cho_gom: 0,
+  admin_thung_xac_nhap: 0,
+  admin_thung_xac_tra_lai: 0,
+  ketoan_thung_xac: 0,
 };
 type Counts = typeof EMPTY;
 
@@ -183,6 +188,19 @@ workload.get("/", async (c) => {
       ).then((r) => {
         counts.admin_thieu_hang_da_ve = r?.cnt ?? 0;
       }),
+      // 13/11/2026: tra xac linh kien - xac cho gom thung, thung nhap, thung KT tra lai.
+      one(
+        `SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_CHO_GOM}${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.admin_xac_cho_gom = r?.cnt ?? 0;
+      }),
+      one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'nhap'${mt.sql}`, ...mt.binds).then((r) => {
+        counts.admin_thung_xac_nhap = r?.cnt ?? 0;
+      }),
+      one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'nhap' AND t.ly_do_tra_lai IS NOT NULL${mt.sql}`, ...mt.binds).then((r) => {
+        counts.admin_thung_xac_tra_lai = r?.cnt ?? 0;
+      }),
       // 20/10/2026: phieu tra Ke toan tu choi, tra ve Admin BH.
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'nhap' AND t.ly_do_tu_choi_kt IS NOT NULL${mt.sql}`, ...mt.binds).then((r) => {
         counts.admin_phieu_tra_tu_choi = r?.cnt ?? 0;
@@ -211,6 +229,9 @@ workload.get("/", async (c) => {
         ...mp.binds,
       ).then((r) => {
         counts.ketoan_de_xuat_lk = r?.cnt ?? 0;
+      }),
+      one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'cho_ke_toan'${mt.sql}`, ...mt.binds).then((r) => {
+        counts.ketoan_thung_xac = r?.cnt ?? 0;
       }),
     );
   }

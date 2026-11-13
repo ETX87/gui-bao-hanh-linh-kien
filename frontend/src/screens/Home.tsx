@@ -36,6 +36,10 @@ const LABELS: Record<keyof WorkloadCounts, string> = {
   nv_cho_chan_doan: "Việc chờ chẩn đoán",
   ketoan_cho_duyet: "Phiếu trả chờ duyệt",
   ketoan_de_xuat_lk: "Cấp linh kiện chờ KT xác nhận",
+  admin_xac_cho_gom: "Xác chờ gom thùng trả",
+  admin_thung_xac_nhap: "Thùng trả xác nháp",
+  admin_thung_xac_tra_lai: "Thùng trả xác KT trả lại",
+  ketoan_thung_xac: "Thùng trả xác chờ KT duyệt",
 };
 
 const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
@@ -61,6 +65,10 @@ const HASH_OF: Partial<Record<keyof WorkloadCounts, string>> = {
   nv_cho_chan_doan: "/don?tab=nv",
   ketoan_cho_duyet: "/phieu-tra?tab=cho_kt",
   ketoan_de_xuat_lk: "/phieu-tra?tab=cap_lk",
+  admin_xac_cho_gom: "/tra-xac?tab=cho_gom",
+  admin_thung_xac_nhap: "/tra-xac?tab=nhap",
+  admin_thung_xac_tra_lai: "/tra-xac?tab=nhap",
+  ketoan_thung_xac: "/tra-xac?tab=cho_kt",
 };
 
 const ICON_OF: Record<keyof WorkloadCounts, string> = {
@@ -87,6 +95,10 @@ const ICON_OF: Record<keyof WorkloadCounts, string> = {
   nv_cho_chan_doan: "🔧",
   ketoan_cho_duyet: "💰",
   ketoan_de_xuat_lk: "🔩",
+  admin_xac_cho_gom: "♻️",
+  admin_thung_xac_nhap: "📦",
+  admin_thung_xac_tra_lai: "↩️",
+  ketoan_thung_xac: "♻️",
 };
 
 // Tone KPI theo nhom nghiep vu (DESIGN_SYSTEM.md §2.5): viec dang CHO minh xu ly = amber, viec cua
@@ -115,6 +127,10 @@ const TONE_OF: Record<keyof WorkloadCounts, "amber" | "blue" | "brand" | "red"> 
   nv_cho_chan_doan: "amber",
   ketoan_cho_duyet: "amber",
   ketoan_de_xuat_lk: "amber",
+  admin_xac_cho_gom: "blue",
+  admin_thung_xac_nhap: "blue",
+  admin_thung_xac_tra_lai: "red",
+  ketoan_thung_xac: "amber",
 };
 
 function todayLabel() {

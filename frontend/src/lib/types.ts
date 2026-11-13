@@ -117,6 +117,8 @@ export interface DonVi {
   ly_do_tu_choi: string | null;
   ghi_chu_huy?: string | null; // 09/11/2026
   xu_ly_xac: string | null;
+  thung_xac_id?: string | null; // 13/11/2026 tra xac
+  xac_tt?: string | null;
   ket_qua_chan_doan: string | null;
   ket_qua_nv?: string | null; // 12/10/2026: da_sua_xong | khong_sua_duoc | khong_loi | kiem_tra_tu_van
   ghi_chu_nv?: string | null; // 21/10/2026: ghi chu NV khi nop ket qua

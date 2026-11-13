@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { LichSuScreen } from "./screens/shared/LichSuBaoHanh";
 import { LogicHeThongScreen } from "./screens/shared/LogicHeThong";
+import { TraXacScreen } from "./screens/xac/TraXacScreen";
 import { BaoCaoBoScreen } from "./screens/shared/BaoCaoBo";
 import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
@@ -40,6 +41,8 @@ function Routed({ user }: { user: AppUser }) {
   if (path === "/lich-su") return <LichSuScreen />;
   // 11/11/2026: tai lieu logic he thong cho vai tro BO (moi tai khoan khong phai KTV thuan).
   if (path === "/logic" && !isPureKtv(user)) return <LogicHeThongScreen />;
+  // 13/11/2026: module tra xac linh kien.
+  if (path === "/tra-xac" && (user.la_admin_bh || user.la_ke_toan || user.la_view || user.la_qtri)) return <TraXacScreen user={user} />;
   // 13/11/2026: bao cao ket qua lam viec BO theo thang.
   if (path === "/bao-cao-bo" && (user.la_admin_bh || user.la_view || user.la_qtri)) return <BaoCaoBoScreen />;
 

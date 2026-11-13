@@ -611,6 +611,13 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                   ) : (
                     u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />
                   )}
+                  {/* 13/11/2026: trang thai tra xac (module Tra xac linh kien, #/tra-xac). */}
+                  {u.huong_xu_ly === "doi_moi" && u.xu_ly_xac === "tra_doi_tac" && (
+                    <Kv
+                      k="Trả xác"
+                      v={u.thung_xac_id ? `${u.xac_tt === "da_tra" ? "Đã trả đối tác" : "Trong thùng"} ${u.thung_xac_id}` : u.xac_tt === "ngoai" ? "Đã xử lý ngoài hệ thống" : "Chờ gom thùng trả xác"}
+                    />
+                  )}
                   {u.thong_tin_mail_pd && <Kv k="Mail phê duyệt" v={u.thong_tin_mail_pd} />}
                   {u.ma_phe_duyet && <Kv k="Mã phê duyệt" v={u.ma_phe_duyet} />}
                   {u.so_lan_yeu_cau_lam_lai > 0 && <Kv k="Số lần làm lại" v={u.so_lan_yeu_cau_lam_lai} />}

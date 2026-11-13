@@ -151,9 +151,7 @@ export function AdminPhieuTraScreen({ user }: { user: AppUser }) {
                 Bỏ chọn
               </Btn>
               <span className="ml-auto flex gap-1.5">
-                <Btn size="sm" variant="secondary" disabled={busy} onClick={taoChoDoiTac}>
-                  Trả xác cho đối tác…
-                </Btn>
+                {/* 13/11/2026: tra xac cho doi tac chuyen sang module rieng "Trả xác linh kiện" (#/tra-xac). */}
                 <Btn size="sm" variant="primary" disabled={busy} onClick={() => taoPhieu([...selected])}>
                   ＋ Tạo phiếu trả ({selected.size})
                 </Btn>

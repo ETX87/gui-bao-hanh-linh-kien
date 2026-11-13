@@ -95,6 +95,8 @@ const CATALOG: CatalogItem[] = [
     countKeys: ["admin_san_sang_gom", "admin_phieu_tra_tu_choi", "ketoan_cho_duyet", "ketoan_de_xuat_lk", "kho_cho_in", "kho_da_in", "kho_lk_cho_in", "kho_lk_da_in", "kho_khieu_nai"],
     show: (u) => u.la_admin_bh || u.la_ke_toan || u.la_kho || u.la_view || u.la_qtri,
   },
+  // 13/11/2026: module tra xac linh kien cho nha may (routes/xac.ts) - Admin BH gom thung, Ke toan duyet.
+  { hash: "/tra-xac", label: "Trả xác linh kiện", short: "Trả xác", icon: "♻️", group: "", desc: "Gom xác Đổi mới vào thùng trả nhà máy → mã EO → Kế toán duyệt", countKeys: ["admin_thung_xac_tra_lai", "ketoan_thung_xac"], show: (u) => u.la_admin_bh || u.la_ke_toan || u.la_view || u.la_qtri },
   { hash: "/lich-su", label: "Lịch sử Serial / Case", short: "Lịch sử", icon: "🔁", group: "", desc: "Tra lịch sử bảo hành theo Serial hoặc ID case", show: () => true },
   { hash: "/bao-cao-bo", label: "Báo cáo BO theo tháng", short: "Báo cáo", icon: "📊", group: "", desc: "Số ca, thời gian xử lý, tỷ lệ SLA của từng nhân viên Kho / Admin BH / NV / Kế toán", show: (u) => u.la_admin_bh || u.la_view || u.la_qtri },
   { hash: "/logic", label: "Logic hệ thống", short: "Logic", icon: "📘", group: "", desc: "Luồng quy trình, logic tự động, lịch chạy — tài liệu cho BO", show: (u) => !isPureKtv(u) },
@@ -167,6 +169,10 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   nv_cho_chan_doan: "đơn chờ chẩn đoán",
   ketoan_cho_duyet: "phiếu chờ duyệt",
   ketoan_de_xuat_lk: "ca cấp linh kiện chờ KT xác nhận",
+  admin_xac_cho_gom: "xác chờ gom thùng",
+  admin_thung_xac_nhap: "thùng trả xác nháp",
+  admin_thung_xac_tra_lai: "thùng trả xác KT trả lại",
+  ketoan_thung_xac: "thùng trả xác chờ KT duyệt",
 };
 
 export function countBreakdown(it: RouteItem, counts: WorkloadCounts): string {

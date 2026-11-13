@@ -772,9 +772,11 @@ adminBH.patch("/don-vi/:id/xu-ly-xac", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{ xu_ly_xac?: string }>().catch(() => ({}) as { xu_ly_xac?: string });
   if (!XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
-  const u = await c.env.DB.prepare("SELECT trang_thai, huong_xu_ly, xu_ly_xac FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; huong_xu_ly: string | null; xu_ly_xac: string | null }>();
+  const u = await c.env.DB.prepare("SELECT trang_thai, huong_xu_ly, xu_ly_xac, thung_xac_id FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; huong_xu_ly: string | null; xu_ly_xac: string | null; thung_xac_id: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
   if (u.huong_xu_ly !== "doi_moi") return c.json({ error: "WRONG_STATE" }, 400);
+  // 13/11/2026: xac da vao thung tra xac -> bo khoi thung truoc moi doi duoc xu ly xac.
+  if (u.thung_xac_id && u.xu_ly_xac !== body.xu_ly_xac) return c.json({ error: "XAC_TRONG_THUNG" }, 400);
   if (u.xu_ly_xac === body.xu_ly_xac) return c.json({ ok: true });
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET xu_ly_xac = ?, updated_at = updated_at WHERE id = ?").bind(body.xu_ly_xac, id).run();
   await addLog(c.env.DB, "phieu_sc_ct", id, u.trang_thai, u.trang_thai, user.email, `Đổi xử lý xác: ${LBL[u.xu_ly_xac ?? ""] || u.xu_ly_xac || "—"} → ${LBL[body.xu_ly_xac!] || body.xu_ly_xac}`);
@@ -897,10 +899,12 @@ adminBH.post("/don-vi/:id/yeu-cau-lam-lai", async (c) => {
 const TT_LUI: Record<string, string> = { ket_thuc_tu_choi: "Đã huỷ", ket_thuc_chuyen_kho: "Chuyển kho", cho_chan_doan: "Chờ NV sửa", san_sang_gom_phieu_tra: "Sẵn sàng trả", cho_phan_loai: "Chờ phân loại", cho_admin_xac_nhan: "Chờ xác nhận hoàn tất" };
 async function hoanTacDonVi(db: D1Database, id: string, actor: string, lyDo: string): Promise<{ error?: string; den?: string }> {
   const u = await db
-    .prepare("SELECT id, trang_thai, phieu_tra_id, ket_qua_nv, admin_xac_nhan_hoan_tat FROM phieu_sua_chua_bh_ct WHERE id = ?")
+    .prepare("SELECT id, trang_thai, phieu_tra_id, ket_qua_nv, admin_xac_nhan_hoan_tat, thung_xac_id FROM phieu_sua_chua_bh_ct WHERE id = ?")
     .bind(id)
-    .first<{ id: string; trang_thai: string; phieu_tra_id: string | null; ket_qua_nv: string | null; admin_xac_nhan_hoan_tat: number }>();
+    .first<{ id: string; trang_thai: string; phieu_tra_id: string | null; ket_qua_nv: string | null; admin_xac_nhan_hoan_tat: number; thung_xac_id: string | null }>();
   if (!u) return { error: "NOT_FOUND" };
+  // 13/11/2026: xac dang trong thung tra xac -> phai bo khoi thung truoc.
+  if (u.thung_xac_id) return { error: "XAC_TRONG_THUNG" };
   const now = nowVN();
   const RESET_PL =
     "huong_xu_ly = NULL, loai_bao_hanh = NULL, loai_doi_tru = NULL, nguoi_sua_chua = NULL, ly_do_tu_choi = NULL, ghi_chu_huy = NULL, xu_ly_xac = NULL, thong_tin_mail_pd = NULL, ma_phe_duyet = NULL, ket_qua_chan_doan = NULL, ket_qua_nv = NULL, ghi_chu_nv = NULL, admin_xac_nhan_hoan_tat = 0, phieu_tra_id = NULL";
