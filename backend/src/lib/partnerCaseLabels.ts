@@ -49,6 +49,7 @@ export const GIAI_DOAN_VI: Record<string, string> = {
   thung_nhap: "Thùng nháp — KTV chưa gửi",
   thung_dang_gui: "Đang gửi về Kho",
   thung_cho_admin_nhan: "Kho đã nhận — chờ Admin nhận",
+  thung_tu_choi: "Admin từ chối thùng — chờ Kho / KTV phản hồi",
   cho_xac_nhan_so_luong: "Chờ xác nhận SL",
   cho_phan_loai: "Chờ phân loại",
   admin_can_xem_lai: "Admin cần xem lại",

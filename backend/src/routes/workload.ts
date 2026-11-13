@@ -21,6 +21,8 @@ workload.use("*", verifySessionMiddleware, loadUser);
 
 const EMPTY = {
   ktv_phieu_nhap: 0,
+  ktv_thung_tu_choi: 0,
+  kho_thung_tu_choi: 0,
   ktv_odoo_cho_gui: 0,
   ktv_cho_bo_sung: 0,
   ktv_nhan_hang: 0,
@@ -71,6 +73,10 @@ workload.get("/", async (c) => {
     jobs.push(
       one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE ${col} = ? AND trang_thai = 'nhap'`, user.email).then((r) => {
         counts.ktv_phieu_nhap = r?.cnt ?? 0;
+      }),
+      // 13/11/2026: thung bi Admin BH tu choi, Kho da dong y -> cho KTV phan hoi (7 ngay).
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE (nguoi_tao = ? OR nguoi_tao_ho = ?) AND tu_choi_tt = 'cho_ktv'`, user.email, user.email).then((r) => {
+        counts.ktv_thung_tu_choi = r?.cnt ?? 0;
       }),
     );
   }
@@ -138,8 +144,12 @@ workload.get("/", async (c) => {
         counts.kho_khieu_nai = r?.cnt ?? 0;
       }),
       // Thung Kho da nhan, cho Admin BH nhan ban giao noi bo (nhac Kho mang hang sang).
-      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0${mg.sql}`, ...mg.binds).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 AND g.tu_choi_tt IS NULL${mg.sql}`, ...mg.binds).then((r) => {
         counts.kho_cho_ban_giao = r?.cnt ?? 0;
+      }),
+      // 13/11/2026: Admin BH tu choi tiep nhan thung -> Kho phan hoi dong y / khong dong y.
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.tu_choi_tt = 'cho_kho'${mg.sql}`, ...mg.binds).then((r) => {
+        counts.kho_thung_tu_choi = r?.cnt ?? 0;
       }),
     );
   }
@@ -147,7 +157,7 @@ workload.get("/", async (c) => {
   // ---- Admin bao hanh (hoac qtri) ----
   if (user.la_admin_bh || user.la_qtri) {
     jobs.push(
-      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0${mg.sql}`, ...mg.binds).then((r) => {
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 AND g.tu_choi_tt IS NULL${mg.sql}`, ...mg.binds).then((r) => {
         counts.admin_cho_tiep_nhan_noi_bo = r?.cnt ?? 0;
       }),
       // don cha cho xac nhan SL - khop GET /admin/don-cha

@@ -39,7 +39,7 @@ export interface PhieuGui {
   ma_xe_hoac_tai_xe: string | null;
   don_vi_van_chuyen: string | null;
   ma_van_don: string | null;
-  trang_thai: "nhap" | "da_gui" | "da_tiep_nhan";
+  trang_thai: "nhap" | "da_gui" | "da_tiep_nhan" | "da_huy";
   su_co_tiep_nhan: boolean;
   su_co_ly_do: string | null;
   su_co_ghi_chu: string | null;
@@ -52,6 +52,20 @@ export interface PhieuGui {
   created_at: string;
   updated_at: string;
   so_don?: number; // GET /admin/phieu-gui (12/10/2026)
+  // 13/11/2026: Admin BH tu choi tiep nhan thung (routes/tuChoiThung.ts).
+  tu_choi_tt?: "cho_kho" | "cho_ktv" | "da_huy" | null;
+  tu_choi_ly_do?: string | null;
+  tu_choi_boi?: string | null;
+  tu_choi_luc?: string | null;
+  tu_choi_han?: string | null;
+  tu_choi_lan: number;
+  kho_y_kien?: string | null;
+  kho_y_kien_boi?: string | null;
+  kho_y_kien_luc?: string | null;
+  phan_hoi_vai_tro?: "kho" | "ktv" | null;
+  phan_hoi_ly_do?: string | null;
+  phan_hoi_boi?: string | null;
+  phan_hoi_luc?: string | null;
 }
 
 export interface GhiChuLog {

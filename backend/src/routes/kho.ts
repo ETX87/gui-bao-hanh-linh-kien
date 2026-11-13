@@ -36,7 +36,7 @@ kho.get("/phieu-gui", async (c) => {
   const LOC = { ktv: "phieu_gui_bh.nguoi_tao", tao_ho: "phieu_gui_bh.nguoi_tao_ho", hinh_thuc_gui: "phieu_gui_bh.hinh_thuc_gui", mien: "phieu_gui_bh.mien" };
   if (c.req.query("loc_only")) {
     const tq = c.req.query("trang_thai");
-    const base = tq === "cho_ban_giao" ? "trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" : tq === "da_tiep_nhan" ? "trang_thai = 'da_tiep_nhan'" : "trang_thai = 'da_gui'";
+    const base = tq === "cho_ban_giao" ? "trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0 AND tu_choi_tt IS NULL" : tq === "da_tiep_nhan" ? "trang_thai = 'da_tiep_nhan'" : "trang_thai = 'da_gui'";
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${base}${ms0.sql}`, ms0.binds) });
   }
   const slaMoc = c.req.query("trang_thai") === "cho_ban_giao" ? "phieu_gui_bh.thoi_gian_nhan_kho" : "phieu_gui_bh.updated_at";
@@ -46,7 +46,7 @@ kho.get("/phieu-gui", async (c) => {
   // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
   if (c.req.query("trang_thai") === "cho_ban_giao") {
     const { limit, offset } = parsePage(c);
-    const w = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0" + ms.sql;
+    const w = "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0 AND tu_choi_tt IS NULL" + ms.sql;
     const [{ results }, totalRow] = await Promise.all([
       c.env.DB.prepare(`SELECT * ${w} ORDER BY thoi_gian_nhan_kho ASC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
       c.env.DB.prepare(`SELECT COUNT(*) as cnt ${w}`).bind(...ms.binds).first<{ cnt: number }>(),

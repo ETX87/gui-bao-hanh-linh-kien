@@ -33,6 +33,8 @@ import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
 import { dongBoTaiKhoan } from "./lib/taiKhoan";
+import tuChoiThungRoutes from "./routes/tuChoiThung";
+import { tuHuyThungQuaHan } from "./lib/tuChoiThung";
 import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
 import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } from "./lib/caseSnapshot";
 import { capNhatTimKiem } from "./lib/timKiem";
@@ -92,6 +94,7 @@ app.route("/api/tra-xac", xacRoutes);
 app.route("/api/etx", etxRoutes);
 app.route("/api/thieu-hang", thieuHangRoutes);
 app.route("/api/anh", anhRoutes);
+app.route("/api/tu-choi-thung", tuChoiThungRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -116,6 +119,8 @@ export default {
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
+    // 13/11/2026: thung bi tu choi, KTV qua 7 ngay khong phan hoi -> tu huy.
+    ctx.waitUntil(tuHuyThungQuaHan(env).then(() => undefined).catch((e) => console.error("[tuHuyThung]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)).then(() => dongBoTaiKhoan(env.DB)).then(() => undefined).catch((e) => console.error("[dongBoTaiKhoan]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunUserKhuVucSync(env).catch((e) => console.error("[userKhuVucSync]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));

@@ -9,6 +9,7 @@ import { KtvDonCard, KtvPhieuTraCard, openKtvDon, ChonPhieuTraModal, type KtvDon
 import { KtvBoSungModal } from "./KtvBoSungModal";
 import { PhieuGuiDetailModal } from "./PhieuGuiDetailModal";
 import { PhieuTraDetailModal } from "../shared/PhieuTraDetailModal";
+import { ThungTuChoiList } from "../shared/TuChoiThung";
 import type { AppUser, DonVi, PhieuGui } from "../../lib/types";
 
 // 30/10/2026 (ra soat UX mobile KTV, de xuat 1): Trang chu cua KTV = "Việc của tôi" - 1 danh sach the
@@ -55,7 +56,8 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
   const canBoSung = don.filter((d) => d.can_bo_sung);
   const theoDoi = don.filter((d) => !d.can_bo_sung && d.gui_trang_thai !== "nhap").slice(0, TRACK_LIMIT);
   const odoo = counts.ktv_odoo_cho_gui || 0;
-  const tongViec = canBoSung.length + tra.length + nhap.length + (odoo > 0 ? 1 : 0);
+  const tuChoi = counts.ktv_thung_tu_choi || 0;
+  const tongViec = canBoSung.length + tra.length + nhap.length + (odoo > 0 ? 1 : 0) + tuChoi;
 
   return (
     <div className="space-y-4">
@@ -64,6 +66,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
           {tongViec > 0 ? "🔥 Việc cần làm" : "✨ Không có việc nào đang chờ bạn"}
         </h2>
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+          {tuChoi > 0 && <ThungTuChoiList user={user} tt="cho_ktv" compact />}
           {canBoSung.map((d) => (
             <KtvDonCard key={d.id} don={d} onOpen={() => openKtvDon(d, { gui: setGuiId, tra: setTraId, chon: setChon })} onBoSung={setBoSung} />
           ))}

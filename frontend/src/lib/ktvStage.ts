@@ -74,6 +74,7 @@ export function ktvUnitStage(u: KtvUnitLite): KtvStage {
 // cac don vi (can bo sung > ... > da nhan).
 export function ktvDonStage(guiTrangThai: string | null | undefined, units: KtvUnitLite[]): KtvStage {
   if (!units.length) {
+    if (guiTrangThai === "da_huy") return S.huy;
     if (guiTrangThai === "nhap") return S.chua_gui;
     if (guiTrangThai === "da_gui") return S.tren_xe;
     return S.kho_nhan;
@@ -84,5 +85,6 @@ export function ktvDonStage(guiTrangThai: string | null | undefined, units: KtvU
 }
 
 export function ktvGuiStage(guiTrangThai: string): KtvStage {
+  if (guiTrangThai === "da_huy") return S.huy;
   return guiTrangThai === "nhap" ? S.chua_gui : guiTrangThai === "da_gui" ? S.tren_xe : S.kho_nhan;
 }

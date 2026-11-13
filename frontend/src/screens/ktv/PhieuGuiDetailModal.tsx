@@ -27,6 +27,7 @@ import { isPureKtv } from "../../layout/routes";
 import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
 import { moPhieuThung, taiPdfPhieuThung } from "../../lib/inPhieuThung";
+import { TuChoiInfo } from "../shared/TuChoiThung";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -408,6 +409,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               {giaoTrucTiep ? "Xác nhận đã giao hàng" : "Xác nhận đã gửi xe"}” khi hàng đã được giao cho xe / mang tới Kho.
             </Banner>
           )}
+
+          <TuChoiInfo g={g} />
 
           {!!g.su_co_tiep_nhan && (
             <Banner tone="red">

@@ -104,6 +104,7 @@ export const GIAI_DOAN: { key: string; label: string; tone: "gray" | "blue" | "a
   { key: "thung_nhap", label: "Thùng nháp — KTV chưa gửi", tone: "gray", icon: "📝" },
   { key: "thung_dang_gui", label: "Đang gửi về Kho", tone: "blue", icon: "🚚" },
   { key: "thung_cho_admin_nhan", label: "Kho đã nhận — chờ Admin nhận", tone: "amber", icon: "📥" },
+  { key: "thung_tu_choi", label: "Admin từ chối thùng — chờ Kho / KTV phản hồi", tone: "red", icon: "⛔" },
   { key: "cho_xac_nhan_so_luong", label: "Chờ xác nhận SL", tone: "amber", icon: "🔢" },
   { key: "cho_phan_loai", label: "Chờ phân loại", tone: "amber", icon: "🗂️" },
   { key: "admin_can_xem_lai", label: "Admin cần xem lại", tone: "orange", icon: "🔁" },

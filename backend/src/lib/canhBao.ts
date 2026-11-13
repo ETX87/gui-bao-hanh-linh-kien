@@ -60,7 +60,7 @@ export const STAGES: StageDef[] = [
     label: "Kho đã nhận, Admin bảo hành chưa tiếp nhận",
     vai_tro: ["kho", "admin"],
     don_vi: "thùng",
-    from: `phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0`,
+    from: `phieu_gui_bh g WHERE g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 AND g.tu_choi_tt IS NULL`,
     since: "COALESCE(g.thoi_gian_nhan_kho, g.updated_at)",
     ktvCol: "g.nguoi_tao",
     mienAlias: "g",

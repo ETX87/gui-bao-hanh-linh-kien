@@ -44,7 +44,7 @@ adminBH.get("/phieu-gui", async (c) => {
   const { limit, offset } = parsePage(c);
   const ms = mienScope(c.get("user"), "phieu_gui_bh");
   // 20/10/2026: ?trang_thai=da_gui -> thung dang gui ve Kho (de Admin "nhan ho Kho" khi KTV giao truc tiep).
-  const base = (c.req.query("trang_thai") === "da_gui" ? "FROM phieu_gui_bh WHERE trang_thai = 'da_gui'" : "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0") + ms.sql;
+  const base = (c.req.query("trang_thai") === "da_gui" ? "FROM phieu_gui_bh WHERE trang_thai = 'da_gui'" : "FROM phieu_gui_bh WHERE trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0 AND tu_choi_tt IS NULL") + ms.sql;
   // 21/10/2026: loc KTV gui / Kho nhan / hinh thuc gui + tim.
   const LOC = { ktv: "nguoi_tao", kho: "nguoi_nhan_kho", hinh_thuc_gui: "hinh_thuc_gui", mien: "mien" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, base, ms.binds) });
@@ -65,9 +65,11 @@ const KHOVAN_NOTE_NOI_BO = "Kho đã bàn giao, Admin bảo hành đã tiếp nh
 
 // Tiep nhan noi bo 1 thung - dung chung cho don le + hang loat (12/10/2026, de xuat #10 ra soat Admin BH).
 async function tiepNhanNoiBo(db: D1Database, id: string, lyDoCham: string | undefined, actor: string): Promise<{ error: string } | { ok: true }> {
-  const g = await db.prepare("SELECT trang_thai, admin_tiep_nhan, thoi_gian_nhan_kho FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ trang_thai: string; admin_tiep_nhan: number; thoi_gian_nhan_kho: string | null }>();
+  const g = await db.prepare("SELECT trang_thai, admin_tiep_nhan, thoi_gian_nhan_kho, tu_choi_tt FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ trang_thai: string; admin_tiep_nhan: number; thoi_gian_nhan_kho: string | null; tu_choi_tt: string | null }>();
   if (!g) return { error: "NOT_FOUND" };
   if (g.trang_thai !== "da_tiep_nhan" || g.admin_tiep_nhan) return { error: "WRONG_STATE" };
+  // 13/11/2026: thung dang bi tu choi (cho Kho / KTV phan hoi) -> Admin phai "Rut lai tu choi" truoc.
+  if (g.tu_choi_tt) return { error: "THUNG_DANG_TU_CHOI" };
   if (isOverdue(g.thoi_gian_nhan_kho) && !lyDoCham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
   const now = nowVN();
   await db.prepare("UPDATE phieu_gui_bh SET admin_tiep_nhan = 1, admin_nguoi_nhan = ?, admin_thoi_gian_nhan = ?, updated_at = ? WHERE id = ?").bind(actor, now, now, id).run();

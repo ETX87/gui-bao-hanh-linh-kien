@@ -13,6 +13,8 @@ import type { AppUser } from "../lib/types";
 
 export interface WorkloadCounts {
   ktv_phieu_nhap: number;
+  ktv_thung_tu_choi: number;
+  kho_thung_tu_choi: number;
   ktv_odoo_cho_gui: number;
   ktv_cho_bo_sung: number;
   ktv_nhan_hang: number;
@@ -43,6 +45,8 @@ export interface WorkloadCounts {
 
 const EMPTY: WorkloadCounts = {
   ktv_phieu_nhap: 0,
+  ktv_thung_tu_choi: 0,
+  kho_thung_tu_choi: 0,
   ktv_odoo_cho_gui: 0,
   ktv_cho_bo_sung: 0,
   ktv_nhan_hang: 0,

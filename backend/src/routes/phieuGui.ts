@@ -97,7 +97,8 @@ phieuGui.get("/", async (c) => {
 // Admin tach don vi) - truoc day man Tien do chi tra don vi da tach nen don vua gui "bien mat".
 // "xong" = don da tach va moi don vi da ket thuc (huy / chuyen kho / phieu tra KTV da nhan / gui that bai).
 const DON_VI_KET_THUC = "(u2.trang_thai IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho') OR EXISTS (SELECT 1 FROM phieu_tra_bh t2 WHERE t2.id = u2.phieu_tra_id AND t2.trang_thai IN ('ktv_da_nhan','gui_that_bai')))";
-const DON_XONG_SQL = `(EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id) AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id AND NOT ${DON_VI_KET_THUC}))`;
+// 13/11/2026: don cha bi huy theo thung (Admin BH tu choi thung, KTV dong y / qua 7 ngay) -> nhom "Huy / tu choi".
+const DON_XONG_SQL = `(p.trang_thai_cha = 'huy_thung' OR (EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id) AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u2 WHERE u2.parent_id = p.id AND NOT ${DON_VI_KET_THUC})))`;
 // 12/11/2026 - "tách các đơn đã xong riêng ra đơn xong và đơn bị hủy, bị từ chối": don da xong ma MOI don vi
 // deu bi huy / tu choi / chuyen kho (khong mon nao tra ve KTV) -> nhom "huy"; con lai (co it nhat 1 mon tra ve) -> "xong".
 const DON_HUY_SQL = `(${DON_XONG_SQL} AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u6 WHERE u6.parent_id = p.id AND u6.trang_thai NOT IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho')))`;

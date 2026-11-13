@@ -6,6 +6,7 @@ import { Card, Btn, Badge, EmptyState } from "../../ui/primitives";
 import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { TiepNhanNoiBoModal } from "./TiepNhanNoiBoModal";
+import { TuChoiModal } from "../shared/TuChoiThung";
 import { THUNG_DEFS, THUNG_PLACEHOLDER } from "./NhanHoKho";
 import { FilterBar, useListFilters, withQuery } from "../../ui/FilterBar";
 import { UserName } from "../../hooks/useUserNames";
@@ -44,6 +45,7 @@ export function ThungChoNhanNoiBoCard() {
   const [thungChon, setThungChon] = useState<Set<string>>(new Set());
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui[] | null>(null);
   const [viewThung, setViewThung] = useState<PhieuGui | null>(null);
+  const [tuChoiFor, setTuChoiFor] = useState<PhieuGui | null>(null);
   useEffect(() => setThungChon(new Set()), [phieuGuiPage]);
   const toggleThung = (id: string, on: boolean) =>
     setThungChon((prev) => {
@@ -82,6 +84,11 @@ export function ThungChoNhanNoiBoCard() {
                   <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate max-w-[180px]" />
                   <span className="text-xs text-[var(--ink-soft)] shrink-0">{g.so_don ?? 0} đơn</span>
                   {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Sự cố</Badge>}
+                  {g.phan_hoi_luc && (
+                    <Badge tone="amber">
+                      <span title={`${g.phan_hoi_vai_tro === "ktv" ? "KTV" : "Kho"} không đồng ý từ chối: ${g.phan_hoi_ly_do ?? ""}`}>↩ {g.phan_hoi_vai_tro === "ktv" ? "KTV" : "Kho"} phản đối từ chối</span>
+                    </Badge>
+                  )}
                   <span onClick={(e) => e.stopPropagation()}>
                     <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
                   </span>
@@ -95,6 +102,18 @@ export function ThungChoNhanNoiBoCard() {
                     className="ml-auto shrink-0"
                   >
                     Xác nhận đã nhận
+                  </Btn>
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTuChoiFor(g);
+                    }}
+                    className="shrink-0 !text-[var(--red-600)]"
+                    title="Từ chối tiếp nhận thùng — Kho phải phản hồi"
+                  >
+                    ⛔ Từ chối
                   </Btn>
                 </div>
               ))}
@@ -111,10 +130,27 @@ export function ThungChoNhanNoiBoCard() {
           onClose={() => setViewThung(null)}
           onChanged={afterChange}
           actions={
-            <Btn variant="primary" onClick={() => setTiepNhanFor([viewThung])}>
-              ✔ Xác nhận đã nhận
-            </Btn>
+            <>
+              <Btn variant="danger" onClick={() => setTuChoiFor(viewThung)}>
+                ⛔ Từ chối
+              </Btn>
+              <Btn variant="primary" onClick={() => setTiepNhanFor([viewThung])}>
+                ✔ Xác nhận đã nhận
+              </Btn>
+            </>
           }
+        />
+      )}
+      {tuChoiFor && (
+        <TuChoiModal
+          g={tuChoiFor}
+          onClose={() => setTuChoiFor(null)}
+          onDone={() => {
+            setTuChoiFor(null);
+            setViewThung(null);
+            setThungChon(new Set());
+            afterChange();
+          }}
         />
       )}
       {tiepNhanFor && (

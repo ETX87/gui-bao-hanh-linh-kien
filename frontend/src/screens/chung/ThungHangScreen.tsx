@@ -5,6 +5,7 @@ import { ThungNhapKtvList } from "./ThungNhapKtv";
 import { KhoTiepNhanScreen } from "../kho/TiepNhan";
 import { ThungDangGuiCard } from "../adminbh/NhanHoKho";
 import { ThungChoNhanNoiBoCard } from "../adminbh/ThungNoiBo";
+import { ThungTuChoiList } from "../shared/TuChoiThung";
 import { useWorkload } from "../../hooks/useWorkload";
 import type { AppUser } from "../../lib/types";
 
@@ -48,6 +49,19 @@ export function ThungHangScreen({ user }: { user: AppUser }) {
       countKeys: ["kho_cho_ban_giao", "admin_cho_tiep_nhan_noi_bo"],
       hint: "Admin bảo hành xác nhận đã nhận thùng từ Kho",
       render: () => (admin(user) ? <ThungChoNhanNoiBoCard /> : <KhoTiepNhanScreen only="ban_giao" />),
+    },
+    {
+      key: "tu_choi",
+      label: "⛔ Từ chối",
+      show: (u) => kho(u) || admin(u),
+      countKeys: ["kho_thung_tu_choi"],
+      hint: "Thùng Admin BH từ chối tiếp nhận — Kho / KTV phản hồi, Admin rút lại nếu nhầm",
+      render: () => (
+        <div className="space-y-3">
+          <ThungTuChoiList user={user} tt="dang" />
+          <ThungTuChoiList user={user} tt="da_huy" />
+        </div>
+      ),
     },
     { key: "gan_day", label: "Kho nhận gần đây", show: kho, render: () => <KhoTiepNhanScreen only="gan_day" /> },
   ];

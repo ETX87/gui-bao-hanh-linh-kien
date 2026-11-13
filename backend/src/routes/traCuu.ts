@@ -30,7 +30,7 @@ function scopeClause(user: { la_giam_sat: boolean; la_view: boolean; la_qtri: bo
 // trạng thái của đơn hàng tại mọi luồng quy trình"): tra cuu gom CA don cha chua tach don vi (thung nhap /
 // dang gui ve Kho / Kho da nhan cho Admin / cho xac nhan SL) LAN don vi; moi dong co "giai_doan" = buoc
 // thuc te cua don trong toan luong (don vi da vao phieu tra -> trang thai phieu tra "tra_<...>").
-const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"];
+const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "thung_tu_choi", "cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"];
 
 function allRowsSql(scopeWhere: string): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
@@ -42,11 +42,11 @@ function allRowsSql(scopeWhere: string): string {
     WHERE ${scopeWhere}`;
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
-           WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
+           WHEN p.trang_thai_cha = 'huy_thung' THEN 'ket_thuc_tu_choi' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong, p.so_luong_khai AS sl_dat, NULL AS sl_duyet
     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-    WHERE p.trang_thai_cha = 'cho_xac_nhan_so_luong' AND ${scopeWhere}`;
+    WHERE p.trang_thai_cha IN ('cho_xac_nhan_so_luong','huy_thung') AND ${scopeWhere}`;
   return `(${units} UNION ALL ${parents}) x`;
 }
 
