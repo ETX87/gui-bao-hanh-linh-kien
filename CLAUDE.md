@@ -6849,3 +6849,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(c) Ghi nhận:** tháng 11 cả 2 NV chưa tự nộp kết quả đơn nào; 82 đơn đang ở bước NV sửa chưa xong → chưa thành "ca đã xử lý".
 
 **(d) Kiểm thử:** typecheck 0 lỗi; chạy lại trên bản sao D1 production: NV sửa chữa tháng 11 = fotohuongthanh 1 ca.
+
+**Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch của commit `ed37cf6` (Version ID `1dfc7535`), không có migration mới.
