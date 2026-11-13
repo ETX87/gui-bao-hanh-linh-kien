@@ -6891,3 +6891,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Đã làm:** `routes/baoCaoBo.ts` lưu kết quả mỗi tháng vào 1 dòng `sync_state` (key `bao_cao_bo:<YYYY-MM>`, không cần migration). Lần mở đầu tiên trong ngày (giờ VN) mới tính lại (~12–15k dòng đọc), các lần sau đọc 1 dòng đã lưu. `?lam_moi=1` (nút "🔄 Tính lại") tính lại ngay, nhưng nếu bản đã lưu mới tính trong 2 phút thì trả luôn bản đó (chống bấm liên tục). Response thêm `tinh_luc`, `tu_bo_nho`. Màn báo cáo hiện "Số liệu tính lúc HH:MM dd/MM — tự tính 1 lần mỗi ngày" + nút "🔄 Tính lại".
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi; `wrangler dev` local với bản sao D1 production: lần 1 tính (`tu_bo_nho=false`), lần 2 đọc bản lưu, `lam_moi=1` trong 2 phút trả bản lưu; giao diện có nút + dòng thời điểm tính. Chưa thử sang ngày mới (so sánh chuỗi ngày `updated_at` với `nowVN()`).
+
+**Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch (commit 8964b02), không có migration mới.
