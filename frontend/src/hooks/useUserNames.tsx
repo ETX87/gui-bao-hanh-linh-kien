@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 // (danh ba KTV + tai khoan), tai 1 lan moi phien, luu localStorage de lan mo sau hien ngay khong
 // phai doi mang. Store dung chung ca trang: nhieu component chi 1 luot goi.
 
-const CACHE_KEY = "user_names_v2"; // 03/11/2026: doi sang ten ETX nhan su
+const CACHE_KEY = "user_names_v3"; // 13/11/2026: uu tien ten ma CRM danh ba KTV > ETX
 let names: Record<string, string> = (() => {
   try {
     return JSON.parse(localStorage.getItem(CACHE_KEY) || "{}") as Record<string, string>;

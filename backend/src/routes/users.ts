@@ -60,7 +60,7 @@ users.get("/", async (c) => {
   else if (etx === "none") where += ` AND ${ETX_ST} IS NULL`;
   else if (etx === "off_mo") where += ` AND ${ETX_ST} = 'off' AND COALESCE(bi_khoa, 0) = 0`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT email, ten, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
+    c.env.DB.prepare(`SELECT email, ten, ten_tay, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
        (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai,
        (SELECT json_group_array(json_object('ma', k.ma_ktv, 'ten', k.ten_hien_thi)) FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(users.email)) AS ktv_json
        FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
@@ -79,6 +79,9 @@ users.get("/", async (c) => {
     }
     ds = ds.filter((k) => k && k.ma);
     if (!ds.length) return { ...u, ten_ktv: null };
+    // 13/11/2026: hien dung ten ma CRM day du tren danh ba KTV (VD "(nguyetlb.mb2) CTV Hà Tĩnh - Lê Bích Nguyệt").
+    const crm = ds.map((k) => (k.ten || "").trim()).find((t) => t.startsWith("("));
+    if (crm) return { ...u, ten_ktv: crm };
     const ma = [...new Set(ds.map((k) => k.ma as string))].join(", ");
     const ten = ds.map((k) => (k.ten ? tenGonKtv(k.ten) : "")).find((t) => !!t) || (u.ten as string) || "";
     return { ...u, ten_ktv: `(${ma}) ${ten}`.trim() };
@@ -105,14 +108,15 @@ users.get("/ten", async (c) => {
   // karofibinhduong01@gmail.com hien "kenvin thanh" = ten Google). Uu tien: ho ten ETX nhan su (keo tu
   // linh-kien-app, ban 'on' truoc) > ten trong danh ba KTV (bo tien to "(ma) KTV Tinh - ") > ten Google (users.ten).
   const [ktv, us, etx] = await Promise.all([
-    c.env.DB.prepare("SELECT email_dang_nhap AS email, ten_hien_thi AS ten FROM ktv_lien_he_bh WHERE email_dang_nhap IS NOT NULL AND TRIM(COALESCE(ten_hien_thi,'')) <> ''").all<{ email: string; ten: string }>(),
+    c.env.DB.prepare("SELECT email_dang_nhap AS email, ten_hien_thi AS ten FROM ktv_lien_he_bh WHERE email_dang_nhap IS NOT NULL AND TRIM(COALESCE(ten_hien_thi,'')) <> '' ORDER BY CASE nguon_du_lieu WHEN 'dong_bo' THEN 1 ELSE 0 END").all<{ email: string; ten: string }>(),
     c.env.DB.prepare("SELECT email, ten FROM users WHERE TRIM(COALESCE(ten,'')) <> ''").all<{ email: string; ten: string }>(),
     c.env.DB.prepare("SELECT gmail AS email, ho_ten AS ten FROM etx_nhan_su_bh WHERE gmail IS NOT NULL AND TRIM(COALESCE(ho_ten,'')) <> '' ORDER BY CASE trang_thai_lam_viec WHEN 'on' THEN 1 ELSE 0 END").all<{ email: string; ten: string }>(),
   ]);
   const names: Record<string, string> = {};
+  // 13/11/2026: uu tien ten ma CRM tren danh ba KTV (day du "(ma) KTV Tinh - Ten") > ETX > ten tai khoan.
   for (const r of us.results) names[r.email.toLowerCase()] = r.ten.trim();
-  for (const r of ktv.results) names[r.email.toLowerCase()] = tenGonKtv(r.ten);
   for (const r of etx.results) names[r.email.toLowerCase()] = r.ten.trim();
+  for (const r of ktv.results) names[r.email.toLowerCase()] = r.ten.trim();
   return c.json({ names });
 });
 
@@ -130,6 +134,7 @@ interface PatchBody {
   bi_khoa?: boolean;
   trang_thai_duyet?: "Cho duyet" | "Da duyet" | "Tu choi";
   mien?: "MB" | "MN" | "ALL" | null;
+  ten?: string;
 }
 
 // PATCH /api/users/:email - sua 1 co vai tro (body {flag, value}), hoac bi_khoa/trang_thai_duyet.
@@ -159,6 +164,12 @@ users.patch("/:email", async (c) => {
     if (body.mien !== null && !["MB", "MN", "ALL"].includes(body.mien)) return c.json({ error: "INVALID_MIEN" }, 400);
     await c.env.DB.prepare("UPDATE users SET mien = ?, mien_tu_dong = 0, updated_at = ? WHERE email = ?").bind(body.mien, nowVN(), targetEmail).run();
   }
+  // 13/11/2026: Admin khai bao ten hien thi (tai khoan khong co tren danh ba KTV / ETX). Dang nhap Google khong ghi de;
+  // co ten ma CRM / ETX thi lan dong bo sau van lay ten do (uu tien hon).
+  if (body.ten !== undefined) {
+    const ten = String(body.ten).trim().slice(0, 200);
+    await c.env.DB.prepare("UPDATE users SET ten = ?, ten_tay = ?, updated_at = ? WHERE email = ?").bind(ten || null, ten ? 1 : 0, nowVN(), targetEmail).run();
+  }
   if (body.trang_thai_duyet !== undefined) {
     await c.env.DB.prepare("UPDATE users SET trang_thai_duyet = ?, updated_at = ? WHERE email = ?").bind(body.trang_thai_duyet, nowVN(), targetEmail).run();
   }
@@ -181,7 +192,7 @@ users.post("/", async (c) => {
   const existing = await c.env.DB.prepare("SELECT 1 FROM users WHERE email = ?").bind(email).first();
   if (existing) return c.json({ error: "EMAIL_EXISTS" }, 409);
 
-  await c.env.DB.prepare("INSERT INTO users (email, ten, trang_thai_duyet) VALUES (?, ?, 'Cho duyet')").bind(email, body.ten?.trim() || null).run();
+  await c.env.DB.prepare("INSERT INTO users (email, ten, ten_tay, trang_thai_duyet) VALUES (?, ?, ?, 'Cho duyet')").bind(email, body.ten?.trim() || null, body.ten?.trim() ? 1 : 0).run();
   return c.json({ ok: true });
 });
 

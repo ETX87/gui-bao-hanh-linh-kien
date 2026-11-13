@@ -107,7 +107,7 @@ auth.get("/callback", async (c) => {
       `INSERT INTO users (email, ten, trang_thai_duyet, la_ktv_dvbh, la_ve_tinh)
        VALUES (?, ?, 'Da duyet', ?, ?)
        ON CONFLICT(email) DO UPDATE SET
-         ten = excluded.ten,
+         ten = CASE WHEN users.ten_tay = 1 THEN users.ten ELSE excluded.ten END,
          updated_at = ?,
          trang_thai_duyet = CASE WHEN trang_thai_duyet = 'Cho duyet' THEN 'Da duyet' ELSE trang_thai_duyet END,
          la_ktv_dvbh = CASE WHEN trang_thai_duyet = 'Cho duyet' THEN ? ELSE la_ktv_dvbh END,
@@ -119,7 +119,7 @@ auth.get("/callback", async (c) => {
     await c.env.DB.prepare(
       `INSERT INTO users (email, ten, trang_thai_duyet, la_qtri)
        VALUES (?, ?, ?, ?)
-       ON CONFLICT(email) DO UPDATE SET ten = excluded.ten, updated_at = ?,
+       ON CONFLICT(email) DO UPDATE SET ten = CASE WHEN users.ten_tay = 1 THEN users.ten ELSE excluded.ten END, updated_at = ?,
          trang_thai_duyet = CASE WHEN ? = 1 AND trang_thai_duyet = 'Cho duyet' THEN 'Da duyet' ELSE trang_thai_duyet END`,
     )
       .bind(userInfo.email, userInfo.name ?? null, isBootstrapAdmin || etxDangLam ? "Da duyet" : "Cho duyet", isBootstrapAdmin ? 1 : 0, nowVN(), etxDangLam ? 1 : 0)

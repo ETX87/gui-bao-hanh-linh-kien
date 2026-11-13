@@ -110,6 +110,23 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
       toast(errorMessage(e), "error");
     }
   };
+  // 13/11/2026: Admin khai bao ten hien thi cho tai khoan khong co tren danh ba KTV / ETX (co ten ma CRM / ETX thi ten do uu tien).
+  const suaTen = async (u: AppUser) => {
+    if (u.ten_ktv) {
+      toast("Tài khoản có trên danh bạ KTV — tên lấy theo mã CRM, sửa ở app Đặt mua linh kiện.", "error");
+      return;
+    }
+    const ten = window.prompt(`Tên hiển thị cho ${u.email}
+(Tài khoản có trên ETX nhân sự thì lần đồng bộ sau sẽ lấy tên ETX.)`, u.ten || "");
+    if (ten === null) return;
+    try {
+      await api.patch(`/users/${encodeURIComponent(u.email)}`, { ten });
+      toast("Đã lưu tên hiển thị.", "ok");
+      reload();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
   const toggleKhoa = async (email: string, v: boolean) => {
     try {
       await api.patch(`/users/${encodeURIComponent(email)}`, { bi_khoa: v });
@@ -176,6 +193,11 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                   <div className="min-w-0">
                     <p className="font-semibold text-[var(--ink)] truncate">
                       {u.ten_ktv || u.ten || "—"}
+                      {!u.ten_ktv && (
+                        <button type="button" onClick={() => suaTen(u)} className="ml-1 text-xs text-[var(--link)]" title="Khai báo tên hiển thị">
+                          ✎
+                        </button>
+                      )}
                       {u.email === currentEmail && <span className="ml-1.5 text-xs text-[var(--ink-faint)]">(bạn)</span>}
                       <EtxTag u={u} />
                     </p>
@@ -247,6 +269,11 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                   <tr key={u.email} className={`border-b border-[var(--line)] last:border-0 ${rowDirty ? "bg-[var(--accent-soft)]" : ""}`}>
                     <td className="">
                       <span className="font-medium text-[var(--ink)]">{u.ten_ktv || u.ten || "—"}</span>
+                      {!u.ten_ktv && (
+                        <button type="button" onClick={() => suaTen(u)} className="ml-1 text-xs text-[var(--link)] hover:underline" title="Khai báo tên hiển thị">
+                          ✎ tên
+                        </button>
+                      )}
                       {u.email === currentEmail && <span className="ml-1 text-[10px] text-[var(--ink-faint)]">(bạn)</span>}
                       <span className="ml-1.5 text-xs text-[var(--ink-soft)] font-mono">{u.email}</span>
                       <EtxTag u={u} />

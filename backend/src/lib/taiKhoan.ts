@@ -13,7 +13,9 @@ export function tenGonKtv(t: string): string {
   return i > 0 ? x.slice(i + 3).trim() || x : x;
 }
 
-// Ten cong ty theo Gmail: ho ten ETX (ban dang lam truoc) > ten danh ba KTV. Khong co -> khong co trong map (giu ten Google).
+// Ten cong ty theo Gmail. 13/11/2026 - "nếu trên app linh kiện có khai báo tài khoản KTV thì lấy ưu tiên theo tên mã trên CRM
+// nếu ko có lấy theo ETX": ten day du tren danh ba KTV "(ma) KTV Tinh - Ten" > ho ten ETX. Khong co -> khong co trong map
+// (giu ten Admin khai bao / ten Google).
 export async function tenCongTyMap(db: D1Database, email?: string): Promise<Map<string, string>> {
   const em = email?.trim().toLowerCase();
   const [ktv, etx] = await Promise.all([
@@ -27,8 +29,8 @@ export async function tenCongTyMap(db: D1Database, email?: string): Promise<Map<
       .all<{ email: string; ten: string }>(),
   ]);
   const m = new Map<string, string>();
-  for (const r of ktv.results) m.set(r.email, tenGonKtv(r.ten));
-  for (const r of etx.results) m.set(r.email, r.ten.trim()); // ETX ghi sau -> uu tien
+  for (const r of etx.results) m.set(r.email, r.ten.trim());
+  for (const r of ktv.results) m.set(r.email, r.ten.trim()); // danh ba KTV ghi sau -> uu tien (dong_bo ghi cuoi)
   return m;
 }
 
@@ -41,7 +43,7 @@ export interface DongBoTaiKhoanKq {
 // Dong bo tai khoan voi danh ba KTV + ETX (1 email hoac tat ca):
 //  - "Cho duyet" trung danh ba KTV / ETX dang lam -> "Da duyet" (+ co KTV / Ve tinh) - tuDuyetTaiKhoanCho;
 //  - tai khoan da duyet nhung CHUA co vai tro nao ma co trong danh ba KTV -> gan co KTV / Ve tinh (khong dong vao tai khoan da co vai tro);
-//  - users.ten = ten cong ty (ETX > danh ba KTV); khong co tren he thong thi giu ten Google.
+//  - users.ten = ten cong ty (danh ba KTV ma CRM > ETX); khong co tren he thong thi giu ten Admin khai bao / ten Google.
 export async function dongBoTaiKhoan(db: D1Database, email?: string): Promise<DongBoTaiKhoanKq> {
   const now = nowVN();
   const em = email?.trim().toLowerCase();
