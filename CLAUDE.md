@@ -6938,3 +6938,5 @@ Hỏi lại 2 điểm, người dùng chốt: (1) KTV không đồng ý → *"lu
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), script HTTP với tài khoản đơn vai trò Admin BH / Kho / 2 KTV **26/26 đạt**: thiếu lý do 400, Kho không từ chối được, từ chối 2 lần 400, thùng rời hàng đợi Admin / Kho, tiếp nhận nội bộ bị chặn, số việc Kho = 1; Kho không đồng ý → thùng về hàng đợi kèm lý do; Kho đồng ý → KTV1 thấy (có hạn, lần 2), KTV2 không thấy / không phản hồi được, số việc KTV = 1; rút lại khi chờ KTV, rút lần 2 400; KTV không đồng ý thiếu lý do 400 → về Kho chờ bàn giao; KTV đồng ý → huỷ, đơn vào tab Huỷ của KTV, tra cứu "ket_thuc_tu_choi", đơn Odoo gỡ + `last_status = cho_gui`; đặt hạn quá khứ + chạy cron → thùng tự huỷ bởi "Hệ thống". Giao diện (trình duyệt): nút Từ chối → modal → tab Từ chối hiện thùng + nút Kho phản hồi / Rút lại; Kho "Không đồng ý" → thùng về tab chờ Admin có nhãn "↩ Kho phản đối từ chối". Chưa xem bằng mắt thẻ trên Trang chủ KTV.
 
+
+**Deploy (13/11/2026):** áp migration 0033 lên D1 production, `npm run deploy` từ git worktree sạch của commit `743cb01` (Version ID `b00f6e4d`).
