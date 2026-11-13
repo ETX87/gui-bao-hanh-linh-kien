@@ -6837,3 +6837,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(b) Đã làm:** `Shell.tsx` chỉ hiện `KtvMenu` khi đang ở 4 màn xử lý danh sách `HO_TRO` (`/don`, `/thung`, `/phieu-tra`, `/admin/de-xuat`); ẩn ở Trang chủ, Báo cáo BO, Lịch sử, Logic, Quản trị và mọi màn khác. Ghi đè 1 phần v1.070 (trước hiện ở mọi màn, bấm tên KTV từ màn khác thì nhảy sang Đơn bảo hành).
 
 **(d) Kiểm thử:** typecheck 0 lỗi. Chưa bấm thử trên giao diện.
+
+**Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch của commit `104d4dd` (Version ID `686e76f0`), không có migration mới.
