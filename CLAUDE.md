@@ -6827,3 +6827,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. Chạy hàm tính trên bản sao D1 production (node:sqlite): tháng 11 Kho 498 ca / 8 người, Admin BH 1.900 ca, Kế toán 351 ca; tháng không dữ liệu trả rỗng; `thang=2026-13` → 400; 1 lần tính ~0,2 giây. Giao diện chạy `wrangler dev` local với dữ liệu thật (1440px): đủ 4 bảng, xổ chi tiết được. Chưa kiểm khổ điện thoại (bảng cuộn ngang). Phiên khác đang làm "thùng trả xác" cùng thư mục → chỉ commit file của đợt này, deploy từ git worktree sạch.
 
+
+**Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch của commit `4eebe6d` (Version ID `805ced5f`), không có migration mới.
