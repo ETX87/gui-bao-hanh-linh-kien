@@ -284,6 +284,14 @@ export async function tinhBaoCaoBo(
     .bind(tu, r.den)
     .all<{ id: string; created_at: string; appsheet: number }>();
   const unitStart = new Map(units.map((x) => [x.id, x]));
+  // 13/11/2026: viec "Sua chua / nop ket qua" tinh cho NV DUOC GIAO (nguoi_sua_chua), ke ca khi Admin BH bam
+  // "Nop ket qua ho NV" - nguoi sua that la NV, Admin chi bam thay.
+  const { results: nvGiao } = await db
+    .prepare(
+      "SELECT id, nguoi_sua_chua FROM phieu_sua_chua_bh_ct WHERE nguoi_sua_chua IS NOT NULL AND nguoi_sua_chua <> ''",
+    )
+    .all<{ id: string; nguoi_sua_chua: string }>();
+  const nvCua = new Map(nvGiao.map((x) => [x.id, x.nguoi_sua_chua]));
 
   let cur = "";
   let state: string | null = null;
@@ -309,8 +317,11 @@ export async function tinhBaoCaoBo(
     if (state && since && l.tu === state && !l.appsheet) {
       const def: { task: string; den: string[] } | undefined =
         LOG_TASKS[`${l.entity_type}:${state}`];
-      if (def && l.den && (def.den[0] === "*" || def.den.includes(l.den)))
-        add(def.task, l.nguoi, since, l.thoi_gian, l.entity_id, sinceAs);
+      if (def && l.den && (def.den[0] === "*" || def.den.includes(l.den))) {
+        const nguoi =
+          def.task === "nv_sua" ? (nvCua.get(l.entity_id) ?? l.nguoi) : l.nguoi;
+        add(def.task, nguoi, since, l.thoi_gian, l.entity_id, sinceAs);
+      }
     }
     state = l.den;
     since = l.thoi_gian;

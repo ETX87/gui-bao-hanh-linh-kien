@@ -6839,3 +6839,13 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck 0 lỗi. Chưa bấm thử trên giao diện.
 
 **Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch của commit `104d4dd` (Version ID `686e76f0`), không có migration mới.
+
+## Báo cáo BO: việc sửa chữa tính cho NV được giao (13/11/2026) — v1.117
+
+**(a) Nguyên văn:** *"nv sửa chữa có sao trong báo cáo lại hiện là Phùng Thị Doanh"* (ảnh: KTV đang sửa 82 đơn của Nguyễn Viết Khương 45 / Nguyễn Vũ Việt 37; báo cáo NV sửa chữa chỉ có Phùng Thị Doanh 1 ca).
+
+**(b) Nguyên nhân + đã sửa:** đơn DH-005938-1 giao cho NV fotohuongthanh (Nguyễn Vũ Việt), Admin BH Phùng Thị Doanh bấm "Nộp kết quả hộ NV" → báo cáo tính cho người bấm. `lib/baoCaoBo.ts`: việc "Sửa chữa / nộp kết quả" nay tính cho NV được giao (`phieu_sua_chua_bh_ct.nguoi_sua_chua`), không có NV mới lấy người bấm. Các việc khác vẫn tính cho người bấm.
+
+**(c) Ghi nhận:** tháng 11 cả 2 NV chưa tự nộp kết quả đơn nào; 82 đơn đang ở bước NV sửa chưa xong → chưa thành "ca đã xử lý".
+
+**(d) Kiểm thử:** typecheck 0 lỗi; chạy lại trên bản sao D1 production: NV sửa chữa tháng 11 = fotohuongthanh 1 ca.
