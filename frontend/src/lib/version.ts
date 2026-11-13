@@ -4,4 +4,4 @@
 // QUY UOC: moi lan `npm run deploy` len production PHAI tang APP_VERSION len 0.001 (vd 1.001 => 1.002)
 // truoc khi build, kem 1 commit rieng ghi ro "vX.XXX" trong message - xem CLAUDE.md muc "Quy uoc
 // versioning".
-export const APP_VERSION = "1.124";
+export const APP_VERSION = "1.125";
