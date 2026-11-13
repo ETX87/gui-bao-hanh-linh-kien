@@ -6987,3 +6987,31 @@ Hỏi lại 2 điểm, người dùng chốt: (1) KTV không đồng ý → *"lu
 **(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá; 24 KTV + 12 khách mẫu), 1440×900: modal 95%, 2 cột cân đối; tìm "hoang 6" ra đúng 1 khách, bấm chọn → tiêu đề cột phải "— Điện máy Hoàng Long 6 (0988000006)"; tab KTV tìm "nghe an" ra 4 KTV, chọn xong nút "Tạo thùng hộ & thêm đơn" bật. Khổ 800px: 1 cột danh sách, không tràn. Chưa thử trên điện thoại thật.
 
 **Deploy (14/11/2026):** `npm run deploy` từ git worktree sạch của commit `e706916` (Version ID `646736c9`), không có migration mới. Bundle production mang 1.125.
+
+## 14/11/2026 — Tối ưu lượt đọc D1 (v1.126)
+
+**Bối cảnh:** đo lượt đọc D1 cả tài khoản ngày 13/11, `sua-chua-bao-hanh-db` là DB duy nhất tăng đều: 2,5M (30/10) → 139M
+rows_read/ngày (13/11). Người dùng chốt: "phân tích vấn đề đọc dữ liệu từ app sửa chữa => đưa ra phương án tối ưu" → "OK".
+
+**Nguyên nhân (D1 Insights 13/11):** không có câu lỗi, mà nhiều câu quét TOÀN BỘ đơn từ trước tới nay, chạy hàng trăm lần/ngày:
+- Menu KTV (`/tra-cuu/ktv-menu`) ~19M/ngày: gọi lại mỗi lần chuyển màn + tự gọi mỗi 2 phút trên mọi tab mở; `x.giai_doan` là cột
+  tính (CASE) nên `WHERE x.giai_doan IN (...)` không dùng được index → mỗi lần ~23-24k dòng.
+- Ô lọc cột: `/admin/don-vi/loc-options` 6 câu `SELECT DISTINCT` riêng (điều kiện OR trên 2 bảng → quét hết) ~29M/ngày;
+  `distinctOpts` (dùng chung ~13 màn) cũng 1 câu/cột.
+
+**Đã sửa (kết quả đối chiếu trên DB thật bằng SELECT chỉ đọc — mọi trường hợp KHỚP 100% kết quả cũ):**
+- `traCuu.ts allRowsSql(scope, gd?)` + `locTruocDonVi`: lọc trước đơn vị theo giai đoạn bằng index (đơn vị chưa có phiếu trả qua
+  index một phần mới `idx_psc_ct_chua_tra` — migration 0035; đơn vị đã có phiếu trả qua `phieu_tra_bh.trang_thai`), điều kiện
+  `x.giai_doan IN` bên ngoài giữ nguyên. Phát hiện: 4.463/5.293 đơn vị vẫn giữ `trang_thai = san_sang_gom_phieu_tra` sau khi vào
+  phiếu trả (giai đoạn thật là `tra_…`), nên nhánh này chỉ xét `phieu_tra_id IS NULL` (an toàn: phiếu trả chỉ bị xoá khi rỗng,
+  FK + `trang_thai NOT NULL`; đã kiểm 0 đơn vị mồ côi). Nhánh đơn cha (~1.3k đơn chờ xác nhận SL) bỏ khi giai đoạn lọc không có
+  giai đoạn đơn cha. Áp cho menu KTV, đếm quá hạn Tổng quan, danh sách Tra cứu khi lọc giai đoạn.
+  Đo: menu mặc định 24,3k → 9,4k dòng/lần; tab lọc giai đoạn 22,8k → 1,3–1,5k.
+- `KtvMenu.tsx`: tab trình duyệt ẩn thì không tự tải lại mỗi 2 phút; quay lại tab sau ≥2 phút thì tải 1 lần.
+- `/admin/don-vi/loc-options`: 1 câu `json_group_array(DISTINCT …)` + lọc trước đơn cha bằng 2 index → 134,5k → 8,2k dòng/lần.
+- `lib/filters.ts distinctOpts`: 1 câu `json_group_array(DISTINCT …)` cho mọi cột, sắp xếp + cắt 500 ở JS giống `ORDER BY v LIMIT 500`
+  (đã kiểm khớp cả thứ tự) → màn Tra cứu 173,7k → 22,6k dòng/lần.
+
+**Lưu ý commit:** commit này gộp luôn các thay đổi "bảng kiểu Excel" (lọc nhiều giá trị / chữ / số / sắp xếp theo cột) +
+`lib/kiemTraCase.ts` làm từ chiều 13/11 — đã chạy production từ bản deploy v1.125 (22:39 13/11) nhưng chưa được commit; hai phần
+nằm chung file nên không tách được. Migration remote phải ép `CLOUDFLARE_ACCOUNT_ID=b1f870d7f2df6701219ac095926a67e5`.

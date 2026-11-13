@@ -8,6 +8,7 @@
 import type { Context } from "hono";
 import { slaCutoffVn } from "./sla";
 import { nowVN } from "./vnTime";
+import { normVi } from "./timKiem";
 
 export const NONE = "__none__";
 
@@ -21,14 +22,21 @@ export function eqFilters(c: Context, map: Record<string, string>): { sql: strin
       sql += ` AND (${expr} IS NULL OR ${expr} = '')`;
       continue;
     }
-    const vals = raw.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 30);
+    const all = raw.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 60);
+    // 13/11/2026: tich chon nhieu gia tri co the gom ca "(Trống)" (__none__) lan gia tri that.
+    const coNone = all.includes(NONE);
+    const vals = all.filter((v) => v !== NONE);
+    const none = `(${expr} IS NULL OR ${expr} = '')`;
+    let cond = "";
     if (vals.length === 1) {
-      sql += ` AND ${expr} = ?`;
+      cond = `${expr} = ?`;
       binds.push(vals[0]);
     } else if (vals.length > 1) {
-      sql += ` AND ${expr} IN (${vals.map(() => "?").join(",")})`;
+      cond = `${expr} IN (${vals.map(() => "?").join(",")})`;
       binds.push(...vals);
     }
+    if (cond) sql += coNone ? ` AND (${cond} OR ${none})` : ` AND ${cond}`;
+    else if (coNone) sql += ` AND ${none}`;
   }
   return { sql, binds };
 }
@@ -41,17 +49,28 @@ export async function distinctOpts(
   fromWhere: string,
   binds: unknown[],
 ): Promise<Record<string, string[]>> {
+  // 14/11/2026 (toi uu D1): truoc day 1 cau SELECT DISTINCT / bieu thuc -> N lan quet cung 1 tap dong. Gio 1 cau
+  // duy nhat, moi bieu thuc 1 json_group_array(DISTINCT ...) (1 lan quet, tra 1 dong); sap xep + cat 500 o JS
+  // giong "ORDER BY v LIMIT 500" cu (so dung truoc, chuoi sau).
+  const entries = Object.entries(exprs);
   const out: Record<string, string[]> = {};
-  await Promise.all(
-    Object.entries(exprs).map(async ([k, expr]) => {
-      const { results } = await db
-        .prepare(`SELECT DISTINCT COALESCE(${expr}, '') AS v ${fromWhere} ORDER BY v LIMIT 500`)
-        .bind(...binds)
-        .all<{ v: string | number }>();
-      out[k] = results.map((r) => String(r.v ?? ""));
-    }),
-  );
+  if (!entries.length) return out;
+  const cols = entries.map(([, expr], i) => `json_group_array(DISTINCT COALESCE(${expr}, '')) AS a${i}`).join(", ");
+  const row = await db.prepare(`SELECT ${cols} ${fromWhere}`).bind(...binds).first<Record<string, string>>();
+  entries.forEach(([k], i) => {
+    out[k] = sapXepGiaTriLoc(JSON.parse(row?.[`a${i}`] || "[]") as (string | number)[]).slice(0, 500).map((v) => String(v ?? ""));
+  });
   return out;
+}
+
+// Thu tu giong SQLite "ORDER BY v" (collation BINARY): so truoc (tang dan), chuoi sau (so theo ma ky tu).
+export function sapXepGiaTriLoc(vals: (string | number)[]): (string | number)[] {
+  return [...vals].sort((a, b) => {
+    const sa = typeof a === "number", sb = typeof b === "number";
+    if (sa !== sb) return sa ? -1 : 1;
+    if (sa && sb) return (a as number) - (b as number);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
 }
 
 // 31/10/2026: loc THOI GIAN theo 1 cot moc (vd ngay tao). ?khoang= hom_nay | 7n | 30n | thang_nay | thang_truoc.
@@ -113,3 +132,56 @@ export function slaFilter(c: Context, sinceExpr: string, param = "canh_bao"): { 
 export function joinF(...fs: { sql: string; binds: unknown[] }[]): { sql: string; binds: unknown[] } {
   return { sql: fs.map((f) => f.sql).join(""), binds: fs.flatMap((f) => f.binds) };
 }
+
+// ---- 13/11/2026: bang kieu Excel (loc + sap xep tren tieu de cot) ----
+// "Bảng dữ liệu: kiểu bảng Excel (lọc + sắp xếp trên tiêu đề cột)": cot chu -> o tim theo tu; cot so -> khoang
+// tu - den; sap xep gui len server (?sort=<khoa>&dir=asc|desc), khoa phai nam trong danh sach cho phep.
+
+// Loc CHU theo cot: ?<param>=cum tu -> moi tu phai co trong cot (khong phan biet hoa thuong). normExpr (tuy chon):
+// chuoi da bo dau (vd phieu_sua_chua_bh.tim_kiem) de go khong dau van khop.
+export function textFilters(c: Context, map: Record<string, string | { expr: string; normExpr?: string }>): { sql: string; binds: string[] } {
+  let sql = "";
+  const binds: string[] = [];
+  for (const [param, def] of Object.entries(map)) {
+    const raw = (c.req.query(param) || "").trim().toLowerCase();
+    if (!raw) continue;
+    const { expr, normExpr } = typeof def === "string" ? { expr: def, normExpr: undefined } : def;
+    for (const w of raw.split(/\s+/).filter(Boolean).slice(0, 6)) {
+      if (normExpr) {
+        sql += ` AND (LOWER(COALESCE(${expr},'')) LIKE ? OR COALESCE(${normExpr},'') LIKE ?)`;
+        binds.push(`%${w}%`, `%${normVi(w)}%`);
+      } else {
+        sql += ` AND LOWER(COALESCE(${expr},'')) LIKE ?`;
+        binds.push(`%${w}%`);
+      }
+    }
+  }
+  return { sql, binds };
+}
+
+// Loc SO theo khoang: ?<param>_tu=&<param>_den=.
+export function numFilters(c: Context, map: Record<string, string>): { sql: string; binds: number[] } {
+  let sql = "";
+  const binds: number[] = [];
+  for (const [param, expr] of Object.entries(map)) {
+    const tu = parseFloat(c.req.query(`${param}_tu`) || "");
+    const den = parseFloat(c.req.query(`${param}_den`) || "");
+    if (Number.isFinite(tu)) {
+      sql += ` AND ${expr} >= ?`;
+      binds.push(tu);
+    }
+    if (Number.isFinite(den)) {
+      sql += ` AND ${expr} <= ?`;
+      binds.push(den);
+    }
+  }
+  return { sql, binds };
+}
+
+// Sap xep: tra ve bieu thuc + chieu neu ?sort= nam trong whitelist, nguoc lai null (dung thu tu mac dinh).
+export function sortParam(c: Context, map: Record<string, string>): { expr: string; dir: "ASC" | "DESC" } | null {
+  const k = (c.req.query("sort") || "").trim();
+  if (!k || !Object.prototype.hasOwnProperty.call(map, k)) return null;
+  return { expr: map[k], dir: (c.req.query("dir") || "").toLowerCase() === "desc" ? "DESC" : "ASC" };
+}
+

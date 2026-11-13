@@ -5,7 +5,7 @@ import { loadUser } from "../middleware/loadUser";
 import { viewKhuVucEmailInSql } from "../lib/scope";
 import { parsePage } from "../lib/pagination";
 import { slaCutoffVn } from "../lib/sla";
-import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, numFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { GS_KTV_SUBQUERY } from "../lib/gs";
 import { mienScope } from "../lib/mien";
@@ -30,23 +30,50 @@ function scopeClause(user: { la_giam_sat: boolean; la_view: boolean; la_qtri: bo
 // trạng thái của đơn hàng tại mọi luồng quy trình"): tra cuu gom CA don cha chua tach don vi (thung nhap /
 // dang gui ve Kho / Kho da nhan cho Admin / cho xac nhan SL) LAN don vi; moi dong co "giai_doan" = buoc
 // thuc te cua don trong toan luong (don vi da vao phieu tra -> trang thai phieu tra "tra_<...>").
-const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "thung_tu_choi", "cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"];
+export const DANG_CHO = ["thung_dang_gui", "thung_cho_admin_nhan", "thung_tu_choi", "cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt", "cho_chan_doan", "cho_admin_xac_nhan", "san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"];
 
-function allRowsSql(scopeWhere: string): string {
+// 14/11/2026 (toi uu D1): giai_doan la cot tinh (CASE) nen "WHERE x.giai_doan IN (...)" khong dung duoc index -> moi
+// lan dem menu KTV / qua han quet TOAN BO don vi tu truoc toi nay (~15k dong/lan, ~19M rows_read/ngay). Truyen `gd` de
+// loc TRUOC nhanh don vi bang 2 index (u.trang_thai + phieu tra theo trang thai): tap nay luon CHUA moi don vi co giai
+// doan thuoc gd (giai_doan = u.trang_thai hoac 'tra_' || t.trang_thai), dieu kien x.giai_doan IN (...) ben ngoai van giu
+// nguyen nen ket qua khong doi. Gia tri gd nhung thang vao SQL (khong them bind -> khong lech thu tu bind cua caller),
+// nen chi nhan chuoi [a-z_].
+const GD_HOP_LE = /^[a-z_]{2,40}$/;
+function locTruocDonVi(gd: readonly string[] | undefined): string {
+  const ds = (gd || []).filter((x) => GD_HOP_LE.test(x) && !x.startsWith("__"));
+  if (!gd || !gd.length || ds.length !== gd.length) return "";
+  const lit = (xs: string[]) => xs.map((x) => `'${x}'`).join(",");
+  const tra = ds.filter((x) => x.startsWith("tra_")).map((x) => x.slice(4)).filter((x) => x.length >= 2);
+  // Don vi da vao phieu tra luon co giai_doan 'tra_...' (phieu tra chi bi xoa khi da rong, FK + trang_thai NOT NULL) ma
+  // u.trang_thai van giu 'san_sang_gom_phieu_tra' (~4.4k dong) -> nhanh nay chi xet don vi CHUA co phieu tra, qua index
+  // mot phan idx_psc_ct_chua_tra (migration 0035).
+  const nhanh = [`SELECT uu.rowid FROM phieu_sua_chua_bh_ct uu WHERE uu.trang_thai IN (${lit(ds)}) AND uu.phieu_tra_id IS NULL`];
+  if (tra.length) nhanh.push(`SELECT uu.rowid FROM phieu_tra_bh tt JOIN phieu_sua_chua_bh_ct uu ON uu.phieu_tra_id = tt.id WHERE tt.trang_thai IN (${lit(tra)})`);
+  return ` AND u.rowid IN (${nhanh.join(" UNION ")})`;
+}
+
+// Giai doan nhanh don cha co the nhan (CASE o allRowsSql). Loc giai doan khong chua gia tri nao trong nay -> nhanh don cha
+// (~1.3k don cho xac nhan SL) khong dong nao khop, bo luon (giu scopeWhere de khong lech bind).
+const GD_DON_CHA = ["thung_nhap", "thung_dang_gui", "ket_thuc_tu_choi", "thung_tu_choi", "thung_cho_admin_nhan", "cho_xac_nhan_so_luong"];
+function boNhanhCha(gd: readonly string[] | undefined): boolean {
+  return !!locTruocDonVi(gd) && !gd!.some((x) => GD_DON_CHA.includes(x));
+}
+
+export function allRowsSql(scopeWhere: string, gd?: readonly string[]): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
       CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
       u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.ma_lk AS lk_a, COALESCE(u.ma_lk_nhan, p.ma_lk) AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong, p.so_luong_khai AS sl_dat, p.so_luong_thuc_nhan AS sl_duyet
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
-    WHERE ${scopeWhere}`;
+    WHERE ${scopeWhere}${locTruocDonVi(gd)}`;
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
            WHEN p.trang_thai_cha = 'huy_thung' THEN 'ket_thuc_tu_choi' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong, p.so_luong_khai AS sl_dat, NULL AS sl_duyet
     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
-    WHERE p.trang_thai_cha IN ('cho_xac_nhan_so_luong','huy_thung') AND ${scopeWhere}`;
+    WHERE p.trang_thai_cha IN ('cho_xac_nhan_so_luong','huy_thung') AND ${scopeWhere}${boNhanhCha(gd) ? " AND 0" : ""}`;
   return `(${units} UNION ALL ${parents}) x`;
 }
 
@@ -72,7 +99,19 @@ traCuu.get("/don-vi", async (c) => {
   const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
   // 01/11/2026: loc giai doan (frontend gui 1 giai doan hoac nhom "a,b,c" -> IN).
-  const f = joinF(eqFilters(c, { ...LOC, giai_doan: "x.giai_doan" }), timeFilter(c, "x.created_at"), slaFilter(c, "x.updated_at"));
+  // 13/11/2026 (bang kieu Excel): them loc chu / so theo tung cot.
+  const f = joinF(
+    eqFilters(c, { ...LOC, giai_doan: "x.giai_doan" }),
+    timeFilter(c, "x.created_at"),
+    slaFilter(c, "x.updated_at"),
+    textFilters(c, {
+      f_id: "x.id",
+      f_gui: "COALESCE(x.phieu_gui_id,'') || ' ' || COALESCE(x.phieu_tra_id,'')",
+      f_case: "x.case_id",
+      f_mota: { expr: "x.mo_ta_loi", normExpr: "(SELECT pt.tim_kiem FROM phieu_sua_chua_bh pt WHERE pt.id = x.parent_id)" },
+    }),
+    numFilters(c, { sl: "x.sl_dat" }),
+  );
   where += f.sql;
   binds.push(...f.binds);
   // 01/11/2026 ("thêm đánh giá việc linh kiện A <> linh kiện B, B <> linh kiện C"): A = KTV chon, B = thuc te
@@ -87,13 +126,35 @@ traCuu.get("/don-vi", async (c) => {
     "(SELECT s.data FROM case_lookup_snapshot s WHERE s.case_id = x.case_id)"], ["(SELECT pt.tim_kiem FROM phieu_sua_chua_bh pt WHERE pt.id = x.parent_id)"]);
   where += kw.sql;
   binds.push(...kw.binds);
-  const from = `FROM ${allRowsSql(scopeWhere)} WHERE ${where}`;
+  // Loc truoc theo giai doan khi dang loc giai doan (o dem Tong quan / o loc cot) - xem locTruocDonVi.
+  const gdLoc = st === "qua_han" ? DANG_CHO : st ? [st] : (c.req.query("giai_doan") || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const from = `FROM ${allRowsSql(scopeWhere, gdLoc.length ? gdLoc : undefined)} WHERE ${where}`;
   const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
-  const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT x.*, json_extract(s.data, '$.seri_san_pham') AS serial, json_extract(s.data, '$.ngay_mua') AS ngay_mua, json_extract(s.data, '$.ngay_san_xuat') AS ngay_sx FROM ${allRowsSql(scopeWhere)} LEFT JOIN case_lookup_snapshot s ON s.case_id = x.case_id WHERE ${where} ORDER BY x.updated_at DESC LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
+  const sp = sortParam(c, {
+    id: "x.id",
+    gd: "x.giai_doan",
+    gui: "COALESCE(x.phieu_gui_id, x.phieu_tra_id, '')",
+    mien: "COALESCE(x.mien,'')",
+    ktv: "COALESCE((SELECT us.ten FROM users us WHERE us.email = x.ktv), x.ktv, '')",
+    case: "COALESCE(x.case_id,'')",
+    lk: `COALESCE(${tenLkOf("x.ma_lk")}, x.ma_lk, '')`,
+    nv: "COALESCE((SELECT us.ten FROM users us WHERE us.email = x.nguoi_sua_chua), x.nguoi_sua_chua, '')",
+    huong: "COALESCE(x.huong_xu_ly,'')",
+    mota: "COALESCE(x.mo_ta_loi,'')",
+    sl: "x.sl_dat",
+    tao: "x.created_at",
+    sla: "x.updated_at",
+  });
+  const order = sp ? `${sp.expr} ${sp.dir}, x.id` : "x.updated_at DESC";
+  // So dong truoc khi loc (de hien "x / tong dong").
+  const coLoc = binds.length > 0 || where !== "1=1";
+  const [{ results }, totalRow, tongRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT x.*, json_extract(s.data, '$.seri_san_pham') AS serial, json_extract(s.data, '$.ngay_mua') AS ngay_mua, json_extract(s.data, '$.ngay_san_xuat') AS ngay_sx FROM ${allRowsSql(scopeWhere)} LEFT JOIN case_lookup_snapshot s ON s.case_id = x.case_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from}`).bind(...allBinds).first<{ cnt: number }>(),
+    coLoc ? c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM ${allRowsSql(scopeWhere)}`).bind(...scopeBinds, ...scopeBinds).first<{ cnt: number }>() : Promise.resolve(null),
   ]);
-  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
+  const total = totalRow?.cnt ?? 0;
+  return c.json({ don_vi: results, total, total_all: tongRow ? tongRow.cnt : total });
 });
 
 traCuu.get("/tong-quan", async (c) => {
@@ -101,10 +162,11 @@ traCuu.get("/tong-quan", async (c) => {
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
   const { where, binds } = scopeClause(user);
   const from = `FROM ${allRowsSql(where)}`;
+  const fromDangCho = `FROM ${allRowsSql(where, DANG_CHO)}`;
   const b2 = [...binds, ...binds];
   const [{ results }, quaHanRow] = await Promise.all([
     c.env.DB.prepare(`SELECT x.giai_doan AS trang_thai, COUNT(*) as cnt ${from} GROUP BY x.giai_doan`).bind(...b2).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from} WHERE x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`)
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromDangCho} WHERE x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`)
       .bind(...b2, ...DANG_CHO, slaCutoffVn(24))
       .first<{ cnt: number }>(),
   ]);
@@ -142,7 +204,7 @@ traCuu.get("/ktv-menu", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT COALESCE(x.ktv, '') AS ktv, COUNT(DISTINCT x.parent_id) AS so_don, COUNT(*) AS so_dong,
        SUM(CASE WHEN x.updated_at < ? THEN 1 ELSE 0 END) AS qua_han
-     FROM ${allRowsSql(scopeWhere)} WHERE ${gdWhere}${extra}
+     FROM ${allRowsSql(scopeWhere, tatCa ? undefined : gd)} WHERE ${gdWhere}${extra}
      GROUP BY COALESCE(x.ktv, '') ORDER BY so_don DESC`
   ).bind(slaCutoffVn(24), ...binds).all();
   return c.json({ ktv: results });

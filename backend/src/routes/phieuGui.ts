@@ -19,6 +19,7 @@ import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { nhanHoThung } from "../lib/nhanHo";
+import { kiemTraCase, ghiDoiCase } from "../lib/kiemTraCase";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -449,21 +450,10 @@ phieuGui.post("/:id/don", async (c) => {
 
   // 30/10/2026: tach "khong tim thay case" (chan cung) voi "DVBH loi / khong phan hoi" (cho tao neu nguoi
   // dung tich xac nhan, gan co case_xac_minh = 1, cron xac minh lai - lib/caseSnapshot.ts verifyPendingCases).
-  const lk = await lookupCaseEx(caseId, c.env);
-  // 03/11/2026: case trong ngay (SC + YYMMDD hom nay) chua dong bo kip sang DVBH -> cho tao, chua xac minh.
-  const choDongBo = lk.status === "not_found" && laCaseHomNay(caseId);
-  if (lk.status === "not_found" && !choDongBo) return c.json({ error: "CASE_NOT_FOUND" }, 400);
-  const chuaXacMinh = lk.status === "error" || choDongBo;
-  if (lk.status === "error" && body.xac_nhan_chua_xac_minh !== true) return c.json({ error: "DVBH_KHONG_PHAN_HOI" }, 400);
-  const casePreview = lk.status === "found" ? lk.preview : null;
-  let lechKtv = false;
-  if (casePreview) {
-    lechKtv = !(await caseThuocKtv(c.env.DB, casePreview, g.nguoi_tao));
-  }
-  // Chi nguoi tao HO (khong phai chinh KTV so huu thung) co quyen tao ho moi duoc xac nhan vuot qua.
-  const duocVuot = (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== g.nguoi_tao;
-  if (lechKtv && !(duocVuot && body.xac_nhan_khac_ktv === true)) return c.json({ error: "CASE_KTV_MISMATCH" }, 400);
-  const xacNhanKhac = lechKtv ? user.email : null;
+  // 03/11/2026: case trong ngay chua dong bo kip -> cho tao, chua xac minh. 08/11/2026: logic tach sang lib/kiemTraCase.ts.
+  const kq = await kiemTraCase(c.env, caseId, g.nguoi_tao, user, body);
+  if (!kq.ok) return c.json({ error: kq.error }, 400);
+  const { casePreview, chuaXacMinh, choDongBo, xacNhanKhac } = kq;
 
   // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi tao don de loi anh khong tao don thieu anh.
   let anhUrls: string[];
@@ -578,19 +568,35 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
 // DELETE /api/phieu-gui-don/:id - xoa 1 don CHUA gui (phieu cha van "nhap").
 // 31/10/2026: sua 1 don trong thung NHAP (bam vao don): doi linh kien KTV chon (A, VD linh kien mac dinh tu
 // Odoo bi sai), so luong, mo ta loi, loai doi tru de xuat. Chi khi thung con nhap (chua gui).
+// Don sua duoc boi KTV: thung nhap, hoac da gui / Kho da nhan nhung Admin BH chua nhan thung va don chua tach don vi.
+function donSuaDuoc(d: { trang_thai: string; admin_tiep_nhan: number; trang_thai_cha: string }) {
+  return d.trang_thai === "nhap" || (["da_gui", "da_tiep_nhan"].includes(d.trang_thai) && !d.admin_tiep_nhan && d.trang_thai_cha === "cho_xac_nhan_so_luong");
+}
+
 phieuGui.patch("/don/:donId", async (c) => {
   const user = c.get("user");
   const donId = c.req.param("donId");
   const don = await c.env.DB.prepare(
-    `SELECT p.ma_lk, p.so_luong_khai, p.mo_ta_loi, p.loai_doi_tru_de_xuat, g.nguoi_tao, g.nguoi_tao_ho, g.trang_thai
+    `SELECT p.ma_lk, p.so_luong_khai, p.mo_ta_loi, p.loai_doi_tru_de_xuat, p.case_id, p.odoo_id, p.trang_thai_cha, g.nguoi_tao, g.nguoi_tao_ho, g.trang_thai, g.admin_tiep_nhan
      FROM phieu_sua_chua_bh p JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.id = ?`,
   )
     .bind(donId)
-    .first<{ ma_lk: string | null; so_luong_khai: number; mo_ta_loi: string | null; loai_doi_tru_de_xuat: string | null; nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string }>();
+    .first<{ ma_lk: string | null; so_luong_khai: number; mo_ta_loi: string | null; loai_doi_tru_de_xuat: string | null; case_id: string | null; odoo_id: number | null; trang_thai_cha: string; nguoi_tao: string; nguoi_tao_ho: string | null; trang_thai: string; admin_tiep_nhan: number }>();
   if (!don) return c.json({ error: "NOT_FOUND" }, 404);
   if (!ownsPhieuGui(user, don)) return c.json({ error: "FORBIDDEN" }, 403);
-  if (don.trang_thai !== "nhap") return c.json({ error: "NOT_DRAFT" }, 400);
-  const body = await c.req.json<{ ma_lk?: string; so_luong_khai?: number; mo_ta_loi?: string; loai_doi_tru_de_xuat?: string }>().catch(() => ({}) as Record<string, never>);
+  // 08/11/2026 - "Nếu đơn BH gửi mà Admin BH chưa tương tác => cho phép KTV sửa thông tin đơn bình thường (Mã ID, linh kiện,
+  // số lượng...)": ngoai thung nhap, con sua duoc khi Admin BH chua nhan thung (admin_tiep_nhan = 0) va don chua tach don vi.
+  if (!donSuaDuoc(don)) return c.json({ error: "ADMIN_DA_XU_LY" }, 400);
+  const body = await c.req.json<{ ma_lk?: string; so_luong_khai?: number; mo_ta_loi?: string; loai_doi_tru_de_xuat?: string; case_id?: string; xac_nhan_khac_ktv?: boolean; xac_nhan_chua_xac_minh?: boolean }>().catch(() => ({}) as Record<string, never>);
+  const caseMoi = body.case_id !== undefined ? normCaseId(body.case_id) : null;
+  const doiCase = !!caseMoi && caseMoi !== (don.case_id ?? "");
+  if (body.case_id !== undefined && !caseMoi) return c.json({ error: "MISSING_CASE_ID" }, 400);
+  if (doiCase && don.odoo_id) return c.json({ error: "CASE_TU_ODOO" }, 400);
+  let kqCase: Awaited<ReturnType<typeof kiemTraCase>> | null = null;
+  if (doiCase) {
+    kqCase = await kiemTraCase(c.env, caseMoi!, don.nguoi_tao, user, body);
+    if (!kqCase.ok) return c.json({ error: kqCase.error }, 400);
+  }
   const set: string[] = [];
   const binds: unknown[] = [];
   const doi: string[] = [];
@@ -612,9 +618,16 @@ phieuGui.patch("/don/:donId", async (c) => {
     if (!["doi_tra", "tru_cong_no"].includes(body.loai_doi_tru_de_xuat)) return c.json({ error: "INVALID_LOAI_DOI_TRU" }, 400);
     set.push("loai_doi_tru_de_xuat = ?"); binds.push(body.loai_doi_tru_de_xuat); doi.push("loại đối trừ đề xuất");
   }
-  if (set.length === 0) return c.json({ ok: true, doi: 0 });
-  await c.env.DB.prepare(`UPDATE phieu_sua_chua_bh SET ${set.join(", ")} WHERE id = ?`).bind(...binds, donId).run();
-  await addLog(c.env.DB, "phieu_sc", donId, "nhap", "nhap", user.email, "Sửa đơn trong thùng nháp: " + doi.join("; "));
+  if (set.length === 0 && !doiCase) return c.json({ ok: true, doi: 0 });
+  const tt = don.trang_thai === "nhap" ? "nhap" : don.trang_thai_cha;
+  if (set.length) {
+    await c.env.DB.prepare(`UPDATE phieu_sua_chua_bh SET ${set.join(", ")} WHERE id = ?`).bind(...binds, donId).run();
+    await addLog(c.env.DB, "phieu_sc", donId, tt, tt, user.email, (don.trang_thai === "nhap" ? "Sửa đơn trong thùng nháp: " : "Sửa đơn trước khi Admin BH nhận: ") + doi.join("; "));
+  }
+  if (doiCase && kqCase && kqCase.ok) {
+    await ghiDoiCase(c.env, donId, don.case_id, caseMoi!, kqCase, user, tt, "KTV");
+    doi.push("mã case");
+  }
   c.executionCtx.waitUntil(capNhatTimKiem(c.env.DB, [donId]).then(() => undefined).catch(() => undefined));
   return c.json({ ok: true, doi: doi.length });
 });

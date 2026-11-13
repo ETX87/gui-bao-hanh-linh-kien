@@ -13,13 +13,14 @@ import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, t
 import { parsePage } from "../lib/pagination";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { nhanHoThung } from "../lib/nhanHo";
-import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, numFilters, sortParam } from "../lib/filters";
 import { normVi, capNhatTimKiem } from "../lib/timKiem";
 import type { Context } from "hono";
 import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
 import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
 import { pushBoxDoneToKhovan } from "../lib/khovanPushClient";
 import { lanTruocSql } from "../lib/lanTruoc";
+import { kiemTraCase, ghiDoiCase } from "../lib/kiemTraCase";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
 // xac nhan so luong (tach don vi con), phan loai (don le + hang loat), yeu cau bo sung, bao cao sai,
@@ -144,8 +145,10 @@ adminBH.post("/phieu-gui/:id/day-lai-chua-tiep-nhan", async (c) => {
 //   pl   : phan loai linh kien (linh_kien_bh.don_vi) | __none__
 //   cham : qua_han | dung_han (SLA 24h bo Chu nhat; don cha tinh tu created_at, don vi tu updated_at)
 //   mien : MB | MN | __none__ (chua khai bao) - loc them; ngoai ra luon gioi han theo mien cua nguoi xem.
-function locBangThongNhat(c: { req: { query(k: string): string | undefined }; get(k: "user"): AppUser }, kind: "parent" | "unit"): { sql: string; binds: unknown[] } {
+function locBangThongNhat(c: { req: { query(k: string): string | undefined }; get(k: "user"): AppUser }, kind: "parent" | "unit", chiPhamVi = false): { sql: string; binds: unknown[] } {
   const q = (k: string) => (c.req.query(k) || "").trim();
+  // 13/11/2026 (bang kieu Excel): moi o loc nhan nhieu gia tri "a,b,c" (tich chon tren tieu de cot); "__none__" = rong.
+  const list = (k: string) => q(k).split(",").map((s) => s.trim()).filter(Boolean).slice(0, 60);
   const parts: string[] = [];
   const binds: unknown[] = [];
   const ms = mienScope(c.get("user"), "p");
@@ -153,72 +156,96 @@ function locBangThongNhat(c: { req: { query(k: string): string | undefined }; ge
     parts.push(ms.sql.replace(/^ AND /, ""));
     binds.push(...ms.binds);
   }
-  const mien = q("mien");
-  if (mien === "__none__") parts.push("p.mien IS NULL");
-  else if (mien === "MB" || mien === "MN") {
-    parts.push("p.mien = ?");
-    binds.push(mien);
-  }
-  const tt = q("tt");
-  if (tt) {
+  if (chiPhamVi) return { sql: parts.length ? " AND " + parts.join(" AND ") : "", binds };
+  // IN co ho tro "__none__" (rong / NULL).
+  const inList = (expr: string, vals: string[], noneSql?: string) => {
+    if (!vals.length) return;
+    const real = vals.filter((v) => v !== "__none__");
+    const ors: string[] = [];
+    if (vals.includes("__none__")) ors.push(noneSql || `(${expr} IS NULL OR ${expr} = '')`);
+    if (real.length) {
+      ors.push(`${expr} IN (${real.map(() => "?").join(",")})`);
+      binds.push(...real);
+    }
+    parts.push(ors.length > 1 ? `(${ors.join(" OR ")})` : ors[0]);
+  };
+  inList("p.mien", list("mien"), "p.mien IS NULL");
+  const tt = list("tt");
+  if (tt.length) {
     if (kind === "parent") {
-      if (tt !== "cho_xac_nhan_so_luong") parts.push("1 = 0");
-    } else if (tt === "cho_xac_nhan_so_luong") parts.push("1 = 0");
-    else {
-      parts.push("u.trang_thai = ?");
-      binds.push(tt);
+      if (!tt.includes("cho_xac_nhan_so_luong")) parts.push("1 = 0");
+    } else {
+      const rest = tt.filter((v) => v !== "cho_xac_nhan_so_luong");
+      if (!rest.length) parts.push("1 = 0");
+      else inList("u.trang_thai", rest);
     }
   }
-  const ktv = q("ktv");
-  if (ktv === KHACH_LE_KEY) parts.push("p.phieu_gui_id IS NULL");
-  else if (ktv) {
-    parts.push("g.nguoi_tao = ?");
-    binds.push(ktv);
+  const ktv = list("ktv");
+  if (ktv.length) {
+    const emails = ktv.filter((v) => v !== KHACH_LE_KEY && v !== "__none__");
+    const ors: string[] = [];
+    if (ktv.includes(KHACH_LE_KEY) || ktv.includes("__none__")) ors.push("p.phieu_gui_id IS NULL");
+    if (emails.length) {
+      ors.push(`g.nguoi_tao IN (${emails.map(() => "?").join(",")})`);
+      binds.push(...emails);
+    }
+    parts.push(`(${ors.join(" OR ")})`);
   }
-  const lk = q("lk");
-  if (lk) {
-    parts.push("p.ma_lk = ?");
-    binds.push(lk);
-  }
+  inList("p.ma_lk", list("lk"));
   const effLk = kind === "unit" ? "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)" : "p.ma_lk";
-  const lkTt = q("lk_tt");
-  if (lkTt) {
-    parts.push(`${effLk} = ?`);
-    binds.push(lkTt);
+  const lkB = kind === "unit" ? "COALESCE(u.ma_lk_nhan, p.ma_lk)" : "p.ma_lk";
+  inList(effLk, list("lk_tt"));
+  inList(lkB, list("lk_nhan"));
+  const pl = list("pl");
+  if (pl.length) {
+    const real = pl.filter((v) => v !== "__none__");
+    const ors: string[] = [];
+    if (pl.includes("__none__")) ors.push(`NOT EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${lkB} AND TRIM(COALESCE(l.don_vi,'')) <> '')`);
+    if (real.length) {
+      ors.push(`EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${lkB} AND TRIM(l.don_vi) IN (${real.map(() => "?").join(",")}))`);
+      binds.push(...real);
+    }
+    parts.push(`(${ors.join(" OR ")})`);
   }
-  const pl = q("pl");
-  if (pl === "__none__") parts.push(`NOT EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${effLk} AND TRIM(COALESCE(l.don_vi,'')) <> '')`);
-  else if (pl) {
-    parts.push(`EXISTS (SELECT 1 FROM linh_kien_bh l WHERE l.ma_lk = ${effLk} AND TRIM(l.don_vi) = ?)`);
-    binds.push(pl);
-  }
+  const slaCol = kind === "unit" ? "u.updated_at" : "p.created_at";
   const cham = q("cham");
   if (cham === "qua_han" || cham === "dung_han") {
-    parts.push(`${kind === "unit" ? "u.updated_at" : "p.created_at"} ${cham === "qua_han" ? "<" : ">="} ?`);
+    parts.push(`${slaCol} ${cham === "qua_han" ? "<" : ">="} ?`);
     binds.push(slaCutoffVn(24));
   } else if (cham === "nguy_hiem") {
-    parts.push(`${kind === "unit" ? "u.updated_at" : "p.created_at"} < ?`);
+    parts.push(`${slaCol} < ?`);
     binds.push(slaCutoffVn(72));
   }
-  // 31/10/2026: linh kien thuc te gui ve (B), huong xu ly, thoi gian tao don.
-  const lkNhan = q("lk_nhan");
-  if (lkNhan) {
-    parts.push(kind === "unit" ? "COALESCE(u.ma_lk_nhan, p.ma_lk) = ?" : "p.ma_lk = ?");
-    binds.push(lkNhan);
-  }
-  const huong = q("huong");
-  if (huong) {
+  const huong = list("huong");
+  if (huong.length) {
     if (kind === "parent") parts.push("1 = 0");
-    else if (huong === "__none__") parts.push("u.huong_xu_ly IS NULL");
-    else {
-      parts.push("u.huong_xu_ly = ?");
-      binds.push(huong);
-    }
+    else inList("u.huong_xu_ly", huong, "u.huong_xu_ly IS NULL");
   }
+  inList(kind === "unit" ? "COALESCE(u.loai_doi_tru, p.loai_doi_tru_de_xuat)" : "p.loai_doi_tru_de_xuat", list("doitru"));
   const tf = timeFilter(c as unknown as Context, "p.created_at");
   if (tf.sql) {
     parts.push(tf.sql.replace(/^ AND /, ""));
     binds.push(...tf.binds);
+  }
+  // Loc chu / so theo cot.
+  const khachExpr = "COALESCE(p.ten_khach_hang, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id))";
+  const txt = textFilters(c as unknown as Context, {
+    f_id: kind === "unit" ? "u.id" : "p.id",
+    f_case: "p.case_id",
+    f_mota: { expr: "p.mo_ta_loi", normExpr: "p.tim_kiem" },
+    f_khach: { expr: khachExpr, normExpr: "p.tim_kiem" },
+    f_sdt: "p.sdt_khach_hang",
+    f_doncha: "p.id",
+    f_gui: "p.phieu_gui_id",
+  });
+  if (txt.sql) {
+    parts.push(txt.sql.replace(/^ AND /, ""));
+    binds.push(...txt.binds);
+  }
+  const num = numFilters(c as unknown as Context, { sl: "p.so_luong_khai" });
+  if (num.sql) {
+    parts.push(num.sql.replace(/^ AND /, ""));
+    binds.push(...num.binds);
   }
   // q: tim tu khoa (12/10/2026, de xuat #9) - ma don/case/phieu gui, mo ta loi, khach le, linh kien
   // (ma + ten), KTV (email + ten danh ba) va ca "bang chung case" da luu (ten khach, serial, san pham).
@@ -243,6 +270,30 @@ function locBangThongNhat(c: { req: { query(k: string): string | undefined }; ge
   return { sql: parts.length ? " AND " + parts.join(" AND ") : "", binds };
 }
 
+// 13/11/2026 (bang kieu Excel): sap xep theo cot cua bang thong nhat - ?sort=<khoa cot>&dir=asc|desc (khoa = AdminColKey).
+function sortBangThongNhat(c: Context, kind: "parent" | "unit"): { expr: string; dir: "ASC" | "DESC" } | null {
+  const lkB = kind === "unit" ? "COALESCE(u.ma_lk_nhan, p.ma_lk)" : "p.ma_lk";
+  return sortParam(c, {
+    id: kind === "unit" ? "u.id" : "p.id",
+    trangthai: kind === "unit" ? "u.trang_thai" : "'cho_xac_nhan_so_luong'",
+    sla: kind === "unit" ? "u.updated_at" : "p.created_at",
+    nguon: "COALESCE((SELECT us.ten FROM users us WHERE us.email = g.nguoi_tao), g.nguoi_tao, '')",
+    mien: "COALESCE(p.mien, '')",
+    khachhang: "COALESCE(p.ten_khach_hang, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id), '')",
+    linhkien: `COALESCE(${tenLkOf(lkB)}, ${lkB}, '')`,
+    phanloai: `COALESCE((SELECT l.don_vi FROM linh_kien_bh l WHERE l.ma_lk = ${lkB}), '')`,
+    mota: "COALESCE(p.mo_ta_loi, '')",
+    sdt: "COALESCE(p.sdt_khach_hang, '')",
+    donchacode: "p.id",
+    phieuguicode: "COALESCE(p.phieu_gui_id, '')",
+    doitru: kind === "unit" ? "COALESCE(u.loai_doi_tru, p.loai_doi_tru_de_xuat, '')" : "COALESCE(p.loai_doi_tru_de_xuat, '')",
+    huongxuly: kind === "unit" ? "COALESCE(u.huong_xu_ly, '')" : "''",
+    baohanh: "COALESCE((SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id), '')",
+    ngaytao: "p.created_at",
+    sl: "p.so_luong_khai",
+  });
+}
+
 // ---------- 2. Don cha cho xac nhan so luong thuc nhan ----------
 
 adminBH.get("/don-cha", async (c) => {
@@ -254,11 +305,15 @@ adminBH.get("/don-cha", async (c) => {
   const loc = locBangThongNhat(c, "parent");
   const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
-  const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, ${lanTruocSql("p", "p.ma_lk")} AS lan_truoc, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx ${fromWhere} ORDER BY p.created_at LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
+  const sp = sortBangThongNhat(c as unknown as Context, "parent");
+  const order = sp ? `${sp.expr} ${sp.dir}, p.id` : "p.created_at";
+  const pv = locBangThongNhat(c, "parent", true);
+  const [{ results }, totalRow, tongRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT p.*, g.nguoi_tao AS ktv, ${lanTruocSql("p", "p.ma_lk")} AS lan_truoc, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx ${fromWhere} ORDER BY ${order} LIMIT ? OFFSET ?`).bind(trangThai, ...loc.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(trangThai, ...loc.binds).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.trang_thai_cha = ? AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${pv.sql}`).bind(trangThai, ...pv.binds).first<{ cnt: number }>(),
   ]);
-  return c.json({ don_cha: results, total: totalRow?.cnt ?? 0 });
+  return c.json({ don_cha: results, total: totalRow?.cnt ?? 0, total_all: tongRow?.cnt ?? 0 });
 });
 
 interface XacNhanSoLuongBody {
@@ -335,6 +390,11 @@ adminBH.get("/don-vi", async (c) => {
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt')
        AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${loc.sql}`;
   const B = loc.binds;
+  const sp = sortBangThongNhat(c as unknown as Context, "unit");
+  const pv = locBangThongNhat(c, "unit", true);
+  const tongSql = `SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+     WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt') AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${pv.sql}`;
   const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.so_luong_khai, p.so_luong_thuc_nhan, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
@@ -343,25 +403,33 @@ adminBH.get("/don-vi", async (c) => {
   // dong thu gon tren bang), total_don_vi = tong so don vi.
   if (c.req.query("group") === "1") {
     const { limit, offset } = parsePage(c, 20, 100);
-    const [{ results: pids }, totalRow] = await Promise.all([
-      c.env.DB.prepare(`SELECT u.parent_id AS pid, MIN(u.updated_at) AS t ${fromWhere} GROUP BY u.parent_id ORDER BY t, u.parent_id LIMIT ? OFFSET ?`).bind(...B, limit, offset).all<{ pid: string }>(),
+    // Sap xep nhom (don cha): tang = gia tri NHO nhat trong nhom, giam = LON nhat.
+    const grpKey = sp ? `${sp.dir === "ASC" ? "MIN" : "MAX"}(${sp.expr})` : "MIN(u.updated_at)";
+    const grpDir = sp ? sp.dir : "ASC";
+    const [{ results: pids }, totalRow, tongRow] = await Promise.all([
+      c.env.DB.prepare(`SELECT u.parent_id AS pid, ${grpKey} AS t ${fromWhere} GROUP BY u.parent_id ORDER BY t ${grpDir}, u.parent_id LIMIT ? OFFSET ?`).bind(...B, limit, offset).all<{ pid: string }>(),
       c.env.DB.prepare(`SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units ${fromWhere}`).bind(...B).first<{ cnt: number; units: number }>(),
+      c.env.DB.prepare(tongSql).bind(...pv.binds).first<{ cnt: number; units: number }>(),
     ]);
-    if (pids.length === 0) return c.json({ don_vi: [], total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
+    const tong = { total_all: tongRow?.cnt ?? 0, total_all_don_vi: tongRow?.units ?? 0 };
+    if (pids.length === 0) return c.json({ don_vi: [], total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0, ...tong });
     const ph = pids.map(() => "?").join(",");
-    const { results } = await c.env.DB.prepare(`${selectCols} ${fromWhere} AND u.parent_id IN (${ph}) ORDER BY u.updated_at, u.id`)
-      .bind(...B, ...pids.map((r) => r.pid))
+    // Giu dung thu tu nhom cua trang (theo pids), trong nhom sap theo cot dang chon.
+    const pos = `CASE u.parent_id ${pids.map((_, i) => `WHEN ? THEN ${i}`).join(" ")} END`;
+    const { results } = await c.env.DB.prepare(`${selectCols} ${fromWhere} AND u.parent_id IN (${ph}) ORDER BY ${pos}, ${sp ? `${sp.expr} ${sp.dir}, ` : ""}u.updated_at, u.id`)
+      .bind(...B, ...pids.map((r) => r.pid), ...pids.map((r) => r.pid))
       .all();
-    return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0 });
+    return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_don_vi: totalRow?.units ?? 0, ...tong });
   }
 
   // 02/11/2026: che do xem nhom theo KTV / linh kien lay toi da 1000 don vi 1 lan.
   const { limit, offset } = parsePage(c, 20, 1000);
-  const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...B, limit, offset).all(),
+  const [{ results }, totalRow, tongRow] = await Promise.all([
+    c.env.DB.prepare(`${selectCols} ${fromWhere} ORDER BY ${sp ? `${sp.expr} ${sp.dir}, u.id` : "u.updated_at"} LIMIT ? OFFSET ?`).bind(...B, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...B).first<{ cnt: number }>(),
+    c.env.DB.prepare(tongSql).bind(...pv.binds).first<{ cnt: number; units: number }>(),
   ]);
-  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });
+  return c.json({ don_vi: results, total: totalRow?.cnt ?? 0, total_all: tongRow?.units ?? 0 });
 });
 
 // GET /don-vi/loc-options - gia tri cho cac o loc cua bang thong nhat: chi lay tu chinh hang doi dang
@@ -370,18 +438,30 @@ adminBH.get("/don-vi/loc-options", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const ms = mienScope(c.get("user"), "p");
   const mienSql = ms.binds.length ? ` AND (p.mien = '${ms.binds[0]}' OR p.mien IS NULL)` : "";
-  const base = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_sua_chua_bh_ct u ON u.parent_id = p.id
-     WHERE (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${mienSql}
-       AND (p.trang_thai_cha = 'cho_xac_nhan_so_luong' OR u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt'))`;
-  const [ktv, lk, lkTt, pl, lkNhan, huong] = await Promise.all([
-    c.env.DB.prepare(`SELECT DISTINCT COALESCE(g.nguoi_tao, '${KHACH_LE_KEY}') AS v ${base}`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT p.ma_lk AS v ${base} AND p.ma_lk IS NOT NULL`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS v ${base} AND COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) IS NOT NULL`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT TRIM(COALESCE(l.don_vi,'')) AS v ${base.replace("WHERE", "LEFT JOIN linh_kien_bh l ON l.ma_lk = COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) WHERE")}`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.ma_lk_nhan, p.ma_lk) AS v ${base} AND COALESCE(u.ma_lk_nhan, p.ma_lk) IS NOT NULL`).all<{ v: string }>(),
-    c.env.DB.prepare(`SELECT DISTINCT COALESCE(u.huong_xu_ly, '') AS v ${base} AND u.id IS NOT NULL`).all<{ v: string }>(),
-  ]);
-  return c.json({ ktv: ktv.results.map((r) => r.v), lk: lk.results.map((r) => r.v), lk_tt: lkTt.results.map((r) => r.v), phan_loai: pl.results.map((r) => r.v), lk_nhan: lkNhan.results.map((r) => r.v), huong: huong.results.map((r) => r.v) });
+  // 14/11/2026 (toi uu D1): truoc day 6 cau SELECT DISTINCT, moi cau quet ~12k dong (dieu kien OR tren 2 bang khong
+  // dung duoc index) -> ~29M rows_read/ngay. Gio: (1) loc truoc don cha bang 2 index (trang_thai_cha / u.trang_thai),
+  // dieu kien goc van giu nguyen nen ket qua khong doi; (2) 1 cau duy nhat, moi o loc 1 json_group_array(DISTINCT ...).
+  const QUEUE_DV = "'cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt'";
+  const fromWhere = `FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_sua_chua_bh_ct u ON u.parent_id = p.id
+     LEFT JOIN linh_kien_bh l ON l.ma_lk = COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)
+     WHERE p.id IN (SELECT pp.id FROM phieu_sua_chua_bh pp WHERE pp.trang_thai_cha = 'cho_xac_nhan_so_luong'
+                    UNION SELECT uu.parent_id FROM phieu_sua_chua_bh_ct uu WHERE uu.trang_thai IN (${QUEUE_DV}))
+       AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${mienSql}
+       AND (p.trang_thai_cha = 'cho_xac_nhan_so_luong' OR u.trang_thai IN (${QUEUE_DV}))`;
+  const row = await c.env.DB.prepare(
+    `SELECT json_group_array(DISTINCT COALESCE(g.nguoi_tao, '${KHACH_LE_KEY}')) AS ktv,
+            json_group_array(DISTINCT p.ma_lk) AS lk,
+            json_group_array(DISTINCT COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)) AS lk_tt,
+            json_group_array(DISTINCT TRIM(COALESCE(l.don_vi,''))) AS pl,
+            json_group_array(DISTINCT COALESCE(u.ma_lk_nhan, p.ma_lk)) AS lk_nhan,
+            json_group_array(DISTINCT CASE WHEN u.id IS NOT NULL THEN COALESCE(u.huong_xu_ly, '') END) AS huong
+     ${fromWhere}`,
+  ).first<Record<"ktv" | "lk" | "lk_tt" | "pl" | "lk_nhan" | "huong", string>>();
+  // NULL = gia tri cu bi loai bang "IS NOT NULL" / "u.id IS NOT NULL" -> bo.
+  const ds = (k: "ktv" | "lk" | "lk_tt" | "pl" | "lk_nhan" | "huong") => (JSON.parse(row?.[k] || "[]") as (string | null)[]).filter((v): v is string => v !== null);
+  const out = { ktv: ds("ktv"), lk: ds("lk"), lk_tt: ds("lk_tt"), phan_loai: ds("pl"), lk_nhan: ds("lk_nhan"), huong: ds("huong") };
+  // 13/11/2026: them dang {loc} cho bo loc tieu de cot (useListFilters) - khoa = ten tham so loc.
+  return c.json({ ...out, loc: { ktv: out.ktv, lk: out.lk, lk_tt: out.lk_tt, lk_nhan: out.lk_nhan, pl: out.phan_loai, huong: out.huong } });
 });
 
 // Chi tiet 1 don vi (dung cho modal chi tiet + 4 khoi log rieng biet).
@@ -811,6 +891,34 @@ async function lkHopLe(db: D1Database, mas: (string | null | undefined)[]): Prom
   for (const ma of mas) if (ma && !(await db.prepare("SELECT 1 FROM linh_kien_bh WHERE ma_lk = ?").bind(ma).first())) return false;
   return true;
 }
+
+// 08/11/2026 - "Cho Admin BH sửa mã ID case sai nếu đơn chưa kết thúc": doi ma case cua don cha (moi don vi dung chung).
+// Kiem tra nhu luc tao don (lib/kiemTraCase.ts); case thuoc KTV khac thi Admin tich xac nhan. Don Odoo: ma case theo Odoo, khong doi.
+adminBH.patch("/don-cha/:id/case", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const p = await c.env.DB.prepare(
+    `SELECT p.case_id, p.odoo_id, p.trang_thai_cha, g.nguoi_tao,
+       (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.parent_id = p.id) AS so_dv,
+       (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.parent_id = p.id AND NOT (u.trang_thai IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho')
+          OR EXISTS (SELECT 1 FROM phieu_tra_bh t WHERE t.id = u.phieu_tra_id AND t.trang_thai IN ('ktv_da_nhan','gui_that_bai','ket_thuc_khong_gui')))) AS con_mo
+     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id WHERE p.id = ?`,
+  )
+    .bind(id)
+    .first<{ case_id: string | null; odoo_id: number | null; trang_thai_cha: string; nguoi_tao: string | null; so_dv: number; con_mo: number }>();
+  if (!p) return c.json({ error: "NOT_FOUND" }, 404);
+  if (p.so_dv > 0 && p.con_mo === 0) return c.json({ error: "DON_DA_KET_THUC" }, 400);
+  if (p.odoo_id) return c.json({ error: "CASE_TU_ODOO" }, 400);
+  const body = await c.req.json<{ case_id?: string; xac_nhan_khac_ktv?: boolean; xac_nhan_chua_xac_minh?: boolean }>().catch(() => ({}) as { case_id?: string; xac_nhan_khac_ktv?: boolean; xac_nhan_chua_xac_minh?: boolean });
+  const moi = normCaseId(body.case_id);
+  if (!moi) return c.json({ error: "MISSING_CASE_ID" }, 400);
+  if (moi === (p.case_id ?? "")) return c.json({ ok: true, doi: 0 });
+  const kq = await kiemTraCase(c.env, moi, p.nguoi_tao, user, body);
+  if (!kq.ok) return c.json({ error: kq.error }, 400);
+  await ghiDoiCase(c.env, id, p.case_id, moi, kq, user, p.trang_thai_cha, "Admin BH");
+  return c.json({ ok: true, doi: 1, chua_xac_minh: kq.chuaXacMinh });
+});
 
 adminBH.patch("/don-vi/:id/linh-kien", async (c) => {
   const user = c.get("user");

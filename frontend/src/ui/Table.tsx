@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./primitives";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { ColHeader, type ColFilter } from "./ColumnFilter";
+import type { ListFilters } from "./FilterBar";
 
 // Bang du lieu dung chung.
 // - Desktop (>=768px): 1 dong khong xuong dong (nowrap + cuon ngang), click dong mo chi tiet.
@@ -17,11 +19,15 @@ export interface Column<T> {
   // hideOnMobileCard: khong hien cap nhan-gia tri nay trong the mobile (vd cot rong toan "—", hoac
   // cot dieu khien khong co header).
   hideOnMobileCard?: boolean;
+  // 13/11/2026 (bang kieu Excel): bo loc + khoa sap xep tren tieu de cot (can truyen `flt` cho Table).
+  filter?: ColFilter;
+  sortKey?: string;
 }
 
-export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { columns: Column<T>[]; rows: T[]; rowKey: (row: T) => string; onRowClick?: (row: T) => void; emptyText?: string }) {
+export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText, flt }: { columns: Column<T>[]; rows: T[]; rowKey: (row: T) => string; onRowClick?: (row: T) => void; emptyText?: string; flt?: ListFilters }) {
   const isMobile = useIsMobile();
-  if (rows.length === 0) return <EmptyState text={emptyText || "Không có dữ liệu."} />;
+  // Bang co bo loc tieu de cot: van ve tieu de khi rong (de bo loc / sap xep dang chon con nhin thay).
+  if (rows.length === 0 && (isMobile || !flt)) return <EmptyState text={emptyText || "Không có dữ liệu."} />;
 
   if (isMobile) {
     const [head, ...rest] = columns;
@@ -79,13 +85,20 @@ export function Table<T>({ columns, rows, rowKey, onRowClick, emptyText }: { col
           <tr className="bg-[var(--surface-2)] border-b border-[var(--line)]">
             {ordered.map((c) => (
               <th key={c.key} className={`text-left font-semibold text-[var(--ink-soft)] ${c.className || ""}`}>
-                {c.header || (c === first ? "" : "Thao tác")}
+                {c.header ? <ColHeader col={{ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey }} flt={flt} /> : c === first ? "" : "Thao tác"}
               </th>
             ))}
             <th className="w-full" aria-hidden="true" />
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={ordered.length + 1} className="!py-6 text-center text-[var(--ink-faint)]">
+                {emptyText || "Không có dữ liệu."}
+              </td>
+            </tr>
+          )}
           {rows.map((row) => (
             <tr
               key={rowKey(row)}

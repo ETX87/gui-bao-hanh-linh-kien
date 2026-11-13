@@ -89,10 +89,23 @@ export function KtvMenu({ user }: { user: AppUser }) {
       .get<{ ktv: Row[] }>(dxTab ? `/de-xuat/ktv-menu?trang_thai=${encodeURIComponent(dxTab)}` : `/tra-cuu/ktv-menu${gd ? `?gd=${encodeURIComponent(gd)}` : ""}`)
       .then((r) => alive && setRows((r.ktv || []).filter((x) => x.ktv)))
       .catch(() => alive && setRows([]));
-    const t = setInterval(() => setTick((v) => v + 1), 120_000);
+    // 14/11/2026 (toi uu D1): tab trinh duyet dang an thi KHONG tu tai lai moi 2 phut (truoc day moi tab mo san deu goi
+    // ca ngay); quay lai tab sau >= 2 phut thi tai lai ngay 1 lan.
+    let lanTai = Date.now();
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") setTick((v) => v + 1);
+    }, 120_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible" && Date.now() - lanTai >= 120_000) {
+        lanTai = Date.now();
+        setTick((v) => v + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       alive = false;
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
     };
     // Tai lai khi doi man (thao tac xong o man khac) hoac moi 2 phut.
   }, [open, path, gd, dxTab, tick, user.email]);

@@ -93,6 +93,11 @@ export interface ListFilters {
   query: string; // "a=b&c=d" (khong co dau ? dau)
   loc: Record<string, string[]>;
   reloadLoc: () => void;
+  // 13/11/2026 (bang kieu Excel): sap xep tren tieu de cot - gui len server ?sort=&dir=.
+  sort: string;
+  dir: "asc" | "desc";
+  setSort: (k: string, dir?: "asc" | "desc" | "") => void;
+  setMany: (v: Record<string, string>) => void;
 }
 
 // locPath: duong dan API danh sach (co the kem query co dinh, vd "/phieu-tra?trang_thai=nhap").
@@ -104,6 +109,7 @@ export function useListFilters(locPath: string | null, keys: string[]): ListFilt
   const hasKtv = keys.includes("ktv");
   const [values, setValues] = useState<Record<string, string>>(() => (hasKtv && urlKtv ? { ktv: urlKtv } : ({} as Record<string, string>)));
   const [loc, setLoc] = useState<Record<string, string[]>>({});
+  const [sortSt, setSortSt] = useState<{ k: string; d: "asc" | "desc" }>({ k: "", d: "asc" });
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (hasKtv) setValues((s) => (s.ktv === urlKtv || (!s.ktv && !urlKtv) ? s : { ...s, ktv: urlKtv }));
@@ -128,9 +134,13 @@ export function useListFilters(locPath: string | null, keys: string[]): ListFilt
     const p = new URLSearchParams();
     if (q) p.set("q", q);
     for (const k of keys) if (values[k]) p.set(k, values[k]);
+    if (sortSt.k) {
+      p.set("sort", sortSt.k);
+      p.set("dir", sortSt.d);
+    }
     return p.toString();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, values, keys.join(",")]);
+  }, [q, values, keys.join(","), sortSt]);
   return {
     q,
     setQ: setQInput,
@@ -150,6 +160,20 @@ export function useListFilters(locPath: string | null, keys: string[]): ListFilt
     query,
     loc,
     reloadLoc: () => setTick((t) => t + 1),
+    sort: sortSt.k,
+    dir: sortSt.d,
+    // Khong truyen dir: bam lan luot tang -> giam -> bo sap xep (nhu Excel). dir = "" -> bo sap xep.
+    setSort: (k, dir) =>
+      setSortSt((s) => {
+        if (dir === "") return { k: "", d: "asc" };
+        if (dir) return { k, d: dir };
+        if (s.k !== k) return { k, d: "asc" };
+        return s.d === "asc" ? { k, d: "desc" } : { k: "", d: "asc" };
+      }),
+    setMany: (v) => {
+      setValues((s) => ({ ...s, ...v }));
+      if (hasKtv && "ktv" in v) setUrlKtv(v.ktv);
+    },
   };
 }
 
@@ -186,9 +210,16 @@ export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: Lis
   // 31/10/2026: tren dien thoai moi thanh loc deu thu vao nut "Lọc" (o loc chiem nua man hinh dau).
   const isMobile = useIsMobile();
   collapsible = collapsible || isMobile;
+  const optsOf = useOptsOf(f);
+  const visible = defs.filter((d) => d.static || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
+  return <FilterBarView f={f} defs={visible} optsOf={optsOf} placeholder={placeholder} extra={extra} collapsible={collapsible} open={open} setOpen={setOpen} />;
+}
+
+// Lua chon cua 1 o loc (static hoac lay tu backend) - dung chung cho thanh loc va bo loc tieu de cot.
+export function useOptsOf(f: ListFilters) {
   useUserNames();
   const { nameOf } = useLkName();
-  const optsOf = (d: FilterDef) => {
+  return (d: FilterDef): { value: string; label: string }[] => {
     if (d.static) return d.static;
     const cur = f.values[d.key];
     // Gia tri dang loc (vd ?ktv= tu menu KTV) khong co trong du lieu -> van hien dung ten thay vi "Tất cả".
@@ -201,7 +232,9 @@ export function FilterBar({ f, defs, placeholder, extra, collapsible }: { f: Lis
       })
       .sort((a, b) => (a.value === NONE ? 1 : b.value === NONE ? -1 : a.label.localeCompare(b.label, "vi")));
   };
-  const visible = defs.filter((d) => d.static || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
+}
+
+function FilterBarView({ f, defs: visible, optsOf, placeholder, extra, collapsible, open, setOpen }: { f: ListFilters; defs: FilterDef[]; optsOf: (d: FilterDef) => { value: string; label: string }[]; placeholder: string; extra?: React.ReactNode; collapsible: boolean; open: boolean; setOpen: (fn: (v: boolean) => boolean) => void }) {
   return (
     <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 mb-2">
       <div className="flex flex-col md:flex-row md:items-center gap-1.5">
