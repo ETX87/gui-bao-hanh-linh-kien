@@ -6950,3 +6950,5 @@ Hỏi lại 2 điểm, người dùng chốt: (1) KTV không đồng ý → *"lu
 **(c) Ghi nhận:** báo cáo lưu 1 bản / ngày → tháng đã tính hôm nay cần bấm "🔄 Tính lại" mới thấy số mới.
 
 **(d) Kiểm thử:** typecheck 0 lỗi; câu đếm trên D1 production: Khương 107 ca (tháng 10), Nguyễn Vũ Việt 7 ca (tháng 10) + 1 (tháng 7).
+
+**Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch (Version ID `89b40fca`), không có migration mới.
