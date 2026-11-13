@@ -6873,3 +6873,11 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá), script HTTP 38/39 đạt (mục còn lại do kịch bản kỳ vọng sai: Admin miền Nam đúng ra không thấy xác miền Bắc): lọc / tìm, KTV bị chặn, tạo thùng chỉ nhận xác hợp lệ, thêm trùng bị chặn, Admin miền khác không xem được, bỏ xác về chờ gom, chặn đổi xử lý xác / lùi đơn khi trong thùng, gửi thiếu EO bị chặn, thêm xác khi chờ KT, KT trả lại thiếu lý do / có lý do, gửi lại, KT sửa EO, Admin không tự duyệt, KT duyệt → xác `da_tra`, không bỏ xác sau duyệt, đánh dấu ngoài / đưa lại, xoá thùng rỗng, số việc. Giao diện 1440px: tạo thùng từ tab Xác chờ gom → mở chi tiết → Gửi Kế toán → "Chờ KT duyệt"; chi tiết thùng đã duyệt hiện đủ tổng hợp + nhật ký.
 
 **Deploy (13/11/2026):** áp migration 0031 lên D1 production (2.885 xác của đơn trước 01/11 → đã xử lý ngoài; 937 xác vào danh sách chờ gom) và `npm run deploy` từ git worktree sạch của commit `c878dcf` (Version ID `4863a25e`).
+
+## Báo cáo BO: 1 bảng chung, gộp theo phòng ban / tách theo nhân viên (13/11/2026) — v1.118
+
+**(a) Nguyên văn:** *"format chung cho cả table báo cáo. cho phép gộp lại theo phòng ban, tách ra theo nhân viên"*
+
+**(b) Đã làm** (`screens/shared/BaoCaoBo.tsx`, chỉ frontend): bỏ 4 bảng rời mỗi vai trò, thay bằng 1 bảng chung cùng cột (Số ca · TB xử lý · Nhanh nhất · Lâu nhất · Trong SLA · Từ AppSheet) + dòng "Tổng cộng". Nút chuyển 2 chế độ (nhớ trên máy, `localStorage bc_bo_che_do`): **Gộp theo phòng ban** — dòng phòng ban (tổng) → bấm xổ nhân viên → bấm xổ loại việc; **Tách theo nhân viên** — mỗi người 1 dòng (gộp mọi phòng ban người đó làm, cột "Phòng ban"), bấm xổ "Phòng ban · loại việc". Gộp nhiều nhóm: TB có trọng số theo số ca, nhanh / lâu nhất lấy min / max, SLA cộng dồn. Nút "Mở hết / Thu gọn". Excel có 2 sheet (sheet đầu theo chế độ đang xem).
+
+**(d) Kiểm thử:** typecheck + build sạch; chạy `wrangler dev` local với bản sao D1 production (1440px): chế độ phòng ban 4 dòng + Tổng cộng 2.760 ca; chế độ nhân viên — Lê Đình Toàn gộp Kho + Admin BH + Kế toán = 1.053 ca, xổ đúng 7 loại việc. Phiên khác đang làm "thùng trả xác" cùng thư mục → chỉ commit file của đợt này, deploy từ git worktree sạch.
