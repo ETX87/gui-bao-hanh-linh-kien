@@ -6883,3 +6883,11 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 **(d) Kiểm thử:** typecheck + build sạch; chạy `wrangler dev` local với bản sao D1 production (1440px): chế độ phòng ban 4 dòng + Tổng cộng 2.760 ca; chế độ nhân viên — Lê Đình Toàn gộp Kho + Admin BH + Kế toán = 1.053 ca, xổ đúng 7 loại việc. Phiên khác đang làm "thùng trả xác" cùng thư mục → chỉ commit file của đợt này, deploy từ git worktree sạch.
 
 **Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch (commit 6d4709f, gồm cả v1.118 trả xác của phiên khác đã deploy trước đó).
+
+## Báo cáo BO: tự tính 1 lần / ngày + nút "Tính lại" (13/11/2026) — v1.120
+
+**(a) Nguyên văn:** *"báo cáo này tự động tạo 1 lần đầu tiên trong ngày khi có người vào xem, vào thêm 1 nút load lại thủ công để tránh báo cáo gây lãnh phí D1"*
+
+**(b) Đã làm:** `routes/baoCaoBo.ts` lưu kết quả mỗi tháng vào 1 dòng `sync_state` (key `bao_cao_bo:<YYYY-MM>`, không cần migration). Lần mở đầu tiên trong ngày (giờ VN) mới tính lại (~12–15k dòng đọc), các lần sau đọc 1 dòng đã lưu. `?lam_moi=1` (nút "🔄 Tính lại") tính lại ngay, nhưng nếu bản đã lưu mới tính trong 2 phút thì trả luôn bản đó (chống bấm liên tục). Response thêm `tinh_luc`, `tu_bo_nho`. Màn báo cáo hiện "Số liệu tính lúc HH:MM dd/MM — tự tính 1 lần mỗi ngày" + nút "🔄 Tính lại".
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi; `wrangler dev` local với bản sao D1 production: lần 1 tính (`tu_bo_nho=false`), lần 2 đọc bản lưu, `lam_moi=1` trong 2 phút trả bản lưu; giao diện có nút + dòng thời điểm tính. Chưa thử sang ngày mới (so sánh chuỗi ngày `updated_at` với `nowVN()`).

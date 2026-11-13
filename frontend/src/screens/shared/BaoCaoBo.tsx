@@ -66,7 +66,12 @@ function thangOptions(): string[] {
   return out;
 }
 
-const ICON: Record<string, string> = { kho: "🏬", admin: "🛡", nv: "🔧", ketoan: "💳" };
+const ICON: Record<string, string> = {
+  kho: "🏬",
+  admin: "🛡",
+  nv: "🔧",
+  ketoan: "💳",
+};
 
 // Gop thong ke nhieu nhom (1 nguoi o nhieu phong ban, hoac tong toan bo): TB co trong so theo so ca.
 function gop(list: ThongKe[]): ThongKe {
@@ -74,12 +79,30 @@ function gop(list: ThongKe[]): ThongKe {
   const so_ca = co.reduce((a, t) => a + t.so_ca, 0);
   const trong_sla = co.reduce((a, t) => a + t.trong_sla, 0);
   const ca_appsheet = list.reduce((a, t) => a + t.ca_appsheet, 0);
-  if (!so_ca) return { so_ca: 0, tb_gio: null, nhanh_gio: null, nhanh_id: null, lau_gio: null, lau_id: null, trong_sla: 0, ty_le_sla: null, ca_appsheet };
-  const min = co.reduce((a, t) => ((t.nhanh_gio ?? 1e9) < (a.nhanh_gio ?? 1e9) ? t : a));
-  const max = co.reduce((a, t) => ((t.lau_gio ?? -1) > (a.lau_gio ?? -1) ? t : a));
+  if (!so_ca)
+    return {
+      so_ca: 0,
+      tb_gio: null,
+      nhanh_gio: null,
+      nhanh_id: null,
+      lau_gio: null,
+      lau_id: null,
+      trong_sla: 0,
+      ty_le_sla: null,
+      ca_appsheet,
+    };
+  const min = co.reduce((a, t) =>
+    (t.nhanh_gio ?? 1e9) < (a.nhanh_gio ?? 1e9) ? t : a,
+  );
+  const max = co.reduce((a, t) =>
+    (t.lau_gio ?? -1) > (a.lau_gio ?? -1) ? t : a,
+  );
   return {
     so_ca,
-    tb_gio: Math.round((co.reduce((a, t) => a + (t.tb_gio ?? 0) * t.so_ca, 0) / so_ca) * 10) / 10,
+    tb_gio:
+      Math.round(
+        (co.reduce((a, t) => a + (t.tb_gio ?? 0) * t.so_ca, 0) / so_ca) * 10,
+      ) / 10,
     nhanh_gio: min.nhanh_gio,
     nhanh_id: min.nhanh_id,
     lau_gio: max.lau_gio,
@@ -92,15 +115,29 @@ function gop(list: ThongKe[]): ThongKe {
 
 function SlaCell({ v }: { v: number | null }) {
   if (v == null) return <span className="text-[var(--ink-faint)]">—</span>;
-  const tone = v >= 90 ? "text-[var(--green-700)]" : v >= 70 ? "text-[var(--amber-700)]" : "text-[var(--red-600)]";
-  return <span className={`font-semibold ${tone}`}>{v.toLocaleString("vi-VN")}%</span>;
+  const tone =
+    v >= 90
+      ? "text-[var(--green-700)]"
+      : v >= 70
+        ? "text-[var(--amber-700)]"
+        : "text-[var(--red-600)]";
+  return (
+    <span className={`font-semibold ${tone}`}>
+      {v.toLocaleString("vi-VN")}%
+    </span>
+  );
 }
 
 function Cells({ t, coAs }: { t: ThongKe; coAs: boolean }) {
-  const sub = (s: string | null) => s && <div className="font-mono text-[11px] text-[var(--ink-faint)]">{s}</div>;
+  const sub = (s: string | null) =>
+    s && (
+      <div className="font-mono text-[11px] text-[var(--ink-faint)]">{s}</div>
+    );
   return (
     <>
-      <td className="text-right font-semibold">{t.so_ca.toLocaleString("vi-VN")}</td>
+      <td className="text-right font-semibold">
+        {t.so_ca.toLocaleString("vi-VN")}
+      </td>
       <td className="text-right">{fmtGio(t.tb_gio)}</td>
       <td className="text-right" title={t.nhanh_id ?? ""}>
         {fmtGio(t.nhanh_gio)}
@@ -118,7 +155,11 @@ function Cells({ t, coAs }: { t: ThongKe; coAs: boolean }) {
           </div>
         )}
       </td>
-      {coAs && <td className="text-right text-[var(--ink-soft)]">{t.ca_appsheet ? t.ca_appsheet.toLocaleString("vi-VN") : "—"}</td>}
+      {coAs && (
+        <td className="text-right text-[var(--ink-soft)]">
+          {t.ca_appsheet ? t.ca_appsheet.toLocaleString("vi-VN") : "—"}
+        </td>
+      )}
     </>
   );
 }
@@ -138,21 +179,33 @@ export function BaoCaoBoScreen() {
   const [thang, setThang] = useState(opts[0]);
   const [data, setData] = useState<Nhom[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [tinhLuc, setTinhLuc] = useState<string | null>(null);
+  const [lan, setLan] = useState(0); // >0: bam "Tinh lai" -> ?lam_moi=1
   const [mo, setMo] = useState<Set<string>>(new Set());
-  const [cheDo, setCheDo] = useState<CheDo>(() => (localStorage.getItem("bc_bo_che_do") === "nhan_vien" ? "nhan_vien" : "phong_ban"));
+  const [cheDo, setCheDo] = useState<CheDo>(() =>
+    localStorage.getItem("bc_bo_che_do") === "nhan_vien"
+      ? "nhan_vien"
+      : "phong_ban",
+  );
 
   useEffect(() => {
     let huy = false;
     setData(null);
     setErr(null);
     api
-      .get<{ nhom: Nhom[] }>(`/bao-cao-bo?thang=${thang}`)
-      .then((r) => !huy && setData(r.nhom))
+      .get<{ nhom: Nhom[]; tinh_luc?: string }>(
+        `/bao-cao-bo?thang=${thang}${lan ? "&lam_moi=1" : ""}`,
+      )
+      .then((r) => {
+        if (huy) return;
+        setData(r.nhom);
+        setTinhLuc(r.tinh_luc ?? null);
+      })
       .catch((e) => !huy && setErr(errorMessage(e)));
     return () => {
       huy = true;
     };
-  }, [thang]);
+  }, [thang, lan]);
 
   const doiCheDo = (c: CheDo) => {
     setCheDo(c);
@@ -173,24 +226,59 @@ export function BaoCaoBoScreen() {
     const m = new Map<string, DongNv>();
     for (const g of data)
       for (const p of g.nguoi) {
-        const d = m.get(p.nguoi) ?? { nguoi: p.nguoi, phong_ban: [], tong: p, con: [] };
+        const d = m.get(p.nguoi) ?? {
+          nguoi: p.nguoi,
+          phong_ban: [],
+          tong: p,
+          con: [],
+        };
         d.phong_ban.push(g.label);
-        for (const c of p.cong_viec) d.con.push({ key: `${g.vai_tro}|${c.task}`, label: `${g.label} · ${c.label} (${c.don_vi})`, t: c });
+        for (const c of p.cong_viec)
+          d.con.push({
+            key: `${g.vai_tro}|${c.task}`,
+            label: `${g.label} · ${c.label} (${c.don_vi})`,
+            t: c,
+          });
         m.set(p.nguoi, d);
       }
-    for (const d of m.values()) d.tong = gop(data.flatMap((g) => g.nguoi.filter((p) => p.nguoi === d.nguoi)));
-    return [...m.values()].sort((a, b) => b.tong.so_ca - a.tong.so_ca || b.tong.ca_appsheet - a.tong.ca_appsheet);
+    for (const d of m.values())
+      d.tong = gop(
+        data.flatMap((g) => g.nguoi.filter((p) => p.nguoi === d.nguoi)),
+      );
+    return [...m.values()].sort(
+      (a, b) =>
+        b.tong.so_ca - a.tong.so_ca || b.tong.ca_appsheet - a.tong.ca_appsheet,
+    );
   }, [data]);
-  const tongAll = useMemo(() => (data ? gop(data.map((g) => g.tong)) : null), [data]);
+  const tongAll = useMemo(
+    () => (data ? gop(data.map((g) => g.tong)) : null),
+    [data],
+  );
   const coAs = !!tongAll && tongAll.ca_appsheet > 0;
   const tatCaKey = useMemo(
-    () => (cheDo === "phong_ban" ? (data ?? []).flatMap((g) => [g.vai_tro, ...g.nguoi.map((p) => `${g.vai_tro}|${p.nguoi}`)]) : nhanVien.map((d) => d.nguoi)),
+    () =>
+      cheDo === "phong_ban"
+        ? (data ?? []).flatMap((g) => [
+            g.vai_tro,
+            ...g.nguoi.map((p) => `${g.vai_tro}|${p.nguoi}`),
+          ])
+        : nhanVien.map((d) => d.nguoi),
     [cheDo, data, nhanVien],
   );
 
   const taiXlsx = () => {
     if (!data) return;
-    const cols = ["Số ca", "TB xử lý (giờ)", "Nhanh nhất (giờ)", "Ca nhanh nhất", "Lâu nhất (giờ)", "Ca lâu nhất", "Trong SLA", "Tỷ lệ SLA (%)", "Ca từ AppSheet (không tính giờ)"];
+    const cols = [
+      "Số ca",
+      "TB xử lý (giờ)",
+      "Nhanh nhất (giờ)",
+      "Ca nhanh nhất",
+      "Lâu nhất (giờ)",
+      "Ca lâu nhất",
+      "Trong SLA",
+      "Tỷ lệ SLA (%)",
+      "Ca từ AppSheet (không tính giờ)",
+    ];
     const so = (t: ThongKe) => [
       String(t.so_ca),
       t.tb_gio == null ? "" : String(t.tb_gio),
@@ -207,24 +295,43 @@ export function BaoCaoBoScreen() {
       pb.push([g.label, "TỔNG", "", ...so(g.tong)]);
       for (const p of g.nguoi) {
         pb.push([g.label, displayName(p.nguoi), "Tất cả", ...so(p)]);
-        for (const c of p.cong_viec) pb.push([g.label, displayName(p.nguoi), c.label, ...so(c)]);
+        for (const c of p.cong_viec)
+          pb.push([g.label, displayName(p.nguoi), c.label, ...so(c)]);
       }
     }
     if (tongAll) pb.push(["TỔNG CỘNG", "", "", ...so(tongAll)]);
     const nv: string[][] = [["Nhân viên", "Phòng ban", "Công việc", ...cols]];
     for (const d of nhanVien) {
-      nv.push([displayName(d.nguoi), d.phong_ban.join(", "), "Tất cả", ...so(d.tong)]);
-      for (const c of d.con) nv.push([displayName(d.nguoi), d.phong_ban.join(", "), c.label, ...so(c.t)]);
+      nv.push([
+        displayName(d.nguoi),
+        d.phong_ban.join(", "),
+        "Tất cả",
+        ...so(d.tong),
+      ]);
+      for (const c of d.con)
+        nv.push([
+          displayName(d.nguoi),
+          d.phong_ban.join(", "),
+          c.label,
+          ...so(c.t),
+        ]);
     }
     const w = [22, 26, 38, 8, 12, 12, 16, 12, 16, 10, 12, 14];
     const sheets = [
       { name: "Theo phong ban", rows: pb, widths: w },
       { name: "Theo nhan vien", rows: nv, widths: w },
     ];
-    downloadBlob(buildXlsx(cheDo === "phong_ban" ? sheets : [sheets[1], sheets[0]]), `Bao-cao-BO-${thang}.xlsx`);
+    downloadBlob(
+      buildXlsx(cheDo === "phong_ban" ? sheets : [sheets[1], sheets[0]]),
+      `Bao-cao-BO-${thang}.xlsx`,
+    );
   };
 
-  const mui = (open: boolean) => <span className="mr-1 inline-block w-3 text-[var(--ink-faint)]">{open ? "▾" : "▸"}</span>;
+  const mui = (open: boolean) => (
+    <span className="mr-1 inline-block w-3 text-[var(--ink-faint)]">
+      {open ? "▾" : "▸"}
+    </span>
+  );
 
   return (
     <Card
@@ -248,15 +355,34 @@ export function BaoCaoBoScreen() {
               </button>
             ))}
           </div>
-          <Select value={thang} onChange={(e) => setThang(e.target.value)} className="!w-auto">
+          <Select
+            value={thang}
+            onChange={(e) => {
+              setLan(0);
+              setThang(e.target.value);
+            }}
+            className="!w-auto"
+          >
             {opts.map((o) => (
               <option key={o} value={o}>
                 Tháng {o.slice(5)}/{o.slice(0, 4)}
               </option>
             ))}
           </Select>
-          <Btn size="sm" onClick={() => setMo(mo.size ? new Set() : new Set(tatCaKey))} disabled={!data}>
+          <Btn
+            size="sm"
+            onClick={() => setMo(mo.size ? new Set() : new Set(tatCaKey))}
+            disabled={!data}
+          >
             {mo.size ? "▸ Thu gọn" : "▾ Mở hết"}
+          </Btn>
+          <Btn
+            size="sm"
+            onClick={() => setLan((x) => x + 1)}
+            disabled={!data}
+            title="Tính lại ngay từ dữ liệu mới nhất (bình thường báo cáo tự tính 1 lần mỗi ngày)"
+          >
+            🔄 Tính lại
           </Btn>
           <Btn size="sm" onClick={taiXlsx} disabled={!data}>
             ⬇ Tải Excel
@@ -265,9 +391,19 @@ export function BaoCaoBoScreen() {
       }
     >
       <p className="mb-2 text-xs text-[var(--ink-soft)]">
-        1 ca = 1 việc 1 người làm xong trong tháng (theo lúc bấm xong; việc sửa chữa tính cho NV được giao). Thời gian xử lý tính từ lúc việc sang tay vai trò đó
-        tới lúc làm xong, theo giờ SLA (không tính Chủ nhật). Trong SLA = xong trong 24 giờ. Ca bắt đầu chờ từ dữ liệu nhập AppSheet chỉ đếm ở cột "Từ AppSheet",
-        không tính thời gian / SLA. Bấm dòng để mở / gộp chi tiết.
+        1 ca = 1 việc 1 người làm xong trong tháng (theo lúc bấm xong; việc sửa
+        chữa tính cho NV được giao). Thời gian xử lý tính từ lúc việc sang tay
+        vai trò đó tới lúc làm xong, theo giờ SLA (không tính Chủ nhật). Trong
+        SLA = xong trong 24 giờ. Ca bắt đầu chờ từ dữ liệu nhập AppSheet chỉ đếm
+        ở cột "Từ AppSheet", không tính thời gian / SLA. Bấm dòng để mở / gộp
+        chi tiết.
+        {tinhLuc && (
+          <span className="ml-1 font-semibold text-[var(--ink)]">
+            Số liệu tính lúc {tinhLuc.slice(11, 16)} {tinhLuc.slice(8, 10)}/
+            {tinhLuc.slice(5, 7)} — tự tính 1 lần mỗi ngày, bấm "🔄 Tính lại" để
+            cập nhật ngay.
+          </span>
+        )}
       </p>
       {err && <EmptyState text={`Không tải được báo cáo: ${err}`} />}
       {!data && !err && <Spinner />}
@@ -276,15 +412,24 @@ export function BaoCaoBoScreen() {
           <table className="tbl w-full whitespace-nowrap">
             <thead>
               <tr>
-                <th className="text-left">{cheDo === "phong_ban" ? "Phòng ban / Nhân viên / Công việc" : "Nhân viên / Công việc"}</th>
-                {cheDo === "nhan_vien" && <th className="text-left">Phòng ban</th>}
+                <th className="text-left">
+                  {cheDo === "phong_ban"
+                    ? "Phòng ban / Nhân viên / Công việc"
+                    : "Nhân viên / Công việc"}
+                </th>
+                {cheDo === "nhan_vien" && (
+                  <th className="text-left">Phòng ban</th>
+                )}
                 <th className="text-right">Số ca</th>
                 <th className="text-right">TB xử lý</th>
                 <th className="text-right">Nhanh nhất</th>
                 <th className="text-right">Lâu nhất</th>
                 <th className="text-right">Trong SLA</th>
                 {coAs && (
-                  <th className="text-right" title="Ca bắt đầu chờ từ dữ liệu nhập AppSheet (ngày gốc) — chỉ đếm, không tính thời gian / SLA">
+                  <th
+                    className="text-right"
+                    title="Ca bắt đầu chờ từ dữ liệu nhập AppSheet (ngày gốc) — chỉ đếm, không tính thời gian / SLA"
+                  >
                     Từ AppSheet
                   </th>
                 )}
@@ -296,10 +441,20 @@ export function BaoCaoBoScreen() {
                   const openG = mo.has(g.vai_tro);
                   return (
                     <Fragment key={g.vai_tro}>
-                      <tr className="cursor-pointer bg-[var(--brand-50)] font-semibold hover:bg-[var(--surface-2)]" onClick={() => g.nguoi.length && toggle(g.vai_tro)}>
+                      <tr
+                        className="cursor-pointer bg-[var(--brand-50)] font-semibold hover:bg-[var(--surface-2)]"
+                        onClick={() => g.nguoi.length && toggle(g.vai_tro)}
+                      >
                         <td>
-                          {g.nguoi.length ? mui(openG) : <span className="mr-1 inline-block w-3" />}
-                          {ICON[g.vai_tro]} {g.label} <span className="text-xs font-normal text-[var(--ink-soft)]">· {g.nguoi.length} người</span>
+                          {g.nguoi.length ? (
+                            mui(openG)
+                          ) : (
+                            <span className="mr-1 inline-block w-3" />
+                          )}
+                          {ICON[g.vai_tro]} {g.label}{" "}
+                          <span className="text-xs font-normal text-[var(--ink-soft)]">
+                            · {g.nguoi.length} người
+                          </span>
                         </td>
                         <Cells t={g.tong} coAs={coAs} />
                       </tr>
@@ -309,18 +464,29 @@ export function BaoCaoBoScreen() {
                           const open = mo.has(k);
                           return (
                             <Fragment key={k}>
-                              <tr className="cursor-pointer hover:bg-[var(--surface-2)]" onClick={() => toggle(k)}>
+                              <tr
+                                className="cursor-pointer hover:bg-[var(--surface-2)]"
+                                onClick={() => toggle(k)}
+                              >
                                 <td className="!pl-7">
                                   {mui(open)}
-                                  <span title={p.nguoi}>{displayName(p.nguoi)}</span>
+                                  <span title={p.nguoi}>
+                                    {displayName(p.nguoi)}
+                                  </span>
                                 </td>
                                 <Cells t={p} coAs={coAs} />
                               </tr>
                               {open &&
                                 p.cong_viec.map((c) => (
-                                  <tr key={c.task} className="bg-[var(--surface-2)] text-[13px]">
+                                  <tr
+                                    key={c.task}
+                                    className="bg-[var(--surface-2)] text-[13px]"
+                                  >
                                     <td className="!pl-14 text-[var(--ink-soft)]">
-                                      {c.label} <span className="text-[11px]">({c.don_vi})</span>
+                                      {c.label}{" "}
+                                      <span className="text-[11px]">
+                                        ({c.don_vi})
+                                      </span>
                                     </td>
                                     <Cells t={c} coAs={coAs} />
                                   </tr>
@@ -336,18 +502,29 @@ export function BaoCaoBoScreen() {
                   const open = mo.has(d.nguoi);
                   return (
                     <Fragment key={d.nguoi}>
-                      <tr className="cursor-pointer hover:bg-[var(--surface-2)]" onClick={() => toggle(d.nguoi)}>
+                      <tr
+                        className="cursor-pointer hover:bg-[var(--surface-2)]"
+                        onClick={() => toggle(d.nguoi)}
+                      >
                         <td className="font-semibold">
                           {mui(open)}
                           <span title={d.nguoi}>{displayName(d.nguoi)}</span>
                         </td>
-                        <td className="text-[var(--ink-soft)]">{d.phong_ban.join(", ")}</td>
+                        <td className="text-[var(--ink-soft)]">
+                          {d.phong_ban.join(", ")}
+                        </td>
                         <Cells t={d.tong} coAs={coAs} />
                       </tr>
                       {open &&
                         d.con.map((c) => (
-                          <tr key={c.key} className="bg-[var(--surface-2)] text-[13px]">
-                            <td className="!pl-8 text-[var(--ink-soft)]" colSpan={2}>
+                          <tr
+                            key={c.key}
+                            className="bg-[var(--surface-2)] text-[13px]"
+                          >
+                            <td
+                              className="!pl-8 text-[var(--ink-soft)]"
+                              colSpan={2}
+                            >
                               {c.label}
                             </td>
                             <Cells t={c.t} coAs={coAs} />
