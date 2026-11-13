@@ -399,6 +399,24 @@ export async function tinhBaoCaoBo(
     add("kho_xuat_lk", x.kho_xuat_boi, x.kt_luc, x.kho_xuat_luc, x.id);
   }
 
+  // 5) 13/11/2026 ("tại sao báo cáo lại không có nv sửa chữa văn khương" -> "Có, hiện thêm"): don vi nhap tu
+  // AppSheet ma NV da sua xong ben AppSheet (co ket_qua_nv, khong co lan nop ket qua tren he thong moi) ->
+  // dem 1 ca "Từ AppSheet" cho NV duoc giao, tinh vao thang tao don vi (AppSheet khong luu ngay sua xong
+  // dang tin duoc). Chi dem, khong tinh thoi gian / SLA.
+  const { results: nvAs } = await db
+    .prepare(
+      `SELECT u.id, u.nguoi_sua_chua AS nguoi, u.created_at FROM phieu_sua_chua_bh_ct u
+       JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+       WHERE p.ghi_chu LIKE '%AppSheet ID%' AND u.nguoi_sua_chua IS NOT NULL AND u.nguoi_sua_chua <> ''
+         AND u.ket_qua_nv IS NOT NULL AND u.created_at >= ? AND u.created_at < ?
+         AND NOT EXISTS (SELECT 1 FROM logs_bh l WHERE l.entity_type = 'phieu_sc_ct' AND l.entity_id = u.id
+           AND l.tu_trang_thai = 'cho_chan_doan' AND COALESCE(l.ghi_chu, '') NOT LIKE '%AppSheet%')`,
+    )
+    .bind(r.tu, r.den)
+    .all<{ id: string; nguoi: string; created_at: string }>();
+  for (const x of nvAs)
+    add("nv_sua", x.nguoi, x.created_at, x.created_at, x.id, true);
+
   // Gom theo vai tro -> nguoi -> viec.
   const nhom: NhomVaiTro[] = (Object.keys(VAI_TRO_BO_LABEL) as VaiTroBo[]).map(
     (vt) => {

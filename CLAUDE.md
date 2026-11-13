@@ -6940,3 +6940,13 @@ Hỏi lại 2 điểm, người dùng chốt: (1) KTV không đồng ý → *"lu
 
 
 **Deploy (13/11/2026):** áp migration 0033 lên D1 production, `npm run deploy` từ git worktree sạch của commit `743cb01` (Version ID `b00f6e4d`).
+
+## Báo cáo BO: đếm ca NV sửa xong bên AppSheet vào cột "Từ AppSheet" (13/11/2026) — v1.123
+
+**(a) Nguyên văn:** *"tại sao báo cáo lại không có nv sửa chữa văn khương"* → sau khi giải thích → *"Có, hiện thêm"*.
+
+**(b) Nguyên nhân + đã làm:** Khương (nvk.joseph86) có 107 đơn vị đã sửa xong nhưng đều sửa bên AppSheet (nhập 19/10 + 01/11), báo cáo bỏ mọi dòng nhập AppSheet nên NV này không có ca nào; tháng 11 chưa ai nộp kết quả cho đơn của anh trên hệ thống mới. `lib/baoCaoBo.ts` thêm bước 5: đơn vị của đơn cha nhập AppSheet có `nguoi_sua_chua` + `ket_qua_nv` mà không có lần nộp kết quả trên hệ thống mới → 1 ca "Từ AppSheet" cho NV được giao, **tính vào tháng tạo đơn vị** (AppSheet không có ngày sửa xong tin được — `updated_at` bị các thao tác sau ghi đè), chỉ đếm, không tính thời gian / SLA. Không có migration.
+
+**(c) Ghi nhận:** báo cáo lưu 1 bản / ngày → tháng đã tính hôm nay cần bấm "🔄 Tính lại" mới thấy số mới.
+
+**(d) Kiểm thử:** typecheck 0 lỗi; câu đếm trên D1 production: Khương 107 ca (tháng 10), Nguyễn Vũ Việt 7 ca (tháng 10) + 1 (tháng 7).
