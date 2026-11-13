@@ -6985,3 +6985,5 @@ Hỏi lại 2 điểm, người dùng chốt: (1) KTV không đồng ý → *"lu
 **(c) Vấn đề:** chạy thử local: lệnh tắt tiến trình chạy thử (lọc theo chữ `wrangler.qa.jsonc` trong dòng lệnh) tự tắt luôn chính phiên Bash đang chạy nó — lần sau tách lệnh tắt ra riêng. `wrangler dev` cũ còn sót làm request treo → phải tắt hết rồi chạy lại.
 
 **(d) Kiểm thử:** typecheck + build sạch. `wrangler dev` local (config + D1 tạm, đã xoá; 24 KTV + 12 khách mẫu), 1440×900: modal 95%, 2 cột cân đối; tìm "hoang 6" ra đúng 1 khách, bấm chọn → tiêu đề cột phải "— Điện máy Hoàng Long 6 (0988000006)"; tab KTV tìm "nghe an" ra 4 KTV, chọn xong nút "Tạo thùng hộ & thêm đơn" bật. Khổ 800px: 1 cột danh sách, không tràn. Chưa thử trên điện thoại thật.
+
+**Deploy (14/11/2026):** `npm run deploy` từ git worktree sạch của commit `e706916` (Version ID `646736c9`), không có migration mới. Bundle production mang 1.125.
