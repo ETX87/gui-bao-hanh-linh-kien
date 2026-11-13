@@ -973,6 +973,8 @@ interface DonDichVuBody {
   sdt_khach_hang?: string;
   dia_chi_khach_hang?: string;
   san_pham_bh?: string;
+  // 14/11/2026: khach hang chon tu danh ba (khach_hang_bh, NPP / khach le) - ten/SDT/dia chi lay tu danh ba neu de trong.
+  khach_hang_id?: string | null;
   ma_lk?: string | null;
   so_luong?: number;
   mo_ta_loi?: string;
@@ -985,6 +987,13 @@ adminBH.post("/don-dich-vu", async (c) => {
   if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
   const body = await c.req.json<DonDichVuBody>().catch(() => ({}) as DonDichVuBody);
   body.case_id = normCaseId(body.case_id) || null; // 06/11/2026: sc... -> SC...
+  if (body.khach_hang_id) {
+    const kh = await c.env.DB.prepare("SELECT id, ten, sdt, dia_chi FROM khach_hang_bh WHERE id = ?").bind(body.khach_hang_id).first<{ id: string; ten: string; sdt: string; dia_chi: string }>();
+    if (!kh) return c.json({ error: "KH_NOT_FOUND" }, 400);
+    body.ten_khach_hang = body.ten_khach_hang?.trim() || kh.ten;
+    body.sdt_khach_hang = body.sdt_khach_hang?.trim() || kh.sdt;
+    body.dia_chi_khach_hang = body.dia_chi_khach_hang?.trim() || kh.dia_chi;
+  }
   if (!body.case_id) {
     if (!body.ten_khach_hang?.trim() || !body.sdt_khach_hang?.trim() || !body.san_pham_bh?.trim()) return c.json({ error: "MISSING_KHACH_LE_INFO" }, 400);
   }
@@ -1002,10 +1011,10 @@ adminBH.post("/don-dich-vu", async (c) => {
   const id = await nextSequentialId(c.env.DB, "phieu_sua_chua_bh", "DH");
   const now = nowVN();
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, so_luong_thuc_nhan, nguon_tao, ten_khach_hang, sdt_khach_hang, dia_chi_khach_hang, san_pham_bh, trang_thai_cha, created_at, mien)
-     VALUES (?, NULL, ?, ?, ?, ?, ?, 'admin_dich_vu', ?, ?, ?, ?, 'da_tach', ?, ?)`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, so_luong_thuc_nhan, nguon_tao, ten_khach_hang, sdt_khach_hang, dia_chi_khach_hang, san_pham_bh, trang_thai_cha, created_at, mien, khach_hang_id)
+     VALUES (?, NULL, ?, ?, ?, ?, ?, 'admin_dich_vu', ?, ?, ?, ?, 'da_tach', ?, ?, ?)`,
   )
-    .bind(id, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, soLuong, body.ten_khach_hang?.trim() || "", body.sdt_khach_hang?.trim() || "", body.dia_chi_khach_hang?.trim() || "", body.san_pham_bh?.trim() || "", now, mienOfStaff(user))
+    .bind(id, body.case_id || null, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, soLuong, body.ten_khach_hang?.trim() || "", body.sdt_khach_hang?.trim() || "", body.dia_chi_khach_hang?.trim() || "", body.san_pham_bh?.trim() || "", now, mienOfStaff(user), body.khach_hang_id || null)
     .run();
   const statements = [];
   for (let i = 1; i <= soLuong; i++) {

@@ -16,6 +16,7 @@ import { setUrlKtv } from "../../layout/KtvMenu";
 import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
+import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { FastActionsModal } from "../shared/FastActionsModal";
 import { YeuCauBoSungModal } from "../shared/YeuCauBoSungModal";
 import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
@@ -81,6 +82,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
 
   const [xacNhanSlFor, setXacNhanSlFor] = useState<DonCha | null>(null);
   const [donDichVuOpen, setDonDichVuOpen] = useState(false);
+  const [thungHoId, setThungHoId] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [phanLoaiFor, setPhanLoaiFor] = useState<DonVi | null>(null);
@@ -199,7 +201,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
               </Btn>
             )}
             <Btn variant="primary" onClick={() => setDonDichVuOpen(true)}>
-              + Tạo đơn dịch vụ tính phí
+              + Tạo đơn thủ công
             </Btn>
           </div>
         </div>
@@ -262,6 +264,20 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
             setDonDichVuOpen(false);
             afterChange();
           }}
+          onKtvThung={(id) => {
+            setDonDichVuOpen(false);
+            setThungHoId(id);
+          }}
+        />
+      )}
+      {thungHoId && (
+        <PhieuGuiDetailModal
+          guiId={thungHoId}
+          onClose={() => {
+            setThungHoId(null);
+            afterChange();
+          }}
+          onChanged={afterChange}
         />
       )}
       {bulkOpen && (

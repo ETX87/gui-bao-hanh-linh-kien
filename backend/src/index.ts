@@ -34,6 +34,7 @@ import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
 import { dongBoTaiKhoan } from "./lib/taiKhoan";
 import tuChoiThungRoutes from "./routes/tuChoiThung";
+import khachHangRoutes from "./routes/khachHang";
 import { tuHuyThungQuaHan } from "./lib/tuChoiThung";
 import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
 import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } from "./lib/caseSnapshot";
@@ -95,6 +96,7 @@ app.route("/api/etx", etxRoutes);
 app.route("/api/thieu-hang", thieuHangRoutes);
 app.route("/api/anh", anhRoutes);
 app.route("/api/tu-choi-thung", tuChoiThungRoutes);
+app.route("/api/khach-hang", khachHangRoutes);
 
 app.onError((err, c) => {
   console.error(err);
