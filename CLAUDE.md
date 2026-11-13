@@ -6909,3 +6909,5 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chưa thử đăng nhập Google thật; kiểm tra tên sau deploy trên D1 production.
 
+
+**Deploy (13/11/2026):** áp migration 0032 lên D1 production, `npm run deploy` từ git worktree sạch của commit `163b6c9` (Version ID `12b694f2`). Tên của 186 tài khoản đổi ở lần cron 15 phút kế tiếp.
