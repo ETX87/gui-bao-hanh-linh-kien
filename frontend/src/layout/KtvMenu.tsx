@@ -11,7 +11,8 @@ import type { AppUser } from "../lib/types";
 // Bam ten KTV -> dat ?ktv=<email> tren URL; moi o loc "KTV gửi" / "Người gửi" / "Người nhận" cua cac danh
 // sach doc tham so nay (ui/FilterBar useListFilters, bang Admin BH). Man khong co danh sach -> sang #/don.
 
-const HO_TRO = ["/don", "/thung", "/phieu-tra", "/admin/de-xuat"];
+export const HO_TRO = ["/don", "/thung", "/phieu-tra", "/admin/de-xuat"];
+// 13/11/2026: menu 2 CHI hien o cac man xu ly danh sach don (HO_TRO) - an o Trang chu, Bao cao, Lich su, Logic, Quan tri...
 
 // 05/11/2026 - "số lượng đếm sẽ phụ thuộc vào tab người dùng đang chọn ví dụ chọn tab "Chờ phân loại" => chỉ hiện
 // danh sách KTV đang có đơn trong chờ phân loại và số lượng tương ứng": man + tab -> giai doan (GIAI_DOAN cua

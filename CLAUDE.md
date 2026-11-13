@@ -6829,3 +6829,11 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 
 **Deploy (13/11/2026):** `npm run deploy` từ git worktree sạch của commit `4eebe6d` (Version ID `805ced5f`), không có migration mới.
+
+## Menu 2 (danh sách KTV) chỉ hiện ở màn xử lý danh sách đơn (13/11/2026) — v1.116
+
+**(a) Nguyên văn:** *"menu 2 chỉ hiện ở menu liên quan đến xử lý danh sách KTV, setting, báo cáo... không hiện"* (ảnh màn Báo cáo BO vẫn có cột "KTV gửi đơn").
+
+**(b) Đã làm:** `Shell.tsx` chỉ hiện `KtvMenu` khi đang ở 4 màn xử lý danh sách `HO_TRO` (`/don`, `/thung`, `/phieu-tra`, `/admin/de-xuat`); ẩn ở Trang chủ, Báo cáo BO, Lịch sử, Logic, Quản trị và mọi màn khác. Ghi đè 1 phần v1.070 (trước hiện ở mọi màn, bấm tên KTV từ màn khác thì nhảy sang Đơn bảo hành).
+
+**(d) Kiểm thử:** typecheck 0 lỗi. Chưa bấm thử trên giao diện.
