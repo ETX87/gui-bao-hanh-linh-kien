@@ -6874,7 +6874,7 @@ Mục v1.059 ngay trên vẫn đúng (danh sách nhiều GS / khu vực). Mục 
 
 **Deploy (13/11/2026):** áp migration 0031 lên D1 production (2.885 xác của đơn trước 01/11 → đã xử lý ngoài; 937 xác vào danh sách chờ gom) và `npm run deploy` từ git worktree sạch của commit `c878dcf` (Version ID `4863a25e`).
 
-## Báo cáo BO: 1 bảng chung, gộp theo phòng ban / tách theo nhân viên (13/11/2026) — v1.118
+## Báo cáo BO: 1 bảng chung, gộp theo phòng ban / tách theo nhân viên (13/11/2026) — v1.119
 
 **(a) Nguyên văn:** *"format chung cho cả table báo cáo. cho phép gộp lại theo phòng ban, tách ra theo nhân viên"*
 
