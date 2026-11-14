@@ -120,10 +120,27 @@ export const GIAI_DOAN: { key: string; label: string; tone: "gray" | "blue" | "a
   { key: "tra_ktv_da_nhan", label: "Hoàn tất (KTV đã nhận)", tone: "green", icon: "✅" },
   { key: "tra_gui_that_bai", label: "Gửi thất bại (thất lạc)", tone: "red", icon: "❌" },
   { key: "tra_ket_thuc_khong_gui", label: "Kết thúc, không gửi", tone: "gray", icon: "⏹️" },
-  { key: "ket_thuc_tu_choi", label: "Đã huỷ", tone: "gray", icon: "⛔" },
+  { key: "ket_thuc_tu_choi", label: "Từ chối / huỷ bảo hành", tone: "red", icon: "⛔" },
+  { key: "thung_da_huy", label: "Thùng bị huỷ", tone: "gray", icon: "🗑️" },
   { key: "ket_thuc_chuyen_kho", label: "Đã chuyển kho", tone: "gray", icon: "🏬" },
 ];
 export const GIAI_DOAN_MAP: Record<string, (typeof GIAI_DOAN)[number]> = Object.fromEntries(GIAI_DOAN.map((g) => [g.key, g]));
+
+// 14/11/2026 ("giai đoạn của đơn bh đang bị chia nhỏ quá ... gom các giai đoạn lại cho: Đơn nháp, đơn chờ tiếp nhận,
+// đơn đã tiếp nhận, đơn đang sửa chữa, đơn chờ gửi trả, đơn đang gửi trả, đơn đã kết thúc, đơn đã hủy, đơn bị từ chối"):
+// 9 nhom theo luong. Phai khop backend NHOM_GD (routes/traCuu.ts). Giai doan chi tiet van giu de hien dong phu.
+export const NHOM_GD: { key: string; label: string; tone: (typeof GIAI_DOAN)[number]["tone"]; icon: string; gds: string[] }[] = [
+  { key: "nhap", label: "Đơn nháp", tone: "gray", icon: "📝", gds: ["thung_nhap"] },
+  { key: "cho_tiep_nhan", label: "Chờ tiếp nhận", tone: "blue", icon: "🚚", gds: ["thung_dang_gui", "thung_cho_admin_nhan"] },
+  { key: "da_tiep_nhan", label: "Đã tiếp nhận", tone: "amber", icon: "📥", gds: ["cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt"] },
+  { key: "dang_sua", label: "Đang sửa chữa", tone: "violet", icon: "🔧", gds: ["cho_chan_doan", "cho_admin_xac_nhan"] },
+  { key: "cho_gui_tra", label: "Chờ gửi trả", tone: "orange", icon: "📦", gds: ["san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"] },
+  { key: "dang_gui_tra", label: "Đang gửi trả", tone: "blue", icon: "📤", gds: ["tra_da_gui", "tra_khieu_nai_van_chuyen"] },
+  { key: "ket_thuc", label: "Đã kết thúc", tone: "green", icon: "✅", gds: ["tra_ktv_da_nhan", "tra_ket_thuc_khong_gui", "tra_gui_that_bai", "ket_thuc_chuyen_kho"] },
+  { key: "da_huy", label: "Đã huỷ", tone: "gray", icon: "🗑️", gds: ["thung_da_huy"] },
+  { key: "tu_choi", label: "Bị từ chối", tone: "red", icon: "⛔", gds: ["thung_tu_choi", "ket_thuc_tu_choi"] },
+];
+export const NHOM_CUA_GD: Record<string, (typeof NHOM_GD)[number]> = Object.fromEntries(NHOM_GD.flatMap((n) => n.gds.map((g) => [g, n])));
 
 export const TRANG_THAI_PHIEU_GUI_LABELS: Record<string, string> = {
   nhap: "Nháp",

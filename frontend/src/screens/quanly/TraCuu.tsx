@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, LK_C_DEF } from "../../ui/FilterBar";
+import { ExcelToolbar } from "../../ui/ColumnFilter";
+import { api } from "../../lib/api";
+import { buildXlsx, downloadBlob } from "../../lib/xlsx";
+import { fmtDate, hoursSince } from "../../lib/format";
+import { useToast } from "../../ui/Toast";
 import { displayName } from "../../hooks/useUserNames";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useRoute } from "../../router/Router";
-import { Card, Badge, Spinner } from "../../ui/primitives";
+import { Card, Badge, Spinner, Btn } from "../../ui/primitives";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
-import { GIAI_DOAN, GIAI_DOAN_MAP, HUONG_XU_LY_LABELS, KHACH_LE_KEY } from "../../lib/constants";
+import { GIAI_DOAN_MAP, HUONG_XU_LY_LABELS, KHACH_LE_KEY, NHOM_GD, NHOM_CUA_GD } from "../../lib/constants";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import { MienBadge } from "../../ui/MienBadge";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -37,27 +42,20 @@ interface TraCuuRow {
   so_luong: number;
   sl_dat?: number | null;
   sl_duyet?: number | null;
+  created_at?: string | null;
+  nguoi_sua_chua?: string | null;
+  huong_xu_ly?: string | null;
   serial?: string | null;
   ngay_mua?: string | null;
   ngay_sx?: string | null;
 }
 import { UserName } from "../../hooks/useUserNames";
 
-// 01/11/2026 ("mọi trạng thái thiếu filter trạng thái => đơn đã sửa xong, đơn đang gửi đến KTV..."): nhom
-// giai doan thuong tra (gia tri "a,b" -> backend loc IN) + tung giai doan rieng.
-const NHOM_GIAI_DOAN: { value: string; label: string }[] = [
-  { value: "thung_nhap,thung_dang_gui", label: "▸ Nhóm: Chưa về Kho (nháp / đang gửi)" },
-  { value: "thung_cho_admin_nhan,cho_xac_nhan_so_luong,cho_phan_loai,admin_can_xem_lai,cho_bo_sung_tt,cho_chan_doan,cho_admin_xac_nhan", label: "▸ Nhóm: Đang xử lý tại trung tâm" },
-  { value: "san_sang_gom_phieu_tra,tra_nhap,tra_cho_ke_toan_duyet,tra_da_duyet_ke_toan", label: "▸ Nhóm: Đã sửa / xử lý xong — chờ trả" },
-  { value: "tra_da_gui", label: "▸ Nhóm: Đang gửi đến KTV" },
-  { value: "tra_ktv_da_nhan,tra_ket_thuc_khong_gui", label: "▸ Nhóm: Hoàn tất" },
-  { value: "tra_khieu_nai_van_chuyen,tra_gui_that_bai", label: "▸ Nhóm: KTV báo thiếu / thất lạc" },
-  { value: "ket_thuc_tu_choi,ket_thuc_chuyen_kho", label: "▸ Nhóm: Đã huỷ / chuyển kho" },
-];
-const GIAI_DOAN_DEF: FilterDef = {
-  key: "giai_doan",
+// 14/11/2026: cot "Giai đoạn" loc theo 9 NHOM theo luong (NHOM_GD) thay vi 21 giai doan chi tiet.
+const NHOM_DEF: FilterDef = {
+  key: "nhom",
   label: "Giai đoạn",
-  static: [...NHOM_GIAI_DOAN, ...GIAI_DOAN.map((g) => ({ value: g.key, label: `${g.icon} ${g.label}` }))],
+  static: NHOM_GD.map((n) => ({ value: n.key, label: `${n.icon} ${n.label}` })),
 };
 
 // 01/11/2026: danh gia lech linh kien A (KTV chon) / B (thuc te gui ve) / C (doi moi).
@@ -88,17 +86,23 @@ function LechLkBadges({ r }: { r: TraCuuRow }) {
   );
 }
 
-const DEFS: FilterDef[] = [
-  GIAI_DOAN_DEF,
-  LECH_LK_DEF,
-  { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" },
-  { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" },
-  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" },
-  ...LK_ABC_DEFS,
-  { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
-  CANH_BAO_DEF,
-  KHOANG_DEF,
-];
+const KTV_DEF: FilterDef = { key: "ktv", label: "KTV gửi", fmt: (v) => (v === KHACH_LE_KEY ? "Khách lẻ" : displayName(v)), noneLabel: "Khách lẻ" };
+const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" };
+const HUONG_DEF: FilterDef = { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" };
+const MIEN_DEF: FilterDef = { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" };
+// Tham so loc gui len server (khop cac cot loc ben duoi).
+const FILTER_KEYS = ["f_id", "nhom", "f_gui", "mien", "ktv", "f_case", "lk", "lech_lk", "nv", "huong_xu_ly", "f_mota", "sl_tu", "sl_den", "khoang", "canh_bao"];
+
+function NhomGdBadge({ gd }: { gd: string }) {
+  const n = NHOM_CUA_GD[gd];
+  const g = GIAI_DOAN_MAP[gd];
+  return (
+    <span className="inline-flex flex-col leading-tight" title={g?.label || gd}>
+      <Badge tone={n?.tone || "gray"}>{n ? `${n.icon} ${n.label}` : gd}</Badge>
+      {g && <span className="mt-0.5 text-[11px] text-[var(--ink-soft)] truncate max-w-[190px]">{g.label}</span>}
+    </span>
+  );
+}
 
 // "Tra cuu moi don hang trong pham vi" (Giam sat/View) - THUAN CHI XEM. Phan trang that.
 // Phat hien 12 vong ra soat UX: nhan ?trang_thai= tu man Tong quan (bam 1 o dem) -> loc san + hien
@@ -106,25 +110,34 @@ const DEFS: FilterDef[] = [
 
 export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   const { query, nav } = useRoute();
+  const toast = useToast();
   const stFilter = query.get("trang_thai") || "";
-  const flt = useListFilters("/tra-cuu/don-vi", DEFS.map((d) => d.key));
+  const flt = useListFilters("/tra-cuu/don-vi", FILTER_KEYS);
   const base = stFilter ? `/tra-cuu/don-vi?trang_thai=${encodeURIComponent(stFilter)}` : "/tra-cuu/don-vi";
   // 02/11/2026: 3 che do xem (danh sach / nhom theo KTV / nhom theo linh kien) - che do nhom lay toi da 1000 dong 1 lan.
   const [mode, setMode] = useDonViewMode("don_view_tat_ca");
   const grouped = mode !== "list";
   const listPath = withQuery(base, flt.query);
   const path = grouped ? `${listPath}${listPath.includes("?") ? "&" : "?"}view=nhom` : listPath;
-  const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<TraCuuRow>(path, "don_vi", grouped ? 1000 : 20);
+  const { items: rows, total, page, pageCount, setPage, loading, reload, raw } = usePagedApi<TraCuuRow>(path, "don_vi", grouped ? 1000 : 20);
+  const totalAll = typeof raw.total_all === "number" ? (raw.total_all as number) : null;
   const { nameOf } = useLkName();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
+  const [dl, setDl] = useState<string | null>(null);
 
-  const stLabel = stFilter === "qua_han" ? "Quá hạn SLA 24h" : GIAI_DOAN_MAP[stFilter]?.label || stFilter;
+  const stLabel =
+    stFilter === "qua_han"
+      ? "Quá hạn SLA 24h"
+      : NHOM_GD.find((n) => n.gds.join(",") === stFilter)?.label || GIAI_DOAN_MAP[stFilter]?.label || stFilter;
 
+  // 14/11/2026 (bang kieu Excel): loc + sap xep tren tieu de cot, gui len server.
   const cols: Column<TraCuuRow>[] = [
     {
       key: "id",
       header: "ID",
+      filter: { type: "text", key: "f_id", placeholder: "Mã đơn…" },
+      sortKey: "id",
       render: (r) => (
         <span className="font-mono text-xs font-semibold text-[var(--link)]">
           {r.id}
@@ -132,83 +145,155 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         </span>
       ),
     },
+    { key: "st", header: "Giai đoạn", filter: { type: "multi", def: NHOM_DEF }, sortKey: "gd", render: (r) => <NhomGdBadge gd={r.giai_doan} /> },
+    { key: "sla", header: "SLA", filter: { type: "single", def: CANH_BAO_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.updated_at} /> },
     {
-      key: "st",
-      header: "Giai đoạn",
-      render: (r) => {
-        const g = GIAI_DOAN_MAP[r.giai_doan];
-        return <Badge tone={g?.tone || "gray"}>{g ? `${g.icon} ${g.label}` : r.giai_doan}</Badge>;
-      },
+      key: "gui",
+      header: "Thùng / Phiếu trả",
+      filter: { type: "text", key: "f_gui", placeholder: "BH-… / TR-…" },
+      sortKey: "gui",
+      render: (r) => <span className="font-mono text-xs">{[r.phieu_gui_id, r.phieu_tra_id].filter(Boolean).join(" · ") || "—"}</span>,
     },
-    { key: "gui", header: "Thùng / Phiếu trả", render: (r) => <span className="font-mono text-xs">{[r.phieu_gui_id, r.phieu_tra_id].filter(Boolean).join(" · ") || "—"}</span> },
-    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "ktv", header: "KTV / Nguồn", render: (r) => (r.ktv && r.ktv !== KHACH_LE_KEY ? <UserName email={r.ktv} /> : <Badge tone="violet">Khách lẻ{r.ten_khach_hang ? ` · ${r.ten_khach_hang}` : ""}</Badge>) },
-    { key: "case", header: "Case", render: (r) => <span className="font-mono text-xs">{r.case_id || "—"}</span> },
-    { key: "lk", header: "Linh kiện", render: (r) => nameOf(r.ma_lk) },
+    { key: "mien", header: "Miền", filter: { type: "multi", def: MIEN_DEF }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
     {
-      key: "lech",
-      header: "Đánh giá LK",
-      render: (r) => <LechLkBadges r={r} />,
+      key: "ktv",
+      header: "KTV / Nguồn",
+      filter: { type: "multi", def: KTV_DEF },
+      sortKey: "ktv",
+      render: (r) => (r.ktv && r.ktv !== KHACH_LE_KEY ? <UserName email={r.ktv} /> : <Badge tone="violet">Khách lẻ{r.ten_khach_hang ? ` · ${r.ten_khach_hang}` : ""}</Badge>),
     },
-    { key: "mota", header: "Mô tả lỗi", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
-    { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} /> },
+    { key: "case", header: "Case", filter: { type: "text", key: "f_case", placeholder: "Mã case…" }, sortKey: "case", render: (r) => <span className="font-mono text-xs">{r.case_id || "—"}</span> },
+    { key: "lk", header: "Linh kiện", filter: { type: "multi", def: LK_C_DEF }, sortKey: "lk", className: "max-w-[240px] truncate", render: (r) => nameOf(r.ma_lk) },
+    { key: "sl", header: "SL", filter: { type: "number", key: "sl" }, sortKey: "sl", render: (r) => r.sl_dat ?? "—" },
+    { key: "lech", header: "Đánh giá LK", filter: { type: "single", def: LECH_LK_DEF }, render: (r) => <LechLkBadges r={r} /> },
+    {
+      key: "huong",
+      header: "Hướng xử lý",
+      filter: { type: "multi", def: HUONG_DEF },
+      sortKey: "huong",
+      render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—"),
+    },
+    { key: "nv", header: "NV sửa", filter: { type: "multi", def: NV_DEF }, sortKey: "nv", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") },
+    { key: "mota", header: "Mô tả lỗi", filter: { type: "text", key: "f_mota", placeholder: "Từ trong mô tả…" }, sortKey: "mota", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
+    { key: "tao", header: "Tạo lúc", filter: { type: "date", key: "khoang" }, sortKey: "tao", render: (r) => <span className="text-xs">{fmtDate(r.created_at)}</span> },
   ];
+
+  // 14/11/2026 ("thêm nút tải"): tai Excel TOAN BO danh sach dang loc / sap xep (moi lan 1000 dong, toi da 20.000).
+  const taiExcel = async () => {
+    if (dl) return;
+    try {
+      const all: TraCuuRow[] = [];
+      const sep = listPath.includes("?") ? "&" : "?";
+      for (let off = 0; off < 20000; off += 1000) {
+        setDl(`Đang tải ${all.length}/${total}…`);
+        const r = await api.get<{ don_vi: TraCuuRow[]; total: number }>(`${listPath}${sep}limit=1000&offset=${off}`);
+        all.push(...r.don_vi);
+        if (r.don_vi.length < 1000 || all.length >= r.total) break;
+      }
+      const head = [
+        "ID", "Loại", "Giai đoạn", "Bước chi tiết", "Thùng", "Phiếu trả", "Miền", "KTV / Nguồn", "Khách lẻ", "Case", "Serial",
+        "LK KTV chọn (A)", "LK gửi về (B)", "LK đổi mới (C)", "SL đặt", "SL duyệt", "Hướng xử lý", "NV sửa", "Mô tả lỗi", "Tạo lúc", "Cập nhật", "Giờ chờ (SLA)",
+      ];
+      const body = all.map((r) => [
+        r.id,
+        r.loai === "unit" ? "Đơn vị" : "Đơn cha (chưa tách)",
+        NHOM_CUA_GD[r.giai_doan]?.label || "",
+        GIAI_DOAN_MAP[r.giai_doan]?.label || r.giai_doan,
+        r.phieu_gui_id || "",
+        r.phieu_tra_id || "",
+        r.mien === "MB" ? "Miền Bắc" : r.mien === "MN" ? "Miền Nam" : "Chưa khai báo",
+        r.ktv && r.ktv !== KHACH_LE_KEY ? displayName(r.ktv) : "Khách lẻ",
+        r.ten_khach_hang || "",
+        r.case_id || "",
+        r.serial || "",
+        r.lk_a ? nameOf(r.lk_a) : "",
+        r.lk_b ? nameOf(r.lk_b) : "",
+        r.ma_lk ? nameOf(r.ma_lk) : "",
+        r.sl_dat != null ? String(r.sl_dat) : "",
+        r.sl_duyet != null ? String(r.sl_duyet) : "",
+        r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "",
+        r.nguoi_sua_chua ? displayName(r.nguoi_sua_chua) : "",
+        r.mo_ta_loi || "",
+        fmtDate(r.created_at),
+        fmtDate(r.updated_at),
+        String(Math.round(hoursSince(r.updated_at))),
+      ]);
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      downloadBlob(
+        buildXlsx([{ name: "Don bao hanh", rows: [head, ...body], widths: [16, 12, 16, 28, 12, 12, 12, 30, 20, 16, 16, 30, 30, 30, 8, 8, 16, 24, 40, 16, 16, 10] }]),
+        `don-bao-hanh_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.xlsx`,
+      );
+      toast(`Đã tải ${all.length} dòng.`, "ok");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Không tải được danh sách.", "error");
+    } finally {
+      setDl(null);
+    }
+  };
 
   const openRow = (r: TraCuuRow) => (r.loai === "unit" ? setDetailId(r.id) : r.phieu_gui_id ? setGuiId(r.phieu_gui_id) : undefined);
   const gRows: GroupRow[] = grouped
-    ? rows.map((r) => {
-        const g = GIAI_DOAN_MAP[r.giai_doan];
-        return {
-          id: r.id,
-          parentId: r.parent_id,
-          ktv: r.ktv,
-          lk: r.lk_b || r.ma_lk,
-          caseId: r.case_id,
-          slDat: r.sl_dat,
-          slDuyet: r.sl_duyet,
-          laDonVi: r.loai === "unit",
-          serial: r.serial,
-          ngayMua: r.ngay_mua,
-          ngaySx: r.ngay_sx,
-          moTa: r.mo_ta_loi,
-          status: <Badge tone={g?.tone || "gray"}>{g ? `${g.icon} ${g.label}` : r.giai_doan}</Badge>,
-          sla: <SlaBadge since={r.updated_at} />,
-          badge: r.loai === "parent" && r.so_luong > 1 ? <span className="text-xs text-[var(--ink-soft)]">×{r.so_luong}</span> : undefined,
-          onClick: () => openRow(r),
-        };
-      })
+    ? rows.map((r) => ({
+        id: r.id,
+        parentId: r.parent_id,
+        ktv: r.ktv,
+        lk: r.lk_b || r.ma_lk,
+        caseId: r.case_id,
+        slDat: r.sl_dat,
+        slDuyet: r.sl_duyet,
+        laDonVi: r.loai === "unit",
+        serial: r.serial,
+        ngayMua: r.ngay_mua,
+        ngaySx: r.ngay_sx,
+        moTa: r.mo_ta_loi,
+        status: <NhomGdBadge gd={r.giai_doan} />,
+        sla: <SlaBadge since={r.updated_at} />,
+        badge: r.loai === "parent" && r.so_luong > 1 ? <span className="text-xs text-[var(--ink-soft)]">×{r.so_luong}</span> : undefined,
+        onClick: () => openRow(r),
+      }))
     : [];
 
-  if (loading && rows.length === 0 && !flt.active && !stFilter) return <Spinner />;
+  if (loading && rows.length === 0 && !flt.active && !stFilter && !flt.sort) return <Spinner />;
 
   return (
     <Card className="p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔍 Tra cứu mọi đơn — mọi giai đoạn ({total})</h3>
-        <DonViewToggle value={mode} onChange={setMode} />
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔍 Tra cứu mọi đơn — mọi giai đoạn</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <Btn size="sm" onClick={taiExcel} disabled={!!dl || total === 0} title="Tải toàn bộ danh sách đang lọc / sắp xếp ra file Excel">
+            {dl || "⬇ Tải Excel"}
+          </Btn>
+          <DonViewToggle value={mode} onChange={setMode} />
+        </div>
       </div>
-      <FilterBar
-        f={flt}
-        defs={DEFS}
+      <ExcelToolbar
+        flt={flt}
+        cols={cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey }))}
         placeholder="Mã đơn, thùng, phiếu trả, case, KTV, khách, serial, linh kiện…"
+        total={total}
+        totalAll={totalAll}
+        unit="đơn"
         extra={
           stFilter && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1">
-            Lọc: {stLabel}
-            <button onClick={() => nav("/don?tab=tat_ca")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
-              ✕
-            </button>
-          </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1 whitespace-nowrap">
+              Lọc: {stLabel}
+              <button onClick={() => nav("/don?tab=tat_ca")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
+                ✕
+              </button>
+            </span>
           )
         }
       />
       <details className="mb-2 text-xs text-[var(--ink-soft)]">
-        <summary className="cursor-pointer select-none font-semibold text-[var(--link)]">ℹ Đánh giá linh kiện A / B / C là gì?</summary>
+        <summary className="cursor-pointer select-none font-semibold text-[var(--link)]">ℹ Giai đoạn và đánh giá linh kiện A / B / C là gì?</summary>
         <div className="mt-1.5 space-y-1 rounded-lg bg-[var(--surface-2)] p-2 leading-relaxed">
+          <p>
+            <b>Giai đoạn</b> theo luồng: {NHOM_GD.map((n) => `${n.icon} ${n.label}`).join(" → ")}. Dòng nhỏ dưới nhãn là bước chi tiết hiện tại.
+          </p>
           <p><b>A</b> = linh kiện KTV chọn khi gửi. <b>B</b> = linh kiện Admin xác nhận thực tế gửi về (để trống = giống A). <b>C</b> = linh kiện đổi mới / thay thế (để trống = giống B).</p>
-          <p><Badge tone="orange">A≠B</Badge> KTV khai sai mã linh kiện. Nên rà lại với KTV (có thể ghi "KTV báo cáo sai"). Xác linh kiện (trả đối tác / tiêu huỷ) tính theo <b>B</b>.</p>
-          <p><Badge tone="violet">B≠C</Badge> Trả cho KTV linh kiện khác với linh kiện gửi về: mã tương đương, nâng cấp, hoặc mã cũ hết hàng. Phiếu trả xuất theo <b>C</b>, nên đối trừ / kho phải theo C.</p>
-          <p>Đơn chưa tách (chưa xác nhận số lượng) chưa có B, C nên chưa đánh giá.</p>
+          <p><Badge tone="orange">A≠B</Badge> KTV khai sai mã linh kiện. Xác linh kiện (trả đối tác / tiêu huỷ) tính theo <b>B</b>.</p>
+          <p><Badge tone="violet">B≠C</Badge> Trả cho KTV linh kiện khác với linh kiện gửi về. Phiếu trả xuất theo <b>C</b>.</p>
         </div>
       </details>
       {grouped ? (
@@ -218,7 +303,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         </>
       ) : (
         <>
-          <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={openRow} emptyText="Không tìm thấy đơn nào." />
+          <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={openRow} emptyText="Không tìm thấy đơn nào." flt={flt} />
           <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
         </>
       )}

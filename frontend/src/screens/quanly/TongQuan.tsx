@@ -3,7 +3,7 @@ import { CanhBaoTonDon } from "../shared/CanhBaoTonDon";
 import { api } from "../../lib/api";
 import { useRoute } from "../../router/Router";
 import { Card, Spinner, StatCard } from "../../ui/primitives";
-import { GIAI_DOAN } from "../../lib/constants";
+import { NHOM_GD } from "../../lib/constants";
 
 // "Tong quan he thong" (Giam sat/View) - THUAN CHI XEM. So lieu theo dung pham vi da scope o backend
 // (Giam sat qua email_gs, View qua Khu vuc).
@@ -30,7 +30,7 @@ export function QuanLyTongQuanScreen({ hideCanhBao }: { hideCanhBao?: boolean } 
   if (loading) return <Spinner />;
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const goto = (st: string) => nav(`/don?tab=tat_ca&trang_thai=${st}`);
+  const goto = (st: string) => nav(`/don?tab=tat_ca&trang_thai=${encodeURIComponent(st)}`);
 
   return (
     <div className="space-y-3">
@@ -55,12 +55,15 @@ export function QuanLyTongQuanScreen({ hideCanhBao }: { hideCanhBao?: boolean } 
       <Card className="p-3">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">📊 Tổng quan hệ thống — {total} đơn theo giai đoạn (cả thùng chưa về)</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-2.5">
-          {GIAI_DOAN.map((g) => (
-            // Dien thoai: an giai doan = 0 (mo ta 18 the cao ~1.800px).
-            <div key={g.key} className={(counts[g.key] || 0) === 0 ? "hidden md:block" : ""}>
-              <StatCard label={g.label} value={counts[g.key] || 0} tone={g.tone} icon={g.icon} onClick={() => goto(g.key)} />
-            </div>
-          ))}
+          {/* 14/11/2026: gom 21 giai doan chi tiet thanh 9 nhom theo luong (NHOM_GD). */}
+          {NHOM_GD.map((n) => {
+            const v = n.gds.reduce((a, g) => a + (counts[g] || 0), 0);
+            return (
+              <div key={n.key} className={v === 0 ? "hidden md:block" : ""}>
+                <StatCard label={n.label} value={v} tone={n.tone} icon={n.icon} onClick={() => goto(n.gds.join(","))} />
+              </div>
+            );
+          })}
         </div>
       </Card>
     </div>

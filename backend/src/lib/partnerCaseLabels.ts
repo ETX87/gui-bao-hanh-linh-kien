@@ -65,6 +65,7 @@ export const GIAI_DOAN_VI: Record<string, string> = {
   tra_ktv_da_nhan: "Hoàn tất (KTV đã nhận)",
   tra_gui_that_bai: "Gửi thất bại (thất lạc)",
   tra_ket_thuc_khong_gui: "Kết thúc, không gửi",
-  ket_thuc_tu_choi: "Đã huỷ",
+  ket_thuc_tu_choi: "Từ chối / huỷ bảo hành",
+  thung_da_huy: "Thùng bị huỷ",
   ket_thuc_chuyen_kho: "Đã chuyển kho",
 };

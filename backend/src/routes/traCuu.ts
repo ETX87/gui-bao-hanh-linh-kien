@@ -54,7 +54,25 @@ function locTruocDonVi(gd: readonly string[] | undefined): string {
 
 // Giai doan nhanh don cha co the nhan (CASE o allRowsSql). Loc giai doan khong chua gia tri nao trong nay -> nhanh don cha
 // (~1.3k don cho xac nhan SL) khong dong nao khop, bo luon (giu scopeWhere de khong lech bind).
-const GD_DON_CHA = ["thung_nhap", "thung_dang_gui", "ket_thuc_tu_choi", "thung_tu_choi", "thung_cho_admin_nhan", "cho_xac_nhan_so_luong"];
+const GD_DON_CHA = ["thung_nhap", "thung_dang_gui", "thung_da_huy", "thung_tu_choi", "thung_cho_admin_nhan", "cho_xac_nhan_so_luong"];
+
+// 14/11/2026 ("giai đoạn của đơn bh đang bị chia nhỏ quá ... gom các giai đoạn lại cho: Đơn nháp, đơn chờ tiếp nhận,
+// đơn đã tiếp nhận, đơn đang sửa chữa, đơn chờ gửi trả, đơn đang gửi trả, đơn đã kết thúc, đơn đã hủy, đơn bị từ chối"):
+// 9 nhom theo luong (frontend NHOM_GD trong lib/constants.ts phai khop). Loc ?nhom=a,b -> IN cac giai doan cua nhom.
+export const NHOM_GD: Record<string, string[]> = {
+  nhap: ["thung_nhap"],
+  cho_tiep_nhan: ["thung_dang_gui", "thung_cho_admin_nhan"],
+  da_tiep_nhan: ["cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt"],
+  dang_sua: ["cho_chan_doan", "cho_admin_xac_nhan"],
+  cho_gui_tra: ["san_sang_gom_phieu_tra", "tra_nhap", "tra_cho_ke_toan_duyet", "tra_da_duyet_ke_toan"],
+  dang_gui_tra: ["tra_da_gui", "tra_khieu_nai_van_chuyen"],
+  ket_thuc: ["tra_ktv_da_nhan", "tra_ket_thuc_khong_gui", "tra_gui_that_bai", "ket_thuc_chuyen_kho"],
+  da_huy: ["thung_da_huy"],
+  tu_choi: ["thung_tu_choi", "ket_thuc_tu_choi"],
+};
+function gdCuaNhom(v: string): string[] {
+  return v.split(",").map((x) => x.trim()).flatMap((k) => NHOM_GD[k] || []);
+}
 function boNhanhCha(gd: readonly string[] | undefined): boolean {
   return !!locTruocDonVi(gd) && !gd!.some((x) => GD_DON_CHA.includes(x));
 }
@@ -69,7 +87,7 @@ export function allRowsSql(scopeWhere: string, gd?: readonly string[]): string {
     WHERE ${scopeWhere}${locTruocDonVi(gd)}`;
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
-           WHEN p.trang_thai_cha = 'huy_thung' THEN 'ket_thuc_tu_choi' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
+           WHEN p.trang_thai_cha = 'huy_thung' THEN 'thung_da_huy' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'parent' AS loai, p.so_luong_khai AS so_luong, p.so_luong_khai AS sl_dat, NULL AS sl_duyet
     FROM phieu_sua_chua_bh p LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
@@ -92,8 +110,18 @@ traCuu.get("/don-vi", async (c) => {
     where += ` AND x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`;
     binds.push(...DANG_CHO, slaCutoffVn(24));
   } else if (st) {
-    where += " AND x.giai_doan = ?";
-    binds.push(st);
+    const ds = st.split(",").map((x) => x.trim()).filter(Boolean);
+    where += ` AND x.giai_doan IN (${ds.map(() => "?").join(",")})`;
+    binds.push(...ds);
+  }
+  // 14/11/2026: loc theo nhom giai doan (9 nhom theo luong).
+  const nhomGd = gdCuaNhom(c.req.query("nhom") || "");
+  if (c.req.query("nhom")) {
+    if (!nhomGd.length) where += " AND 0";
+    else {
+      where += ` AND x.giai_doan IN (${nhomGd.map(() => "?").join(",")})`;
+      binds.push(...nhomGd);
+    }
   }
   // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
   const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
@@ -127,7 +155,8 @@ traCuu.get("/don-vi", async (c) => {
   where += kw.sql;
   binds.push(...kw.binds);
   // Loc truoc theo giai doan khi dang loc giai doan (o dem Tong quan / o loc cot) - xem locTruocDonVi.
-  const gdLoc = st === "qua_han" ? DANG_CHO : st ? [st] : (c.req.query("giai_doan") || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const gdRieng = (c.req.query("giai_doan") || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const gdLoc = st === "qua_han" ? DANG_CHO : st ? st.split(",").map((x) => x.trim()).filter(Boolean) : nhomGd.length ? nhomGd : gdRieng;
   const from = `FROM ${allRowsSql(scopeWhere, gdLoc.length ? gdLoc : undefined)} WHERE ${where}`;
   const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
   const sp = sortParam(c, {
