@@ -7046,3 +7046,5 @@ Gửi thêm giữa lượt: *"2. table theo logic tạo filter dạng excel, th�
 **(c) Vấn đề:** heredoc dài trong Bash lại lỗi EOF → viết phần màn hình bằng file rồi ghép. Bấm theo toạ độ trên Browser pane trượt (khung bị co) → dùng tham chiếu phần tử. Lệnh xoá file script tạm `F:/tmp_mkqa.cjs` (ngoài repo) bị chặn bởi kiểm tra an toàn → file vẫn còn, người dùng tự xoá.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config tạm, D1 `.wrangler/qa3110`, đã xoá config): tổng 9 nhóm = 2+2+14+9+4+2+1+0+0 = 34 = tổng chung (mọi giai đoạn rơi vào đúng 1 nhóm); `nhom=dang_sua,cho_gui_tra` 13; nhóm lạ 0; `trang_thai` nhiều giá trị, `f_id`, `sl_tu`, sắp xếp KTV đều chạy. Giao diện 1440px: popover cột Giai đoạn hiện 9 nhóm, tích "Đang sửa chữa" → "9 / 34 đơn" + chip; "Tải Excel" sinh file xlsx 22KB đúng 1 dòng tiêu đề + 9 dòng đang lọc. Trang chủ hiện thẻ nhóm. Điện thoại 375px không tràn ngang. Chưa thử với dữ liệu production thật.
+
+**Deploy (14/11/2026):** `npm run deploy` (Version ID `16f50657`), không có migration mới. Bundle production mang 1.127.
