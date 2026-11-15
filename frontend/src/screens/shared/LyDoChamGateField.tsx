@@ -6,8 +6,8 @@ import { isOverdue } from "../../lib/format";
 // 31/08/2026 diem #4: chuyen banner/truong SLA len dau thay vi cuoi cung). Dung chung cho moi form co
 // cong SLA (tiep nhan/phan loai/xac nhan hoan tat/chan doan/yeu cau lam lai/FAST actions...).
 
-export function useSlaGate(since: string | null | undefined) {
-  return isOverdue(since);
+export function useSlaGate(since: string | null | undefined, gd?: string | null) {
+  return isOverdue(since, gd);
 }
 
 export function LyDoChamGateField({ overdue, value, onChange }: { overdue: boolean; value: string; onChange: (v: string) => void }) {
@@ -15,7 +15,7 @@ export function LyDoChamGateField({ overdue, value, onChange }: { overdue: boole
   if (!overdue) return null;
   return (
     <div className="rounded-lg border border-[var(--red-500)] bg-[var(--red-100)] p-3">
-      <p className="text-xs font-bold text-[var(--red-700)] mb-2">⚠ Đơn đã quá hạn SLA 24h — vui lòng chọn lý do chậm để tiếp tục.</p>
+      <p className="text-xs font-bold text-[var(--red-700)] mb-2">⚠ Bước này đã quá SLA — vui lòng chọn lý do chậm (giải trình) để tiếp tục.</p>
       <Field label="Lý do chậm" required>
         <Select value={value} onChange={(e) => onChange(e.target.value)}>
           <option value="">— Chọn lý do —</option>

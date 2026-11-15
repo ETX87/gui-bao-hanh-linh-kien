@@ -13,7 +13,7 @@ import type { DonVi } from "../../lib/types";
 
 export function XacNhanHoanTatModal({ unit, onClose, onDone }: { unit: DonVi; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
-  const overdue = useSlaGate(unit.updated_at);
+  const overdue = useSlaGate(unit.updated_at, "cho_admin_xac_nhan");
   const needsXuLyXac = unit.huong_xu_ly === "doi_moi";
 
   // 05/10/2026: neu da chon xu ly xac luc phan loai thi dien san (van doi duoc), khong bat chon lai.

@@ -279,6 +279,7 @@ export interface SettingItem {
   noi_dung: string;
   bat_tat: boolean;
   stt: number;
+  ben?: string | null;
 }
 
 // Preview 1 case tra ve tu GET /api/case-lookup?id=... (proxy sang he DVBH goc, CHI DOC) - khop DUNG

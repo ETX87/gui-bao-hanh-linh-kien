@@ -28,7 +28,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const { items: linhKien } = useLinhKien();
   const nvList = useNvList();
   const { items: lyDoTuChoiList } = useLyDoTuChoi();
-  const overdue = useSlaGate(unit.updated_at);
+  const overdue = useSlaGate(unit.updated_at, unit.trang_thai);
 
   const [loaiBaoHanh, setLoaiBaoHanh] = useState(unit.loai_bao_hanh || "trong_bh");
   const [mailPd, setMailPd] = useState(unit.thong_tin_mail_pd || "");

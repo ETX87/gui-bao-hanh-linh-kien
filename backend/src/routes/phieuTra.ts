@@ -9,7 +9,6 @@ import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
-import { isOverdue } from "../lib/sla";
 import { LBL, KHACH_LE_KEY, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { pushBoxToKhovan, pushBoxDoneToKhovan } from "../lib/khovanPushClient";

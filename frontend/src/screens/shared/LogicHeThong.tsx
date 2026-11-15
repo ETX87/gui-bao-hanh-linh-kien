@@ -17,13 +17,19 @@ const DOCS = [
     label: "🔩 Luồng cấp linh kiện",
     load: () => import("../../../../du an sua chua bao hanh/Luong-Cap-Linh-Kien-Bao-Hanh.html?raw"),
   },
+  {
+    key: "buoc",
+    label: "🧭 Quản trị theo bước",
+    load: () => import("../../../../du an sua chua bao hanh/Quan-Tri-Theo-Buoc_15-11-2026.html?raw"),
+  },
 ] as const;
 
 type DocKey = (typeof DOCS)[number]["key"];
 
 function readTab(): DocKey {
   const q = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
-  return q.get("tab") === "cap_lk" ? "cap_lk" : "tong";
+  const t = q.get("tab");
+  return t === "cap_lk" || t === "buoc" ? t : "tong";
 }
 
 export function LogicHeThongScreen() {

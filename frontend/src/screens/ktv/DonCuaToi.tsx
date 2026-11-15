@@ -25,9 +25,11 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
     const t = setTimeout(() => setQ(qInput.trim()), 400);
     return () => clearTimeout(t);
   }, [qInput]);
-  const path = `/phieu-gui/don-cua-toi?nhom=${nhom}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+  // 15/11/2026 (doi tac: "bộ lọc theo TỪNG BƯỚC ĐANG DỪNG"): loc theo buoc dang dung (goc nhin KTV).
+  const [buoc, setBuoc] = useState("");
+  const path = `/phieu-gui/don-cua-toi?nhom=${nhom}${q ? `&q=${encodeURIComponent(q)}` : ""}${nhom === "dang" && buoc ? `&buoc=${buoc}` : ""}`;
   const { items, total, page, pageCount, setPage, loading, reload, raw } = usePagedApi<KtvDon>(path, "don");
-  const r = raw as { so_dang?: number; so_xong?: number; so_huy?: number } | null;
+  const r = raw as { so_dang?: number; so_xong?: number; so_huy?: number; dem_buoc?: Record<string, number> | null } | null;
   const [boSung, setBoSung] = useState<DonVi | null>(null);
   const [guiId, setGuiId] = useState<string | null>(null);
   const [traId, setTraId] = useState<string | null>(null);
@@ -59,6 +61,32 @@ export function KtvDonCuaToiScreen({ user }: { user: AppUser }) {
           </button>
         ))}
       </div>
+      {nhom === "dang" && r?.dem_buoc && (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+          {(
+            [
+              ["", "Tất cả bước", r.so_dang],
+              ["bo_sung", "✍️ Cần bổ sung", r.dem_buoc.bo_sung],
+              ["chua_gui", "📝 Chưa gửi", r.dem_buoc.chua_gui],
+              ["tren_xe", "🚚 Trên xe về Kho", r.dem_buoc.tren_xe],
+              ["kho_nhan", "📥 Kho đã nhận", r.dem_buoc.kho_nhan],
+              ["dang_xu_ly", "🔧 Đang xử lý", r.dem_buoc.dang_xu_ly],
+              ["cho_tra", "📦 Chờ trả", r.dem_buoc.cho_tra],
+              ["dang_tra", "📤 Đang trả về", r.dem_buoc.dang_tra],
+            ] as const
+          )
+            .filter(([k, , n]) => !k || (n ?? 0) > 0 || buoc === k)
+            .map(([k, label, n]) => (
+              <button
+                key={k || "all"}
+                onClick={() => setBuoc(k)}
+                className={`focus-ring shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-inset ${buoc === k ? "bg-[var(--accent)] text-white ring-[var(--accent)]" : "bg-[var(--surface)] text-[var(--ink-body)] ring-[var(--line)]"}`}
+              >
+                {label} <span className="opacity-80">{n ?? 0}</span>
+              </button>
+            ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <div className="flex-1">
           <Input type="search" value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="🔍 Tìm khách, serial, case, linh kiện, mã đơn…" />

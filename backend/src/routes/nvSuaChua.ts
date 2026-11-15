@@ -5,7 +5,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
-import { isOverdue } from "../lib/sla";
+import { quaHanBuoc } from "../lib/buoc";
 import { LBL, KHACH_LE_KEY, KET_QUA_NV_VALUES, KET_QUA_NV_TO_CU, type KetQuaNv } from "../lib/constants";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
@@ -86,7 +86,7 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   const body = await c.req.json<ChanDoanBody>().catch(() => ({}) as ChanDoanBody);
   if (body.ban_giao) body.ket_qua_chan_doan = "da_sua_xong";
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
-  if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+  if ((await quaHanBuoc(c.env.DB, "cho_chan_doan", u.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi ghi ket qua.
   let anhTruoc: string[], anhSau: string[], anhLoi: string[];

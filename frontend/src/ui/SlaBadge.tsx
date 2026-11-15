@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 import { Btn, Field, Select } from "./primitives";
 import type { LogEntityType } from "../lib/types";
 import { useLyDoCham } from "../hooks/useSettings";
+import { slaGio } from "../lib/buoc";
 
 // Badge SLA - 3 muc (<=24h xanh la / 24-72h vang / >72h do dac+icon, port dung slaBadge() cua
 // prototype, da bo chu "Qua han" chi con so gio). Khi truyen du entityType+entityId (mo cho vai tro
@@ -13,10 +14,12 @@ import { useLyDoCham } from "../hooks/useSettings";
 // duoc de ghi ly do cham NGAY (doc lap, khong doi trang thai) - port dung
 // openQuickLyDoChamModal()/submitQuickLyDoCham().
 
-export function SlaBadge({ since, entityType, entityId, clickable }: { since: string | null | undefined; entityType?: LogEntityType; entityId?: string; clickable?: boolean }) {
+export function SlaBadge({ since, entityType, entityId, clickable, gd }: { since: string | null | undefined; entityType?: LogEntityType; entityId?: string; clickable?: boolean; gd?: string | null }) {
   const [open, setOpen] = useState(false);
-  const level = slaLevel(since);
-  const overdue = hoursSince(since) > 24;
+  // 15/11/2026: muc mau theo SLA RIENG cua buoc (gd) - khong truyen gd thi 24h nhu cu.
+  const level = slaLevel(since, gd);
+  const sla = slaGio(gd);
+  const overdue = hoursSince(since) > sla;
   const canClick = clickable && overdue && entityType && entityId;
 
   const cls =
@@ -28,7 +31,7 @@ export function SlaBadge({ since, entityType, entityId, clickable }: { since: st
 
   const badge = (
     <span
-      title={overdue ? "Đã quá hạn SLA 24h" : "Trong hạn SLA"}
+      title={overdue ? `Đã quá SLA bước (${sla}h)` : `Trong hạn SLA bước (${sla}h)`}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap ${cls} ${canClick ? "cursor-pointer hover:opacity-80" : ""}`}
       onClick={canClick ? (e) => { e.stopPropagation(); setOpen(true); } : undefined}
     >

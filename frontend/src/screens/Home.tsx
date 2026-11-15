@@ -1,3 +1,4 @@
+import { CanGiaiTrinh, ViecTheoBuoc } from "./shared/QuanTriBuoc";
 import { useState } from "react";
 import { useRoute } from "../router/Router";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -189,6 +190,10 @@ export function HomeScreen({ user }: { user: AppUser }) {
           </div>
         )}
       </section>
+
+      {/* 15/11/2026 (doi tac): quan tri theo buoc - viec can giai trinh + so don dang dung tung buoc. */}
+      <CanGiaiTrinh user={user} compact />
+      <ViecTheoBuoc user={user} />
 
       {/* 12/10/2026: canh bao don ton + thoi gian xu ly TB theo vai tro. */}
       <CanhBaoTonDon canTinhLai={user.la_admin_bh || user.la_qtri} />

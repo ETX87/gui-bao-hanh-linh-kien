@@ -74,7 +74,7 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   const toast = useToast();
   const nvList = useNvList();
   const bulk = units.length > 1;
-  const overdueCount = units.filter((u) => isOverdue(u.updated_at)).length;
+  const overdueCount = units.filter((u) => isOverdue(u.updated_at, u.trang_thai)).length;
   const overdue = overdueCount > 0;
   const needsNv = meta.huong && ["sua_chua", "dich_vu_tinh_phi"].includes(meta.huong);
   const needsMailPd = meta.loaiBH === "ngoai_bh";

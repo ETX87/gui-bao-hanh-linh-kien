@@ -9,7 +9,7 @@ import { UserName } from "../../hooks/useUserNames";
 
 export function TiepNhanModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
-  const overdue = useSlaGate(gui.updated_at);
+  const overdue = useSlaGate(gui.updated_at, "thung_dang_gui");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
 

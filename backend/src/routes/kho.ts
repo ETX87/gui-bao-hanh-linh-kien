@@ -4,7 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
-import { isOverdue } from "../lib/sla";
+import { quaHanBuoc } from "../lib/buoc";
 import { parsePage } from "../lib/pagination";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tkThungOf } from "../lib/search";
@@ -81,7 +81,7 @@ kho.post("/phieu-gui/:id/tiep-nhan", async (c) => {
   if (g.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
 
   const body = await c.req.json<ConfirmBody>().catch(() => ({}) as ConfirmBody);
-  if (isOverdue(g.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+  if ((await quaHanBuoc(c.env.DB, "thung_dang_gui", g.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   const now = nowVN();
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_tiep_nhan', nguoi_nhan_kho = ?, thoi_gian_nhan_kho = ?, updated_at = ? WHERE id = ?")
@@ -111,7 +111,7 @@ kho.post("/phieu-gui/:id/bao-su-co", async (c) => {
 
   const body = await c.req.json<SuCoBody>().catch(() => ({}) as SuCoBody);
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
-  if (isOverdue(g.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+  if ((await quaHanBuoc(c.env.DB, "thung_dang_gui", g.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   const now = nowVN();
   await c.env.DB.prepare(

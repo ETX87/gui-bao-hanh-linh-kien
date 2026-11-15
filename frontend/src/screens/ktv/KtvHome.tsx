@@ -1,3 +1,4 @@
+import { CanGiaiTrinh } from "../shared/QuanTriBuoc";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useRoute } from "../../router/Router";
@@ -61,6 +62,8 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="space-y-4">
+      {/* 15/11/2026: buoc KTV giu qua SLA -> KTV giai trinh. */}
+      <CanGiaiTrinh user={user} compact />
       <section>
         <h2 className="mb-2 flex items-baseline gap-2 text-lg font-bold text-[var(--ink)]">
           {tongViec > 0 ? "🔥 Việc cần làm" : "✨ Không có việc nào đang chờ bạn"}

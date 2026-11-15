@@ -8,7 +8,8 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { gsListOfKtv } from "../lib/gs";
-import { isOverdue, slaCutoffVn } from "../lib/sla";
+import { slaCutoffVn } from "../lib/sla";
+import { quaHanBuoc } from "../lib/buoc";
 import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
@@ -71,7 +72,7 @@ async function tiepNhanNoiBo(db: D1Database, id: string, lyDoCham: string | unde
   if (g.trang_thai !== "da_tiep_nhan" || g.admin_tiep_nhan) return { error: "WRONG_STATE" };
   // 13/11/2026: thung dang bi tu choi (cho Kho / KTV phan hoi) -> Admin phai "Rut lai tu choi" truoc.
   if (g.tu_choi_tt) return { error: "THUNG_DANG_TU_CHOI" };
-  if (isOverdue(g.thoi_gian_nhan_kho) && !lyDoCham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
+  if ((await quaHanBuoc(db, "thung_cho_admin_nhan", g.thoi_gian_nhan_kho)) && !lyDoCham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
   const now = nowVN();
   await db.prepare("UPDATE phieu_gui_bh SET admin_tiep_nhan = 1, admin_nguoi_nhan = ?, admin_thoi_gian_nhan = ?, updated_at = ? WHERE id = ?").bind(actor, now, now, id).run();
   await addLog(db, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", actor, "Admin bảo hành xác nhận tiếp nhận nội bộ từ Kho" + (lyDoCham ? " | Lý do chậm: " + lyDoCham : ""));
@@ -601,7 +602,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
   if (HUONG_CAN_NV.includes(body.huong_xu_ly) && !body.nguoi_sua_chua) return { error: "REQUIRE_NV" };
   if (body.huong_xu_ly === "tu_choi" && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
   if (body.huong_xu_ly === "doi_moi" && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return { error: "REQUIRE_XU_LY_XAC" };
-  if (isOverdue(unit.updated_at) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
+  if ((await quaHanBuoc(db, unit.trang_thai, unit.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
 
   let trangThaiMoi = unit.trang_thai;
   if (HUONG_CAN_NV.includes(body.huong_xu_ly)) trangThaiMoi = "cho_chan_doan";
@@ -801,7 +802,7 @@ async function xacNhanHoanTat(db: D1Database, id: string, body: { ly_do_cham?: s
   // (05/10/2026) thi khong hoi lai; gui gia tri moi hop le thi ghi de (chi ap cho don doi_moi).
   if (body.xu_ly_xac && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac)) return { error: "REQUIRE_XU_LY_XAC" };
   if (u.huong_xu_ly === "doi_moi" && !u.xu_ly_xac && !body.xu_ly_xac) return { error: "REQUIRE_XU_LY_XAC" };
-  if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
+  if ((await quaHanBuoc(db, "cho_admin_xac_nhan", u.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
   // Hang loat (giuXacCu): chi dien xu ly xac cho don Doi moi CHUA co, khong ghi de lua chon da chot.
   const xlx = u.huong_xu_ly === "doi_moi" && !(giuXacCu && u.xu_ly_xac) ? body.xu_ly_xac || null : null;
   const now = nowVN();
@@ -989,7 +990,7 @@ adminBH.post("/don-vi/:id/yeu-cau-lam-lai", async (c) => {
   if (u.trang_thai !== "cho_admin_xac_nhan") return c.json({ error: "WRONG_STATE" }, 400);
   const body = await c.req.json<{ ly_do?: string; ly_do_cham?: string }>().catch(() => ({}) as { ly_do?: string; ly_do_cham?: string });
   if (!body.ly_do?.trim()) return c.json({ error: "MISSING_LY_DO" }, 400);
-  if (isOverdue(u.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+  if ((await quaHanBuoc(c.env.DB, "cho_admin_xac_nhan", u.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET trang_thai = 'cho_chan_doan', so_lan_yeu_cau_lam_lai = ?, ly_do_yeu_cau_lam_lai = ?, updated_at = ? WHERE id = ?")
     .bind((u.so_lan_yeu_cau_lam_lai || 0) + 1, body.ly_do.trim(), nowVN(), id)
@@ -1219,7 +1220,7 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
   if (needsNv && !body.nv) return { error: "REQUIRE_NV" };
   if (needsMailPd && !body.mail_pd?.trim()) return { error: "REQUIRE_MAIL_PD" };
   if (needsLyDoTuChoi && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
-  if (isOverdue(unit.updated_at) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
+  if ((await quaHanBuoc(db, unit.trang_thai, unit.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
 
   const loaiDoiTru = meta.loaiDoiTru || (await defaultLoaiDoiTru(db, unit.parent_id));
   const result = await applyPhanLoaiToUnit(

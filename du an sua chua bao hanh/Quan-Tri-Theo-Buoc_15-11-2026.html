@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quản trị theo bước — Bảo hành đổi trả 3T</title>
+<style>
+:root{--brand:#15803f;--brand-d:#116a34;--brand-50:#ecf8f0;--brand-100:#d3efdc;--ink:#14261b;--body:#334a3c;--soft:#5f7568;--line:#d7e3db;--bg:#f4f8f5;
+--blue:#2563eb;--blue-50:#eaf1fe;--amber:#b7791f;--amber-50:#fdf6e3;--violet:#7c3aed;--violet-50:#f2ecfe;--orange:#ea580c;--orange-50:#fff1e8;--red:#dc2626;--red-50:#fdecec;--slate:#64748b;--slate-50:#f1f5f9;--teal:#0d9488;--teal-50:#e6f7f5}
+*{box-sizing:border-box}body{margin:0;font-family:"Plus Jakarta Sans","Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--body);line-height:1.6;font-size:15px}
+header.hero{background:linear-gradient(135deg,#0f5a2d,#15803f 55%,#2a9d5a);color:#fff;padding:40px 24px 32px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}.hero h1{margin:0 0 8px;font-size:30px;line-height:1.25}.hero p{margin:0 0 6px;opacity:.93;max-width:880px}.hero .meta{margin-top:12px;font-size:13px;opacity:.8}
+nav.toc{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}nav.toc .wrap{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px}
+nav.toc a{font-size:13px;text-decoration:none;color:var(--brand-d);background:var(--brand-50);padding:5px 11px;border-radius:999px;font-weight:600}
+section{padding:28px 0 4px}h2{color:var(--ink);font-size:22px;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+h2 .n{background:var(--brand);color:#fff;font-size:14px;width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center}
+h3{color:var(--ink);font-size:17px;margin:18px 0 8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(20,38,27,.04),0 6px 18px rgba(20,38,27,.05);margin-bottom:16px;overflow-x:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.t-gray{background:var(--slate-50);color:var(--slate)}.t-blue{background:var(--blue-50);color:var(--blue)}.t-amber{background:var(--amber-50);color:var(--amber)}.t-violet{background:var(--violet-50);color:var(--violet)}.t-orange{background:var(--orange-50);color:var(--orange)}.t-green{background:var(--brand-50);color:var(--brand-d)}.t-red{background:var(--red-50);color:var(--red)}.t-teal{background:var(--teal-50);color:var(--teal)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--brand-50);color:var(--brand-d);font-weight:700;font-size:13px}
+td ul{margin:0;padding-left:16px}td li{margin:1px 0}.muted{color:var(--soft)}
+.card ul{margin:6px 0;padding-left:20px}.card li{margin:4px 0}
+.note{border-left:4px solid var(--amber);background:var(--amber-50);padding:10px 14px;border-radius:8px;font-size:14px;margin:10px 0}.note.green{border-color:var(--brand);background:var(--brand-50)}
+.pipe{display:flex;flex-wrap:wrap;gap:8px}.pipe .st{flex:1 1 150px;background:#fff;border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:9px 11px;font-size:13px}
+.pipe .st .so{font-weight:800;color:var(--c)}.pipe .st b{display:block;color:var(--ink);font-size:13.5px;line-height:1.35}.pipe .st i{display:block;font-style:normal;font-size:11.5px;color:var(--soft);margin-top:2px}
+.par{display:flex;flex-direction:column;gap:6px;flex:1 1 170px}.par .st{flex:1}
+.bar{display:flex;gap:6px;min-width:900px}.bx{flex:1;border:1px solid var(--line);border-radius:10px;padding:6px 4px;text-align:center;font-size:11.5px;background:#fff}
+.bx .dot{display:flex;margin:0 auto 2px;width:20px;height:20px;border-radius:99px;align-items:center;justify-content:center;font-weight:800;font-size:11px;background:#eef2ef;color:#8a9a90}
+.bx b{display:block;font-size:11.5px;color:#8a9a90;font-weight:600}.bx i{display:block;font-style:normal;font-size:10.5px;color:#8a9a90}.bx i.r{color:var(--red);font-weight:800}
+.bx.done{background:var(--brand-50);border-color:#b9e3c7}.bx.done .dot{background:var(--brand);color:#fff}.bx.done b{color:var(--body)}
+.bx.cur{background:var(--blue-50);border-color:var(--blue);box-shadow:0 0 0 3px #dbe6fd}.bx.cur .dot{background:#1d4ed8;color:#fff}.bx.cur b{color:var(--ink);font-weight:800}.bx.cur i{color:var(--blue)}
+.bx.late{background:var(--red-50);border-color:var(--red);box-shadow:0 0 0 3px #fbd5d5}.bx.late .dot{background:var(--red);color:#fff}.bx.late b{color:var(--ink);font-weight:800}.bx.late i{color:var(--red)}
+.bx.skip b{text-decoration:line-through}
+.mock{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px 14px;font-size:13px;margin-bottom:16px}.mock .hd{font-weight:800;color:var(--ink);margin-bottom:6px}
+.row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}.row .so{width:30px;text-align:center;font-weight:800;color:var(--soft)}.row .t{flex:1;min-width:0}.row .t small{display:block;color:var(--soft)}
+.cnt{min-width:28px;text-align:center;border-radius:99px;background:var(--brand);color:#fff;font-weight:800;font-size:12px;line-height:22px;padding:0 7px}
+.timeline{display:grid;grid-template-columns:130px 1fr;gap:8px 14px;font-size:14px}.timeline .t{font-weight:800;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:600;background:#fff}.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
+@media print{nav.toc{position:static}.card{box-shadow:none;break-inside:avoid}}
+</style></head><body>
+<header class="hero"><div class="wrap">
+<h1>Quản trị theo bước — Bảo hành đổi trả 3T</h1>
+<p>Bản mô tả cách thay đổi quản trị theo nguyên tắc đối tác đưa ra: <b>định nghĩa rõ từng bước</b>, <b>bước nào tự động pass trong trường hợp nào</b>, <b>ở từng bước có những lỗi nào</b>, <b>khi nào KTV phải giải trình, khi nào TNGS phải giải trình</b>, và <b>bộ lọc theo từng bước đang dừng</b>.</p>
+<p>Nội dung mô tả đúng những gì đã chạy trên app thật (phiên bản v1.128) — bảng định nghĩa bước được sinh trực tiếp từ danh mục bước trong mã nguồn.</p>
+<p class="meta">Cập nhật 15/11/2026 · suachua.dichvu3t.workers.dev · 11 bước chính + nhánh 3B, 5B, 6B, 11B · 14 trạng thái dừng có SLA</p>
+</div></header>
+<nav class="toc"><div class="wrap">
+<a href="#s1">1. Thay đổi gì</a><a href="#s2">2. Luồng bước</a><a href="#s3">3. Định nghĩa từng bước</a><a href="#s4">4. Giải trình</a><a href="#s5">5. Đồng hồ &amp; SLA</a><a href="#s6">6. Bộ lọc bước đang dừng</a><a href="#s7">7. Màn hình</a><a href="#s8">8. Cấu hình</a><a href="#s9">9. Ghi chú</a>
+</div></nav>
+<main class="wrap">
+
+<section id="s1"><h2><span class="n">1</span>Thay đổi cách quản trị</h2>
+<div class="card"><table>
+<tr><th style="width:18%">Nội dung</th><th style="width:30%">Trước đây</th><th>Từ v1.128</th></tr>
+<tr><td><b>Đơn vị quản trị</b></td><td>21 "giai đoạn" kỹ thuật, gom thành 9 nhóm để xem.</td><td><b>11 bước đánh số</b> (1 → 11, nhánh song song 3B, 5B, 6B, 11B). Mỗi bước có <b>chủ bước</b>, <b>SLA riêng</b>, việc phải làm để qua bước, các trường hợp tự pass, các lỗi thường gặp.</td></tr>
+<tr><td><b>SLA</b></td><td>Một mốc 24 giờ cho mọi việc.</td><td>SLA riêng từng bước (VD Kho nhận thùng 48h vì có thời gian vận chuyển, NV sửa chữa 48h, KTV nhận hàng trả 72h). Admin hệ thống chỉnh được. Vẫn không tính Chủ nhật.</td></tr>
+<tr><td><b>Ai giải trình</b></td><td>Ai bấm thao tác khi đơn đã quá hạn thì người đó chọn lý do — kể cả khi chậm do KTV.</td><td>Giải trình theo <b>trách nhiệm</b>: bước KTV giữ → KTV giải trình; KTV quá thêm 24 giờ vẫn chưa giải trình → <b>TNGS</b> giải trình; bước BO giữ → người giữ bước giải trình. Mỗi lý do chậm gắn sẵn <b>bên chịu lỗi</b>.</td></tr>
+<tr><td><b>Theo dõi</b></td><td>Đếm theo hàng đợi của từng vai trò.</td><td>"Việc theo bước đang dừng" (mỗi bước: số đơn, số quá SLA, số chưa giải trình), danh sách "Cần giải trình" riêng cho từng người, <b>bộ lọc bước đang dừng</b> ở mọi danh sách có bước.</td></tr>
+<tr><td><b>Chi tiết đơn</b></td><td>Thanh tiến trình 8 mốc.</td><td>Thanh 11 bước dạng ô: bước đã qua (✓ + giờ), bước đang dừng tô nổi (xanh khi trong SLA, đỏ khi quá) có <b>đồng hồ "đã dừng / SLA / quá bao lâu"</b>, bước chưa tới xám, bước tự pass gạch ngang "bỏ qua". Kèm "Đang chờ: ai — việc gì", nút <b>📝 Giải trình</b> và lịch sử giải trình.</td></tr>
+</table></div></section>
+
+<section id="s2"><h2><span class="n">2</span>Luồng bước</h2>
+<div class="card">
+<div class="pipe"><div class="st" style="--c:var(--blue)"><span class="so">1</span><b>KTV đóng thùng &amp; gửi xe</b><i>KTV · SLA 24h</i></div><div class="st" style="--c:var(--amber)"><span class="so">2</span><b>Vận chuyển về Kho — Kho tiếp nhận</b><i>Kho · SLA 48h</i></div><div class="par"><div class="st" style="--c:var(--brand)"><span class="so">3</span><b>Admin BH tiếp nhận nội bộ</b><i>Admin BH · SLA 24h</i></div><div class="st" style="--c:var(--amber)"><span class="so">3B</span><b>Thùng bị từ chối — chờ Kho / KTV phản hồi</b><i>Kho · SLA 24h</i></div></div><div class="st" style="--c:var(--brand)"><span class="so">4</span><b>Xác nhận số lượng thực nhận</b><i>Admin BH · SLA 24h</i></div><div class="par"><div class="st" style="--c:var(--brand)"><span class="so">5</span><b>Phân loại &amp; chọn hướng xử lý</b><i>Admin BH · SLA 24h</i></div><div class="st" style="--c:var(--blue)"><span class="so">5B</span><b>KTV bổ sung thông tin</b><i>KTV · SLA 24h</i></div></div><div class="st" style="--c:var(--violet)"><span class="so">6</span><b>NV sửa chữa (6B: xin cấp linh kiện song song)</b><i>NV sửa chữa · SLA 48h</i></div><div class="st" style="--c:var(--brand)"><span class="so">7</span><b>Admin BH xác nhận hoàn tất</b><i>Admin BH · SLA 24h</i></div><div class="st" style="--c:var(--brand)"><span class="so">8</span><b>Lập phiếu trả</b><i>Admin BH · SLA 24h</i></div><div class="st" style="--c:var(--orange)"><span class="so">9</span><b>Kế toán duyệt phiếu trả</b><i>Kế toán · SLA 24h</i></div><div class="st" style="--c:var(--amber)"><span class="so">10</span><b>Kho in phiếu, đóng gói &amp; gửi trả</b><i>Kho · SLA 24h</i></div><div class="par"><div class="st" style="--c:var(--blue)"><span class="so">11</span><b>KTV nhận hàng trả</b><i>KTV · SLA 72h</i></div><div class="st" style="--c:var(--amber)"><span class="so">11B</span><b>Kho đánh giá khiếu nại không nhận được</b><i>Kho · SLA 24h</i></div></div></div>
+<p class="muted" style="font-size:13px;margin:12px 0 0">Màu viền trên = chủ bước: <span class="tag t-blue">KTV</span> <span class="tag t-amber">Kho</span> <span class="tag t-green">Admin BH</span> <span class="tag t-violet">NV sửa chữa</span> <span class="tag t-orange">Kế toán</span>. Ô xếp chồng là nhánh: 3B thùng bị từ chối, 5B KTV bổ sung khi Admin yêu cầu, 6B xin cấp linh kiện chạy song song với sửa chữa (Admin cấp → Kế toán xác nhận → Kho in / xuất), 11B KTV báo không nhận được. Kết thúc: Hoàn tất · Kết thúc không gửi (trừ công nợ) · Gửi thất bại (thất lạc) · Từ chối / huỷ bảo hành · Chuyển kho · Thùng bị huỷ.</p>
+</div></section>
+
+<section id="s3"><h2><span class="n">3</span>Định nghĩa từng bước</h2>
+<div class="card"><table>
+<tr><th>Bước</th><th style="width:15%">Tên</th><th>Chủ bước</th><th>SLA</th><th style="width:16%">Việc để qua bước</th><th style="width:21%">Tự động pass khi</th><th style="width:19%">Lỗi thường gặp</th><th style="width:14%">Quá SLA thì ai giải trình</th></tr>
+<tr><td><b>1</b></td><td><b>KTV đóng thùng &amp; gửi xe</b></td><td><span class="tag t-blue">KTV</span></td><td>24h</td><td>Thêm đủ đơn vào thùng, điền vận chuyển, bấm Xác nhận gửi</td><td><ul><li>Admin BH tạo hộ thùng → bỏ qua bước 2, 3, 4 khi bấm gửi</li><li>Kho / Admin BH nhận thẳng thùng nháp (KTV giao tận tay)</li></ul></td><td><ul><li>Thùng có đơn nhưng để nháp quá SLA</li><li>Mã case không thuộc KTV (bị chặn khi thêm đơn)</li><li>Thiếu thông tin vận chuyển</li></ul></td><td><span class="tag t-blue">KTV</span><br><span class="muted" style="font-size:12px">quá thêm 24h chưa giải trình →</span> <span class="tag t-violet">TNGS</span></td></tr>
+<tr><td><b>2</b></td><td><b>Vận chuyển về Kho — Kho tiếp nhận</b></td><td><span class="tag t-amber">Kho</span></td><td>48h</td><td>Kho quét / bấm Xác nhận tiếp nhận thùng</td><td><ul><li>Admin BH nhận hộ Kho (hàng giao thẳng Admin)</li><li>Thùng Admin BH tạo hộ</li></ul></td><td><ul><li>Hàng chưa về (nhà xe / bưu điện chậm)</li><li>Hàng về nhưng Kho chưa bấm nhận</li><li>Thùng hư hỏng, thiếu hàng (Kho báo sự cố, không chặn)</li></ul></td><td><span class="tag t-amber">Kho</span></td></tr>
+<tr><td><b>3</b></td><td><b>Admin BH tiếp nhận nội bộ</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH bấm Xác nhận đã nhận (hoặc Từ chối thùng)</td><td><ul><li>Admin BH nhận hộ Kho / tạo hộ thùng</li></ul></td><td><ul><li>Kho chưa bàn giao vật lý cho Admin</li><li>Thùng sai, cần từ chối</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>3B</b></td><td><b>Thùng bị từ chối — chờ Kho / KTV phản hồi</b></td><td><span class="tag t-amber">Kho</span></td><td>24h</td><td>Kho đồng ý / không đồng ý, sau đó KTV đồng ý / không đồng ý</td><td><ul><li>KTV không phản hồi trong 7 ngày → hệ thống tự huỷ thùng</li><li>Admin BH rút lại từ chối</li></ul></td><td><ul><li>Kho / KTV chậm phản hồi</li></ul></td><td><span class="tag t-gray">Không — hệ thống tự xử lý</span></td></tr>
+<tr><td><b>4</b></td><td><b>Xác nhận số lượng thực nhận</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH xác nhận SL thực nhận (tách đơn vị)</td><td><ul><li>Admin BH tạo hộ / nhận hộ Kho → tự xác nhận SL = SL khai</li><li>Đơn dịch vụ khách lẻ</li></ul></td><td><ul><li>SL thực nhận khác SL khai (bắt buộc ghi lý do lệch)</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>5</b></td><td><b>Phân loại &amp; chọn hướng xử lý</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH phân loại Trong / Ngoài BH, chọn hướng xử lý, đối trừ</td><td><ul><li>Nút xử lý nhanh (FAST) — 1 chạm, Đổi mới / Trừ nợ đi thẳng tới bước 8</li></ul></td><td><ul><li>Hết hạn bảo hành (cảnh báo, không chặn)</li><li>Ngoài BH thiếu mail phê duyệt (bị chặn)</li><li>KTV khai sai linh kiện / thông tin</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>5</b></td><td><b>Phân loại lại (NV trả về)</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH phân loại lại</td><td><span class="muted">—</span></td><td><ul><li>NV không sửa được theo hướng đã chọn</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>5B</b></td><td><b>KTV bổ sung thông tin</b></td><td><span class="tag t-blue">KTV</span></td><td>24h</td><td>KTV (hoặc GS thay) bổ sung linh kiện / mô tả / ảnh theo yêu cầu</td><td><ul><li>Giám sát / người tạo hộ bổ sung thay KTV</li></ul></td><td><ul><li>KTV khai sai mã linh kiện</li><li>Thiếu ảnh, mô tả lỗi không rõ</li></ul></td><td><span class="tag t-blue">KTV</span><br><span class="muted" style="font-size:12px">quá thêm 24h chưa giải trình →</span> <span class="tag t-violet">TNGS</span></td></tr>
+<tr><td><b>6</b></td><td><b>NV sửa chữa (6B: xin cấp linh kiện song song)</b></td><td><span class="tag t-violet">NV sửa chữa</span></td><td>48h</td><td>NV sửa / chẩn đoán và nộp 1 trong 4 kết quả</td><td><ul><li>Đã sửa xong → tự hoàn tất + phiếu trả đi thẳng Kho (bỏ bước 7, 8, 9)</li><li>Đã bàn giao máy → kết thúc luôn</li></ul></td><td><ul><li>Thiếu linh kiện (tự tạo ticket thiếu hàng bên Đặt mua LK)</li><li>Sửa chậm</li><li>Không sửa được → Admin xem lại</li></ul></td><td><span class="tag t-violet">NV sửa chữa</span></td></tr>
+<tr><td><b>7</b></td><td><b>Admin BH xác nhận hoàn tất</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH xác nhận hoàn tất hoặc yêu cầu làm lại</td><td><ul><li>NV nộp 'Đã sửa xong' (bỏ qua bước này)</li></ul></td><td><ul><li>Kết quả NV chưa đạt → yêu cầu làm lại</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>8</b></td><td><b>Lập phiếu trả</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH tạo / gộp phiếu trả theo KTV</td><td><ul><li>Tự động gộp tất cả</li><li>Trả trực tiếp KTV / giao trực tiếp Kho (bỏ bước 9)</li></ul></td><td><ul><li>Đơn chờ gom lâu</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>8</b></td><td><b>Phiếu trả nháp — gửi Kế toán</b></td><td><span class="tag t-green">Admin BH</span></td><td>24h</td><td>Admin BH kiểm tra phiếu, gửi Kế toán duyệt</td><td><span class="muted">—</span></td><td><ul><li>Kế toán / Kho đẩy ngược phiếu</li></ul></td><td><span class="tag t-green">Admin BH</span></td></tr>
+<tr><td><b>9</b></td><td><b>Kế toán duyệt phiếu trả</b></td><td><span class="tag t-orange">Kế toán</span></td><td>24h</td><td>Kế toán duyệt / từ chối / trừ công nợ</td><td><ul><li>Kế toán Trừ công nợ → kết thúc không gửi KTV</li></ul></td><td><ul><li>Sai mã MISA / đối trừ → từ chối, trả Admin</li></ul></td><td><span class="tag t-orange">Kế toán</span></td></tr>
+<tr><td><b>10</b></td><td><b>Kho in phiếu, đóng gói &amp; gửi trả</b></td><td><span class="tag t-amber">Kho</span></td><td>24h</td><td>Kho in phiếu, đóng gói, bấm Gửi hàng</td><td><span class="muted">—</span></td><td><ul><li>Thiếu hàng để đóng gói</li><li>Kho đẩy ngược phiếu lên nhầm</li></ul></td><td><span class="tag t-amber">Kho</span></td></tr>
+<tr><td><b>11</b></td><td><b>KTV nhận hàng trả</b></td><td><span class="tag t-blue">KTV</span></td><td>72h</td><td>KTV xác nhận đã nhận hoặc báo không nhận được (theo từng món)</td><td><ul><li>Kho xác nhận kết thúc thay KTV (đã biết hàng tới nơi)</li></ul></td><td><ul><li>KTV quên xác nhận</li><li>Thiếu món → báo không nhận được</li></ul></td><td><span class="tag t-blue">KTV</span><br><span class="muted" style="font-size:12px">quá thêm 24h chưa giải trình →</span> <span class="tag t-violet">TNGS</span></td></tr>
+<tr><td><b>11B</b></td><td><b>Kho đánh giá khiếu nại không nhận được</b></td><td><span class="tag t-amber">Kho</span></td><td>24h</td><td>Kho đánh giá gửi thành công / thất bại (thất lạc)</td><td><span class="muted">—</span></td><td><ul><li>Thất lạc trên đường trả</li></ul></td><td><span class="tag t-amber">Kho</span></td></tr>
+</table>
+<p class="muted" style="font-size:13px">Bước 5 có 2 trạng thái (chờ phân loại / phân loại lại khi NV trả về); bước 8 gồm "chờ lập phiếu" và "phiếu nháp chờ gửi Kế toán". SLA ghi trên là mặc định — Admin hệ thống chỉnh được ở Cài đặt.</p>
+</div></section>
+
+<section id="s4"><h2><span class="n">4</span>Quy tắc giải trình — khi nào KTV, khi nào TNGS</h2>
+<div class="grid3">
+<div class="card"><h3 style="margin-top:0"><span class="tag t-blue">KTV</span> giải trình khi</h3><ul>
+<li>Bước <b>1</b>: thùng đã có đơn nhưng để nháp quá 24h chưa gửi.</li>
+<li>Bước <b>5B</b>: Admin yêu cầu bổ sung, quá 24h chưa bổ sung.</li>
+<li>Bước <b>11</b>: hàng trả đã gửi, quá 72h chưa xác nhận đã nhận / báo thiếu.</li></ul>
+<p class="muted" style="font-size:13px">KTV thấy các việc này ở đầu màn "Việc của tôi" trên điện thoại, bấm <b>Giải trình</b>, chọn lý do + ghi chú.</p></div>
+<div class="card"><h3 style="margin-top:0"><span class="tag t-violet">TNGS — Giám sát khu vực</span> giải trình khi</h3><ul>
+<li>Bước của KTV đã quá SLA <b>thêm 24 giờ</b> (chỉnh được) mà KTV vẫn chưa giải trình.</li>
+<li>Áp cho mọi KTV thuộc khu vực GS phụ trách (GS chính và GS phụ).</li>
+<li>KTV giải trình rồi thì việc tự rời danh sách của GS.</li></ul>
+<p class="muted" style="font-size:13px">GS giải trình thay được cả trước mốc này (VD "Không liên lạc được KTV").</p></div>
+<div class="card"><h3 style="margin-top:0"><span class="tag t-green">BO</span> giải trình khi</h3><ul>
+<li>Bước do Kho / Admin BH / NV / Kế toán giữ đã quá SLA.</li>
+<li><b>Cách 1</b> (bắt buộc): khi bấm thao tác qua bước mà bước đã quá SLA, form chèn ô "Lý do chậm" — chọn xong là ghi luôn 1 lần giải trình.</li>
+<li><b>Cách 2</b>: bấm "📝 Giải trình" bất kỳ lúc nào (trong chi tiết đơn hoặc danh sách "Cần giải trình").</li></ul>
+<p class="muted" style="font-size:13px">Bước 3B (thùng bị từ chối) không cần giải trình — quá 7 ngày KTV không phản hồi thì hệ thống tự huỷ thùng.</p></div>
+</div>
+<div class="card"><h3 style="margin-top:0">Ví dụ: KTV để thùng nháp không gửi (SLA bước 1 = 24h)</h3>
+<div class="timeline">
+<span class="t">0h</span><span>KTV thêm đơn vào thùng nháp — đồng hồ bước 1 bắt đầu.</span>
+<span class="t">sau 24h</span><span>Quá SLA → việc hiện ở <b>"Cần giải trình"</b> của KTV (vai KTV); ô bước 1 trong chi tiết đơn chuyển đỏ "quá …".</span>
+<span class="t">thêm 24h</span><span>KTV vẫn chưa giải trình → việc hiện thêm ở "Cần giải trình" của <b>Giám sát khu vực</b> (vai TNGS).</span>
+<span class="t">bất kỳ lúc nào</span><span>KTV hoặc GS chọn lý do (VD "KTV chưa gom đủ hàng để gửi" — bên chịu: Lỗi KTV) → việc rời cả 2 danh sách; lịch sử giải trình lưu trên thùng / đơn.</span>
+</div></div>
+<div class="card"><h3 style="margin-top:0">Danh mục lý do chậm gắn bên chịu trách nhiệm</h3>
+<table><tr><th>Lý do</th><th>Bên chịu lỗi</th></tr><tr><td>Không có linh kiện</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Hết hàng tồn kho</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Chờ mail phê duyệt từ cấp quản lý</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Do khách hàng chưa thanh toán</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Chờ kho xuất hàng</td><td><span class="tag t-amber">Kho</span></td></tr><tr><td>Kho chưa bàn giao hàng cho Admin</td><td><span class="tag t-amber">Kho</span></td></tr><tr><td>Do sửa chữa chậm</td><td><span class="tag t-violet">NV sửa chữa</span></td></tr><tr><td>Đang chờ thông tin từ bộ phận khác</td><td><span class="tag t-green">Admin BH</span></td></tr><tr><td>Quá tải đơn trong ngày</td><td><span class="tag t-green">Admin BH</span></td></tr><tr><td>KTV cung cấp thiếu thông tin</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV chưa gom đủ hàng để gửi</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV bận việc hiện trường</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV chưa kiểm tra hàng trả về</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>Không liên lạc được KTV</td><td><span class="tag t-violet">Giám sát</span></td></tr><tr><td>Nhà xe / bưu điện chưa lấy hàng</td><td><span class="tag t-teal">Vận chuyển</span></td></tr><tr><td>Hàng đang trên đường, chưa về kho</td><td><span class="tag t-teal">Vận chuyển</span></td></tr></table>
+<p class="muted" style="font-size:13px">Người giải trình chọn lý do → bên chịu lỗi tự xác định theo lý do (người bấm không phải là người chịu lỗi). Danh mục thêm / sửa / đổi bên ở Cài đặt. Lý do "Không có linh kiện" / "Hết hàng tồn kho" vẫn tự tạo ticket thiếu hàng bên Đặt mua linh kiện như trước.</p>
+</div></section>
+
+<section id="s5"><h2><span class="n">5</span>Đồng hồ &amp; SLA</h2>
+<div class="card"><ul>
+<li><b>Mốc bắt đầu</b>: lúc đơn vào bước hiện tại — đơn vị: lần đổi trạng thái gần nhất; bước của phiếu trả: lần đổi trạng thái gần nhất của phiếu; bước của thùng: lần đổi trạng thái gần nhất của thùng.</li>
+<li><b>Cách tính giờ</b>: liên tục cả đêm và thứ 7, <b>không tính Chủ nhật</b>.</li>
+<li><b>Mức màu</b>: trong SLA xanh · quá SLA vàng · quá 3 lần SLA đỏ đậm có ⚠.</li>
+<li><b>Đồng hồ tổng</b> của ca ở đầu chi tiết đơn ("Tạo … · đã chạy …"); <b>đồng hồ bước</b> ở ô bước đang dừng.</li>
+<li><b>Cổng thao tác</b> dùng đúng SLA của bước: thao tác 1 bước đã quá SLA phải chọn lý do mới làm tiếp được (Kho tiếp nhận, Admin nhận nội bộ, phân loại, xử lý nhanh, NV nộp kết quả, xác nhận hoàn tất, yêu cầu làm lại, Kho vận tiếp nhận).</li>
+</ul></div></section>
+
+<section id="s6"><h2><span class="n">6</span>Bộ lọc theo từng bước đang dừng</h2>
+<div class="card"><table>
+<tr><th style="width:24%">Màn hình</th><th>Lọc theo bước</th><th style="width:18%">Ai dùng</th></tr>
+<tr><td><b>Trang chủ › Việc theo bước đang dừng</b></td><td>Mỗi bước 1 dòng: tổng đơn đang dừng · ⏰ quá SLA · 📝 chưa giải trình. Bấm dòng → danh sách đơn đã lọc đúng bước; bấm ⏰ / 📝 → lọc thêm quá SLA / chưa giải trình.</td><td>Admin BH, Admin hệ thống, Giám sát, View, Kho, Kế toán</td></tr>
+<tr><td><b>Trang chủ › Cần giải trình</b></td><td>Việc quá SLA mà chính mình phải giải trình, cũ nhất trước, gắn nhãn vai (KTV / TNGS / BO).</td><td>Mọi vai trò</td></tr>
+<tr><td><b>Đơn bảo hành › Mọi giai đoạn</b></td><td>Cột <b>Bước đang dừng</b> (lọc tích nhiều bước; hiện chủ bước · đã dừng / SLA · quá bao lâu) và cột <b>SLA bước</b> (Quá SLA · Quá SLA chưa giải trình · Đã giải trình · Trong SLA). Kết hợp được với mọi cột lọc kiểu Excel khác. File Excel tải về có thêm cột Bước, Chủ bước, Giờ dừng, SLA.</td><td>Admin BH, Giám sát, View</td></tr>
+<tr><td><b>KTV › Đơn của tôi</b></td><td>Dải chip theo bước (góc nhìn KTV), mỗi chip có số đơn:<div class="chips" style="margin-top:6px"><span class="chip on">Tất cả bước 6</span><span class="chip">✍️ Cần bổ sung 1</span><span class="chip">📝 Chưa gửi 2</span><span class="chip">🚚 Trên xe về Kho 1</span><span class="chip">🔧 Đang xử lý 1</span><span class="chip">📤 Đang trả về 1</span></div></td><td>KTV</td></tr>
+<tr><td><b>Thùng hàng / Phiếu trả / Cấp linh kiện</b></td><td>Tab theo bước, mỗi tab có số việc (Thùng nháp · Đang gửi về Kho · Kho đã nhận chờ Admin · Từ chối; Chờ tạo phiếu · Nháp · Chờ KT · Chờ Kho in · Kho đã in · Đang gửi KTV…; Chờ Admin cấp · Chờ KT · Chờ Kho in · Đã xuất).</td><td>Theo vai trò</td></tr>
+</table></div></section>
+
+<section id="s7"><h2><span class="n">7</span>Màn hình trên app</h2>
+<div class="card"><h3 style="margin-top:0">Chi tiết đơn — bước đang dừng còn trong SLA (đơn Đổi mới tự pass bước 6, 7)</h3>
+<div class="bar"><div class="bx done"><span class="dot">✓</span><b>KTV gửi</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Kho nhận</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Admin nhận</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Xác nhận SL</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Phân loại</b><i>14:05 12/11</i></div><div class="bx skip"><span class="dot">6</span><b>Sửa chữa</b><i>bỏ qua (tự pass)</i></div><div class="bx skip"><span class="dot">7</span><b>Xác nhận HT</b><i>bỏ qua (tự pass)</i></div><div class="bx cur"><span class="dot">8</span><b>Phiếu trả</b><i>⏱ 9 giờ</i><i>SLA 24h</i></div><div class="bx todo"><span class="dot">9</span><b>KT duyệt</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">10</span><b>Kho gửi</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">11</span><b>KTV nhận</b><i>chưa tới</i></div></div>
+<p style="margin:8px 0 0;font-size:13px"><span class="muted">Đang chờ:</span> <b>Admin bảo hành — gộp phiếu trả</b> · chủ bước Admin BH</p></div>
+<div class="card"><h3 style="margin-top:0">Chi tiết đơn — bước đang dừng đã quá SLA</h3>
+<div class="bar"><div class="bx done"><span class="dot">✓</span><b>KTV gửi</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Kho nhận</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Admin nhận</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Xác nhận SL</b><i>14:05 12/11</i></div><div class="bx done"><span class="dot">✓</span><b>Phân loại</b><i>14:05 12/11</i></div><div class="bx late"><span class="dot">6</span><b>Sửa chữa</b><i>⏱ 52 giờ</i><i class="r">quá 4 giờ</i></div><div class="bx todo"><span class="dot">7</span><b>Xác nhận HT</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">8</span><b>Phiếu trả</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">9</span><b>KT duyệt</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">10</span><b>Kho gửi</b><i>chưa tới</i></div><div class="bx todo"><span class="dot">11</span><b>KTV nhận</b><i>chưa tới</i></div></div>
+<p style="margin:8px 0 0;font-size:13px"><span class="muted">Đang chờ:</span> <b>NV Nguyễn Viết Khương — chẩn đoán / sửa</b> · chủ bước NV sửa chữa <span class="tag t-red" style="margin-left:6px">📝 Giải trình</span></p></div>
+<div class="grid2">
+<div class="mock"><div class="hd">🧭 Việc theo bước đang dừng <span class="muted" style="font-weight:400">· 33 đơn · 33 quá SLA</span></div>
+<div class="row"><span class="so">1</span><span class="t">KTV đóng thùng &amp; gửi xe<small>KTV · SLA 24h</small></span><span class="tag t-orange">📝 2</span><span class="tag t-red">⏰ 2</span><span class="cnt">2</span></div>
+<div class="row"><span class="so">2</span><span class="t">Vận chuyển về Kho — Kho tiếp nhận<small>Kho · SLA 48h</small></span><span class="tag t-orange">📝 1</span><span class="tag t-red">⏰ 1</span><span class="cnt">1</span></div>
+<div class="row"><span class="so">5</span><span class="t">Phân loại &amp; chọn hướng xử lý<small>Admin BH · SLA 24h</small></span><span class="tag t-orange">📝 10</span><span class="tag t-red">⏰ 10</span><span class="cnt">10</span></div>
+<div class="row"><span class="so">6</span><span class="t">NV sửa chữa (6B: cấp linh kiện song song)<small>NV sửa chữa · SLA 48h</small></span><span class="tag t-orange">📝 7</span><span class="tag t-red">⏰ 8</span><span class="cnt">8</span></div>
+<div class="row"><span class="so">11</span><span class="t">KTV nhận hàng trả<small>KTV · SLA 72h</small></span><span class="tag t-orange">📝 2</span><span class="tag t-red">⏰ 2</span><span class="cnt">2</span></div>
+</div>
+<div class="mock" style="border-left:4px solid var(--orange)"><div class="hd">📝 Cần giải trình <span class="muted" style="font-weight:400">· việc quá SLA bước</span></div>
+<div class="row"><span class="t"><b style="color:var(--blue);font-family:monospace">BH-000001</b><small>1. KTV đóng thùng &amp; gửi xe · quá 11 ngày 23 giờ</small></span><span class="tag t-blue">KTV</span><span class="tag t-green">Giải trình</span></div>
+<div class="row"><span class="t"><b style="color:var(--blue);font-family:monospace">TR-000001</b><small>11. KTV nhận hàng trả · quá 10 ngày 2 giờ</small></span><span class="tag t-blue">KTV</span><span class="tag t-green">Giải trình</span></div>
+<div class="row"><span class="t"><b style="color:var(--blue);font-family:monospace">DH-000004-1</b><small>5B. KTV bổ sung thông tin · KTV chưa giải trình</small></span><span class="tag t-violet">Giám sát (TNGS)</span><span class="tag t-green">Giải trình</span></div>
+<div class="row"><span class="t"><b style="color:var(--blue);font-family:monospace">DH-000021-1</b><small>5. Phân loại &amp; chọn hướng xử lý · quá 15 ngày 19 giờ</small></span><span class="tag t-gray">BO</span><span class="tag t-green">Giải trình</span></div>
+</div></div>
+<p class="muted" style="font-size:13px">Minh hoạ dựng lại theo giao diện app; số liệu lấy từ dữ liệu kiểm thử khi chạy app.</p>
+</section>
+
+<section id="s8"><h2><span class="n">8</span>Cấu hình (Admin hệ thống › Quản trị › Cài đặt)</h2>
+<div class="grid2">
+<div class="card"><h3 style="margin-top:0">🧭 SLA từng bước</h3><p style="margin:0">Sửa số giờ SLA của từng bước (1–720 giờ) và số giờ "chuyển Giám sát giải trình thay KTV" (mặc định 24). Lưu là áp ngay cho đồng hồ, cổng lý do chậm, danh sách cần giải trình và bộ lọc.</p></div>
+<div class="card"><h3 style="margin-top:0">⏱ Lý do chậm</h3><p style="margin:0">Mỗi lý do có ô <b>Bên chịu trách nhiệm</b> (Lỗi KTV · Giám sát · Kho · Admin BH · NV sửa chữa · Kế toán · Vận chuyển · Ngoại cảnh). Thêm / sửa / bật tắt / xoá như trước.</p></div>
+</div></section>
+
+<section id="s9"><h2><span class="n">9</span>Ghi chú &amp; việc tiếp theo</h2>
+<div class="card"><ul>
+<li><b>TNGS</b> được hiểu là Giám sát khu vực phụ trách KTV (gồm GS chính và GS phụ đồng bộ từ Đặt mua linh kiện).</li>
+<li>Đồng hồ bước <b>chưa tự tạm dừng</b> khi đang chờ linh kiện (thiếu hàng) hoặc chờ phê duyệt — hiện xử lý bằng giải trình với lý do bên "Ngoại cảnh". Có thể bổ sung tạm dừng đồng hồ nếu đối tác yêu cầu.</li>
+<li>Chưa có thông báo đẩy (push) khi phát sinh việc cần giải trình — người dùng thấy ở Trang chủ.</li>
+<li>Báo cáo thống kê giải trình theo bên chịu lỗi (tháng này bao nhiêu lần chậm do KTV / Kho / ngoại cảnh…) là bước tiếp theo; dữ liệu đã được lưu từ v1.128.</li>
+</ul></div></section>
+</main>
+<footer>Bảo hành đổi trả 3T · Quản trị theo bước · v1.128 · 15/11/2026</footer>
+</body></html>

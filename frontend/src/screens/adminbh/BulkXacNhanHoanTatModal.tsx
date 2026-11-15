@@ -17,7 +17,7 @@ export function BulkXacNhanHoanTatModal({ units, onClose, onDone }: { units: Don
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
   const thieuXac = units.filter((u) => u.huong_xu_ly === "doi_moi" && !u.xu_ly_xac).length;
-  const soQuaHan = units.filter((u) => isOverdue(u.updated_at)).length;
+  const soQuaHan = units.filter((u) => isOverdue(u.updated_at, "cho_admin_xac_nhan")).length;
   const valid = (!thieuXac || xuLyXac) && (!soQuaHan || lyDoCham);
 
   const byHuong: Record<string, number> = {};

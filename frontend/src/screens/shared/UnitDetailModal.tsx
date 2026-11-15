@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
-import { fmtDate } from "../../lib/format";
+import { fmtDate, hoursSince } from "../../lib/format";
+import { buocOf, gdDonVi, fmtGio, CHU_BUOC_LABEL } from "../../lib/buoc";
+import { GiaiTrinhModal, LichSuGiaiTrinh, type GtEntity } from "./QuanTriBuoc";
 import { Modal } from "../../ui/Modal";
 import { Btn, Badge, Spinner, Textarea } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
@@ -147,6 +149,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const [suaLk, setSuaLk] = useState(false);
   const [chat, setChat] = useState("");
   const [sending, setSending] = useState(false);
+  const [giaiTrinh, setGiaiTrinh] = useState(false);
+  const [gtKey, setGtKey] = useState(0);
 
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const load = () =>
@@ -243,25 +247,40 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const nhanLog = newest(logs.phieu_tra, (l) => l.den_trang_thai === "ktv_da_nhan");
   const needNv = !!u.huong_xu_ly && ["sua_chua", "dich_vu_tinh_phi"].includes(u.huong_xu_ly);
 
-  // ---- Thanh tien trinh ----
-  type Step = { label: string; at?: string | null; done: boolean; skip?: boolean; red?: boolean };
+  // ---- Thanh buoc (15/11/2026, quan tri theo buoc - doi tac): 11 buoc danh so nhu lib/buoc, buoc dang dung to noi + dong ho / SLA ----
+  type Step = { so: string; label: string; at?: string | null; done: boolean; skip?: boolean; red?: boolean; phu?: string };
+  const ptTt = pt?.trang_thai || null;
+  const PT_SAU_KT = ["da_duyet_ke_toan", "da_gui", "ktv_da_nhan", "khieu_nai_van_chuyen", "gui_that_bai", "ket_thuc_khong_gui"];
+  const PT_SAU_GUI = ["da_gui", "ktv_da_nhan", "khieu_nai_van_chuyen", "gui_that_bai"];
   const steps: Step[] = [];
-  if (isKhachLe) steps.push({ label: "Tạo đơn dịch vụ", at: p.created_at, done: true });
+  if (isKhachLe) steps.push({ so: "1", label: "Tạo đơn dịch vụ", at: p.created_at, done: true });
   else {
-    steps.push({ label: "KTV gửi", at: pg?.thoi_gian_gui || pg?.ngay_gui_xe, done: !!pg && pg.trang_thai !== "nhap" });
-    steps.push({ label: "Kho nhận", at: pg?.thoi_gian_nhan_kho, done: pg?.trang_thai === "da_tiep_nhan" });
-    steps.push({ label: "Admin nhận", at: pg?.admin_thoi_gian_nhan, done: !!pg?.admin_tiep_nhan });
+    steps.push({ so: "1", label: "KTV gửi", at: pg?.thoi_gian_gui || pg?.ngay_gui_xe, done: !!pg && pg.trang_thai !== "nhap" });
+    steps.push({ so: "2", label: "Kho nhận", at: pg?.thoi_gian_nhan_kho, done: pg?.trang_thai === "da_tiep_nhan" });
+    steps.push({ so: "3", label: "Admin nhận", at: pg?.admin_thoi_gian_nhan, done: !!pg?.admin_tiep_nhan });
+    steps.push({ so: "4", label: "Xác nhận SL", at: u.created_at, done: true });
   }
-  steps.push({ label: "Phân loại", at: plLog?.thoi_gian, done: SAU_PHAN_LOAI.includes(tt) || !!u.phieu_tra_id });
+  steps.push({ so: "5", label: "Phân loại", at: plLog?.thoi_gian, done: SAU_PHAN_LOAI.includes(tt) || !!u.phieu_tra_id, phu: tt === "cho_bo_sung_tt" ? "5B · KTV bổ sung" : undefined });
   if (ketThuc) {
-    steps.push({ label: tt === "ket_thuc_tu_choi" ? "Đã huỷ" : "Chuyển kho", at: plLog?.thoi_gian, done: true, red: true });
+    steps.push({ so: "✕", label: tt === "ket_thuc_tu_choi" ? "Đã huỷ" : "Chuyển kho", at: plLog?.thoi_gian, done: true, red: true });
   } else {
-    steps.push({ label: "Sửa chữa", at: ndLog?.thoi_gian, done: needNv && !!ndLog && tt !== "cho_chan_doan", skip: daPhanLoai && !needNv && SAU_PHAN_LOAI.includes(tt) });
-    steps.push({ label: "Hoàn tất", at: htLog?.thoi_gian, done: tt === "san_sang_gom_phieu_tra" || !!u.phieu_tra_id });
-    steps.push({ label: "Phiếu trả", at: pt?.created_at, done: !!pt && ["da_gui", "ktv_da_nhan", "khieu_nai_van_chuyen", "gui_that_bai", "ket_thuc_khong_gui"].includes(pt.trang_thai) });
-    steps.push({ label: isKhachLe ? "Khách nhận" : "KTV nhận", at: nhanLog?.thoi_gian, done: pt?.trang_thai === "ktv_da_nhan" || pt?.trang_thai === "ket_thuc_khong_gui" });
+    steps.push({ so: "6", label: "Sửa chữa", at: ndLog?.thoi_gian, done: needNv && !!ndLog && tt !== "cho_chan_doan", skip: daPhanLoai && !needNv && SAU_PHAN_LOAI.includes(tt), phu: "6B · cấp linh kiện" });
+    steps.push({ so: "7", label: "Xác nhận HT", at: htLog?.thoi_gian, done: tt === "san_sang_gom_phieu_tra" || !!u.phieu_tra_id, skip: daPhanLoai && !needNv && !htLog && (tt === "san_sang_gom_phieu_tra" || !!u.phieu_tra_id) });
+    steps.push({ so: "8", label: "Phiếu trả", at: pt?.created_at, done: !!pt && ptTt !== "nhap" });
+    steps.push({ so: "9", label: "KT duyệt", at: ktLog?.thoi_gian, done: !!ptTt && PT_SAU_KT.includes(ptTt) });
+    steps.push({ so: "10", label: "Kho gửi", at: khoGuiLog?.thoi_gian, done: !!ptTt && PT_SAU_GUI.includes(ptTt), skip: ptTt === "ket_thuc_khong_gui" });
+    steps.push({ so: "11", label: isKhachLe ? "Khách nhận" : "KTV nhận", at: nhanLog?.thoi_gian, done: ptTt === "ktv_da_nhan" || ptTt === "ket_thuc_khong_gui" || ptTt === "gui_that_bai", red: ptTt === "gui_that_bai", phu: ptTt === "khieu_nai_van_chuyen" ? "11B · Kho đánh giá" : undefined });
   }
   const curIdx = steps.findIndex((s) => !s.done && !s.skip);
+  const gdNay = gdDonVi(tt, ptTt);
+  const buocNay = buocOf(gdNay);
+  const buocTu = ptTt ? pt?.updated_at : u.updated_at;
+  const gioDung = hoursSince(buocTu);
+  const quaGio = buocNay && !buocNay.ket_thuc ? gioDung - buocNay.sla : 0;
+  const moc0 = [p.created_at, pg?.created_at, u.created_at].filter(Boolean).sort()[0] as string;
+  const gioTong = hoursSince(moc0);
+  const gtType: GtEntity = ptTt ? "phieu_tra" : "phieu_sc_ct";
+  const gtId = ptTt && pt ? pt.id : u.id;
 
   // ---- "Dang o" ai ----
   const ktvEmail = p.ktv || pg?.nguoi_tao || null;
@@ -378,30 +397,48 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
           ) : undefined
         }
       >
-        {/* Tien trinh + "dang o" */}
+        {/* Thanh buoc + "dang cho ai" (15/11/2026 - quan tri theo buoc) */}
         <div className="mb-3 rounded-xl border border-[var(--line)] px-3 py-2">
-          <ol className="hidden md:flex items-start">
+          <p className="mb-1.5 text-[12.5px] text-[var(--ink-soft)]">
+            {buocNay && !buocNay.ket_thuc ? <b className="text-[var(--ink)]">{buocNay.ten}</b> : <b className="text-[var(--ink)]">Đã kết thúc</b>} · Tạo {fmtDate(p.created_at)} · đã chạy <b className="text-[var(--ink)]">{fmtGio(gioTong)}</b>
+          </p>
+          <ol className="hidden md:flex items-stretch gap-1.5">
             {steps.map((s, i) => {
               const cur = i === curIdx;
-              const dot = s.red ? "bg-[var(--red-500)]" : s.done ? "bg-[var(--brand-500)]" : cur ? "bg-[var(--blue-500)] ring-4 ring-[var(--blue-100)]" : s.skip ? "bg-white border border-dashed border-[var(--ink-faint)]" : "bg-[var(--line)]";
+              const box = s.red
+                ? "border-[var(--red-500)] bg-[var(--red-50)]"
+                : cur
+                  ? quaGio > 0
+                    ? "border-[var(--red-500)] bg-[var(--red-50)] ring-2 ring-[var(--red-100)]"
+                    : "border-[var(--blue-500)] bg-[var(--blue-50)] ring-2 ring-[var(--blue-100)]"
+                  : s.done
+                    ? "border-[var(--brand-200)] bg-[var(--brand-50)]"
+                    : "border-[var(--line)] bg-white";
               return (
-                <li key={s.label} className="relative flex-1 text-center">
-                  {i > 0 && <span className={`absolute left-0 right-1/2 top-[5px] h-0.5 ${s.done || cur ? "bg-[var(--brand-300)]" : "bg-[var(--line)]"}`} />}
-                  {i < steps.length - 1 && <span className={`absolute left-1/2 right-0 top-[5px] h-0.5 ${steps[i + 1].done || i + 1 === curIdx ? "bg-[var(--brand-300)]" : "bg-[var(--line)]"}`} />}
-                  <span className={`relative mx-auto block h-3 w-3 rounded-full ${dot}`} />
-                  <p className={`mt-1 text-[11.5px] leading-tight ${cur ? "font-bold text-[var(--ink)]" : s.red ? "font-bold text-[var(--red-700)]" : s.skip ? "text-[var(--ink-faint)] line-through" : s.done ? "text-[var(--ink-body)]" : "text-[var(--ink-faint)]"}`}>{s.label}</p>
-                  <p className="text-[10.5px] font-mono text-[var(--ink-faint)]">{s.done && s.at ? fmtDate(s.at).slice(0, 11) : cur ? "đang" : s.skip ? "bỏ qua" : ""}</p>
+                <li key={s.so + s.label} className={`min-w-0 flex-1 rounded-lg border px-1.5 py-1 text-center ${box}`} title={s.phu || s.label}>
+                  <span className={`mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10.5px] font-bold ${s.red ? "bg-[var(--red-600)] text-white" : cur ? (quaGio > 0 ? "bg-[var(--red-600)] text-white" : "bg-[var(--blue-700)] text-white") : s.done ? "bg-[var(--brand-600)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-faint)]"}`}>
+                    {s.done && !s.red ? "✓" : s.so}
+                  </span>
+                  <p className={`mt-0.5 truncate text-[11.5px] leading-tight ${cur ? "font-bold text-[var(--ink)]" : s.red ? "font-bold text-[var(--red-700)]" : s.skip ? "text-[var(--ink-faint)] line-through" : s.done ? "text-[var(--ink-body)]" : "text-[var(--ink-faint)]"}`}>{s.label}</p>
+                  <p className={`truncate text-[10.5px] ${cur && quaGio > 0 ? "font-bold text-[var(--red-700)]" : "text-[var(--ink-faint)]"}`}>
+                    {cur ? (s.phu && (tt === "cho_bo_sung_tt" || ptTt === "khieu_nai_van_chuyen") ? s.phu : `⏱ ${fmtGio(gioDung)}`) : s.skip ? "bỏ qua (tự pass)" : s.done ? (s.at ? fmtDate(s.at).slice(0, 11) : "xong") : "chưa tới"}
+                  </p>
+                  {cur && buocNay && !buocNay.ket_thuc && <p className={`text-[10px] ${quaGio > 0 ? "font-bold text-[var(--red-700)]" : "text-[var(--ink-soft)]"}`}>{quaGio > 0 ? `quá ${fmtGio(quaGio)}` : `SLA ${buocNay.sla}h`}</p>}
                 </li>
               );
             })}
           </ol>
-          <p className="md:mt-1.5 text-[13px] text-[var(--ink-body)]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-[var(--ink-body)]">
             <span className="md:hidden font-bold text-[var(--ink)]">
-              Bước {curIdx < 0 ? steps.length : curIdx + 1}/{steps.length} · {curIdx < 0 ? steps[steps.length - 1].label : steps[curIdx].label} —{" "}
+              Bước {buocNay && !buocNay.ket_thuc ? buocNay.so : "✓"} · {buocNay && !buocNay.ket_thuc ? `⏱ ${fmtGio(gioDung)} / SLA ${buocNay.sla}h${quaGio > 0 ? ` · quá ${fmtGio(quaGio)}` : ""}` : "đã kết thúc"} —
             </span>
-            <span className="text-[var(--ink-faint)]">Đang ở: </span>
+            <span className="text-[var(--ink-faint)]">Đang chờ: </span>
             <span className="font-semibold">{dangO}</span>
-          </p>
+            {buocNay && !buocNay.ket_thuc && <span className="text-[var(--ink-soft)]">· chủ bước {CHU_BUOC_LABEL[buocNay.chu]}</span>}
+            {buocNay && !buocNay.ket_thuc && buocNay.giai_trinh !== "khong" && quaGio > 0 && (
+              <Btn size="sm" variant="secondary" onClick={() => setGiaiTrinh(true)}>📝 Giải trình</Btn>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_440px]">
@@ -636,6 +673,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
 
             <DeXuatSection unitId={u.id} unitTrangThai={u.trang_thai} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
 
+            <LichSuGiaiTrinh ids={[u.id, p.id, p.phieu_gui_id, u.phieu_tra_id]} reloadKey={gtKey} />
             <ThieuHangSection key={`thb-${u.id}`} unitId={u.id} defaultLk={u.ma_lk_thuc_te || lkB} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
 
             <ThuHoiHangSection key={`${u.id}-${u.thu_hoi_hang_luc || ""}`} unit={u} user={user} onSaved={load} />
@@ -741,6 +779,19 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
       {sub === "tra-ktv" && <TraTrucTiepModal unitId={u.id} mode="ktv" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "tra-kho" && <TraTrucTiepModal unitId={u.id} mode="kho" onClose={() => setSub(null)} onDone={afterAction} />}
       {sub === "chan-doan" && <ChanDoanModal unit={u} onClose={() => setSub(null)} onDone={afterAction} />}
+      {giaiTrinh && (
+        <GiaiTrinhModal
+          entityType={gtType}
+          entityId={gtId}
+          gd={gdNay}
+          onClose={() => setGiaiTrinh(false)}
+          onDone={() => {
+            setGiaiTrinh(false);
+            setGtKey((k) => k + 1);
+            load();
+          }}
+        />
+      )}
       {sub === "hoan-tac" && <HoanTacModal unitId={u.id} trangThai={u.trang_thai} quaNv={!!u.ket_qua_nv && !!u.admin_xac_nhan_hoan_tat} phieuTraId={u.phieu_tra_id} onClose={() => setSub(null)} onDone={afterAction} />}
       {suaLk && <SuaLinhKienModal unitId={u.id} maLkKtv={p.ma_lk} maLkNhan={u.ma_lk_nhan ?? null} maLkThucTe={u.ma_lk_thuc_te} onClose={() => setSuaLk(false)} onDone={() => { setSuaLk(false); onChanged(); load(); }} />}
       {openPg && pg && <PhieuGuiDetailModal guiId={pg.id} nested onOpenUnit={(id) => { setOpenPg(false); setCurId(id); }} onClose={() => setOpenPg(false)} onChanged={() => { onChanged(); load(); }} />}

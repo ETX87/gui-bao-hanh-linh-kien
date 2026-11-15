@@ -17,6 +17,7 @@ import { MienBadge } from "../../ui/MienBadge";
 import { useLkName } from "../../hooks/useLinhKien";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
+import { buocOf, useBuoc, fmtGio, CHU_BUOC_LABEL } from "../../lib/buoc";
 import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
 import type { AppUser } from "../../lib/types";
 
@@ -29,6 +30,7 @@ interface TraCuuRow {
   giai_doan: string;
   trang_thai: string;
   updated_at: string;
+  buoc_tu?: string | null;
   case_id: string | null;
   ma_lk: string | null;
   lk_a: string | null;
@@ -91,7 +93,35 @@ const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person",
 const HUONG_DEF: FilterDef = { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS, noneLabel: "Chưa phân loại" };
 const MIEN_DEF: FilterDef = { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" };
 // Tham so loc gui len server (khop cac cot loc ben duoi).
-const FILTER_KEYS = ["f_id", "nhom", "f_gui", "mien", "ktv", "f_case", "lk", "lech_lk", "nv", "huong_xu_ly", "f_mota", "sl_tu", "sl_den", "khoang", "canh_bao"];
+const FILTER_KEYS = ["f_id", "nhom", "giai_doan", "buoc_tt", "f_gui", "mien", "ktv", "f_case", "lk", "lech_lk", "nv", "huong_xu_ly", "f_mota", "sl_tu", "sl_den", "khoang", "canh_bao"];
+
+// 15/11/2026 (doi tac: "bộ lọc theo TỪNG BƯỚC ĐANG DỪNG"): loc theo buoc chi tiet + tinh trang SLA cua buoc.
+const BUOC_TT_DEF: FilterDef = {
+  key: "buoc_tt",
+  label: "SLA bước",
+  static: [
+    { value: "qua_han", label: "🔴 Quá SLA bước" },
+    { value: "chua_gt", label: "📝 Quá SLA — chưa giải trình" },
+    { value: "da_gt", label: "✔ Đã giải trình" },
+    { value: "trong_han", label: "🟢 Trong SLA bước" },
+  ],
+};
+
+function BuocCell({ r }: { r: TraCuuRow }) {
+  const b = buocOf(r.giai_doan);
+  if (!b || b.ket_thuc) return <span className="text-[var(--ink-faint)] text-xs">—</span>;
+  const tu = r.buoc_tu || r.updated_at;
+  const h = hoursSince(tu);
+  const qua = h - b.sla;
+  return (
+    <span className="inline-flex flex-col leading-tight" title={`${b.so}. ${b.ten} — chủ bước: ${CHU_BUOC_LABEL[b.chu]} — SLA ${b.sla}h`}>
+      <span className="text-xs font-semibold text-[var(--ink)] truncate max-w-[200px]">{b.so}. {b.ten}</span>
+      <span className={`text-[11px] ${qua > 0 ? "font-bold text-[var(--red-700)]" : "text-[var(--ink-soft)]"}`}>
+        {CHU_BUOC_LABEL[b.chu]} · {fmtGio(h)} / {b.sla}h{qua > 0 ? ` · quá ${fmtGio(qua)}` : ""}
+      </span>
+    </span>
+  );
+}
 
 function NhomGdBadge({ gd }: { gd: string }) {
   const n = NHOM_CUA_GD[gd];
@@ -112,8 +142,16 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   const { query, nav } = useRoute();
   const toast = useToast();
   const stFilter = query.get("trang_thai") || "";
+  const bttUrl = query.get("buoc_tt") || "";
   const flt = useListFilters("/tra-cuu/don-vi", FILTER_KEYS);
-  const base = stFilter ? `/tra-cuu/don-vi?trang_thai=${encodeURIComponent(stFilter)}` : "/tra-cuu/don-vi";
+  const { buoc } = useBuoc();
+  const BUOC_DEF: FilterDef = {
+    key: "giai_doan",
+    label: "Bước đang dừng",
+    static: buoc.filter((b) => !b.ket_thuc).map((b) => ({ value: b.gd, label: `${b.so}. ${b.ten} (${CHU_BUOC_LABEL[b.chu]})` })),
+  };
+  const baseQ = [stFilter ? `trang_thai=${encodeURIComponent(stFilter)}` : "", bttUrl && !/(^|&)buoc_tt=/.test(flt.query) ? `buoc_tt=${encodeURIComponent(bttUrl)}` : ""].filter(Boolean).join("&");
+  const base = baseQ ? `/tra-cuu/don-vi?${baseQ}` : "/tra-cuu/don-vi";
   // 02/11/2026: 3 che do xem (danh sach / nhom theo KTV / nhom theo linh kien) - che do nhom lay toi da 1000 dong 1 lan.
   const [mode, setMode] = useDonViewMode("don_view_tat_ca");
   const grouped = mode !== "list";
@@ -128,7 +166,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
 
   const stLabel =
     stFilter === "qua_han"
-      ? "Quá hạn SLA 24h"
+      ? "Quá SLA bước"
       : NHOM_GD.find((n) => n.gds.join(",") === stFilter)?.label || GIAI_DOAN_MAP[stFilter]?.label || stFilter;
 
   // 14/11/2026 (bang kieu Excel): loc + sap xep tren tieu de cot, gui len server.
@@ -146,7 +184,8 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
       ),
     },
     { key: "st", header: "Giai đoạn", filter: { type: "multi", def: NHOM_DEF }, sortKey: "gd", render: (r) => <NhomGdBadge gd={r.giai_doan} /> },
-    { key: "sla", header: "SLA", filter: { type: "single", def: CANH_BAO_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.updated_at} /> },
+    { key: "buoc", header: "Bước đang dừng", filter: { type: "multi", def: BUOC_DEF }, render: (r) => <BuocCell r={r} /> },
+    { key: "sla", header: "SLA bước", filter: { type: "single", def: BUOC_TT_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} /> },
     {
       key: "gui",
       header: "Thùng / Phiếu trả",
@@ -192,7 +231,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
       }
       const head = [
         "ID", "Loại", "Giai đoạn", "Bước chi tiết", "Thùng", "Phiếu trả", "Miền", "KTV / Nguồn", "Khách lẻ", "Case", "Serial",
-        "LK KTV chọn (A)", "LK gửi về (B)", "LK đổi mới (C)", "SL đặt", "SL duyệt", "Hướng xử lý", "NV sửa", "Mô tả lỗi", "Tạo lúc", "Cập nhật", "Giờ chờ (SLA)",
+        "LK KTV chọn (A)", "LK gửi về (B)", "LK đổi mới (C)", "SL đặt", "SL duyệt", "Hướng xử lý", "NV sửa", "Mô tả lỗi", "Tạo lúc", "Cập nhật", "Bước đang dừng", "Chủ bước", "Giờ dừng ở bước", "SLA bước (giờ)",
       ];
       const body = all.map((r) => [
         r.id,
@@ -216,12 +255,15 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         r.mo_ta_loi || "",
         fmtDate(r.created_at),
         fmtDate(r.updated_at),
-        String(Math.round(hoursSince(r.updated_at))),
+        buocOf(r.giai_doan) && !buocOf(r.giai_doan)!.ket_thuc ? `${buocOf(r.giai_doan)!.so}. ${buocOf(r.giai_doan)!.ten}` : "",
+        buocOf(r.giai_doan) && !buocOf(r.giai_doan)!.ket_thuc ? CHU_BUOC_LABEL[buocOf(r.giai_doan)!.chu] : "",
+        buocOf(r.giai_doan)?.ket_thuc ? "" : String(Math.round(hoursSince(r.buoc_tu || r.updated_at))),
+        buocOf(r.giai_doan)?.ket_thuc ? "" : String(buocOf(r.giai_doan)?.sla ?? ""),
       ]);
       const d = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       downloadBlob(
-        buildXlsx([{ name: "Don bao hanh", rows: [head, ...body], widths: [16, 12, 16, 28, 12, 12, 12, 30, 20, 16, 16, 30, 30, 30, 8, 8, 16, 24, 40, 16, 16, 10] }]),
+        buildXlsx([{ name: "Don bao hanh", rows: [head, ...body], widths: [16, 12, 16, 28, 12, 12, 12, 30, 20, 16, 16, 30, 30, 30, 8, 8, 16, 24, 40, 16, 16, 32, 14, 10, 10] }]),
         `don-bao-hanh_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.xlsx`,
       );
       toast(`Đã tải ${all.length} dòng.`, "ok");
@@ -248,7 +290,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         ngaySx: r.ngay_sx,
         moTa: r.mo_ta_loi,
         status: <NhomGdBadge gd={r.giai_doan} />,
-        sla: <SlaBadge since={r.updated_at} />,
+        sla: <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} />,
         badge: r.loai === "parent" && r.so_luong > 1 ? <span className="text-xs text-[var(--ink-soft)]">×{r.so_luong}</span> : undefined,
         onClick: () => openRow(r),
       }))
@@ -275,9 +317,9 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         totalAll={totalAll}
         unit="đơn"
         extra={
-          stFilter && (
+          (stFilter || bttUrl) && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1 whitespace-nowrap">
-              Lọc: {stLabel}
+              Lọc: {[stFilter && stLabel, bttUrl && BUOC_TT_DEF.static?.find((x) => x.value === bttUrl)?.label].filter(Boolean).join(" · ")}
               <button onClick={() => nav("/don?tab=tat_ca")} className="focus-ring hover:text-[var(--blue-800)]" aria-label="Bỏ lọc">
                 ✕
               </button>

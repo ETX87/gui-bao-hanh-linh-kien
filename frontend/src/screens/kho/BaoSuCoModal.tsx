@@ -11,7 +11,7 @@ import type { PhieuGui } from "../../lib/types";
 
 export function BaoSuCoModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
-  const overdue = useSlaGate(gui.updated_at);
+  const overdue = useSlaGate(gui.updated_at, "thung_dang_gui");
   const [lyDo, setLyDo] = useState("");
   const [ghiChu, setGhiChu] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");

@@ -117,10 +117,23 @@ phieuGui.get("/don-cua-toi", async (c) => {
     "(SELECT group_concat(u3.id, ' ') FROM phieu_sua_chua_bh_ct u3 WHERE u3.parent_id = p.id)",
   ], ["p.tim_kiem"]);
   const f = joinF(eqFilters(c, { lk: "p.ma_lk" }), timeFilter(c, "p.created_at"));
-  const w = `${base} AND ${nhomSql}${kw.sql}${f.sql}`;
-  const b = [user.email, ...kw.binds, ...f.binds];
   const CAN_BO_SUNG = "EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u4 WHERE u4.parent_id = p.id AND u4.trang_thai = 'cho_bo_sung_tt')";
-  const [{ results }, totalRow, dangRow, xongRow, huyRow] = await Promise.all([
+  // 15/11/2026 (doi tac: "bộ lọc theo TỪNG BƯỚC ĐANG DỪNG"): buoc theo goc nhin KTV.
+  const UX = (cond: string) => `EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct u6 LEFT JOIN phieu_tra_bh t6 ON t6.id = u6.phieu_tra_id WHERE u6.parent_id = p.id AND ${cond})`;
+  const BUOC_KTV: Record<string, string> = {
+    chua_gui: "g.trang_thai = 'nhap'",
+    tren_xe: "g.trang_thai = 'da_gui'",
+    kho_nhan: "g.trang_thai = 'da_tiep_nhan' AND p.trang_thai_cha = 'cho_xac_nhan_so_luong'",
+    bo_sung: CAN_BO_SUNG,
+    dang_xu_ly: UX("u6.trang_thai IN ('cho_phan_loai','admin_can_xem_lai','cho_chan_doan','cho_admin_xac_nhan')"),
+    cho_tra: UX("u6.trang_thai = 'san_sang_gom_phieu_tra' AND (t6.id IS NULL OR t6.trang_thai IN ('nhap','cho_ke_toan_duyet','da_duyet_ke_toan'))"),
+    dang_tra: UX("t6.trang_thai IN ('da_gui','khieu_nai_van_chuyen')"),
+  };
+  const buocQ = c.req.query("buoc") || "";
+  const buocSql = BUOC_KTV[buocQ] ? ` AND ${BUOC_KTV[buocQ]}` : "";
+  const w = `${base} AND ${nhomSql}${kw.sql}${f.sql}${buocSql}`;
+  const b = [user.email, ...kw.binds, ...f.binds];
+  const [{ results }, totalRow, dangRow, xongRow, huyRow, demRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT p.id, p.case_id, p.ma_lk, p.mo_ta_loi, p.so_luong_khai, p.phieu_gui_id, p.odoo_id, p.created_at, p.case_xac_minh,
          g.trang_thai AS gui_trang_thai, g.ngay_gui_xe, g.updated_at AS gui_updated_at,
@@ -136,9 +149,12 @@ phieuGui.get("/don-cua-toi", async (c) => {
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND NOT ${DON_XONG_SQL}`).bind(user.email).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_XONG_THAT_SQL}`).bind(user.email).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${base} AND ${DON_HUY_SQL}`).bind(user.email).first<{ cnt: number }>(),
+    nhom === "xong" || nhom === "huy"
+      ? Promise.resolve(null)
+      : c.env.DB.prepare(`SELECT ${Object.entries(BUOC_KTV).map(([k, v]) => `SUM(CASE WHEN ${v} THEN 1 ELSE 0 END) AS ${k}`).join(", ")} ${base} AND NOT ${DON_XONG_SQL}`).bind(user.email).first<Record<string, number>>(),
   ]);
   const don = results.map(({ don_vi_json, ...r }) => ({ ...r, don_vi: JSON.parse((don_vi_json as string) || "[]") }));
-  return c.json({ don, total: totalRow?.cnt ?? 0, so_dang: dangRow?.cnt ?? 0, so_xong: xongRow?.cnt ?? 0, so_huy: huyRow?.cnt ?? 0 });
+  return c.json({ don, total: totalRow?.cnt ?? 0, so_dang: dangRow?.cnt ?? 0, so_xong: xongRow?.cnt ?? 0, so_huy: huyRow?.cnt ?? 0, dem_buoc: demRow });
 });
 
 interface CreatePhieuBody {

@@ -1,5 +1,6 @@
 import { nowVN } from "./vnTime";
 import { ghiNhanThieuHangTuLog } from "./thieuHang";
+import { ghiGiaiTrinhTuLog } from "./giaiTrinh";
 
 // Nhat ky insert-only dung chung 4 entity_type - port dung addLog() trong prototype-html/index.html.
 export type LogEntityType = "phieu_gui" | "phieu_sc" | "phieu_sc_ct" | "phieu_tra";
@@ -20,4 +21,6 @@ export async function addLog(
   // 04/11/2026: ly do cham "Khong co linh kien" / "Het hang ton kho" -> tu tao yeu cau thieu hang gui sang linh-kien-app (lib/thieuHang.ts).
   // Loi o buoc nay khong duoc lam hong thao tac nghiep vu goc.
   if (ghiChu) await ghiNhanThieuHangTuLog(db, entityType, entityId, nguoiThucHien, ghiChu).catch((e) => console.error("[thieuHang]", e instanceof Error ? e.message : e));
+  // 15/11/2026: ly do cham chon o cong SLA = 1 lan giai trinh cua BO cho buoc dang dung (lib/giaiTrinh.ts).
+  if (ghiChu) await ghiGiaiTrinhTuLog(db, entityType, entityId, tuTrangThai, nguoiThucHien, ghiChu).catch((e) => console.error("[giaiTrinh]", e instanceof Error ? e.message : e));
 }

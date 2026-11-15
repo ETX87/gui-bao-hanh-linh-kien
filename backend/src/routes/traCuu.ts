@@ -9,6 +9,8 @@ import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, num
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { GS_KTV_SUBQUERY } from "../lib/gs";
 import { mienScope } from "../lib/mien";
+import { BUOC_DUNG, cauHinhBuoc, sqlQuaHan } from "../lib/buoc";
+import { sqlDaGiaiTrinh } from "../lib/giaiTrinh";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -79,6 +81,7 @@ function boNhanhCha(gd: readonly string[] | undefined): boolean {
 
 export function allRowsSql(scopeWhere: string, gd?: readonly string[]): string {
   const units = `SELECT u.id, u.parent_id, u.updated_at, u.created_at,
+      CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN t.updated_at ELSE u.updated_at END AS buoc_tu,
       CASE WHEN u.phieu_tra_id IS NOT NULL AND t.trang_thai IS NOT NULL THEN 'tra_' || t.trang_thai ELSE u.trang_thai END AS giai_doan,
       u.trang_thai, u.phieu_tra_id, u.nguoi_sua_chua, u.huong_xu_ly, p.case_id, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk) AS ma_lk, p.ma_lk AS lk_a, COALESCE(u.ma_lk_nhan, p.ma_lk) AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
       p.phieu_gui_id, p.mien, g.nguoi_tao AS ktv, 'unit' AS loai, 1 AS so_luong, p.so_luong_khai AS sl_dat, p.so_luong_thuc_nhan AS sl_duyet
@@ -86,6 +89,7 @@ export function allRowsSql(scopeWhere: string, gd?: readonly string[]): string {
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
     WHERE ${scopeWhere}${locTruocDonVi(gd)}`;
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
+      COALESCE(g.updated_at, p.created_at) AS buoc_tu,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
            WHEN p.trang_thai_cha = 'huy_thung' THEN 'thung_da_huy' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
@@ -106,9 +110,12 @@ traCuu.get("/don-vi", async (c) => {
   // Loc theo giai doan (bam 1 o dem o man Tong quan -> sang day da loc san). "qua_han" = dang cho xu ly
   // ma da troi qua 24h SLA (bo Chu nhat, moc cat tinh bang JS).
   const st = (c.req.query("trang_thai") || "").trim();
+  const chBuoc = await cauHinhBuoc(c.env.DB);
   if (st === "qua_han") {
-    where += ` AND x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`;
-    binds.push(...DANG_CHO, slaCutoffVn(24));
+    // 15/11/2026: qua han theo SLA RIENG tung buoc (lib/buoc.ts).
+    const qh = sqlQuaHan(chBuoc, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+    where += ` AND ${qh.sql}`;
+    binds.push(...qh.binds);
   } else if (st) {
     const ds = st.split(",").map((x) => x.trim()).filter(Boolean);
     where += ` AND x.giai_doan IN (${ds.map(() => "?").join(",")})`;
@@ -123,6 +130,17 @@ traCuu.get("/don-vi", async (c) => {
       binds.push(...nhomGd);
     }
   }
+  // 15/11/2026: loc "buoc dang dung": qua_han / trong_han (theo SLA buoc), chua_gt (qua han chua giai trinh), da_gt.
+  const btt = (c.req.query("buoc_tt") || "").trim();
+  if (btt) {
+    const qh = sqlQuaHan(chBuoc, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+    if (btt === "qua_han") where += ` AND ${qh.sql}`;
+    else if (btt === "trong_han") where += ` AND x.giai_doan IN (${BUOC_DUNG.map(() => "?").join(",")}) AND NOT ${qh.sql}`;
+    else if (btt === "chua_gt") where += ` AND ${qh.sql} AND NOT ${sqlDaGiaiTrinh()}`;
+    else if (btt === "da_gt") where += ` AND ${sqlDaGiaiTrinh()}`;
+    if (btt === "qua_han" || btt === "chua_gt") binds.push(...qh.binds);
+    else if (btt === "trong_han") binds.push(...BUOC_DUNG, ...qh.binds);
+  }
   // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
   const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
@@ -131,7 +149,7 @@ traCuu.get("/don-vi", async (c) => {
   const f = joinF(
     eqFilters(c, { ...LOC, giai_doan: "x.giai_doan" }),
     timeFilter(c, "x.created_at"),
-    slaFilter(c, "x.updated_at"),
+    slaFilter(c, "x.buoc_tu"),
     textFilters(c, {
       f_id: "x.id",
       f_gui: "COALESCE(x.phieu_gui_id,'') || ' ' || COALESCE(x.phieu_tra_id,'')",
@@ -156,7 +174,7 @@ traCuu.get("/don-vi", async (c) => {
   binds.push(...kw.binds);
   // Loc truoc theo giai doan khi dang loc giai doan (o dem Tong quan / o loc cot) - xem locTruocDonVi.
   const gdRieng = (c.req.query("giai_doan") || "").split(",").map((x) => x.trim()).filter(Boolean);
-  const gdLoc = st === "qua_han" ? DANG_CHO : st ? st.split(",").map((x) => x.trim()).filter(Boolean) : nhomGd.length ? nhomGd : gdRieng;
+  const gdLoc = st === "qua_han" ? BUOC_DUNG : st ? st.split(",").map((x) => x.trim()).filter(Boolean) : nhomGd.length ? nhomGd : gdRieng.length ? gdRieng : ["qua_han", "chua_gt", "trong_han"].includes(btt) ? BUOC_DUNG : [];
   const from = `FROM ${allRowsSql(scopeWhere, gdLoc.length ? gdLoc : undefined)} WHERE ${where}`;
   const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
   const sp = sortParam(c, {
@@ -172,7 +190,7 @@ traCuu.get("/don-vi", async (c) => {
     mota: "COALESCE(x.mo_ta_loi,'')",
     sl: "x.sl_dat",
     tao: "x.created_at",
-    sla: "x.updated_at",
+    sla: "x.buoc_tu",
   });
   const order = sp ? `${sp.expr} ${sp.dir}, x.id` : "x.updated_at DESC";
   // So dong truoc khi loc (de hien "x / tong dong").
@@ -191,12 +209,13 @@ traCuu.get("/tong-quan", async (c) => {
   if (!(user.la_giam_sat || user.la_view || user.la_qtri || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
   const { where, binds } = scopeClause(user);
   const from = `FROM ${allRowsSql(where)}`;
-  const fromDangCho = `FROM ${allRowsSql(where, DANG_CHO)}`;
+  const fromDangCho = `FROM ${allRowsSql(where, BUOC_DUNG)}`;
   const b2 = [...binds, ...binds];
+  const qhTq = sqlQuaHan(await cauHinhBuoc(c.env.DB), "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
   const [{ results }, quaHanRow] = await Promise.all([
     c.env.DB.prepare(`SELECT x.giai_doan AS trang_thai, COUNT(*) as cnt ${from} GROUP BY x.giai_doan`).bind(...b2).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromDangCho} WHERE x.giai_doan IN (${DANG_CHO.map(() => "?").join(",")}) AND x.updated_at < ?`)
-      .bind(...b2, ...DANG_CHO, slaCutoffVn(24))
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromDangCho} WHERE ${qhTq.sql}`)
+      .bind(...b2, ...qhTq.binds)
       .first<{ cnt: number }>(),
   ]);
   return c.json({ theo_trang_thai: results, qua_han: quaHanRow?.cnt ?? 0 });

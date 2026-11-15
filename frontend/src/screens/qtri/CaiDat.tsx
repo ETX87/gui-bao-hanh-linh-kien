@@ -8,12 +8,13 @@ import { Card, Btn, Input } from "../../ui/primitives";
 import type { SettingItem } from "../../lib/types";
 import { refreshLinhKien } from "../../hooks/useLinhKien";
 import { OdooImportExportModal } from "../shared/OdooImportExportModal";
+import { BEN_LABEL, CHU_BUOC_LABEL, loadBuoc, useBuoc } from "../../lib/buoc";
 
 // "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang.
 // Phat hien 15 vong ra soat UX: them SUA (doi ten) + XOA (truoc day chi bat/tat + them, go nham la
 // ket vinh vien).
 
-function SettingListCard({ title, path }: { title: string; path: string }) {
+function SettingListCard({ title, path, coBen }: { title: string; path: string; coBen?: boolean }) {
   const toast = useToast();
   const [items, setItems] = useState<SettingItem[]>([]);
   const [text, setText] = useState("");
@@ -82,6 +83,26 @@ function SettingListCard({ title, path }: { title: string; path: string }) {
           ) : (
             <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm">
               <span className={`flex-1 ${!it.bat_tat ? "line-through text-[var(--ink-faint)]" : ""}`}>{it.noi_dung}</span>
+              {coBen && (
+                <select
+                  value={it.ben || ""}
+                  title="Bên chịu trách nhiệm khi chọn lý do này"
+                  onChange={async (e) => {
+                    try {
+                      await api.patch(`${path}/${it.id}`, { ben: e.target.value });
+                      load();
+                    } catch (er) {
+                      toast(errorMessage(er), "error");
+                    }
+                  }}
+                  className="rounded border border-[var(--line)] bg-white px-1 py-0.5 text-xs"
+                >
+                  <option value="">— Bên —</option>
+                  {Object.entries(BEN_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              )}
               <label className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
                 <input type="checkbox" checked={it.bat_tat} onChange={(e) => toggle(it.id, e.target.checked)} /> Bật
               </label>
@@ -526,11 +547,54 @@ function AnhDriveCard() {
   );
 }
 
+// 15/11/2026 (doi tac: quan tri theo buoc): SLA rieng tung buoc + so gio chuyen Giam sat giai trinh thay KTV.
+function BuocSlaCard() {
+  const toast = useToast();
+  const { buoc, lenGs } = useBuoc();
+  const [sla, setSla] = useState<Record<string, string>>({});
+  const [gs, setGs] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setSla(Object.fromEntries(buoc.map((b) => [b.gd, String(b.sla)])));
+    setGs(String(lenGs));
+  }, [buoc, lenGs]);
+  const luu = async () => {
+    setBusy(true);
+    try {
+      await api.put("/buoc/cau-hinh", { sla: Object.fromEntries(Object.entries(sla).map(([k, v]) => [k, Number(v)])), len_gs: Number(gs) });
+      await loadBuoc(true);
+      toast("Đã lưu SLA từng bước.", "ok");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card title="🧭 SLA từng bước (giờ, không tính Chủ nhật)" actions={<Btn size="sm" variant="primary" disabled={busy} onClick={luu}>{busy ? "Đang lưu…" : "Lưu"}</Btn>}>
+      <div className="space-y-1">
+        {buoc.filter((b) => !b.ket_thuc).map((b) => (
+          <div key={b.gd} className="flex items-center gap-2 text-sm">
+            <span className="w-8 text-xs font-bold text-[var(--ink-soft)]">{b.so}</span>
+            <span className="min-w-0 flex-1 truncate" title={b.viec}>{b.ten} <span className="text-xs text-[var(--ink-soft)]">· {CHU_BUOC_LABEL[b.chu]}{b.giai_trinh === "ktv" ? " · KTV giải trình" : b.giai_trinh === "khong" ? " · tự xử lý" : ""}</span></span>
+            <Input type="number" min={1} max={720} value={sla[b.gd] ?? ""} onChange={(e) => setSla((m) => ({ ...m, [b.gd]: e.target.value }))} className="!w-20 !py-1 text-right" />
+          </div>
+        ))}
+        <div className="mt-2 flex items-center gap-2 border-t border-[var(--line)] pt-2 text-sm">
+          <span className="flex-1">Bước của KTV quá SLA thêm bao nhiêu giờ mà KTV chưa giải trình thì chuyển <b>Giám sát (TNGS)</b> giải trình</span>
+          <Input type="number" min={0} max={720} value={gs} onChange={(e) => setGs(e.target.value)} className="!w-20 !py-1 text-right" />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function QtriCaiDatScreen() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <MienCard />
-      <SettingListCard title="⏱ Lý do chậm" path="/settings/ly-do-cham" />
+      <BuocSlaCard />
+      <SettingListCard title="⏱ Lý do chậm (gắn bên chịu trách nhiệm)" path="/settings/ly-do-cham" coBen />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />
       <EtxSyncCard />

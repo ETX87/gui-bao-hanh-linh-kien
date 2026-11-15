@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useBuoc } from "../lib/buoc";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { TopBar } from "./TopBar";
@@ -13,6 +14,8 @@ import type { AppUser } from "../lib/types";
 export function Shell({ user, children }: { user: AppUser; children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true);
   const { path } = useRoute();
+  // 15/11/2026: tai danh muc buoc + SLA tung buoc 1 lan (format.ts isOverdue / slaLevel doc dong bo).
+  useBuoc();
   return (
     <div className="min-h-full flex">
       <Sidebar user={user} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />

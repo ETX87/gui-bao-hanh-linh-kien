@@ -20,7 +20,7 @@ async function filesToDataUrls(files: FileList | null): Promise<string[]> {
 
 export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
-  const overdue = useSlaGate(unit.updated_at);
+  const overdue = useSlaGate(unit.updated_at, "cho_chan_doan");
   const [ketQua, setKetQua] = useState("");
   const [anhTruoc, setAnhTruoc] = useState<FileList | null>(null);
   const [anhSau, setAnhSau] = useState<FileList | null>(null);

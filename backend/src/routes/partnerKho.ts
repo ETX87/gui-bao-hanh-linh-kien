@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
-import { isOverdue } from "../lib/sla";
+import { quaHanBuoc } from "../lib/buoc";
 
 // Nguyen tac "Kho chi thao tac qua app kho van" (chot 2026-09-07): nhan vien Kho khong
 // con dang nhap/thao tac truc tiep trong app nay nua - moi hanh dong thuoc vai tro Kho
@@ -30,7 +30,7 @@ partnerKho.post("/phieu-gui/:id/tiep-nhan", async (c) => {
   const g = await c.env.DB.prepare("SELECT trang_thai, updated_at FROM phieu_gui_bh WHERE id = ?").bind(id).first<{ trang_thai: string; updated_at: string }>();
   if (!g) return c.json({ error: "NOT_FOUND" }, 404);
   if (g.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
-  if (isOverdue(g.updated_at) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+  if ((await quaHanBuoc(c.env.DB, "thung_dang_gui", g.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
 
   const now = nowVN();
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_tiep_nhan', nguoi_nhan_kho = ?, thoi_gian_nhan_kho = ?, updated_at = ? WHERE id = ?")

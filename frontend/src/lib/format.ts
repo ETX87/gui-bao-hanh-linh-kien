@@ -1,3 +1,4 @@
+import { slaGio } from "./buoc";
 // Tien ich dinh dang dung chung - SLA 24h (port dung isOverdue()/slaBadge() cua prototype, 3 muc
 // khan cap da chot: <=24h xanh la, 24-72h vang, >72h do dac + icon).
 //
@@ -43,16 +44,18 @@ export function hoursSince(iso: string | null | undefined): number {
   return (now - then - sundayOverlapMs(then, now)) / HOUR;
 }
 
-export function isOverdue(iso: string | null | undefined): boolean {
-  return hoursSince(iso) > 24;
+// 15/11/2026: SLA RIENG tung buoc (lib/buoc.ts). Khong truyen gd -> 24h nhu cu.
+export function isOverdue(iso: string | null | undefined, gd?: string | null): boolean {
+  return hoursSince(iso) > slaGio(gd);
 }
 
 export type SlaLevel = "ok" | "warn" | "critical";
 
-export function slaLevel(iso: string | null | undefined): SlaLevel {
+export function slaLevel(iso: string | null | undefined, gd?: string | null): SlaLevel {
   const h = hoursSince(iso);
-  if (h > 72) return "critical";
-  if (h > 24) return "warn";
+  const sla = slaGio(gd);
+  if (h > sla * 3) return "critical";
+  if (h > sla) return "warn";
   return "ok";
 }
 

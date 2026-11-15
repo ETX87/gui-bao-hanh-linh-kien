@@ -17,7 +17,7 @@ export function TiepNhanNoiBoModal({ thung, onClose, onDone }: { thung: PhieuGui
   const toast = useToast();
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
-  const soQuaHan = thung.filter((g) => isOverdue(g.thoi_gian_nhan_kho)).length;
+  const soQuaHan = thung.filter((g) => isOverdue(g.thoi_gian_nhan_kho, "thung_cho_admin_nhan")).length;
   const tongDon = thung.reduce((n, g) => n + (g.so_don ?? 0), 0);
 
   const submit = async () => {
@@ -64,7 +64,7 @@ export function TiepNhanNoiBoModal({ thung, onClose, onDone }: { thung: PhieuGui
               <span className="font-mono text-xs font-semibold text-[var(--link)]">{g.id}</span>
               <UserName email={g.nguoi_tao} className="truncate" />
               <span className="ml-auto text-xs text-[var(--ink-soft)]">{g.so_don ?? 0} đơn</span>
-              {isOverdue(g.thoi_gian_nhan_kho) && <span className="text-xs font-semibold text-[var(--red-700)]">quá hạn</span>}
+              {isOverdue(g.thoi_gian_nhan_kho, "thung_cho_admin_nhan") && <span className="text-xs font-semibold text-[var(--red-700)]">quá hạn</span>}
             </li>
           ))}
         </ul>
