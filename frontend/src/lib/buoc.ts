@@ -93,3 +93,37 @@ export function fmtGio(h: number): string {
   const g = Math.round(a - d * 24);
   return g ? `${d} ngày ${g} giờ` : `${d} ngày`;
 }
+
+// 16/11/2026: ly do cham hop le theo chu buoc (giong het backend lib/giaiTrinh.ts BEN_THEO_CHU). Ly do chua gan ben -> luon hien.
+export const BEN_THEO_CHU: Record<string, string[]> = {
+  ktv: ["ktv", "gs", "van_chuyen", "ngoai_canh"],
+  kho: ["kho", "van_chuyen", "ktv", "ngoai_canh"],
+  admin: ["admin_bh", "kho", "ktv", "ngoai_canh"],
+  nv: ["nv", "admin_bh", "kho", "ngoai_canh"],
+  ketoan: ["ke_toan", "admin_bh", "ngoai_canh"],
+};
+export function lyDoHopBuoc<T extends { ben?: string | null }>(items: T[], gd?: string | null): T[] {
+  const b = buocOf(gd);
+  const ok = b ? BEN_THEO_CHU[b.chu] : null;
+  return ok ? items.filter((l) => !l.ben || ok.includes(l.ben)) : items;
+}
+
+// 16/11/2026: buoc -> tab man chung de bam "bước đang dừng" mo dung noi xu ly (nguoi khong xem duoc "Mọi giai đoạn").
+export const GD_TAB: Record<string, string> = {
+  thung_nhap: "/thung?tab=nhap_ktv",
+  thung_dang_gui: "/thung?tab=dang_gui",
+  thung_cho_admin_nhan: "/thung?tab=cho_admin",
+  thung_tu_choi: "/thung?tab=tu_choi",
+  cho_xac_nhan_so_luong: "/don?tab=xu_ly",
+  cho_phan_loai: "/don?tab=xu_ly",
+  admin_can_xem_lai: "/don?tab=xu_ly",
+  cho_bo_sung_tt: "/don?tab=xu_ly",
+  cho_chan_doan: "/don?tab=dang_sua",
+  cho_admin_xac_nhan: "/don?tab=hoan_tat",
+  san_sang_gom_phieu_tra: "/phieu-tra?tab=cho_tao",
+  tra_nhap: "/phieu-tra?tab=nhap",
+  tra_cho_ke_toan_duyet: "/phieu-tra?tab=cho_kt",
+  tra_da_duyet_ke_toan: "/phieu-tra?tab=cho_in",
+  tra_da_gui: "/phieu-tra?tab=dang_gui",
+  tra_khieu_nai_van_chuyen: "/phieu-tra?tab=khieu_nai",
+};

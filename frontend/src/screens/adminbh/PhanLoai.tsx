@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BuocChips } from "../shared/BuocChips";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, Spinner } from "../../ui/primitives";
@@ -205,6 +206,12 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
             </Btn>
           </div>
         </div>
+        <BuocChips
+          gds={["cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt"]}
+          nhan={{ cho_xac_nhan_so_luong: "Xác nhận SL", cho_phan_loai: "Chờ phân loại", admin_can_xem_lai: "Cần xem lại", cho_bo_sung_tt: "Chờ KTV bổ sung" }}
+          value={filter.tt}
+          onChange={(gd) => setFilter({ ...filter, tt: gd })}
+        />
         <AdminFilterBar value={filter} onChange={setFilter} reloadKey={optsKey} />
         {grouped ? (
           <GroupedDonView rows={gRows} mode={mode as "ktv" | "lk"} selected={selected} onToggle={toggleAll} emptyText="Không có đơn nào cần xử lý." />

@@ -144,7 +144,7 @@ function FastActionForm({ units, meta, onClose, onDone, onBack }: { units: DonVi
   return (
     <Modal title={bulk ? `${meta.label} — ${units.length} đơn vị` : meta.label} onClose={onClose} maxWidthClass="max-w-sm">
       <div className="space-y-4">
-        <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="cho_phan_loai" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
         {bulk && overdue && <p className="text-xs text-[var(--ink-soft)]">{overdueCount}/{units.length} đơn đang quá hạn — lý do chậm áp cho các đơn này.</p>}
         {needsNv && (
           <Field label="Nhân viên sửa chữa phụ trách" required>

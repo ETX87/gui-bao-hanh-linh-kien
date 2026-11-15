@@ -56,7 +56,7 @@ export function BulkXacNhanHoanTatModal({ units, onClose, onDone }: { units: Don
       }
     >
       <div className="space-y-3">
-        <LyDoChamGateField overdue={soQuaHan > 0} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="cho_admin_xac_nhan" overdue={soQuaHan > 0} value={lyDoCham} onChange={setLyDoCham} />
         {soQuaHan > 0 && <p className="text-xs text-[var(--ink-soft)]">Lý do chậm áp cho {soQuaHan} đơn quá hạn.</p>}
         <p className="text-sm text-[var(--ink-body)]">
           {Object.entries(byHuong)

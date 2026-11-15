@@ -28,14 +28,14 @@ export function ThungHangScreen({ user }: { user: AppUser }) {
   const tabs: TabDef[] = [
     { key: "nhap", label: "Thùng nháp / tạo hộ", show: taoHo, countKeys: ["ktv_phieu_nhap"], hint: "Tạo thùng hộ KTV, thêm đơn, xác nhận gửi", render: () => <KtvTaoPhieuScreen user={user} /> },
     {
-      key: "nhap_ktv",
+      key: "nhap_ktv", buoc: ["thung_nhap"],
       label: "Thùng nháp của KTV",
       show: (u) => kho(u) || admin(u) || u.la_giam_sat,
       hint: "Mọi thùng KTV đang tạo, chưa bấm gửi — xem, in phiếu, hoặc nhận trực tiếp",
       render: () => <ThungNhapKtvList />,
     },
     {
-      key: "dang_gui",
+      key: "dang_gui", buoc: ["thung_dang_gui"],
       label: "Đang gửi về Kho",
       show: (u) => kho(u) || admin(u),
       countKeys: ["kho_cho_tiep_nhan"],
@@ -43,7 +43,7 @@ export function ThungHangScreen({ user }: { user: AppUser }) {
       render: () => (kho(user) ? <KhoTiepNhanScreen only="cho_nhan" /> : <NhanHoKhoTab />),
     },
     {
-      key: "cho_admin",
+      key: "cho_admin", buoc: ["thung_cho_admin_nhan"],
       label: "Kho đã nhận — chờ Admin",
       show: (u) => kho(u) || admin(u),
       countKeys: ["kho_cho_ban_giao", "admin_cho_tiep_nhan_noi_bo"],
@@ -51,7 +51,7 @@ export function ThungHangScreen({ user }: { user: AppUser }) {
       render: () => (admin(user) ? <ThungChoNhanNoiBoCard /> : <KhoTiepNhanScreen only="ban_giao" />),
     },
     {
-      key: "tu_choi",
+      key: "tu_choi", buoc: ["thung_tu_choi"],
       label: "⛔ Từ chối",
       show: (u) => kho(u) || admin(u),
       countKeys: ["kho_thung_tu_choi"],

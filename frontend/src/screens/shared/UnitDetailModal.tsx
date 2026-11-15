@@ -4,7 +4,7 @@ import { StatusBadge } from "../../ui/StatusBadge";
 import { api, errorMessage } from "../../lib/api";
 import { fmtDate, hoursSince } from "../../lib/format";
 import { buocOf, gdDonVi, fmtGio, CHU_BUOC_LABEL } from "../../lib/buoc";
-import { GiaiTrinhModal, LichSuGiaiTrinh, type GtEntity } from "./QuanTriBuoc";
+import { DongHoBuoc, GiaiTrinhModal, LichSuGiaiTrinh, type GtEntity } from "./QuanTriBuoc";
 import { Modal } from "../../ui/Modal";
 import { Btn, Badge, Spinner, Textarea } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
@@ -151,6 +151,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const [sending, setSending] = useState(false);
   const [giaiTrinh, setGiaiTrinh] = useState(false);
   const [gtKey, setGtKey] = useState(0);
+  const [dongHo, setDongHo] = useState<{ qua_gio: number; tam_dung: boolean } | null>(null);
 
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const load = () =>
@@ -276,7 +277,8 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
   const buocNay = buocOf(gdNay);
   const buocTu = ptTt ? pt?.updated_at : u.updated_at;
   const gioDung = hoursSince(buocTu);
-  const quaGio = buocNay && !buocNay.ket_thuc ? gioDung - buocNay.sla : 0;
+  // 16/11/2026: dong ho hieu luc (tam dung cho hang / gia han ngoai canh) lay tu /buoc/trang-thai qua DongHoBuoc.
+  const quaGio = buocNay && !buocNay.ket_thuc ? (dongHo ? (dongHo.tam_dung ? 0 : dongHo.qua_gio) : gioDung - buocNay.sla) : 0;
   const moc0 = [p.created_at, pg?.created_at, u.created_at].filter(Boolean).sort()[0] as string;
   const gioTong = hoursSince(moc0);
   const gtType: GtEntity = ptTt ? "phieu_tra" : "phieu_sc_ct";
@@ -435,6 +437,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
             <span className="text-[var(--ink-faint)]">Đang chờ: </span>
             <span className="font-semibold">{dangO}</span>
             {buocNay && !buocNay.ket_thuc && <span className="text-[var(--ink-soft)]">· chủ bước {CHU_BUOC_LABEL[buocNay.chu]}</span>}
+            {buocNay && !buocNay.ket_thuc && <DongHoBuoc type={gtType} id={gtId} reloadKey={gtKey} onState={setDongHo} />}
             {buocNay && !buocNay.ket_thuc && buocNay.giai_trinh !== "khong" && quaGio > 0 && (
               <Btn size="sm" variant="secondary" onClick={() => setGiaiTrinh(true)}>📝 Giải trình</Btn>
             )}

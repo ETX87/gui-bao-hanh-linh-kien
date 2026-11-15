@@ -53,7 +53,7 @@ export function TiepNhanNoiBoModal({ thung, onClose, onDone }: { thung: PhieuGui
       }
     >
       <div className="space-y-3">
-        <LyDoChamGateField overdue={soQuaHan > 0} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="thung_cho_admin_nhan" overdue={soQuaHan > 0} value={lyDoCham} onChange={setLyDoCham} />
         {soQuaHan > 0 && thung.length > 1 && <p className="text-xs text-[var(--ink-soft)]">Lý do chậm áp cho {soQuaHan} thùng quá hạn.</p>}
         <p className="text-sm text-[var(--ink-body)]">
           Xác nhận đã nhận từ Kho {thung.length} thùng{tongDon ? ` (${tongDon} đơn bảo hành)` : ""}. Sau bước này các đơn trong thùng hiện ở bảng xử lý để xác nhận số lượng.

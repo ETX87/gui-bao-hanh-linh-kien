@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { sqlQuaHanX } from "../lib/giaiTrinh";
 import type { Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
@@ -89,7 +90,7 @@ export function allRowsSql(scopeWhere: string, gd?: readonly string[]): string {
     LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id LEFT JOIN phieu_tra_bh t ON t.id = u.phieu_tra_id
     WHERE ${scopeWhere}${locTruocDonVi(gd)}`;
   const parents = `SELECT p.id, p.id AS parent_id, COALESCE(g.updated_at, p.created_at) AS updated_at, p.created_at,
-      COALESCE(g.updated_at, p.created_at) AS buoc_tu,
+      CASE WHEN g.trang_thai = 'nhap' THEN g.created_at ELSE COALESCE(g.updated_at, p.created_at) END AS buoc_tu,
       CASE WHEN g.trang_thai = 'nhap' THEN 'thung_nhap' WHEN g.trang_thai = 'da_gui' THEN 'thung_dang_gui'
            WHEN p.trang_thai_cha = 'huy_thung' THEN 'thung_da_huy' WHEN g.tu_choi_tt IN ('cho_kho','cho_ktv') THEN 'thung_tu_choi' WHEN g.trang_thai = 'da_tiep_nhan' AND g.admin_tiep_nhan = 0 THEN 'thung_cho_admin_nhan' ELSE 'cho_xac_nhan_so_luong' END AS giai_doan,
       p.trang_thai_cha AS trang_thai, NULL AS phieu_tra_id, NULL AS nguoi_sua_chua, NULL AS huong_xu_ly, p.case_id, p.ma_lk, p.ma_lk AS lk_a, p.ma_lk AS lk_b, p.mo_ta_loi, p.ten_khach_hang, p.sdt_khach_hang,
@@ -113,7 +114,7 @@ traCuu.get("/don-vi", async (c) => {
   const chBuoc = await cauHinhBuoc(c.env.DB);
   if (st === "qua_han") {
     // 15/11/2026: qua han theo SLA RIENG tung buoc (lib/buoc.ts).
-    const qh = sqlQuaHan(chBuoc, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+    const qh = sqlQuaHanX(chBuoc, BUOC_DUNG);
     where += ` AND ${qh.sql}`;
     binds.push(...qh.binds);
   } else if (st) {
@@ -133,7 +134,7 @@ traCuu.get("/don-vi", async (c) => {
   // 15/11/2026: loc "buoc dang dung": qua_han / trong_han (theo SLA buoc), chua_gt (qua han chua giai trinh), da_gt.
   const btt = (c.req.query("buoc_tt") || "").trim();
   if (btt) {
-    const qh = sqlQuaHan(chBuoc, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+    const qh = sqlQuaHanX(chBuoc, BUOC_DUNG);
     if (btt === "qua_han") where += ` AND ${qh.sql}`;
     else if (btt === "trong_han") where += ` AND x.giai_doan IN (${BUOC_DUNG.map(() => "?").join(",")}) AND NOT ${qh.sql}`;
     else if (btt === "chua_gt") where += ` AND ${qh.sql} AND NOT ${sqlDaGiaiTrinh()}`;
@@ -211,7 +212,7 @@ traCuu.get("/tong-quan", async (c) => {
   const from = `FROM ${allRowsSql(where)}`;
   const fromDangCho = `FROM ${allRowsSql(where, BUOC_DUNG)}`;
   const b2 = [...binds, ...binds];
-  const qhTq = sqlQuaHan(await cauHinhBuoc(c.env.DB), "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+  const qhTq = sqlQuaHanX(await cauHinhBuoc(c.env.DB), BUOC_DUNG);
   const [{ results }, quaHanRow] = await Promise.all([
     c.env.DB.prepare(`SELECT x.giai_doan AS trang_thai, COUNT(*) as cnt ${from} GROUP BY x.giai_doan`).bind(...b2).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromDangCho} WHERE ${qhTq.sql}`)

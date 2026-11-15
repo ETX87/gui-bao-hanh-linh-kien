@@ -56,7 +56,7 @@ export function XacNhanHoanTatModal({ unit, onClose, onDone }: { unit: DonVi; on
   return (
     <Modal title={`Xác nhận hoàn tất — ${unit.id}`} onClose={onClose} maxWidthClass="max-w-md">
       <div className="space-y-4">
-        <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="cho_admin_xac_nhan" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
 
         {needsXuLyXac && (
           <Field label="Xử lý xác linh kiện lỗi" required>

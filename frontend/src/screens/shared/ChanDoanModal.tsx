@@ -75,7 +75,7 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
       }
     >
       <div className="space-y-4">
-        <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="cho_chan_doan" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
         <Field label="Kết quả" required>
           <Select value={ketQua} onChange={(e) => setKetQua(e.target.value)}>
             <option value="">— Chọn —</option>

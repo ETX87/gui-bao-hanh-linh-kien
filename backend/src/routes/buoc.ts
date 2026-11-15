@@ -3,7 +3,7 @@ import type { AppUser, Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { BUOC, BUOC_DUNG, BUOC_KTV, BUOC_MAP, cauHinhBuoc, luuCauHinhBuoc, sqlQuaHan } from "../lib/buoc";
-import { GT_ID, GT_TYPE, buocCuaBo, buocHienTai, scopeBuoc, soGioQua, sqlDaGiaiTrinh } from "../lib/giaiTrinh";
+import { BEN_THEO_CHU, GT_ID, GT_TYPE, SQL_TAM_DUNG, buocCuaBo, buocHienTai, scopeBuoc, soGioQua, sqlDaGiaiTrinh, sqlQuaHanX, trangThaiBuoc } from "../lib/giaiTrinh";
 import { allRowsSql } from "./traCuu";
 import { isGsOfKtv } from "../lib/gs";
 import { addLog, type LogEntityType } from "../lib/logs";
@@ -43,7 +43,7 @@ buoc.put("/cau-hinh", async (c) => {
 });
 
 // So don dang dung o tung buoc (trong pham vi user) + so qua han + so qua han chua giai trinh.
-export type DangDungRow = { gd: string; tong: number; qua_han: number; chua_gt: number };
+export type DangDungRow = { gd: string; tong: number; qua_han: number; chua_gt: number; tam_dung: number };
 export async function demDangDung(db: D1Database, user: AppUser): Promise<DangDungRow[]> {
   const ch = await cauHinhBuoc(db);
   const sc = scopeBuoc(user);
@@ -54,10 +54,11 @@ export async function demDangDung(db: D1Database, user: AppUser): Promise<DangDu
     extra = " AND x.nguoi_sua_chua = ?";
     eb.push(user.email);
   }
-  const qh = sqlQuaHan(ch, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+  const qh = sqlQuaHanX(ch, BUOC_DUNG);
   const { results } = await db.prepare(
     `SELECT x.giai_doan AS gd, COUNT(*) AS tong, SUM(CASE WHEN ${qh.sql} THEN 1 ELSE 0 END) AS qua_han,
-       SUM(CASE WHEN ${qh.sql} AND NOT ${sqlDaGiaiTrinh()} THEN 1 ELSE 0 END) AS chua_gt
+       SUM(CASE WHEN ${qh.sql} AND NOT ${sqlDaGiaiTrinh()} THEN 1 ELSE 0 END) AS chua_gt,
+       SUM(CASE WHEN ${SQL_TAM_DUNG} THEN 1 ELSE 0 END) AS tam_dung
      FROM ${allRowsSql(sc.where, BUOC_DUNG)} WHERE x.giai_doan IN (${BUOC_DUNG.map(() => "?").join(",")})${extra} GROUP BY x.giai_doan`,
   )
     .bind(...qh.binds, ...qh.binds, ...sc.binds, ...sc.binds, ...BUOC_DUNG, ...eb)
@@ -85,7 +86,7 @@ export async function layCanGiaiTrinh(db: D1Database, user: AppUser): Promise<{ 
   const out: CanGtItem[] = [];
   for (const n of nhom) {
     const sc = scopeBuoc(n.scopeUser);
-    const qh = sqlQuaHan(ch, "x.giai_doan", "x.buoc_tu", n.gds, n.extra);
+    const qh = sqlQuaHanX(ch, n.gds, n.extra);
     // GS: chi khi KTV chua giai trinh (KTV giai trinh roi thi thoi); KTV / BO: chua co ai giai trinh.
     const { results } = await db.prepare(
       `SELECT ${GT_TYPE} AS gt_type, ${GT_ID} AS gt_id, x.giai_doan AS gd, MIN(x.buoc_tu) AS tu, COUNT(*) AS so_don,
@@ -100,6 +101,14 @@ export async function layCanGiaiTrinh(db: D1Database, user: AppUser): Promise<{ 
   return { items: out, len_gs: ch.len_gs };
 }
 buoc.get("/can-giai-trinh", async (c) => c.json(await layCanGiaiTrinh(c.env.DB, c.get("user"))));
+
+// 16/11/2026: trang thai buoc hien tai cua 1 doi tuong (tam dung cho hang / gia han ngoai canh / da giai trinh).
+buoc.get("/trang-thai", async (c) => {
+  const type = c.req.query("type") || "";
+  const id = c.req.query("id") || "";
+  if (!["phieu_gui", "phieu_sc", "phieu_sc_ct", "phieu_tra"].includes(type) || !id) return c.json({ error: "INVALID_ENTITY_TYPE" }, 400);
+  return c.json({ item: await trangThaiBuoc(c.env.DB, type, id) });
+});
 
 // Lich su giai trinh cua 1 doi tuong (UI chi tiet).
 buoc.get("/giai-trinh", async (c) => {
@@ -141,6 +150,8 @@ buoc.post("/giai-trinh", async (c) => {
   if (!vai) return c.json({ error: "FORBIDDEN" }, 403);
 
   const ben = await c.env.DB.prepare("SELECT ben FROM settings_ly_do_cham_bh WHERE noi_dung = ?").bind(lyDo).first<{ ben: string | null }>();
+  // 16/11/2026: ly do phai hop voi buoc (VD buoc Kho khong chon "Do sua chua cham").
+  if (ben?.ben && BEN_THEO_CHU[def.chu] && !BEN_THEO_CHU[def.chu].includes(ben.ben)) return c.json({ error: "LY_DO_KHONG_HOP_BUOC" }, 400);
   const qua = await soGioQua(c.env.DB, cur.gd, cur.tu);
   await c.env.DB.prepare("INSERT INTO giai_trinh_bh (entity_type, entity_id, giai_doan, vai_tro, ly_do, ben, ghi_chu, qua_gio, nguoi, luc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .bind(type, id, cur.gd, vai, lyDo, ben?.ben ?? null, ghiChu, qua, user.email, nowVN())

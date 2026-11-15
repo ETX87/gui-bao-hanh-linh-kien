@@ -41,11 +41,11 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 <header class="hero"><div class="wrap">
 <h1>Quản trị theo bước — Bảo hành đổi trả 3T</h1>
 <p>Bản mô tả cách thay đổi quản trị theo nguyên tắc đối tác đưa ra: <b>định nghĩa rõ từng bước</b>, <b>bước nào tự động pass trong trường hợp nào</b>, <b>ở từng bước có những lỗi nào</b>, <b>khi nào KTV phải giải trình, khi nào TNGS phải giải trình</b>, và <b>bộ lọc theo từng bước đang dừng</b>.</p>
-<p>Nội dung mô tả đúng những gì đã chạy trên app thật (phiên bản v1.128) — bảng định nghĩa bước được sinh trực tiếp từ danh mục bước trong mã nguồn.</p>
-<p class="meta">Cập nhật 15/11/2026 · suachua.dichvu3t.workers.dev · 11 bước chính + nhánh 3B, 5B, 6B, 11B · 14 trạng thái dừng có SLA</p>
+<p>Nội dung mô tả đúng những gì đã chạy trên app thật (phiên bản v1.130) — bảng định nghĩa bước được sinh trực tiếp từ danh mục bước trong mã nguồn.</p>
+<p class="meta">Cập nhật 16/11/2026 · suachua.dichvu3t.workers.dev · 11 bước chính + nhánh 3B, 5B, 6B, 11B · 14 trạng thái dừng có SLA</p>
 </div></header>
 <nav class="toc"><div class="wrap">
-<a href="#s1">1. Thay đổi gì</a><a href="#s2">2. Luồng bước</a><a href="#s3">3. Định nghĩa từng bước</a><a href="#s4">4. Giải trình</a><a href="#s5">5. Đồng hồ &amp; SLA</a><a href="#s6">6. Bộ lọc bước đang dừng</a><a href="#s7">7. Màn hình</a><a href="#s8">8. Cấu hình</a><a href="#s9">9. Ghi chú</a>
+<a href="#s1">1. Thay đổi gì</a><a href="#s2">2. Luồng bước</a><a href="#s3">3. Định nghĩa từng bước</a><a href="#s4">4. Giải trình</a><a href="#s5">5. Đồng hồ &amp; SLA</a><a href="#s6">6. Bộ lọc bước đang dừng</a><a href="#s7">7. Màn hình</a><a href="#s8">8. Cấu hình</a><a href="#s9">9. Thông báo &amp; báo cáo</a><a href="#s10">10. Ghi chú</a>
 </div></nav>
 <main class="wrap">
 
@@ -57,6 +57,9 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 <tr><td><b>Ai giải trình</b></td><td>Ai bấm thao tác khi đơn đã quá hạn thì người đó chọn lý do — kể cả khi chậm do KTV.</td><td>Giải trình theo <b>trách nhiệm</b>: bước KTV giữ → KTV giải trình; KTV quá thêm 24 giờ vẫn chưa giải trình → <b>TNGS</b> giải trình; bước BO giữ → người giữ bước giải trình. Mỗi lý do chậm gắn sẵn <b>bên chịu lỗi</b>.</td></tr>
 <tr><td><b>Theo dõi</b></td><td>Đếm theo hàng đợi của từng vai trò.</td><td>"Việc theo bước đang dừng" (mỗi bước: số đơn, số quá SLA, số chưa giải trình), danh sách "Cần giải trình" riêng cho từng người, <b>bộ lọc bước đang dừng</b> ở mọi danh sách có bước.</td></tr>
 <tr><td><b>Chi tiết đơn</b></td><td>Thanh tiến trình 8 mốc.</td><td>Thanh 11 bước dạng ô: bước đã qua (✓ + giờ), bước đang dừng tô nổi (xanh khi trong SLA, đỏ khi quá) có <b>đồng hồ "đã dừng / SLA / quá bao lâu"</b>, bước chưa tới xám, bước tự pass gạch ngang "bỏ qua". Kèm "Đang chờ: ai — việc gì", nút <b>📝 Giải trình</b> và lịch sử giải trình.</td></tr>
+<tr><td><b>Bắt buộc giải trình</b></td><td>Chỉ BO phải chọn lý do khi thao tác đơn quá hạn.</td><td>Thêm: KTV thao tác bước của mình (gửi xe, bổ sung, nhận hàng) khi đã quá SLA mà chưa giải trình → app bắt giải trình trước. Lý do chậm chỉ hiện các bên liên quan tới bước.</td></tr>
+<tr><td><b>Chờ bên ngoài</b></td><td>Chờ hàng / chờ phê duyệt vẫn bị tính quá hạn.</td><td>Đơn đang chờ hàng (thiếu hàng) <b>tạm dừng đồng hồ</b>; giải trình "Ngoại cảnh" <b>gia hạn thêm 1 SLA</b>.</td></tr>
+<tr><td><b>Thông báo &amp; báo cáo</b></td><td>Không có.</td><td>Thông báo tổng hợp 12h theo vai trò (chuông + thông báo đẩy) và báo cáo <b>Điểm nghẽn &amp; trách nhiệm</b>.</td></tr>
 </table></div></section>
 
 <section id="s2"><h2><span class="n">2</span>Luồng bước</h2>
@@ -94,7 +97,8 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 <li>Bước <b>1</b>: thùng đã có đơn nhưng để nháp quá 24h chưa gửi.</li>
 <li>Bước <b>5B</b>: Admin yêu cầu bổ sung, quá 24h chưa bổ sung.</li>
 <li>Bước <b>11</b>: hàng trả đã gửi, quá 72h chưa xác nhận đã nhận / báo thiếu.</li></ul>
-<p class="muted" style="font-size:13px">KTV thấy các việc này ở đầu màn "Việc của tôi" trên điện thoại, bấm <b>Giải trình</b>, chọn lý do + ghi chú.</p></div>
+<p class="muted" style="font-size:13px">KTV thấy các việc này ở đầu màn "Việc của tôi" trên điện thoại, bấm <b>Giải trình</b>, chọn lý do + ghi chú.</p>
+<p style="font-size:13px;margin:6px 0 0"><b>Bắt buộc:</b> bước đã quá SLA mà chưa giải trình thì khi KTV bấm <b>Xác nhận gửi xe</b> / <b>Gửi bổ sung</b> / <b>Đã nhận hàng</b>, app tự mở hộp giải trình; ghi lý do xong thao tác tự thực hiện tiếp, bấm huỷ thì thao tác không thực hiện.</p></div>
 <div class="card"><h3 style="margin-top:0"><span class="tag t-violet">TNGS — Giám sát khu vực</span> giải trình khi</h3><ul>
 <li>Bước của KTV đã quá SLA <b>thêm 24 giờ</b> (chỉnh được) mà KTV vẫn chưa giải trình.</li>
 <li>Áp cho mọi KTV thuộc khu vực GS phụ trách (GS chính và GS phụ).</li>
@@ -108,20 +112,30 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 </div>
 <div class="card"><h3 style="margin-top:0">Ví dụ: KTV để thùng nháp không gửi (SLA bước 1 = 24h)</h3>
 <div class="timeline">
-<span class="t">0h</span><span>KTV thêm đơn vào thùng nháp — đồng hồ bước 1 bắt đầu.</span>
+<span class="t">0h</span><span>KTV tạo thùng — đồng hồ bước 1 bắt đầu (sửa thùng / thêm đơn không làm đồng hồ chạy lại).</span>
 <span class="t">sau 24h</span><span>Quá SLA → việc hiện ở <b>"Cần giải trình"</b> của KTV (vai KTV); ô bước 1 trong chi tiết đơn chuyển đỏ "quá …".</span>
 <span class="t">thêm 24h</span><span>KTV vẫn chưa giải trình → việc hiện thêm ở "Cần giải trình" của <b>Giám sát khu vực</b> (vai TNGS).</span>
+<span class="t">khi bấm gửi</span><span>Chưa ai giải trình → app bắt KTV giải trình trước khi xác nhận gửi xe.</span>
 <span class="t">bất kỳ lúc nào</span><span>KTV hoặc GS chọn lý do (VD "KTV chưa gom đủ hàng để gửi" — bên chịu: Lỗi KTV) → việc rời cả 2 danh sách; lịch sử giải trình lưu trên thùng / đơn.</span>
 </div></div>
 <div class="card"><h3 style="margin-top:0">Danh mục lý do chậm gắn bên chịu trách nhiệm</h3>
 <table><tr><th>Lý do</th><th>Bên chịu lỗi</th></tr><tr><td>Không có linh kiện</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Hết hàng tồn kho</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Chờ mail phê duyệt từ cấp quản lý</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Do khách hàng chưa thanh toán</td><td><span class="tag t-gray">Ngoại cảnh</span></td></tr><tr><td>Chờ kho xuất hàng</td><td><span class="tag t-amber">Kho</span></td></tr><tr><td>Kho chưa bàn giao hàng cho Admin</td><td><span class="tag t-amber">Kho</span></td></tr><tr><td>Do sửa chữa chậm</td><td><span class="tag t-violet">NV sửa chữa</span></td></tr><tr><td>Đang chờ thông tin từ bộ phận khác</td><td><span class="tag t-green">Admin BH</span></td></tr><tr><td>Quá tải đơn trong ngày</td><td><span class="tag t-green">Admin BH</span></td></tr><tr><td>KTV cung cấp thiếu thông tin</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV chưa gom đủ hàng để gửi</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV bận việc hiện trường</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>KTV chưa kiểm tra hàng trả về</td><td><span class="tag t-blue">Lỗi KTV</span></td></tr><tr><td>Không liên lạc được KTV</td><td><span class="tag t-violet">Giám sát</span></td></tr><tr><td>Nhà xe / bưu điện chưa lấy hàng</td><td><span class="tag t-teal">Vận chuyển</span></td></tr><tr><td>Hàng đang trên đường, chưa về kho</td><td><span class="tag t-teal">Vận chuyển</span></td></tr></table>
-<p class="muted" style="font-size:13px">Người giải trình chọn lý do → bên chịu lỗi tự xác định theo lý do (người bấm không phải là người chịu lỗi). Danh mục thêm / sửa / đổi bên ở Cài đặt. Lý do "Không có linh kiện" / "Hết hàng tồn kho" vẫn tự tạo ticket thiếu hàng bên Đặt mua linh kiện như trước.</p>
+<p class="muted" style="font-size:13px">Người giải trình chọn lý do → bên chịu lỗi tự xác định theo lý do (người bấm không phải là người chịu lỗi). Danh mục thêm / sửa / đổi bên ở Cài đặt. <b>Mỗi bước chỉ hiện lý do của các bên liên quan</b> (bảng dưới; lý do chưa gắn bên thì luôn hiện) và kèm gợi ý "lỗi hay gặp ở bước này". Lý do "Không có linh kiện" / "Hết hàng tồn kho" vẫn tự tạo ticket thiếu hàng bên Đặt mua linh kiện như trước.</p>
+<table style="margin-top:8px"><tr><th>Bước do … giữ</th><th>Lý do được chọn (theo bên chịu lỗi)</th></tr>
+<tr><td>KTV (1, 5B, 11)</td><td>Lỗi KTV · Giám sát · Vận chuyển · Ngoại cảnh</td></tr>
+<tr><td>Kho (2, 10, 11B)</td><td>Kho · Vận chuyển · Lỗi KTV · Ngoại cảnh</td></tr>
+<tr><td>Admin BH (3, 4, 5, 7, 8)</td><td>Admin BH · Kho · Lỗi KTV · Ngoại cảnh</td></tr>
+<tr><td>NV sửa chữa (6)</td><td>NV sửa chữa · Admin BH · Kho · Ngoại cảnh</td></tr>
+<tr><td>Kế toán (9)</td><td>Kế toán · Admin BH · Ngoại cảnh</td></tr></table>
 </div></section>
 
 <section id="s5"><h2><span class="n">5</span>Đồng hồ &amp; SLA</h2>
 <div class="card"><ul>
 <li><b>Mốc bắt đầu</b>: lúc đơn vào bước hiện tại — đơn vị: lần đổi trạng thái gần nhất; bước của phiếu trả: lần đổi trạng thái gần nhất của phiếu; bước của thùng: lần đổi trạng thái gần nhất của thùng.</li>
+<li>Riêng <b>bước 1</b> (thùng nháp) tính từ <b>lúc tạo thùng</b>.</li>
 <li><b>Cách tính giờ</b>: liên tục cả đêm và thứ 7, <b>không tính Chủ nhật</b>.</li>
+<li><b>⏸ Tạm dừng khi chờ hàng</b>: đơn có yêu cầu thiếu hàng đang mở (ticket bên Đặt mua linh kiện chưa đóng) thì <b>không tính quá SLA</b>. Ticket đóng (hàng về / từ chối) → đồng hồ tính lại từ lúc đó.</li>
+<li><b>⏳ Gia hạn do ngoại cảnh</b>: giải trình bằng lý do bên "Ngoại cảnh" (chờ mail phê duyệt, khách chưa thanh toán…) → bước được thêm 1 lần SLA tính từ lúc giải trình.</li>
 <li><b>Mức màu</b>: trong SLA xanh · quá SLA vàng · quá 3 lần SLA đỏ đậm có ⚠.</li>
 <li><b>Đồng hồ tổng</b> của ca ở đầu chi tiết đơn ("Tạo … · đã chạy …"); <b>đồng hồ bước</b> ở ô bước đang dừng.</li>
 <li><b>Cổng thao tác</b> dùng đúng SLA của bước: thao tác 1 bước đã quá SLA phải chọn lý do mới làm tiếp được (Kho tiếp nhận, Admin nhận nội bộ, phân loại, xử lý nhanh, NV nộp kết quả, xác nhận hoàn tất, yêu cầu làm lại, Kho vận tiếp nhận).</li>
@@ -130,11 +144,13 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 <section id="s6"><h2><span class="n">6</span>Bộ lọc theo từng bước đang dừng</h2>
 <div class="card"><table>
 <tr><th style="width:24%">Màn hình</th><th>Lọc theo bước</th><th style="width:18%">Ai dùng</th></tr>
+<tr><td><b>Menu trái › Bước đang dừng</b></td><td>Mỗi bước 1 dòng: số bước · tên · số đơn đang dừng · <span class="tag t-red">số quá SLA</span>. Bấm → danh sách đơn đã lọc đúng bước (người không xem được "Mọi giai đoạn" thì mở đúng tab xử lý của bước).</td><td>Mọi vai trò trừ KTV (KTV dùng chip ở Đơn của tôi)</td></tr>
 <tr><td><b>Trang chủ › Việc theo bước đang dừng</b></td><td>Mỗi bước 1 dòng: tổng đơn đang dừng · ⏰ quá SLA · 📝 chưa giải trình. Bấm dòng → danh sách đơn đã lọc đúng bước; bấm ⏰ / 📝 → lọc thêm quá SLA / chưa giải trình.</td><td>Admin BH, Admin hệ thống, Giám sát, View, Kho, Kế toán</td></tr>
 <tr><td><b>Trang chủ › Cần giải trình</b></td><td>Việc quá SLA mà chính mình phải giải trình, cũ nhất trước, gắn nhãn vai (KTV / TNGS / BO).</td><td>Mọi vai trò</td></tr>
 <tr><td><b>Đơn bảo hành › Mọi giai đoạn</b></td><td>Cột <b>Bước đang dừng</b> (lọc tích nhiều bước; hiện chủ bước · đã dừng / SLA · quá bao lâu) và cột <b>SLA bước</b> (Quá SLA · Quá SLA chưa giải trình · Đã giải trình · Trong SLA). Kết hợp được với mọi cột lọc kiểu Excel khác. File Excel tải về có thêm cột Bước, Chủ bước, Giờ dừng, SLA.</td><td>Admin BH, Giám sát, View</td></tr>
 <tr><td><b>KTV › Đơn của tôi</b></td><td>Dải chip theo bước (góc nhìn KTV), mỗi chip có số đơn:<div class="chips" style="margin-top:6px"><span class="chip on">Tất cả bước 6</span><span class="chip">✍️ Cần bổ sung 1</span><span class="chip">📝 Chưa gửi 2</span><span class="chip">🚚 Trên xe về Kho 1</span><span class="chip">🔧 Đang xử lý 1</span><span class="chip">📤 Đang trả về 1</span></div></td><td>KTV</td></tr>
-<tr><td><b>Thùng hàng / Phiếu trả / Cấp linh kiện</b></td><td>Tab theo bước, mỗi tab có số việc (Thùng nháp · Đang gửi về Kho · Kho đã nhận chờ Admin · Từ chối; Chờ tạo phiếu · Nháp · Chờ KT · Chờ Kho in · Kho đã in · Đang gửi KTV…; Chờ Admin cấp · Chờ KT · Chờ Kho in · Đã xuất).</td><td>Theo vai trò</td></tr>
+<tr><td><b>Đơn bảo hành › Chờ phân loại</b></td><td>Tab này gộp bước 4 / 5 / 5B nên có thêm dải chip lọc bước: <div class="chips" style="margin-top:6px"><span class="chip on">Tất cả</span><span class="chip">4 · Xác nhận SL</span><span class="chip">5 · Chờ phân loại</span><span class="chip">5 · Cần xem lại</span><span class="chip">5B · Chờ KTV bổ sung</span></div></td><td>Admin BH</td></tr>
+<tr><td><b>Thùng hàng / Đơn bảo hành / Phiếu trả</b></td><td>Mỗi tab ghi số bước (VD <b>B2</b> Đang gửi về Kho, <b>B9</b> Chờ KT duyệt) kèm <span class="tag t-red">⏰ số quá SLA</span>; tab theo bước, mỗi tab có số việc (Thùng nháp · Đang gửi về Kho · Kho đã nhận chờ Admin · Từ chối; Chờ tạo phiếu · Nháp · Chờ KT · Chờ Kho in · Kho đã in · Đang gửi KTV…; Chờ Admin cấp · Chờ KT · Chờ Kho in · Đã xuất).</td><td>Theo vai trò</td></tr>
 </table></div></section>
 
 <section id="s7"><h2><span class="n">7</span>Màn hình trên app</h2>
@@ -167,13 +183,25 @@ footer{padding:28px 0 40px;color:var(--soft);font-size:13px;text-align:center}
 <div class="card"><h3 style="margin-top:0">⏱ Lý do chậm</h3><p style="margin:0">Mỗi lý do có ô <b>Bên chịu trách nhiệm</b> (Lỗi KTV · Giám sát · Kho · Admin BH · NV sửa chữa · Kế toán · Vận chuyển · Ngoại cảnh). Thêm / sửa / bật tắt / xoá như trước.</p></div>
 </div></section>
 
-<section id="s9"><h2><span class="n">9</span>Ghi chú &amp; việc tiếp theo</h2>
+<section id="s9"><h2><span class="n">9</span>Thông báo 12h &amp; báo cáo cho quản lý</h2>
+<div class="grid2">
+<div class="card"><h3 style="margin-top:0">🔔 Thông báo tổng hợp 12h trưa</h3><ul>
+<li>1 bản / người / ngày (trừ Chủ nhật), chia theo vai trò: số việc từng hàng đợi, việc gấp ⚠ lên đầu (quá SLA cần giải trình, thùng bị từ chối, khiếu nại…).</li>
+<li>Xem ở chuông 🔔 trên app; ai bật thông báo trên điện thoại / máy tính thì nhận thêm 1 thông báo đẩy.</li>
+<li>Admin BH / Giám sát / View có thêm nhóm "Theo dõi": 4 bước đang quá SLA nhiều nhất.</li></ul></div>
+<div class="card"><h3 style="margin-top:0">🚦 Báo cáo Điểm nghẽn &amp; trách nhiệm</h3><ul>
+<li>Kẹt ở bước nào (đang dừng, quá SLA, chưa giải trình, dừng lâu nhất).</li>
+<li>Chậm do bên nào + lý do hay gặp trong kỳ.</li>
+<li>KTV / Giám sát / NV đang giữ việc quá hạn; việc quá hạn chưa ai giải trình.</li>
+<li>Xu hướng 8 tuần; tải Excel.</li></ul></div>
+</div></section>
+
+<section id="s10"><h2><span class="n">10</span>Ghi chú</h2>
 <div class="card"><ul>
 <li><b>TNGS</b> được hiểu là Giám sát khu vực phụ trách KTV (gồm GS chính và GS phụ đồng bộ từ Đặt mua linh kiện).</li>
-<li>Đồng hồ bước <b>chưa tự tạm dừng</b> khi đang chờ linh kiện (thiếu hàng) hoặc chờ phê duyệt — hiện xử lý bằng giải trình với lý do bên "Ngoại cảnh". Có thể bổ sung tạm dừng đồng hồ nếu đối tác yêu cầu.</li>
-<li>Chưa có thông báo đẩy (push) khi phát sinh việc cần giải trình — người dùng thấy ở Trang chủ.</li>
-<li>Báo cáo thống kê giải trình theo bên chịu lỗi (tháng này bao nhiêu lần chậm do KTV / Kho / ngoại cảnh…) là bước tiếp theo; dữ liệu đã được lưu từ v1.128.</li>
+<li>Bắt buộc giải trình áp cho thao tác của KTV (bước 1, 5B, 11) và cổng lý do chậm của BO. Giám sát không có thao tác để chặn — việc của GS hiện ở "Cần giải trình", thông báo 12h và báo cáo.</li>
+<li>Phạm vi hiện tại: app Bảo hành đổi trả 3T. Các app Đặt mua linh kiện / DVBH / Kho vận chưa áp dụng bộ lọc bước.</li>
 </ul></div></section>
 </main>
-<footer>Bảo hành đổi trả 3T · Quản trị theo bước · v1.128 · 15/11/2026</footer>
+<footer>Bảo hành đổi trả 3T · Quản trị theo bước · v1.130 · 16/11/2026</footer>
 </body></html>

@@ -40,7 +40,7 @@ export function TiepNhanModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose
         </>
       }
     >
-      <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+      <LyDoChamGateField gd="thung_dang_gui" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
       {!overdue && <p className="text-sm text-[var(--ink-soft)]">Xác nhận đã nhận thùng hàng từ KTV <b><UserName email={gui.nguoi_tao} /></b>?</p>}
     </Modal>
   );

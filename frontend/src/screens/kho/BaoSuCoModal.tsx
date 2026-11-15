@@ -45,7 +45,7 @@ export function BaoSuCoModal({ gui, onClose, onDone }: { gui: PhieuGui; onClose:
       }
     >
       <div className="space-y-4">
-        <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="thung_dang_gui" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
         <Field label="Lý do sự cố" required>
           <Input value={lyDo} onChange={(e) => setLyDo(e.target.value)} placeholder="VD: thiếu hàng, hỏng vỡ do vận chuyển..." />
         </Field>

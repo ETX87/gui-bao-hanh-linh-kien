@@ -16,11 +16,26 @@ export class ApiError extends Error {
 // 08/11/2026 - "bấm Thêm vào phiếu thì nút mờ đi, màn hình đứng yên": fetch() khong co gioi han thoi gian, mang
 // dien thoai cham/rot giua chung thi promise treo vo han -> nut "dang gui" khong bao gio mo lai. timeoutMs (tuy chon)
 // huy request bang AbortController va nem ApiError("TIMEOUT"); loi mang (fetch reject) nem ApiError("NETWORK").
+// 16/11/2026 - buoc KTV giu qua SLA chua giai trinh: backend tra 400 REQUIRE_GIAI_TRINH kem `gt` (doi tuong + buoc).
+// Lop api tu mo hop giai trinh (GiaiTrinhHost gan o App) roi GUI LAI request 1 lan - khong phai sua tung man.
+export interface GtYeuCau {
+  entity_type: string;
+  entity_id: string;
+  gd: string;
+  so: string;
+  ten: string;
+  qua_gio: number;
+}
+let gtHandler: ((gt: GtYeuCau) => Promise<boolean>) | null = null;
+export function setGiaiTrinhHandler(fn: ((gt: GtYeuCau) => Promise<boolean>) | null) {
+  gtHandler = fn;
+}
+
 export interface RequestOpts {
   timeoutMs?: number;
 }
 
-async function request<T>(method: string, path: string, body?: unknown, opts?: RequestOpts): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, opts?: RequestOpts, daThu = false): Promise<T> {
   const ctrl = opts?.timeoutMs ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), opts!.timeoutMs) : null;
   let res: Response;
@@ -47,6 +62,11 @@ async function request<T>(method: string, path: string, body?: unknown, opts?: R
   }
   if (!res.ok) {
     const code = (json as { error?: string } | null)?.error || `HTTP_${res.status}`;
+    const gt = (json as { gt?: GtYeuCau } | null)?.gt;
+    if (code === "REQUIRE_GIAI_TRINH" && gt && gtHandler && !daThu) {
+      if (await gtHandler(gt)) return request<T>(method, path, body, opts, true);
+      throw new ApiError("GIAI_TRINH_HUY", res.status);
+    }
     throw new ApiError(code, res.status);
   }
   return json as T;
@@ -116,6 +136,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INVALID_FLAG: "Cờ vai trò không hợp lệ.",
   EMAIL_EXISTS: "Email đã tồn tại.",
   MA_LK_EXISTS: "Mã linh kiện đã tồn tại.",
+  REQUIRE_GIAI_TRINH: "Bước này đã quá SLA — cần giải trình trước khi tiếp tục.",
+  GIAI_TRINH_HUY: "Chưa giải trình nên chưa thực hiện được — bước này đã quá SLA.",
+  LY_DO_KHONG_HOP_BUOC: "Lý do này không thuộc bước đang dừng — chọn lý do khác.",
   REQUIRE_LY_DO_CHAM: "Đơn đã quá hạn SLA — vui lòng chọn lý do chậm trước khi tiếp tục.",
   REQUIRE_LY_DO_CHENH_LECH: "Số lượng thực nhận khác số lượng khai — vui lòng nhập lý do chênh lệch.",
   REQUIRE_MAIL_PD: "Ngoài bảo hành — vui lòng nhập thông tin mail phê duyệt.",

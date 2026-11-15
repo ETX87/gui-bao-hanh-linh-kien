@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { setGiaiTrinhHandler, type GtYeuCau } from "../../lib/api";
 import { api, errorMessage } from "../../lib/api";
-import { BEN_LABEL, CHU_BUOC_LABEL, VAI_GT_LABEL, buocOf, fmtGio, useBuoc } from "../../lib/buoc";
+import { BEN_LABEL, CHU_BUOC_LABEL, VAI_GT_LABEL, buocOf, fmtGio, lyDoHopBuoc, useBuoc } from "../../lib/buoc";
 import { useLyDoCham } from "../../hooks/useSettings";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
@@ -18,9 +19,10 @@ import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 
 export type GtEntity = "phieu_gui" | "phieu_sc" | "phieu_sc_ct" | "phieu_tra";
 
-export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone }: { entityType: GtEntity; entityId: string; gd: string; onClose: () => void; onDone: () => void }) {
+export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone, batBuoc }: { entityType: GtEntity; entityId: string; gd: string; onClose: () => void; onDone: () => void; batBuoc?: GtYeuCau }) {
   const toast = useToast();
-  const { items } = useLyDoCham();
+  // 16/11/2026: chi hien ly do thuoc ben hop voi buoc dang dung (lib/buoc.ts BEN_THEO_CHU).
+  const items = lyDoHopBuoc(useLyDoCham().items, gd);
   const [lyDo, setLyDo] = useState("");
   const [ghiChu, setGhiChu] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,10 +58,20 @@ export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone }: { 
       }
     >
       <div className="space-y-3">
+        {batBuoc && (
+          <div className="rounded-lg border border-[var(--red-200)] bg-[var(--red-50)] px-3 py-2 text-sm text-[var(--red-700)]">
+            ⚠ Bước này đã quá SLA {fmtGio(Math.max(0, batBuoc.qua_gio))} và chưa có giải trình — cần ghi lý do trước, sau đó hệ thống tự thực hiện tiếp thao tác bạn vừa bấm.
+          </div>
+        )}
         {b && (
           <p className="text-sm text-[var(--ink-body)]">
             Bước <b>{b.so}. {b.ten}</b> — chủ bước {CHU_BUOC_LABEL[b.chu]}, SLA {b.sla} giờ.
           </p>
+        )}
+        {b && b.loi.length > 0 && (
+          <div className="text-xs text-[var(--ink-soft)]">
+            <b>Lỗi hay gặp ở bước này:</b> {b.loi.join(" · ")}
+          </div>
         )}
         <Field label="Lý do chậm" required hint="Lý do được gắn sẵn bên chịu trách nhiệm (KTV / Kho / Admin / vận chuyển / ngoại cảnh…).">
           <Select value={lyDo} onChange={(e) => setLyDo(e.target.value)}>
@@ -269,5 +281,62 @@ export function LichSuGiaiTrinh({ ids, reloadKey }: { ids: (string | null | unde
         })}
       </ul>
     </div>
+  );
+}
+
+// 16/11/2026: hop giai trinh BAT BUOC - lop api (lib/api.ts) goi khi backend tra REQUIRE_GIAI_TRINH; giai trinh xong
+// thi request duoc gui lai, huy thi thao tac khong thuc hien. Gan 1 lan o App.
+export function GiaiTrinhHost() {
+  const [pending, setPending] = useState<{ gt: GtYeuCau; resolve: (ok: boolean) => void } | null>(null);
+  useEffect(() => {
+    setGiaiTrinhHandler((gt) => new Promise<boolean>((resolve) => setPending({ gt, resolve })));
+    return () => setGiaiTrinhHandler(null);
+  }, []);
+  if (!pending) return null;
+  const xong = (ok: boolean) => {
+    pending.resolve(ok);
+    setPending(null);
+  };
+  return <GiaiTrinhModal entityType={pending.gt.entity_type as GtEntity} entityId={pending.gt.entity_id} gd={pending.gt.gd} batBuoc={pending.gt} onClose={() => xong(false)} onDone={() => xong(true)} />;
+}
+
+// 16/11/2026: dong trang thai dong ho cua buoc dang dung (chi tiet don): tam dung vi cho hang / gia han do ngoai canh.
+interface TtBuoc {
+  gd: string;
+  moc: string;
+  tu: string;
+  sla: number;
+  qua_gio: number;
+  qua_han: boolean;
+  tam_dung: boolean;
+  thieu_hang: { ma_lk: string; trang_thai: string; ticket_id: string | null }[];
+  gia_han: { luc: string; ly_do: string } | null;
+  da_giai_trinh: boolean;
+}
+export function DongHoBuoc({ type, id, reloadKey, onState }: { type: GtEntity; id: string; reloadKey?: number; onState?: (t: { qua_gio: number; tam_dung: boolean } | null) => void }) {
+  const [t, setT] = useState<TtBuoc | null>(null);
+  useEffect(() => {
+    setT(null);
+    onState?.(null);
+    api
+      .get<{ item: TtBuoc | null }>(`/buoc/trang-thai?type=${type}&id=${encodeURIComponent(id)}`)
+      .then((r) => { setT(r.item); onState?.(r.item ? { qua_gio: r.item.qua_gio, tam_dung: r.item.tam_dung } : null); })
+      .catch(() => undefined);
+  }, [type, id, reloadKey]);
+  if (!t) return null;
+  return (
+    <>
+      {t.tam_dung && (
+        <Badge tone="blue">⏸ Tạm dừng đồng hồ — chờ hàng ({t.thieu_hang.filter((x) => x.ticket_id).map((x) => x.ticket_id).join(", ") || "đang gửi yêu cầu"})</Badge>
+      )}
+      {!t.tam_dung && t.moc !== t.tu && (
+        <Badge tone="violet" >
+          ⏳ Tính lại từ {fmtDate(t.moc).slice(0, 11)}
+          {t.gia_han ? ` (giải trình ngoại cảnh: ${t.gia_han.ly_do})` : " (sau khi hết chờ hàng)"}
+          {t.qua_han ? ` · quá ${fmtGio(t.qua_gio)}` : ` · còn ${fmtGio(Math.max(0, -t.qua_gio))}`}
+        </Badge>
+      )}
+      {t.da_giai_trinh && !t.tam_dung && <Badge tone="green">✓ Đã giải trình lần dừng này</Badge>}
+    </>
   );
 }

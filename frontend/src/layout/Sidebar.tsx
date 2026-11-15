@@ -1,4 +1,5 @@
 import { useRoute } from "../router/Router";
+import { BuocNav } from "./BuocNav";
 import { routesForUser, groupRoutes, countOf, countBreakdown, totalOf, GROUP_SHORT } from "./routes";
 import { useWorkload } from "../hooks/useWorkload";
 import { APP_VERSION } from "../lib/version";
@@ -93,6 +94,7 @@ ${breakdown || count + " việc cần làm"}` : ""}`;
             })}
           </div>
         ))}
+        <BuocNav user={user} collapsed={collapsed} />
       </nav>
 
       <div className="border-t border-white/10 p-2 space-y-1">

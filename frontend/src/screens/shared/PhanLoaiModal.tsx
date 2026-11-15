@@ -94,7 +94,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
       }
     >
       <div className="space-y-4">
-        <LyDoChamGateField overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        <LyDoChamGateField gd="cho_phan_loai" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
 
         {loaiBaoHanh === "ngoai_bh" && (
           <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">Sản phẩm này chọn "Ngoài bảo hành" — bắt buộc nhập thông tin mail phê duyệt.</p>

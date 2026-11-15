@@ -4,6 +4,7 @@ import { LogicHeThongScreen } from "./screens/shared/LogicHeThong";
 import { TraXacScreen } from "./screens/xac/TraXacScreen";
 import { BaoCaoBoScreen } from "./screens/shared/BaoCaoBo";
 import { BaoCaoNghenScreen } from "./screens/shared/BaoCaoNghen";
+import { GiaiTrinhHost } from "./screens/shared/QuanTriBuoc";
 import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
 import { RouterProvider, useRoute } from "./router/Router";
@@ -87,6 +88,7 @@ function AuthedApp({ user }: { user: AppUser }) {
       <Shell user={user}>
         <Routed user={user} />
         <MoTheoId user={user} />
+        <GiaiTrinhHost />
       </Shell>
     </WorkloadProvider>
   );

@@ -39,20 +39,20 @@ function list(user: AppUser, value: string, emptyText: string, opts: { extraKhie
 export function PhieuTraScreen({ user }: { user: AppUser }) {
   const [odooOpen, setOdooOpen] = useState(false);
   const tabs: TabDef[] = [
-    { key: "cho_tao", label: "Chờ tạo phiếu", show: admin, countKeys: ["admin_san_sang_gom"], hint: "Đơn đã xử lý xong, chờ gộp phiếu trả", render: () => <AdminPhieuTraScreen user={user} /> },
-    { key: "nhap", label: "Nháp", show: admin, render: () => list(user, "nhap", "Không có phiếu trả nháp nào.") },
+    { key: "cho_tao", buoc: ["san_sang_gom_phieu_tra"], label: "Chờ tạo phiếu", show: admin, countKeys: ["admin_san_sang_gom"], hint: "Đơn đã xử lý xong, chờ gộp phiếu trả", render: () => <AdminPhieuTraScreen user={user} /> },
+    { key: "nhap", buoc: ["tra_nhap"], label: "Nháp", show: admin, render: () => list(user, "nhap", "Không có phiếu trả nháp nào.") },
     { key: "tu_choi_kt", label: "↩ KT trả lại", show: admin, countKeys: ["admin_phieu_tra_tu_choi"], render: () => list(user, "tu_choi_kt", "Không có phiếu nào bị Kế toán trả lại.") },
-    { key: "cho_kt", label: "Chờ KT duyệt", show: (u) => admin(u) || kt(u), countKeys: ["ketoan_cho_duyet"], hint: "Kế toán mở từng phiếu để duyệt / từ chối", render: () => list(user, "cho_ke_toan_duyet", "Không có phiếu trả nào chờ duyệt.") },
+    { key: "cho_kt", buoc: ["tra_cho_ke_toan_duyet"], label: "Chờ KT duyệt", show: (u) => admin(u) || kt(u), countKeys: ["ketoan_cho_duyet"], hint: "Kế toán mở từng phiếu để duyệt / từ chối", render: () => list(user, "cho_ke_toan_duyet", "Không có phiếu trả nào chờ duyệt.") },
     // 04/11/2026 - "gộp các công việc cần xử lý của kế toán vào chung 1 side bar => chuyển phiếu cấp linh kiện về chung
     // menu Phiếu trả": de xuat linh kien cho Ke toan xac nhan MISA (duyet ca case hoac le tung don).
     { key: "cap_lk", label: "🔩 Cấp linh kiện", show: (u) => kt(u) || kho(u), countKeys: ["ketoan_de_xuat_lk", "kho_lk_cho_in", "kho_lk_da_in"], hint: "Phiếu cấp linh kiện: Kế toán nhập MISA, duyệt → Kho in phiếu → Kho xuất", render: () => <AdminDeXuatScreen user={user} ktOnly /> },
     { key: "kt_da", label: "KT đã xử lý", show: kt, render: () => <KtDaXuLyCard user={user} /> },
     // 04/11/2026 - "Bổ sung 1 trạng trung gian cho KHO là trạng thái Kho đã in phiếu, Chờ kho in phiếu, có thể đổi qua lại,
     // và tách Chờ kho gửi thành 2 tab theo 2 trạng thái này."
-    { key: "cho_in", label: "🖨 Chờ Kho in phiếu", show: xem, countKeys: ["kho_cho_in"], hint: "Kế toán đã duyệt — Kho in phiếu xuất", render: () => list(user, "da_duyet_ke_toan", "Không có phiếu trả nào chờ in.", { khoIn: 0 }) },
+    { key: "cho_in", buoc: ["tra_da_duyet_ke_toan"], label: "🖨 Chờ Kho in phiếu", show: xem, countKeys: ["kho_cho_in"], hint: "Kế toán đã duyệt — Kho in phiếu xuất", render: () => list(user, "da_duyet_ke_toan", "Không có phiếu trả nào chờ in.", { khoIn: 0 }) },
     { key: "da_in", label: "📦 Kho đã in phiếu", show: xem, countKeys: ["kho_da_in"], hint: "Đã in phiếu — Kho đóng gói & gửi", render: () => list(user, "da_duyet_ke_toan", "Không có phiếu trả nào đã in chờ gửi.", { khoIn: 1 }) },
-    { key: "khieu_nai", label: "⚠ KTV báo không nhận", show: (u) => admin(u) || kho(u), countKeys: ["kho_khieu_nai"], hint: "Kho đánh giá: gửi thành công / thất bại (thất lạc)", render: () => list(user, "khieu_nai_van_chuyen", "Không có khiếu nại nào.", { extraKhieuNai: true }) },
-    { key: "dang_gui", label: "Đang gửi KTV", show: xem, hint: "Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay)", render: () => list(user, "da_gui", "Không có phiếu trả nào đang gửi.") },
+    { key: "khieu_nai", buoc: ["tra_khieu_nai_van_chuyen"], label: "⚠ KTV báo không nhận", show: (u) => admin(u) || kho(u), countKeys: ["kho_khieu_nai"], hint: "Kho đánh giá: gửi thành công / thất bại (thất lạc)", render: () => list(user, "khieu_nai_van_chuyen", "Không có khiếu nại nào.", { extraKhieuNai: true }) },
+    { key: "dang_gui", buoc: ["tra_da_gui"], label: "Đang gửi KTV", show: xem, hint: "Đã gửi — chờ KTV xác nhận (Kho có thể xác nhận thay)", render: () => list(user, "da_gui", "Không có phiếu trả nào đang gửi.") },
     { key: "xong", label: "Đã kết thúc", show: xem, render: () => list(user, "ktv_da_nhan,gui_that_bai,ket_thuc_khong_gui", "Chưa có phiếu trả nào kết thúc.") },
     { key: "tat_ca", label: "Tất cả", show: xem, render: () => list(user, "", "Chưa có phiếu trả nào.") },
   ];

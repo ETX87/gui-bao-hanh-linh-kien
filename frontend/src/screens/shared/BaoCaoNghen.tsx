@@ -58,7 +58,7 @@ interface Tuan {
 interface Res {
   tu: string;
   den: string;
-  kpi: { dang_dung: number; qua_sla: number; trong_sla_pct: number; chua_giai_trinh: number; giai_trinh_ky: number; hoan_tat_ky: number; tb_ca_gio: number | null };
+  kpi: { dang_dung: number; qua_sla: number; trong_sla_pct: number; chua_giai_trinh: number; tam_dung?: number; giai_trinh_ky: number; hoan_tat_ky: number; tb_ca_gio: number | null };
   buoc: Buoc[];
   giai_trinh: { theo_ben: Nhom[]; theo_ly_do: { ly_do: string; ben: string; so: number }[]; theo_buoc: Nhom[]; theo_vai: Nhom[] };
   nguoi: { ktv: Nguoi[]; gs: Nguoi[]; nv: Nguoi[] };
@@ -240,7 +240,7 @@ export function BaoCaoNghenScreen({ user }: { user: AppUser }) {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2">
             <Kpi label="Đang dừng ở các bước" value={data.kpi.dang_dung} />
-            <Kpi label="Quá SLA bước" value={data.kpi.qua_sla} tone={data.kpi.qua_sla ? "red" : undefined} />
+            <Kpi label="Quá SLA bước" value={data.kpi.qua_sla} tone={data.kpi.qua_sla ? "red" : undefined} sub={data.kpi.tam_dung ? `+ ${data.kpi.tam_dung} tạm dừng chờ hàng` : "không tính đơn đang chờ hàng"} />
             <Kpi label="Trong SLA" value={`${data.kpi.trong_sla_pct}%`} tone={data.kpi.trong_sla_pct >= 80 ? "green" : "amber"} />
             <Kpi label="Quá hạn chưa giải trình" value={data.kpi.chua_giai_trinh} tone={data.kpi.chua_giai_trinh ? "red" : undefined} />
             <Kpi label="Lần chậm / giải trình (kỳ)" value={data.kpi.giai_trinh_ky} />

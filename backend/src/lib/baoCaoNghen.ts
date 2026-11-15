@@ -1,6 +1,6 @@
 import type { AppUser } from "../types";
 import { BUOC_DUNG, BUOC_KTV, BUOC_MAP, cauHinhBuoc, gdTuTrangThai, sqlQuaHan } from "./buoc";
-import { GT_ID, GT_TYPE, scopeBuoc, sqlDaGiaiTrinh } from "./giaiTrinh";
+import { GT_ID, GT_TYPE, SQL_TAM_DUNG, scopeBuoc, sqlDaGiaiTrinh, sqlQuaHanX } from "./giaiTrinh";
 import { allRowsSql } from "../routes/traCuu";
 import { hoursSince, parseVn, slaHoursBetween } from "./sla";
 
@@ -46,25 +46,26 @@ export async function tinhBaoCaoNghen(db: D1Database, user: AppUser, tu: string,
   const tuCua = tu < tuanDau ? tu : tuanDau;
 
   // ---- 1+2+4: anh chup hien tai, gom theo buoc x KTV x NV (1 lan quet) ----
-  const qh = sqlQuaHan(ch, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
+  const qh = sqlQuaHanX(ch, BUOC_DUNG);
   const { results: snap } = await db
     .prepare(
       `SELECT x.giai_doan AS gd, x.ktv AS ktv, x.nguoi_sua_chua AS nv, COUNT(*) AS tong,
          SUM(CASE WHEN ${qh.sql} THEN 1 ELSE 0 END) AS qua_han,
          SUM(CASE WHEN ${qh.sql} AND NOT ${sqlDaGiaiTrinh()} THEN 1 ELSE 0 END) AS chua_gt,
-         MIN(x.buoc_tu) AS tu_som
+         MIN(x.buoc_tu) AS tu_som, SUM(CASE WHEN ${SQL_TAM_DUNG} THEN 1 ELSE 0 END) AS tam_dung
        FROM ${allRowsSql(sc.where, BUOC_DUNG)} WHERE x.giai_doan IN (${BUOC_DUNG.map(() => "?").join(",")})
        GROUP BY x.giai_doan, x.ktv, x.nguoi_sua_chua`,
     )
     .bind(...qh.binds, ...qh.binds, ...sc.binds, ...sc.binds, ...BUOC_DUNG)
-    .all<{ gd: string; ktv: string | null; nv: string | null; tong: number; qua_han: number; chua_gt: number; tu_som: string }>();
+    .all<{ gd: string; ktv: string | null; nv: string | null; tong: number; qua_han: number; chua_gt: number; tu_som: string; tam_dung: number }>();
 
-  const buocAgg = new Map<string, { gd: string; tong: number; qua_han: number; chua_gt: number; tu_som: string | null }>();
+  const buocAgg = new Map<string, { gd: string; tong: number; qua_han: number; chua_gt: number; tam_dung: number; tu_som: string | null }>();
   const ktvAgg = new Map<string, { email: string; tong: number; qua_han: number; chua_gt: number }>();
   const nvAgg = new Map<string, { email: string; tong: number; qua_han: number; chua_gt: number }>();
   for (const r of snap) {
-    const b = buocAgg.get(r.gd) ?? { gd: r.gd, tong: 0, qua_han: 0, chua_gt: 0, tu_som: null };
+    const b = buocAgg.get(r.gd) ?? { gd: r.gd, tong: 0, qua_han: 0, chua_gt: 0, tam_dung: 0, tu_som: null };
     b.tong += r.tong;
+    b.tam_dung += r.tam_dung ?? 0;
     b.qua_han += r.qua_han;
     b.chua_gt += r.chua_gt;
     if (r.tu_som && (!b.tu_som || r.tu_som < b.tu_som)) b.tu_som = r.tu_som;
@@ -224,6 +225,7 @@ export async function tinhBaoCaoNghen(db: D1Database, user: AppUser, tu: string,
       qua_sla: tongQua,
       trong_sla_pct: tongDung ? Math.round(((tongDung - tongQua) / tongDung) * 100) : 100,
       chua_giai_trinh: tongChuaGt,
+      tam_dung: buoc.reduce((s, b) => s + b.tam_dung, 0),
       giai_trinh_ky: trongKy.length,
       hoan_tat_ky: xongKy.length,
       tb_ca_gio: tbCa,
