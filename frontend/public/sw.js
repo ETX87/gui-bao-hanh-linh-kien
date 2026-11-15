@@ -5,7 +5,7 @@
 // lieu moi nhat khi co mang), cache-first cho asset tinh (JS/CSS/font co hash trong ten file, khong
 // bao gio doi noi dung duoi cung 1 ten - an toan cache dai han).
 
-const CACHE_NAME = "suachua-shell-v1";
+const CACHE_NAME = "suachua-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -48,5 +48,39 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(req).then((cached) => cached || caches.match("/"))),
+  );
+});
+
+// 15/11/2026: Web Push - thong bao tong hop viec ton 12h (backend lib/thongBao.ts). Payload JSON { title, body, url }.
+self.addEventListener("push", (event) => {
+  let p = { title: "Bảo hành đổi trả 3T", body: "", url: "/#/home" };
+  try {
+    if (event.data) p = { ...p, ...event.data.json() };
+  } catch {
+    /* khong phai JSON */
+  }
+  event.waitUntil(
+    self.registration.showNotification(p.title, { body: p.body, icon: "/icon-192.png", badge: "/icon-192.png", tag: "tong-hop-ngay", renotify: true, data: { url: p.url || "/#/home" } }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/#/home";
+  event.waitUntil(
+    (async () => {
+      const list = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of list) {
+        if ("focus" in client) {
+          try {
+            await client.navigate(url);
+          } catch {
+            /* tab khac origin / khong dieu huong duoc */
+          }
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })(),
   );
 });

@@ -30,6 +30,9 @@ import lichSuRoutes from "./routes/lichSu";
 import baoCaoBoRoutes from "./routes/baoCaoBo";
 import deXuatRoutes from "./routes/deXuat";
 import xacRoutes from "./routes/xac";
+import thongBaoRoutes from "./routes/thongBao";
+import baoCaoNghenRoutes from "./routes/baoCaoNghen";
+import { maybeRunDigest } from "./lib/thongBao";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
@@ -99,6 +102,9 @@ app.route("/api/thieu-hang", thieuHangRoutes);
 app.route("/api/anh", anhRoutes);
 app.route("/api/tu-choi-thung", tuChoiThungRoutes);
 app.route("/api/khach-hang", khachHangRoutes);
+// 15/11/2026: chuong thong bao tong hop 12h + dang ky Web Push.
+app.route("/api/thong-bao", thongBaoRoutes);
+app.route("/api/bao-cao-nghen", baoCaoNghenRoutes);
 
 app.onError((err, c) => {
   console.error(err);
@@ -113,6 +119,8 @@ export default {
   // nguoc ve dvbh (lib/odooSync.ts, CLAUDE.md muc "Keo don bao hanh Odoo").
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
+    // 15/11/2026: tu 12h, day ban tong hop viec ton cho nguoi da bat thong bao (moi lan 25 nguoi).
+    ctx.waitUntil(maybeRunDigest(env).then(() => undefined).catch((e) => console.error("[thongBao]", e instanceof Error ? e.message : e)));
     // 12/11/2026: chuyen dan anh cu (base64 trong D1) sang Google Drive, moi lan toi da 25 anh.
     ctx.waitUntil(chuyenAnhCuSangDrive(env, 25, 120000).then(() => undefined).catch((e) => console.error("[anhDrive]", e instanceof Error ? e.message : e)));
     // 04/11/2026: thieu hang bao hanh - gui yeu cau con cho + keo trang thai ticket ben linh-kien-app.

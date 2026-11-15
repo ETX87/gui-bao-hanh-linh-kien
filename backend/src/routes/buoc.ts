@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Env } from "../types";
+import type { AppUser, Env } from "../types";
 import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { BUOC, BUOC_DUNG, BUOC_KTV, BUOC_MAP, cauHinhBuoc, luuCauHinhBuoc, sqlQuaHan } from "../lib/buoc";
@@ -43,9 +43,9 @@ buoc.put("/cau-hinh", async (c) => {
 });
 
 // So don dang dung o tung buoc (trong pham vi user) + so qua han + so qua han chua giai trinh.
-buoc.get("/dang-dung", async (c) => {
-  const user = c.get("user");
-  const ch = await cauHinhBuoc(c.env.DB);
+export type DangDungRow = { gd: string; tong: number; qua_han: number; chua_gt: number };
+export async function demDangDung(db: D1Database, user: AppUser): Promise<DangDungRow[]> {
+  const ch = await cauHinhBuoc(db);
   const sc = scopeBuoc(user);
   let extra = "";
   const eb: unknown[] = [];
@@ -55,23 +55,24 @@ buoc.get("/dang-dung", async (c) => {
     eb.push(user.email);
   }
   const qh = sqlQuaHan(ch, "x.giai_doan", "x.buoc_tu", BUOC_DUNG);
-  const { results } = await c.env.DB.prepare(
+  const { results } = await db.prepare(
     `SELECT x.giai_doan AS gd, COUNT(*) AS tong, SUM(CASE WHEN ${qh.sql} THEN 1 ELSE 0 END) AS qua_han,
        SUM(CASE WHEN ${qh.sql} AND NOT ${sqlDaGiaiTrinh()} THEN 1 ELSE 0 END) AS chua_gt
      FROM ${allRowsSql(sc.where, BUOC_DUNG)} WHERE x.giai_doan IN (${BUOC_DUNG.map(() => "?").join(",")})${extra} GROUP BY x.giai_doan`,
   )
     .bind(...qh.binds, ...qh.binds, ...sc.binds, ...sc.binds, ...BUOC_DUNG, ...eb)
-    .all<{ gd: string; tong: number; qua_han: number; chua_gt: number }>();
-  return c.json({ items: results });
-});
+    .all<DangDungRow>();
+  return results;
+}
+buoc.get("/dang-dung", async (c) => c.json({ items: await demDangDung(c.env.DB, c.get("user")) }));
 
 // Danh sach viec CAN GIAI TRINH cua chinh user (gom theo doi tuong: thung / phieu tra / don).
 //   - KTV: buoc KTV giu, qua SLA, chua ai giai trinh.
 //   - Giam sat (TNGS): buoc KTV giu cua KTV khu vuc minh, qua SLA + len_gs, KTV chua giai trinh.
 //   - BO (Kho / Admin / NV / Ke toan): buoc minh giu, qua SLA, chua giai trinh.
-buoc.get("/can-giai-trinh", async (c) => {
-  const user = c.get("user");
-  const ch = await cauHinhBuoc(c.env.DB);
+export type CanGtItem = { gt_type: string; gt_id: string; gd: string; tu: string; so_don: number; ktv: string | null; ids: string; case_id: string | null; mien: string | null; vai: "ktv" | "gs" | "bo"; qua_gio: number };
+export async function layCanGiaiTrinh(db: D1Database, user: AppUser): Promise<{ items: CanGtItem[]; len_gs: number }> {
+  const ch = await cauHinhBuoc(db);
   const nhom: { vai: "ktv" | "gs" | "bo"; gds: string[]; extra: number; scopeUser: typeof user; extraSql?: string; extraBinds?: unknown[] }[] = [];
   const laKtvThat = user.la_ktv_dvbh || user.la_ve_tinh;
   if (laKtvThat) nhom.push({ vai: "ktv", gds: BUOC_KTV, extra: 0, scopeUser: { ...user, la_qtri: false, la_admin_bh: false, la_kho: false, la_ke_toan: false, la_giam_sat: false, la_view: false } });
@@ -81,12 +82,12 @@ buoc.get("/can-giai-trinh", async (c) => {
     const chiNv = user.la_nv_sua_chua && !(user.la_qtri || user.la_admin_bh || user.la_kho || user.la_ke_toan);
     nhom.push({ vai: "bo", gds: boGds, extra: 0, scopeUser: user, extraSql: chiNv ? " AND x.nguoi_sua_chua = ?" : "", extraBinds: chiNv ? [user.email] : [] });
   }
-  const out: unknown[] = [];
+  const out: CanGtItem[] = [];
   for (const n of nhom) {
     const sc = scopeBuoc(n.scopeUser);
     const qh = sqlQuaHan(ch, "x.giai_doan", "x.buoc_tu", n.gds, n.extra);
     // GS: chi khi KTV chua giai trinh (KTV giai trinh roi thi thoi); KTV / BO: chua co ai giai trinh.
-    const { results } = await c.env.DB.prepare(
+    const { results } = await db.prepare(
       `SELECT ${GT_TYPE} AS gt_type, ${GT_ID} AS gt_id, x.giai_doan AS gd, MIN(x.buoc_tu) AS tu, COUNT(*) AS so_don,
           MAX(x.ktv) AS ktv, GROUP_CONCAT(x.id, ', ') AS ids, MAX(x.case_id) AS case_id, MAX(x.mien) AS mien
        FROM ${allRowsSql(sc.where, n.gds)} WHERE ${qh.sql} AND NOT ${sqlDaGiaiTrinh()}${n.extraSql || ""}
@@ -94,10 +95,11 @@ buoc.get("/can-giai-trinh", async (c) => {
     )
       .bind(...sc.binds, ...sc.binds, ...qh.binds, ...(n.extraBinds || []))
       .all<{ gt_type: string; gt_id: string; gd: string; tu: string; so_don: number; ktv: string | null; ids: string; case_id: string | null; mien: string | null }>();
-    for (const r of results) out.push({ ...r, vai: n.vai, qua_gio: await soGioQua(c.env.DB, r.gd, r.tu) });
+    for (const r of results) out.push({ ...r, vai: n.vai, qua_gio: await soGioQua(db, r.gd, r.tu) });
   }
-  return c.json({ items: out, len_gs: ch.len_gs });
-});
+  return { items: out, len_gs: ch.len_gs };
+}
+buoc.get("/can-giai-trinh", async (c) => c.json(await layCanGiaiTrinh(c.env.DB, c.get("user"))));
 
 // Lich su giai trinh cua 1 doi tuong (UI chi tiet).
 buoc.get("/giai-trinh", async (c) => {

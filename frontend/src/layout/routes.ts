@@ -98,6 +98,7 @@ const CATALOG: CatalogItem[] = [
   // 13/11/2026: module tra xac linh kien cho nha may (routes/xac.ts) - Admin BH gom thung, Ke toan duyet.
   { hash: "/tra-xac", label: "Trả xác linh kiện", short: "Trả xác", icon: "♻️", group: "", desc: "Gom xác Đổi mới vào thùng trả nhà máy → mã EO → Kế toán duyệt", countKeys: ["admin_thung_xac_tra_lai", "ketoan_thung_xac"], show: (u) => u.la_admin_bh || u.la_ke_toan || u.la_view || u.la_qtri },
   { hash: "/lich-su", label: "Lịch sử Serial / Case", short: "Lịch sử", icon: "🔁", group: "", desc: "Tra lịch sử bảo hành theo Serial hoặc ID case", show: () => true },
+  { hash: "/bao-cao-nghen", label: "Điểm nghẽn & trách nhiệm", short: "Điểm nghẽn", icon: "🚦", group: "", desc: "Đang kẹt ở bước nào, chậm do bên nào, ai giữ việc quá hạn, việc chưa giải trình, xu hướng 8 tuần", show: (u) => u.la_admin_bh || u.la_view || u.la_giam_sat || u.la_qtri },
   { hash: "/bao-cao-bo", label: "Báo cáo BO theo tháng", short: "Báo cáo", icon: "📊", group: "", desc: "Số ca, thời gian xử lý, tỷ lệ SLA của từng nhân viên Kho / Admin BH / NV / Kế toán", show: (u) => u.la_admin_bh || u.la_view || u.la_qtri },
   { hash: "/logic", label: "Logic hệ thống", short: "Logic", icon: "📘", group: "", desc: "Luồng quy trình, logic tự động, lịch chạy — tài liệu cho BO", show: (u) => !isPureKtv(u) },
   { hash: "/quan-tri", label: "Quản trị & danh mục", short: "Quản trị", icon: "⚙️", group: "", desc: "Linh kiện, người dùng, KTV, khu vực, cài đặt", show: (u) => u.la_admin_bh || u.la_qtri },

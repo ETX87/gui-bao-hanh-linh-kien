@@ -28,6 +28,11 @@ export interface AppUser {
 
 export interface Env {
   DB: D1Database;
+  // 15/11/2026: Web Push (lib/webPush.ts).
+  VAPID_SERVER_PUBLIC_KEY?: string;
+  VAPID_SERVER_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
+  THONG_BAO_NOW_TEST?: string; // chi chay thu local
   ASSETS: Fetcher;
   BOOTSTRAP_ADMIN_EMAIL: string;
   GOOGLE_REDIRECT_URI: string;

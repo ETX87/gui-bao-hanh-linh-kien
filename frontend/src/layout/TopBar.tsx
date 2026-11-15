@@ -3,6 +3,8 @@ import { useState } from "react";
 import { InstallAppButton } from "./InstallAppButton";
 import { TestModeModal, useTestMode } from "./TestMode";
 import { useUserNames } from "../hooks/useUserNames";
+import { ThongBaoBell } from "./ThongBaoBell";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // TopBar (DESIGN_SYSTEM.md §4):
 // - Mobile: header gradient xanh la (cung nen Sidebar) de nhan dien thuong hieu - icon + ten app + nut
@@ -36,6 +38,8 @@ export function TopBar({ user }: { user: AppUser }) {
   const ten = tenHt && tenHt !== user.email ? tenHt : user.ten || user.email;
   const initial = ten.trim().charAt(0).toUpperCase();
   const test = useTestMode();
+  // Chuong chi gan 1 lan (header mobile / desktop deu render, an bang CSS) de khong tai thong bao 2 lan.
+  const mobile = useIsMobile();
   const [testOpen, setTestOpen] = useState(false);
   // Nut "Chế độ test" chi cho tai khoan THAT la Admin he thong (ke ca khi dang test duoi vai tro khac).
   const testBtn = (onDark: boolean) =>
@@ -60,6 +64,7 @@ export function TopBar({ user }: { user: AppUser }) {
           <p className="text-xs text-white/75 leading-tight truncate">{ten}</p>
         </div>
         {testBtn(true)}
+        {mobile && <ThongBaoBell onDark />}
         <InstallAppButton onDark />
         <button onClick={() => window.confirm("Đăng xuất khỏi ứng dụng?") && logout()} className="focus-ring shrink-0 rounded-lg px-2 py-2 text-xs font-medium text-white/70 hover:bg-white/10">
           Thoát
@@ -75,6 +80,7 @@ export function TopBar({ user }: { user: AppUser }) {
           <span className="text-xs text-[var(--ink-soft)]"> · {roles.join(" · ") || "Chưa gán vai trò"}</span>
         </p>
         <div className="ml-auto" />
+        {!mobile && <ThongBaoBell />}
         {testBtn(false)}
         <button
           onClick={logout}

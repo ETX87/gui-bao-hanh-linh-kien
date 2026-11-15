@@ -3,6 +3,7 @@ import { LichSuScreen } from "./screens/shared/LichSuBaoHanh";
 import { LogicHeThongScreen } from "./screens/shared/LogicHeThong";
 import { TraXacScreen } from "./screens/xac/TraXacScreen";
 import { BaoCaoBoScreen } from "./screens/shared/BaoCaoBo";
+import { BaoCaoNghenScreen } from "./screens/shared/BaoCaoNghen";
 import { useAuth } from "./auth/AuthContext";
 import type { AppUser } from "./lib/types";
 import { RouterProvider, useRoute } from "./router/Router";
@@ -45,6 +46,7 @@ function Routed({ user }: { user: AppUser }) {
   if (path === "/tra-xac" && (user.la_admin_bh || user.la_ke_toan || user.la_view || user.la_qtri)) return <TraXacScreen user={user} />;
   // 13/11/2026: bao cao ket qua lam viec BO theo thang.
   if (path === "/bao-cao-bo" && (user.la_admin_bh || user.la_view || user.la_qtri)) return <BaoCaoBoScreen />;
+  if (path === "/bao-cao-nghen" && (user.la_admin_bh || user.la_view || user.la_giam_sat || user.la_qtri)) return <BaoCaoNghenScreen user={user} />;
 
   // 31/10/2026: 4 man chung dung cho moi vai tro (tab theo giai doan, tu mo dung tab viec cua vai tro).
   if ((user.la_kho || user.la_admin_bh || user.la_giam_sat || user.la_qtri) && path === "/thung") return <ThungHangScreen user={user} />;

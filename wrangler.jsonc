@@ -79,7 +79,10 @@
 		"CASE_LOOKUP_BASE_URL": "https://dvbh.dichvu3t.workers.dev",
 		// Them 2026-09-07: diem noi toi Worker "khovan" (chieu GHI - bao truoc thung hang "cho xu ly",
 		// xem KHOVAN_PUSH_SERVICE o tren).
-		"KHOVAN_PUSH_BASE_URL": "https://khovan.dichvu3t.workers.dev"
+		"KHOVAN_PUSH_BASE_URL": "https://khovan.dichvu3t.workers.dev",
+		// 15/11/2026: Web Push thong bao tong hop 12h (khoa rieng cua suachua; private key dat qua "wrangler secret put VAPID_SERVER_PRIVATE_KEY").
+		"VAPID_SERVER_PUBLIC_KEY": "BBxUTJbjs2UIyc-fwPueHQ2c1TQp-zy4ZJd6sF8NhpF2CVRyffxzV5AtTjVg0h5ExeK_zk5YKH14N8JhtPrUrKI",
+		"VAPID_SUBJECT": "mailto:smarttrade.vp@gmail.com"
 	}
 	// Cac gia tri NHAY CAM (khong dat trong "vars" - dat qua "wrangler secret put", xem DEPLOY.md):
 	// GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET, CASE_LOOKUP_API_KEY.
