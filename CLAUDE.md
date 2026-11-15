@@ -7118,3 +7118,5 @@ Chốt qua AskUserQuestion: kênh báo **"Push + chuông trong app"**; báo cáo
 - Chuông: lần mở đầu tạo bản hôm nay, lần 2 không tạo thêm, `doc-het` → chưa đọc 0; subscribe sai endpoint → 400; khoá public đúng.
 - Push: 2 thiết bị giả (khoá P-256 thật, endpoint FCM giả) → `/push/thu` mã hoá + gửi FCM, FCM 404 → tự xoá thiết bị, báo `PUSH_KHONG_GUI_DUOC`; cron `/__scheduled` → `da_push=2` cho người có thiết bị lỗi. Chưa thử nhận push thật (Browser pane chặn quyền thông báo).
 - Báo cáo: Admin / GS / View 200 (40–50 ms), Kho / KTV 403, lần 2 đọc bộ nhớ; giao diện 1440px đủ 5 khối, "Tính lại" cập nhật GS đúng; 375px không tràn ngang, chỉ 1 chuông. Bấm mục trong chuông → đóng modal, mở đúng `#/thung?tab=cho_admin`.
+
+**Deploy (15/11/2026):** áp migration 0037 lên D1 production (có 2 bảng mới), đặt secret `VAPID_SERVER_PRIVATE_KEY`, `npm run deploy` (Version ID `ad7bed37`). Kiểm tra: 3 route mới trả 401 (route có thật), bundle mang 1.129, `sw.js` có xử lý push. Khoá VAPID riêng lưu ở `%TEMP%/vapid_suachua.json` trên máy làm việc (private key chỉ nằm trong secret Cloudflare).
