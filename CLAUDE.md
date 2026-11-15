@@ -7138,3 +7138,16 @@ Chốt qua AskUserQuestion: kênh báo **"Push + chuông trong app"**; báo cáo
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config tạm, D1 sao `.wrangler/buocqa` + migration 0037 + 1 ticket thiếu hàng mẫu, đã xoá config / khôi phục `.claude/launch.json`), script HTTP **12/12**: tạm dừng (bước 6: 8 đơn / 7 quá SLA / 1 tạm dừng), trạng thái bước đúng, lý do sai bước 400, gia hạn ngoại cảnh làm giảm 1 đơn quá hạn, KTV nhận hàng / gửi xe thùng nháp quá SLA → `REQUIRE_GIAI_TRINH`, KTV chọn lý do bên NV → 400, bước 1 tính từ lúc tạo thùng, "Cần giải trình" bỏ đơn tạm dừng / đã gia hạn, KPI tạm dừng = 1. Giao diện: sidebar 12 dòng bước, tab có B + ⏰, chip 5B lọc đúng 1 đơn, bấm B6 mở 8 đơn đúng bước, chi tiết đơn tạm dừng hiện badge ⏸ và thanh bước "SLA 48h"; KTV bấm "Xác nhận đã gửi xe" → hộp giải trình bắt buộc tự mở (chỉ lý do bên KTV / vận chuyển / ngoại cảnh) → ghi giải trình → thùng tự chuyển "Đã gửi". 375px: Đơn BH / Thùng / Phiếu trả / Trang chủ không tràn ngang.
 
 **Deploy (16/11/2026):** không có migration mới, `npm run deploy` (Version ID `9aed2322`); bundle production mang 1.130, route `/api/buoc/trang-thai` trả 401 (route có thật).
+
+## API gợi ý đơn bảo hành cho linh-kien-app (16/11/2026) — v1.131 (+ linh-kien-app v1.496)
+
+**(a) Nguyên văn yêu cầu** (phía linh-kien-app, loại đề xuất mới "CÔNG NỢ SỬA CHỮA" — NV sửa chữa văn phòng đặt linh kiện ký gửi, mỗi dòng gắn 1 đơn bảo hành): *"chọn ô bảo hành lấy thẳng từ app đổi trả nhưng vẫn cho nhập tay nếu không có (vì có thể đặt cho đơn không thuộc app đổi trả)"*.
+
+**(b) Đã làm:** `GET /api/partner/sync/don-vi-sua-chua` (`routes/sync.ts`, cùng khoá `X-Sync-Key` = `LINHKIEN_SYNC_API_KEY`, CHỈ ĐỌC) — linh-kien-app gọi qua Service Binding `SUACHUA_SYNC_SERVICE`:
+- `?ma=DH-000123-1` (hoặc đơn cha `DH-000123` → đơn vị đầu) → `{ row }` — linh-kien-app xác minh lúc tạo đơn (cờ `bh_lien_ket`);
+- `?q=` (≥ 2 ký tự) → tìm theo mã đơn vị / mã case ở mọi trạng thái, ưu tiên đơn đang sửa, ≤ 20;
+- `?email=` → đơn vị NV đó đang sửa (`trang_thai='cho_chan_doan'`, `nguoi_sua_chua`), mới cập nhật trước, ≤ 100.
+- Mỗi dòng: `id, parent_id, case_id, ma_lk` (B nếu có, không thì A), `ten_lk, san_pham_bh, ten_khach_hang, trang_thai, nguoi_sua_chua`.
+
+**Chưa làm (giai đoạn sau):** Admin BH xác nhận tiêu hao linh kiện công nợ sửa chữa + xử lý xác → báo sang linh-kien-app tự tạo đơn trừ công nợ; ngừng luồng "Đề xuất / Cấp linh kiện" cho đơn mới (xem CLAUDE.md linh-kien-app mục "CÔNG NỢ SỬA CHỮA").
+
