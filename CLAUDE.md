@@ -7256,3 +7256,5 @@ Nguyên văn: *"đóng luồng hoạt động trên app đổi trả, chuyển h
 **(c) Vấn đề:** heredoc dài trong Bash lại lỗi → dùng file script; `wrangler d1 execute --command` nhiều dòng lỗi "incomplete input" → dùng `--file`. Ghi nhận: chưa có đơn CÔNG NỢ SỬA CHỮA nào trên production lúc làm; luồng cũ có 102 đề xuất đã xuất của đơn tạo từ 01/11 sẽ vào danh sách chờ gom sau migration.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (D1 sao `buocqa` + 4 đề xuất mẫu, đã xoá): danh sách 26 xác (3 xác sửa chữa, đề xuất đang giao dở bị loại), `tong_sl` 29; `loai=sua_chua` 3; `xl=tu:2026-11-12:2026-11-13` ra đúng 2; kq sai → 400; tiêu huỷ 2 (1 đơn vị + 1 DX, có ghi chú), thất lạc 1, đưa lại 1; tạo thùng chỉ nhận xác hợp lệ, bỏ DX khỏi thùng; số việc khớp (23). Giao diện: chế độ Theo mã SC nhóm đúng, chọn nhóm → 4 nút kết quả hiện, "Không có xác" → hộp xác nhận → 3 xác chuyển kết quả; bộ lọc nhanh có 2 ô ngày; ô tìm 288px.
+
+**Deploy (16/11/2026):** áp migration 0039 lên D1 production (324 đề xuất: 220 coi đã xử lý ngoài, 94 xác sửa chữa vào danh sách chờ gom) và `npm run deploy` (Version ID `195b1450`).
