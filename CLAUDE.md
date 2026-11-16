@@ -7202,3 +7202,17 @@ Nguyên văn: *"đóng luồng hoạt động trên app đổi trả, chuyển h
 **(c) Ghi nhận:** tab "Thiếu hàng" chưa đổi sang lọc Excel. Lúc làm có 1 phiên khác đang sửa song song (`index.ts`, `phieuGui.ts`, `phieuTra.ts`, `lib/tuDongNhanHang.ts`) — không commit / không deploy phần đó; deploy từ git worktree sạch.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (D1 sao `buocqa` + migration tới 0038, đã xoá): API 3 tab đúng (hôm nay 2 đơn gồm 1 từ chối + 1 KTV đã nhận hôm nay; huỷ 2 đơn gồm 1 đơn cũ; `f_id` → 1 / tổng 2); `tat_ca`, `nhom`, `qua_han`, `/admin/don-vi` lọc nhiều trạng thái + sắp xếp, 3 route có `sort` / `f_*` đều 200. Puppeteer 1440px: 3 tab hiện đúng tiêu đề / cột / số dòng; Chờ phân loại / Đang sửa / Hoàn tất có tiêu đề cột lọc + nút "⚙ Bộ lọc nhanh" (lưới ẩn tới khi bấm); Theo KTV hiện hàng nút lọc theo cột, bấm "Trạng thái" mở hộp chọn.
+
+## Sửa theo đánh giá hao phí: index "Đơn của tôi", tự đóng phiếu trả 14 ngày, "Bước đang dừng" chỉ tải khi mở (16/11/2026) — v1.134
+
+**(a) Nguyên văn:** *"1. OK đồng ý tự đóng sau 14 ngày và các fix cần thiết 2. bước đang dừng auto tự ẩn, chỉ khi người dùng vào xem mới load để tránh lãng phí không cần thiết, vì không phải lúc nào cũng có người vào xem"*
+
+**(b) Đã làm:**
+- `GET /phieu-gui/don-cua-toi`: thêm `+` trước `u4/u6.trang_thai` (tắt index trạng thái → dùng index đơn cha). Đo trên D1 thật: 615k → 2,2k rows / lần, cùng kết quả.
+- `lib/tuDongNhanHang.ts` + cron 15 phút: phiếu trả `da_gui` quá **14 ngày** (KTV không bấm nhận / không báo thiếu) → `ktv_da_nhan`, người thực hiện "Hệ thống", ghi chú vào `danh_gia_ktv` + nhật ký; phiếu nhập từ AppSheet đóng ngay (lần chạy đầu: 134 phiếu / 852 đơn vị). Mỗi lần ≤200 phiếu; CAS `trang_thai='da_gui'` nên KTV vừa bấm / báo thiếu thì không ghi đè. Phiếu "KTV báo không nhận được" không bị đóng.
+- Bỏ bắt buộc giải trình khi KTV bấm "Đã nhận" (`ktv-xac-nhan-nhan`); việc quá SLA bước 11 vẫn ở "Cần giải trình" + thông báo 12h.
+- Sidebar "Bước đang dừng" mặc định **ẩn**, không nhớ trạng thái mở; chỉ khi bấm mở mới gọi `/buoc/dang-dung`. Số trên tab (B…, ⏰) và chip bước chỉ đọc bản đã tải (`useDangDung(enabled, false)`) — chưa mở sidebar thì không hiện số, không gọi API.
+
+**(d) Kiểm thử:** typecheck backend + frontend 0 lỗi; câu chọn phiếu tự đóng chạy trên D1 thật (chỉ đọc) ra 134 phiếu AppSheet, 0 phiếu thường quá 14 ngày; mẫu `INSERT … WHERE changes() > 0` thử bằng SQLite chỉ ghi nhật ký cho phiếu thật sự đổi. Chưa bấm thử sidebar trên giao diện.
+
+**Deploy (16/11/2026):** `npm run deploy` từ git worktree sạch của commit `9ce2aac` (Version ID `2d25737a`), không có migration mới.
