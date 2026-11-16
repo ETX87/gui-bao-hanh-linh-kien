@@ -61,6 +61,9 @@ export async function goiLinhKien<T>(env: Env, path: string, init?: { method?: s
 // Nhan tieng Viet cho loi tra ve tu linh-kien-app (FE hien nguyen cau).
 const LOI: Record<string, string> = {
   CHUA_CAU_HINH_LINH_KIEN: "Chưa cấu hình kết nối app Đặt linh kiện",
+  CHUA_GUI_HANG: "Kho chưa gửi linh kiện này (Kế toán / Kho đang xử lý) — chưa xác nhận đã nhận được",
+  DANG_BAO_NHAN_THIEU: "Phiếu xuất đang có báo nhận thiếu chờ Kho kiểm tra",
+  DON_DA_DONG: "Đơn cấp linh kiện đã huỷ / bị từ chối",
   KHONG_KET_NOI_LINH_KIEN: "Không kết nối được app Đặt linh kiện — thử lại sau",
   LINH_KIEN_KHONG_TRA_LOI: "App Đặt linh kiện không phản hồi — thử lại sau (kiểm tra danh sách trước khi gửi lại)",
   MA_LK_NOT_FOUND: "Mã linh kiện không có trong danh mục app Đặt linh kiện",

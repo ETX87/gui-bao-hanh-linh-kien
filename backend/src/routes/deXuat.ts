@@ -13,6 +13,7 @@ import { dayTruCongNo, dongBoTruCongNo, demTruCongNoCho } from "../lib/truCongNo
 import { slaCutoffVn } from "../lib/sla";
 import { dayCapLkCho, demCapLkCho } from "../lib/capLkPush";
 import { dongBoDonSc, ghiMotDon, goiLinhKien, moTaLoi, type DonSc } from "../lib/donScLinhKien";
+import { dxChuaNhan, xacNhanDaNhan } from "../lib/daNhanLk";
 
 // De xuat linh kien sua chua (12/10/2026) - nguyen van chot: "NV se tu bao linh kien can duoc cap, Admin
 // bao hanh se len misa de xuat tu kho sang. Cu de xuat den khi sua xong hoac xac dinh la khong sua
@@ -40,7 +41,10 @@ const KHO_XEM = Object.keys(KHO_TAB);
 // 16/11/2026: tab ao cua luong cap qua app Dat linh kien (de xuat lien_ket).
 const AO_TAB: Record<string, string> = {
   dang_cap: "d.trang_thai = 'lien_ket' AND COALESCE(d.lk_buoc, '') <> 'xong'",
-  cho_xn: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL",
+  // 16/11/2026 (v1.140): "Bàn giao sẽ triển khai bên ngoài, Admin bh sẽ tự vào xác nhận hoặc danh sách các đơn sửa xong chưa xác nhận sẽ tự
+  // phân loại chờ Admin bh xác nhận xử lý" -> tach: NV dang giu (don van o buoc NV sua) / Cho Admin xac nhan (don da sua xong).
+  nv_giu: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
+  cho_xn: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
   tru_cn: "d.xn_luc IS NOT NULL",
 };
 function ttWhere(tt: string): { sql: string; binds: unknown[] } {
@@ -54,7 +58,7 @@ function ttWhere(tt: string): { sql: string; binds: unknown[] } {
 const CA_KEY = "COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)";
 const PXK_KEY = "COALESCE(NULLIF(TRIM(d.ma_misa), ''), d.id)";
 // 06/11/2026 - "đã xuất không cần đếm, chỉ cần đếm những vị trí còn cần thao tác để tiết kiệm lượt đọc D1": chi dem 4 tab con viec.
-const ALL_TABS = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in", "cho_xn"];
+const ALL_TABS = ["cho_cap", "cho_ke_toan", "cho_kho_in", "kho_da_in", "nv_giu", "cho_xn"];
 const canSee = (u: AppUser, tt: string) => isAdmin(u) || (isKt(u) && KT_XEM.includes(tt)) || (isKho(u) && KHO_XEM.includes(tt));
 
 interface DxRow {
@@ -273,6 +277,22 @@ deXuat.post("/:id/sua", async (c) => {
 });
 
 // NV tu huy de xuat chua cap.
+// 16/11/2026 (v1.140): NV sua chua xac nhan "Đã nhận" linh kien cap qua app Dat LK (NV duoc giao / Admin BH / qtri). Body {ids?} = chi cac
+// lan cap nay (mac dinh: tat ca lan cap chua nhan cua don vi).
+deXuat.post("/don-vi/:unitId/da-nhan", async (c) => {
+  const user = c.get("user");
+  const unitId = c.req.param("unitId");
+  const u = await unitOf(c.env.DB, unitId);
+  if (!u) return c.json({ error: "NOT_FOUND" }, 404);
+  if (u.nguoi_sua_chua !== user.email && !user.la_admin_bh && !user.la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
+  const b = await c.req.json<{ ids?: string[] }>().catch(() => ({}) as { ids?: string[] });
+  let ds = await dxChuaNhan(c.env.DB, unitId);
+  if (Array.isArray(b.ids) && b.ids.length) ds = ds.filter((d) => b.ids!.includes(d.id));
+  if (!ds.length) return c.json({ ok: true, so_xac_nhan: 0, loi: [] });
+  const kq = await xacNhanDaNhan(c.env, ds, unitId, u.trang_thai, user.email, false);
+  return c.json({ ok: kq.loi.length === 0, so_xac_nhan: kq.ok.length, loi: kq.loi });
+});
+
 deXuat.post("/:id/huy", async (c) => {
   const user = c.get("user");
   const d = await c.env.DB.prepare("SELECT * FROM de_xuat_linh_kien_bh WHERE id = ?").bind(c.req.param("id")).first<DxRow & { nguoi_de_xuat: string }>();

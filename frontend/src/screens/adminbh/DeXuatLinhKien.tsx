@@ -32,7 +32,8 @@ import { CongNoNut, CongNoTag, XacNhanTieuHaoModal, choXacNhanTieuHao } from "..
 // tác của KT, KT hoàn toàn làm bên linh kiện app" -> Ke toan chi xem (Đang cấp / Trừ công nợ / Kho đã xuất), bo tab Chờ KT xác nhận.
 const TABS = [
   { key: "dang_cap", label: "🔗 Đang cấp (app Đặt LK)", kt: true, kho: false },
-  { key: "cho_xn", label: "🧾 Chờ xác nhận tiêu hao", kt: false, kho: false },
+  { key: "nv_giu", label: "🧑‍🔧 NV đang giữ", kt: false, kho: false },
+  { key: "cho_xn", label: "🧾 Chờ Admin xác nhận (đơn sửa xong)", kt: false, kho: false },
   { key: "tru_cn", label: "💳 Trừ công nợ", kt: true, kho: false },
   { key: "cho_cap", label: "Chờ Admin cấp (luồng cũ)", kt: false, kho: false },
   { key: "cho_ke_toan", label: "Chờ KT xác nhận (luồng cũ)", kt: false, kho: false },
@@ -145,7 +146,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   useEffect(() => setSelected(new Set()), [page, tab, flt.query]);
   const choKt = tab === "cho_ke_toan" && isKt;
   const khoTab = KHO_TABS.includes(tab) && isKho;
-  const choXn = tab === "cho_xn" && isAdmin;
+  const choXn = (tab === "cho_xn" || tab === "nv_giu") && isAdmin;
   const choCap = choXn || choKt || khoTab;
   const chuyenAppLk = async (d: DeXuatLk) => {
     if (!window.confirm(`Chuyển ${d.id} (${nameOf(d.ma_lk)} ×${d.so_luong}) sang app Đặt linh kiện thành đơn CÔNG NỢ SỬA CHỮA?`)) return;
@@ -237,12 +238,12 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     { key: "unit", header: "Đơn bảo hành", render: (r) => <span className="font-mono text-xs">{r.unit_id}</span> },
     { key: "lk", header: "Linh kiện xin cấp", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span> },
     { key: "sl", header: "SL", render: (r) => <b>×{r.so_luong}</b> },
-    ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+    ["dang_cap", "nv_giu", "cho_xn", "tru_cn"].includes(tab)
       ? { key: "nv", header: "NV sửa chữa", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") }
       : { key: "nv", header: "NV đề xuất", render: (r) => <UserName email={r.nguoi_de_xuat} /> },
     { key: "gc", header: "Ghi chú", render: (r) => <span className="block max-w-[220px] truncate" title={r.ghi_chu || ""}>{r.ghi_chu || "—"}</span> },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+    ["dang_cap", "nv_giu", "cho_xn", "tru_cn"].includes(tab)
       ? { key: "ma", header: tab === "dang_cap" ? "Đơn Đặt LK" : "Trừ công nợ", render: (r) => (tab === "dang_cap" ? <span className="text-xs"><span className="font-mono">{r.lk_ddh_id}</span> · {r.lk_nhan || "—"}</span> : <CongNoTag d={r} />) }
       : { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}<LkSyncTag d={r} /></span> },
     tab === "cho_cap" || tab === "cho_ke_toan"
@@ -251,7 +252,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
         ? { key: "sla", header: "Chờ Kho", render: (r) => <SlaBadge since={(tab === "kho_da_in" ? r.kho_in_luc : null) || r.kt_luc || r.updated_at} /> }
         : tab === "kho_da_xuat"
           ? { key: "xl", header: "Kho xuất", render: (r) => <span className="text-xs">{r.kho_xuat_boi ? <UserName email={r.kho_xuat_boi} /> : "—"} · {fmtDate(r.kho_xuat_luc || r.kt_luc)}</span> }
-          : ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+          : ["dang_cap", "nv_giu", "cho_xn", "tru_cn"].includes(tab)
             ? { key: "cn", header: "Cập nhật", render: (r) => <span className="text-xs">{fmtDate(r.xn_luc || r.updated_at)}</span> }
             : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
   ];
@@ -321,7 +322,8 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
       </div>
       {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">Đề xuất theo luồng cũ còn dở. Luồng Kế toán xác nhận ở app này đã đóng — bấm "→ App Đặt LK" để tạo đơn CÔNG NỢ SỬA CHỮA bên app Đặt linh kiện (Kế toán / Kho xử lý bên đó), hoặc "Từ chối".</p>}
       {tab === "dang_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">Đơn CÔNG NỢ SỬA CHỮA đang xử lý bên app Đặt linh kiện (Kế toán duyệt, Kho xuất, NV xác nhận nhận hàng) — trạng thái tự đồng bộ về.</p>}
-      {tab === "cho_xn" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV đã nhận linh kiện. Khi NV sửa xong và giao xác + linh kiện dư, Admin BH xác nhận số đã dùng và tình trạng xác → hệ thống tự tạo đơn trừ công nợ / trả hàng bên app Đặt linh kiện.</p>}
+      {tab === "nv_giu" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV đã nhận linh kiện, đơn bảo hành vẫn đang ở bước NV sửa. Bàn giao xác + linh kiện dư làm ngoài hệ thống — Admin BH có thể xác nhận tiêu hao ngay tại đây nếu đã nhận xác; đơn sửa xong sẽ tự chuyển sang tab "Chờ Admin xác nhận".</p>}
+      {tab === "cho_xn" && <p className="text-xs text-[var(--ink-soft)] mb-2">Đơn đã sửa xong, linh kiện NV đã nhận chưa được xác nhận tiêu hao. Admin BH xác nhận số đã dùng và tình trạng xác → hệ thống tự tạo đơn trừ công nợ / trả hàng, đẩy thẳng Kế toán bên app Đặt linh kiện.</p>}
       {tab === "tru_cn" && <p className="text-xs text-[var(--ink-soft)] mb-2">Lần cấp đã xác nhận tiêu hao: đơn "TRỪ CÔNG NỢ - SỬA CHỮA" (Kế toán chốt trên app Đặt linh kiện → trừ công nợ NV) và "TRẢ HÀNG CÔNG NỢ - SỬA CHỮA" (linh kiện dư NV trả kho). Xác "Trả đối tác" theo dõi ở màn Trả xác.</p>}
       {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA — mỗi khối là 1 phiếu PXK. Bấm khối để xem các đơn bảo hành bên trong; "🖨 Đã in" / "📦 Đã xuất" áp cho toàn bộ phiếu.</p>}
       {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu PXK — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in"), áp cho toàn bộ phiếu.</p>}

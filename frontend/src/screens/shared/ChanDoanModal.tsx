@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ImagePicker } from "../../ui/ImagePicker";
-import { api, errorMessage } from "../../lib/api";
+import { api, ApiError, errorMessage } from "../../lib/api";
+import { useLkName } from "../../hooks/useLinhKien";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
@@ -30,25 +31,39 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [busy, setBusy] = useState(false);
   // 12/10/2026: de xuat linh kien con "cho cap" se tu huy khi nop ket qua - bao truoc cho NV.
   const [soChoCap, setSoChoCap] = useState(0);
+  // 16/11/2026 (v1.140): lan cap qua app Dat LK NV chua bam "Đã nhận" -> dong don se tu xac nhan da nhan du (hoi truoc).
+  const [chuaNhan, setChuaNhan] = useState<DeXuatLk[]>([]);
+  const [canhBaoNhan, setCanhBaoNhan] = useState<{ banGiao: boolean } | null>(null);
+  const { nameOf } = useLkName();
   useEffect(() => {
     api
       .get<{ de_xuat: DeXuatLk[] }>(`/de-xuat/don-vi/${unit.id}`)
-      .then((r) => setSoChoCap(r.de_xuat.filter((d) => d.trang_thai === "cho_cap").length))
+      .then((r) => {
+        setSoChoCap(r.de_xuat.filter((d) => d.trang_thai === "cho_cap").length);
+        setChuaNhan(r.de_xuat.filter((d) => d.trang_thai === "lien_ket" && d.lk_ddh_id && !["xong", "dong"].includes(d.lk_buoc ?? "")));
+      })
       .catch(() => undefined);
   }, [unit.id]);
 
   const [xacNhanBanGiao, setXacNhanBanGiao] = useState(false);
 
-  const submit = async (banGiao = false) => {
+  const submit = async (banGiao = false, tuXacNhan = false) => {
+    if (chuaNhan.length && !tuXacNhan) {
+      setCanhBaoNhan({ banGiao });
+      return;
+    }
     setBusy(true);
     try {
       const [anh_truoc, anh_sau, anh_loi_thuc_te] = await Promise.all([filesToDataUrls(anhTruoc), filesToDataUrls(anhSau), filesToDataUrls(anhLoi)]);
-      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: banGiao ? "da_sua_xong" : ketQua, ban_giao: banGiao || undefined, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined });
+      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: banGiao ? "da_sua_xong" : ketQua, ban_giao: banGiao || undefined, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined, tu_xac_nhan_nhan: tuXacNhan || undefined });
       setXacNhanBanGiao(false);
+      setCanhBaoNhan(null);
       toast(banGiao ? "Đã bàn giao máy — đơn đã kết thúc." : r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
       onDone();
     } catch (e) {
-      toast(errorMessage(e), "error");
+      // Danh sach tren may chua kip cap nhat (NV vua duoc giao linh kien) -> hoi lai.
+      if (e instanceof ApiError && e.code === "CHUA_XAC_NHAN_NHAN" && !tuXacNhan) setCanhBaoNhan({ banGiao });
+      else toast(errorMessage(e), "error");
     } finally {
       setBusy(false);
     }
@@ -89,6 +104,12 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         <Field label="Ghi chú">
           <Textarea rows={3} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} placeholder="Linh kiện đã thay, nguyên nhân lỗi, lưu ý cho Admin / Kho…" />
         </Field>
+        {chuaNhan.length > 0 && (
+          <p className="rounded-lg bg-[var(--amber-100)] px-3 py-2 text-xs font-semibold text-[var(--amber-800)]">
+            ⚠ Còn {chuaNhan.length} lần cấp linh kiện NV chưa xác nhận "Đã nhận" — nên bấm "✔ Đã nhận" ở khối Đề xuất linh kiện trước khi đóng đơn.
+            Nếu nộp luôn, hệ thống sẽ tự động xác nhận tất cả linh kiện đã nhận đủ.
+          </p>
+        )}
         {soChoCap > 0 && (
           <p className="rounded-lg bg-[var(--amber-100)] px-3 py-2 text-xs font-semibold text-[var(--amber-800)]">
             Còn {soChoCap} đề xuất linh kiện chưa được cấp — nộp kết quả sẽ tự huỷ các đề xuất này.
@@ -106,6 +127,34 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
           </Field>
         </div>
       </div>
+      {canhBaoNhan && (
+        <Modal
+          title="Linh kiện chưa xác nhận đã nhận"
+          onClose={() => setCanhBaoNhan(null)}
+          maxWidthClass="max-w-md"
+          footerActions={
+            <>
+              <Btn onClick={() => setCanhBaoNhan(null)}>Quay lại</Btn>
+              <Btn variant="danger" disabled={busy} onClick={() => submit(canhBaoNhan.banGiao, true)}>
+                {busy ? "Đang lưu…" : "Tự xác nhận đã nhận đủ & đóng đơn"}
+              </Btn>
+            </>
+          }
+        >
+          <div className="space-y-3 text-sm">
+            <p className="rounded-lg bg-[var(--amber-100)] px-3 py-2 font-semibold text-[var(--amber-800)]">
+              ⚠ NV chưa xác nhận đã nhận {chuaNhan.length} lần cấp linh kiện của đơn {unit.id}.
+            </p>
+            <ul className="list-disc pl-5 text-xs space-y-0.5">
+              {chuaNhan.map((d) => (
+                <li key={d.id}><span className="font-mono">{d.id}</span> · {nameOf(d.ma_lk)} ×{d.so_luong} · {d.lk_nhan || "đang cấp"}</li>
+              ))}
+            </ul>
+            <p>Đóng đơn lúc này, hệ thống sẽ <b>tự động xác nhận tất cả các linh kiện trên đều đã nhận đủ</b> (ghi nhật ký "tự động xác nhận" bên app Đặt linh kiện).</p>
+            <p className="text-xs text-[var(--ink-soft)]">Lần cấp Kho chưa gửi thì không tự xác nhận được — hệ thống sẽ báo, chờ Kho gửi hoặc huỷ lần cấp rồi nộp lại.</p>
+          </div>
+        </Modal>
+      )}
       {xacNhanBanGiao && (
         <Modal
           title="Xác nhận đã bàn giao máy"

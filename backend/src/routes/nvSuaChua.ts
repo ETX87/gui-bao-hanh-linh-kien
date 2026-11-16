@@ -13,6 +13,7 @@ import { parsePage } from "../lib/pagination";
 import { nextSequentialId } from "../lib/idCounter";
 import { syncPhieuTraMien } from "../lib/mien";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
+import { dxChuaNhan, xacNhanDaNhan } from "../lib/daNhanLk";
 
 // Man hinh NV sua chua - "Viec cua toi" + Chan doan. Anh luu dang data URL (base64) truc tiep trong
 // cot TEXT - dung quyet dinh "KHONG dung R2" da chot cho he nay (giong prototype fileToBase64()).
@@ -70,6 +71,8 @@ interface ChanDoanBody {
   ghi_chu?: string;
   // 10/11/2026: "Đã bàn giao máy (kết thúc luôn)" - tinh la da sua xong + da ban giao, ket thuc toan bo luong.
   ban_giao?: boolean;
+  // 16/11/2026: dong y "tự động xác nhận tất cả các linh kiện đều chuyển sang trạng thái đã nhận đủ" khi NV chua bam "Đã nhận".
+  tu_xac_nhan_nhan?: boolean;
 }
 
 nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
@@ -88,6 +91,22 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (body.ban_giao) body.ket_qua_chan_doan = "da_sua_xong";
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
   if ((await quaHanBuoc(c.env.DB, "cho_chan_doan", u.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+
+  // 16/11/2026 (v1.140): "YC phải xác nhận đã nhận mới cho đóng đơn sửa chữa (nếu chưa xác nhận mà đóng đơn sẽ hiện cảnh báo tự động xác nhận
+  // tất cả các linh kiện đều chuyển sang trạng thái đã nhận đủ)". Con lan cap qua app Dat LK chua xac nhan -> 409 CHUA_XAC_NHAN_NHAN (FE hien
+  // canh bao); gui lai voi tu_xac_nhan_nhan -> tu xac nhan het. Lan cap Kho chua gui -> khong tu xac nhan duoc, chan.
+  const chuaNhan = await dxChuaNhan(c.env.DB, id);
+  if (chuaNhan.length) {
+    if (!body.tu_xac_nhan_nhan) return c.json({ error: "CHUA_XAC_NHAN_NHAN", ds: chuaNhan }, 409);
+    const kq = await xacNhanDaNhan(c.env, chuaNhan, id, "cho_chan_doan", user.email, true);
+    if (kq.loi.length) {
+      return c.json({
+        error: "KHONG_TU_XAC_NHAN_DUOC",
+        loi: kq.loi,
+        message: `Chưa đóng đơn được: ${kq.loi.map((l) => `${l.id} — ${l.nhan ? `${l.nhan}: ` : ""}${l.message}`).join("; ")}. Chờ Kho gửi linh kiện (hoặc huỷ lần cấp) rồi nộp lại.`,
+      }, 409);
+    }
+  }
 
   // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi ghi ket qua.
   let anhTruoc: string[], anhSau: string[], anhLoi: string[];

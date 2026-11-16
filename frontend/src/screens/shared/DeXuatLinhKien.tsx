@@ -426,6 +426,20 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
       toast(errorMessage(e), "error");
     }
   };
+  // 16/11/2026 (v1.140): NV xac nhan "Đã nhận" linh kien cap qua app Dat LK (bat buoc truoc khi dong don sua chua).
+  const chuaNhan = list.filter((d) => d.trang_thai === "lien_ket" && !!d.lk_ddh_id && !["xong", "dong"].includes(d.lk_buoc ?? ""));
+  const duocNhan = isAdmin || nguoiSuaChua === user.email;
+  const daNhan = async (ds: DeXuatLk[]) => {
+    if (!window.confirm(`Xác nhận đã nhận đủ ${ds.map((d) => `${nameOf(d.ma_lk)} ×${d.so_luong}`).join(", ")}?`)) return;
+    try {
+      const r = await api.post<{ so_xac_nhan: number; loi: { id: string; message: string; nhan?: string | null }[] }>(`/de-xuat/don-vi/${unitId}/da-nhan`, { ids: ds.map((d) => d.id) });
+      if (r.so_xac_nhan) toast(`Đã xác nhận nhận ${r.so_xac_nhan} lần cấp linh kiện.`, "ok");
+      if (r.loi.length) toast(r.loi.map((l) => `${l.id}: ${l.nhan ? `${l.nhan} — ` : ""}${l.message}`).join("; "), "error");
+      after();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
   // De xuat moi: nguoi tao / NV dang sua / Admin BH sua, huy (huy can ly do - gui sang app Dat linh kien).
   const duocSua = (d: DeXuatLk) => isAdmin || d.nguoi_de_xuat === user.email || nguoiSuaChua === user.email;
   const huy = async (d: DeXuatLk) => {
@@ -449,6 +463,11 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
       title={`🔩 Đề xuất linh kiện (${list.length})`}
       right={
         <>
+          {duocNhan && chuaNhan.length > 1 && (
+            <Btn size="sm" variant="success" onClick={() => daNhan(chuaNhan)}>
+              ✔ Đã nhận tất cả ({chuaNhan.length})
+            </Btn>
+          )}
           {isAdmin && list.filter(choXacNhanTieuHao).length > 0 && (
             <Btn size="sm" variant="success" onClick={() => setXnFor(list.filter(choXacNhanTieuHao))}>
               ✔ Xác nhận tiêu hao ({list.filter(choXacNhanTieuHao).length})
@@ -483,6 +502,11 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                         Chuyển sang app Đặt LK
                       </Btn>
                     </>
+                  )}
+                  {duocNhan && chuaNhan.includes(d) && (
+                    <Btn size="sm" variant="success" onClick={() => daNhan([d])} title="Xác nhận đã nhận linh kiện từ Kho (bắt buộc trước khi đóng đơn sửa chữa)">
+                      ✔ Đã nhận
+                    </Btn>
                   )}
                   {isAdmin && choXacNhanTieuHao(d) && (
                     <Btn size="sm" variant="success" onClick={() => setXnFor([d])}>
