@@ -182,7 +182,7 @@ export function OdooDonPickerModal({ guiId, ktvEmail, onClose, onDone }: { guiId
     setErr(null);
     try {
       const r = await api.post<{ created: string[]; loi: { odoo_id: number; error: string }[] }>(`/phieu-gui/${guiId}/don-tu-odoo`, { odoo_ids: [...sel.selected] });
-      onDone(`Đã thêm ${r.created.length} đơn từ Odoo${r.loi.length ? `, ${r.loi.length} đơn không thêm được` : ""}.`);
+      onDone(`Đã thêm ${r.created.length} đơn từ Odoo${r.loi.length ? `, ${r.loi.length} đơn không thêm được${r.loi.some((l) => l.error === "TRUNG_LINH_KIEN") ? ` (${r.loi.filter((l) => l.error === "TRUNG_LINH_KIEN").length} đơn trùng mã case + linh kiện đã có đơn)` : ""}` : ""}.`);
     } catch (e) {
       setErr(errorMessage(e));
     } finally {

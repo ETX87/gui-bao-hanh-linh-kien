@@ -167,6 +167,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   DON_DA_KET_THUC: "Đơn đã kết thúc, không sửa mã case được nữa.",
   CASE_NOT_FOUND: "Không tìm thấy mã sự cố này bên hệ DVBH.",
   DVBH_KHONG_PHAN_HOI: "Hệ DVBH đang không phản hồi — tích “Vẫn tạo đơn” để tạo trước, hệ thống sẽ tự xác minh mã case sau.",
+  TRUNG_LINH_KIEN: "Mã case này đã có đơn cùng linh kiện — không thể tạo trùng (chỉ tạo lại khi đơn cũ bị từ chối / huỷ).",
   CASE_KTV_MISMATCH: "Sai mã sự vụ — mã này không thuộc về KTV đang tạo đơn.",
   KTV_NOT_FOUND: "Không tìm thấy KTV này trong danh bạ.",
   OUT_OF_KHU_VUC: "KTV này không thuộc Khu vực bạn phụ trách.",

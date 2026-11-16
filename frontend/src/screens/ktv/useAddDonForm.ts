@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ApiError, errorMessage } from "../../lib/api";
+import { useEffect, useState } from "react";
+import { api, ApiError, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
 import { useLinhKien } from "../../hooks/useLinhKien";
@@ -37,12 +37,29 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const allowOverride = !!user && (user.la_admin_bh || user.la_giam_sat || user.la_qtri) && user.email !== ktvEmail;
   const [override, setOverride] = useState(false);
 
-  const valid = !!moTa.trim() && Number(soLuong) >= 1 && !!caseId.trim() && caseValid;
+  // 16/11/2026 - chan tao trung cung ma case + cung linh kien (tru don cu bi tu choi / huy): kiem tra ngay khi
+  // da co case hop le + linh kien, hien canh bao do va khoa nut (backend van chan lai lan nua).
+  const [trung, setTrung] = useState<{ id: string; phieu_gui_id: string | null } | null>(null);
+  useEffect(() => {
+    setTrung(null);
+    const cid = caseId.trim();
+    if (!caseValid || !cid || !maLk) return;
+    let huy = false;
+    api
+      .get<{ trung: { id: string; phieu_gui_id: string | null } | null }>(`/phieu-gui/kiem-tra-trung?case_id=${encodeURIComponent(cid)}&ma_lk=${encodeURIComponent(maLk)}`)
+      .then((r) => { if (!huy) setTrung(r.trung); })
+      .catch(() => undefined);
+    return () => { huy = true; };
+  }, [caseId, caseValid, maLk]);
+
+  const valid = !!moTa.trim() && Number(soLuong) >= 1 && !!caseId.trim() && caseValid && !trung;
   // 05/11/2026 - "điền đủ thông tin nhưng không cho tạo đơn": noi ro vi sao nut "Thêm vào phiếu" bi khoa.
   const lyDoKhoa = !caseId.trim()
     ? "Nhập mã case rồi bấm “Kiểm tra”."
     : !caseValid
       ? "Mã case chưa hợp lệ — bấm “🔍 Kiểm tra” (sửa mã case thì phải kiểm tra lại) và xem cảnh báo ngay dưới ô Mã case."
+      : trung
+        ? `Mã case này đã có đơn ${trung.id}${trung.phieu_gui_id ? ` (thùng ${trung.phieu_gui_id})` : ""} cùng linh kiện — không thể tạo trùng.`
       : !(Number(soLuong) >= 1)
         ? "Số lượng phải từ 1 trở lên."
         : !moTa.trim()
@@ -93,5 +110,5 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
     }
   };
 
-  return { linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, tienDo, valid, lyDoKhoa, submit };
+  return { trung, linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, tienDo, valid, lyDoKhoa, submit };
 }

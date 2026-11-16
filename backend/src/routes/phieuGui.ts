@@ -21,6 +21,7 @@ import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
 import { nhanHoThung } from "../lib/nhanHo";
 import { kiemTraCase, ghiDoiCase } from "../lib/kiemTraCase";
+import { timDonTrung, msgTrung } from "../lib/donTrung";
 
 // Man hinh KTV: tao/quan ly phieu gui, them don, xac nhan gui xe, ghi chu/phan hoi (dung chung voi
 // Kho/Admin BH - xem CLAUDE.md "Phan hoi vong 1 muc #5"). Port dung cac ham createPhieuGui()/
@@ -394,6 +395,12 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
 });
 
 // GET /api/phieu-gui/:id - chi tiet + danh sach don cha ben trong.
+// 16/11/2026: kiem tra truoc tren form them don - da co don con hieu luc cung case + linh kien chua.
+phieuGui.get("/kiem-tra-trung", async (c) => {
+  const trung = await timDonTrung(c.env.DB, normCaseId(c.req.query("case_id")), c.req.query("ma_lk") || null, c.req.query("bo_qua") || null);
+  return c.json({ trung });
+});
+
 phieuGui.get("/:id", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
@@ -470,6 +477,9 @@ phieuGui.post("/:id/don", async (c) => {
   if (!body.mo_ta_loi?.trim()) return c.json({ error: "MISSING_MO_TA_LOI" }, 400);
   const caseId = normCaseId(body.case_id) || undefined;
   if (!caseId) return c.json({ error: "MISSING_CASE_ID" }, 400);
+  // 16/11/2026: chan tao trung cung case + cung linh kien (tru don cu da bi tu choi / huy).
+  const trung = await timDonTrung(c.env.DB, caseId, body.ma_lk);
+  if (trung) return c.json({ error: "TRUNG_LINH_KIEN", trung, message: msgTrung(trung) }, 400);
 
   // 30/10/2026: tach "khong tim thay case" (chan cung) voi "DVBH loi / khong phan hoi" (cho tao neu nguoi
   // dung tich xac nhan, gan co case_xac_minh = 1, cron xac minh lai - lib/caseSnapshot.ts verifyPendingCases).
@@ -565,6 +575,12 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
   const now = nowVN();
   const created: string[] = [];
   for (const r of ok) {
+    // 16/11/2026: chan trung case + linh kien (ca voi don vua tao trong cung lan nay).
+    const caseOdoo = normCaseId(r.case_id);
+    if (await timDonTrung(c.env.DB, caseOdoo, r.ma_linh_kien)) {
+      loi.push({ odoo_id: r.odoo_id, error: "TRUNG_LINH_KIEN" });
+      continue;
+    }
     if (r.ma_linh_kien) {
       const ins = await c.env.DB.prepare("INSERT INTO linh_kien_bh (ma_lk, ten_lk, nguon_du_lieu, ghi_chu) VALUES (?, ?, 'noi_bo', 'Tự thêm từ đơn bảo hành Odoo') ON CONFLICT(ma_lk) DO NOTHING")
         .bind(r.ma_linh_kien, r.ten_linh_kien || r.ma_linh_kien)
@@ -585,7 +601,11 @@ phieuGui.post("/:id/don-tu-odoo", async (c) => {
   if (created.length > 0) await addLog(c.env.DB, "phieu_gui", guiId, "nhap", "nhap", user.email, `Thêm ${created.length} đơn từ Odoo: ${ok.map((r) => r.ma_don || r.odoo_id).join(", ")}`);
   // 20/10/2026: luu bang chung case tu dvbh ngay khi tao don (chay nen, khong lam cham thao tac).
   if (created.length > 0) c.executionCtx.waitUntil(syncCaseSnapshots(c.env, ok.map((r) => r.case_id)).catch(() => 0));
-  return c.json({ created, loi }, created.length > 0 ? 201 : 400);
+  if (created.length === 0) {
+    const soTrung = loi.filter((l) => l.error === "TRUNG_LINH_KIEN").length;
+    return c.json({ error: loi[0]?.error || "NOT_FOUND", created, loi, message: soTrung ? `${soTrung} đơn Odoo đã có đơn cùng mã case + linh kiện trên hệ thống — không thể tạo trùng.` : undefined }, 400);
+  }
+  return c.json({ created, loi }, 201);
 });
 
 // DELETE /api/phieu-gui-don/:id - xoa 1 don CHUA gui (phieu cha van "nhap").
@@ -619,6 +639,11 @@ phieuGui.patch("/don/:donId", async (c) => {
   if (doiCase) {
     kqCase = await kiemTraCase(c.env, caseMoi!, don.nguoi_tao, user, body);
     if (!kqCase.ok) return c.json({ error: kqCase.error }, 400);
+  }
+  // 16/11/2026: doi linh kien / doi case khong duoc trung don con hieu luc khac.
+  if ((body.ma_lk !== undefined && body.ma_lk !== don.ma_lk) || doiCase) {
+    const trung = await timDonTrung(c.env.DB, doiCase ? caseMoi : don.case_id, body.ma_lk !== undefined ? body.ma_lk : don.ma_lk, donId);
+    if (trung) return c.json({ error: "TRUNG_LINH_KIEN", trung, message: msgTrung(trung) }, 400);
   }
   const set: string[] = [];
   const binds: unknown[] = [];

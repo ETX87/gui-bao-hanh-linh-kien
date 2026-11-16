@@ -52,6 +52,11 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
         />
         <Field label="Linh kiện lỗi">
           <SearchableSelect options={lkOptions(f.linhKien)} value={f.maLk} onChange={f.setMaLk} />
+              {f.trung && (
+                <p className="mt-1 rounded-lg border border-[var(--red-200)] bg-[var(--red-50)] px-2 py-1.5 text-xs font-semibold text-[var(--red-600)]">
+                  ⛔ Mã case này đã có đơn {f.trung.id}{f.trung.phieu_gui_id ? ` (thùng ${f.trung.phieu_gui_id})` : ""} cùng linh kiện — không thể tạo trùng. Chỉ tạo lại được khi đơn cũ bị từ chối / huỷ.
+                </p>
+              )}
         </Field>
         <Field label="Số lượng" required>
           <div className="flex items-center gap-2">

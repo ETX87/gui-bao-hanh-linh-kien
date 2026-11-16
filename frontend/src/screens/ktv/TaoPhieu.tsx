@@ -80,8 +80,9 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     setCreating(true);
     try {
       const r = await api.post<{ id: string }>("/phieu-gui", ktvFor ? { ktv_email: ktvFor } : undefined);
-      const add = await api.post<{ created: string[]; loi: unknown[] }>(`/phieu-gui/${r.id}/don-tu-odoo`, { odoo_ids: [...sel.selected] });
-      toast(`Đã tạo phiếu ${r.id} với ${add.created.length} đơn Odoo.`, "ok");
+      const add = await api.post<{ created: string[]; loi: { error: string }[] }>(`/phieu-gui/${r.id}/don-tu-odoo`, { odoo_ids: [...sel.selected] });
+      const soTrung = add.loi.filter((l) => l.error === "TRUNG_LINH_KIEN").length;
+      toast(`Đã tạo phiếu ${r.id} với ${add.created.length} đơn Odoo${soTrung ? ` — ${soTrung} đơn bị bỏ vì trùng mã case + linh kiện đã có đơn` : ""}.`, soTrung ? "error" : "ok");
       sel.setSelected(new Set());
       afterChange();
       setDetailId(r.id);

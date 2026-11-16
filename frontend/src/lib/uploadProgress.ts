@@ -54,7 +54,8 @@ export function postJsonWithProgress<T>(
       }
       if (xhr.status >= 200 && xhr.status < 300) return resolve(json as T);
       const code = (json as { error?: string } | null)?.error || `HTTP_${xhr.status}`;
-      reject(new ApiError(code, xhr.status));
+      const msg = (json as { message?: unknown } | null)?.message;
+      reject(new ApiError(code, xhr.status, typeof msg === "string" ? msg : undefined));
     };
     xhr.onerror = () => {
       if (timer) clearTimeout(timer);
