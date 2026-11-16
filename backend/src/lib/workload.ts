@@ -34,6 +34,7 @@ export const EMPTY_COUNTS = {
   admin_cho_xac_nhan_hoan_tat: 0,
   admin_san_sang_gom: 0,
   admin_de_xuat_cho_cap: 0,
+  admin_xn_tieu_hao: 0,
   admin_thieu_hang_da_ve: 0,
   admin_phieu_tra_tu_choi: 0,
   nv_cho_chan_doan: 0,
@@ -183,6 +184,13 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       ).then((r) => {
         counts.admin_de_xuat_cho_cap = r?.cnt ?? 0;
       }),
+      // 16/11/2026: lan cap linh kien (app Dat LK) NV da nhan, cho Admin BH xac nhan tieu hao -> tru cong no NV.
+      one(
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.admin_xn_tieu_hao = r?.cnt ?? 0;
+      }),
       // 04/11/2026: ticket thieu hang ben linh-kien-app da dong (hang da ve / tu choi / khong mua duoc) - Admin BH chua bam "Da nam".
       one(
         `SELECT COUNT(*) as cnt FROM thieu_hang_bh t2 JOIN phieu_sua_chua_bh_ct u ON u.id = t2.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE t2.da_xem = 0 AND t2.trang_thai IN ('Kho xac nhan hang da ve', 'Kho tu choi', 'Mua hang tu choi')${mp.sql}`,
@@ -227,13 +235,7 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'cho_ke_toan_duyet'${mt.sql}`, ...mt.binds).then((r) => {
         counts.ketoan_cho_duyet = r?.cnt ?? 0;
       }),
-      // 02/11/2026: de xuat linh kien Admin da dong y cap, cho Ke toan nhap MISA + xac nhan.
-      one(
-        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'cho_ke_toan'${mp.sql}`,
-        ...mp.binds,
-      ).then((r) => {
-        counts.ketoan_de_xuat_lk = r?.cnt ?? 0;
-      }),
+      // 16/11/2026: ke toan khong con xac nhan cap linh kien o app nay (lam ben app Dat linh kien) - bo dem ketoan_de_xuat_lk.
       one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'cho_ke_toan'${mt.sql}`, ...mt.binds).then((r) => {
         counts.ketoan_thung_xac = r?.cnt ?? 0;
       }),

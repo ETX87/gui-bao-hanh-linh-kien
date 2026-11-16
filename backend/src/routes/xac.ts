@@ -41,7 +41,7 @@ function xacFrom(condU: string, condD: string): string {
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE ${condU}
     UNION ALL
-    SELECT d.id, 'sua_chua', d.unit_id, u.parent_id, d.so_luong, p.ma_lk, u.ma_lk_nhan, d.ma_lk,
+    SELECT d.id, 'sua_chua', d.unit_id, u.parent_id, COALESCE(d.sl_dung, d.so_luong), p.ma_lk, u.ma_lk_nhan, d.ma_lk,
       d.ma_lk, d.ma_lk, p.case_id, p.mien, p.mo_ta_loi, p.tim_kiem, g.nguoi_tao, ${KH_CASE},
       u.trang_thai, d.xac_tt, d.thung_xac_id, d.xac_xl_boi, d.xac_xl_luc, d.xac_xl_ghi_chu, u.nguoi_sua_chua,
       d.created_at, COALESCE(d.kho_xuat_luc, d.updated_at), COALESCE(d.xac_xl_luc, d.kho_xuat_luc, d.updated_at)
@@ -141,7 +141,7 @@ xac.post("/xac/ngoai", async (c) => {
     const tbl = dx ? "de_xuat_linh_kien_bh AS d" : "phieu_sua_chua_bh_ct AS u";
     const a = dx ? "d" : "u";
     const r = body.dua_lai
-      ? await c.env.DB.prepare(`UPDATE ${tbl} SET xac_tt = NULL, xac_xl_boi = NULL, xac_xl_luc = NULL, xac_xl_ghi_chu = NULL WHERE ${a}.id = ? AND ${a}.xac_tt IN (${XAC_KQ_SQL}) AND ${a}.thung_xac_id IS NULL`).bind(id).run()
+      ? await c.env.DB.prepare(`UPDATE ${tbl} SET xac_tt = NULL, xac_xl_boi = NULL, xac_xl_luc = NULL, xac_xl_ghi_chu = NULL${dx ? ", xac_kq = CASE WHEN d.trang_thai = 'lien_ket' THEN 'tra_doi_tac' ELSE d.xac_kq END" : ""} WHERE ${a}.id = ? AND ${a}.xac_tt IN (${XAC_KQ_SQL}) AND ${a}.thung_xac_id IS NULL`).bind(id).run()
       : await c.env.DB.prepare(`UPDATE ${tbl} SET xac_tt = ?, xac_xl_boi = ?, xac_xl_luc = ?, xac_xl_ghi_chu = ? WHERE ${a}.id = ? AND ${dx ? XAC_DX_CHO_GOM : XAC_CHO_GOM}`).bind(kq, user.email, now, lyDo, id).run();
     if (r.meta.changes) {
       ok++;
@@ -409,6 +409,7 @@ const KQ_IMPORT: [string, string[]][] = [
   ["tieu_huy", ["tieu huy", "xac da tieu huy", "da tieu huy"]],
   ["that_lac", ["that lac", "xac that lac"]],
   ["khong_co", ["khong co xac", "khong co"]],
+  ["luu_kho", ["luu kho", "xac luu kho"]],
   ["ngoai", ["ngoai", "tra ngoai he thong", "da tra ngoai he thong", "da xu ly ngoai he thong", "xu ly ngoai"]],
   ["dua_lai", ["dua lai", "dua lai cho gom"]],
 ];
@@ -543,7 +544,7 @@ xac.post("/import", async (c) => {
       ghi = `đưa vào thùng trả xác ${tid} (import)`;
       theoThung.set(tid, [...(theoThung.get(tid) || []), r.ma]);
     } else if (r.kq === "dua_lai") {
-      stmts.push(db.prepare(`UPDATE ${tbl} SET xac_tt = NULL, xac_xl_boi = NULL, xac_xl_luc = NULL, xac_xl_ghi_chu = NULL WHERE ${a}.id = ? AND ${a}.xac_tt IN (${XAC_KQ_SQL}) AND ${a}.thung_xac_id IS NULL`).bind(r.ma));
+      stmts.push(db.prepare(`UPDATE ${tbl} SET xac_tt = NULL, xac_xl_boi = NULL, xac_xl_luc = NULL, xac_xl_ghi_chu = NULL${dx ? ", xac_kq = CASE WHEN d.trang_thai = 'lien_ket' THEN 'tra_doi_tac' ELSE d.xac_kq END" : ""} WHERE ${a}.id = ? AND ${a}.xac_tt IN (${XAC_KQ_SQL}) AND ${a}.thung_xac_id IS NULL`).bind(r.ma));
       ghi = "đưa lại danh sách chờ gom thùng trả xác (import)";
     } else {
       stmts.push(db.prepare(`UPDATE ${tbl} SET xac_tt = ?, xac_xl_boi = ?, xac_xl_luc = ?, xac_xl_ghi_chu = ? WHERE ${a}.id = ? AND ${choGom}`).bind(r.kq, user.email, now, r.ghi_chu, r.ma));

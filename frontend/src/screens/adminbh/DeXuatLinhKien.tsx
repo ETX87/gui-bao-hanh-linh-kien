@@ -19,6 +19,7 @@ import { useRoute } from "../../router/Router";
 import type { AppUser, DeXuatLk } from "../../lib/types";
 import { ExcelExportButton } from "../../ui/ExcelExport";
 import { deXuatExportCols } from "../shared/exportCols";
+import { CongNoNut, CongNoTag, XacNhanTieuHaoModal, choXacNhanTieuHao } from "../shared/TruCongNo";
 
 // Man "Cap linh kien sua chua" (Admin BH, 12/10/2026): de xuat linh kien cua NV (don con cua don vi bao
 // hanh). Admin len phieu xuat MISA roi bam "Cap" (1 hoac nhieu de xuat chung 1 ma MISA), hoac "Tu choi".
@@ -27,9 +28,14 @@ import { deXuatExportCols } from "../shared/exportCols";
 // tu choi / tra lai Admin. Ke toan chi thay 2 tab cho_ke_toan + da_cap.
 // 04/11/2026 - "Phiếu cấp linh kiện sửa chữa tách thành các giai đoạn: Chờ KT, (KT xác nhận xong) => chờ kho in, kho đã in,
 // Kho đã xuất (có 2 nút đã in hoặc đã xuất luôn cho kho) => Cho kho nhìn thấy đơn cấp lk": tab "Đã cấp" tach thanh 3 giai doan Kho.
+// 16/11/2026 - tru cong no sua chua: cap linh kien qua app Dat linh kien (de xuat lien_ket) co 3 tab rieng; "App đổi trả dừng các luồng thao
+// tác của KT, KT hoàn toàn làm bên linh kiện app" -> Ke toan chi xem (Đang cấp / Trừ công nợ / Kho đã xuất), bo tab Chờ KT xác nhận.
 const TABS = [
-  { key: "cho_cap", label: "Chờ Admin cấp", kt: false, kho: false },
-  { key: "cho_ke_toan", label: "Chờ KT xác nhận", kt: true, kho: false },
+  { key: "dang_cap", label: "🔗 Đang cấp (app Đặt LK)", kt: true, kho: false },
+  { key: "cho_xn", label: "🧾 Chờ xác nhận tiêu hao", kt: false, kho: false },
+  { key: "tru_cn", label: "💳 Trừ công nợ", kt: true, kho: false },
+  { key: "cho_cap", label: "Chờ Admin cấp (luồng cũ)", kt: false, kho: false },
+  { key: "cho_ke_toan", label: "Chờ KT xác nhận (luồng cũ)", kt: false, kho: false },
   { key: "cho_kho_in", label: "🖨 Chờ Kho in", kt: true, kho: true },
   { key: "kho_da_in", label: "📦 Kho đã in", kt: true, kho: true },
   { key: "kho_da_xuat", label: "✔ Kho đã xuất", kt: true, kho: true },
@@ -41,6 +47,7 @@ const KHO_TABS = ["cho_kho_in", "kho_da_in"];
 const PXK_TABS = ["cho_kho_in", "kho_da_in", "kho_da_xuat"];
 // Tab co viec cua nguoi xem -> so dem to do.
 const VIEC_TAB: Record<string, (u: AppUser) => boolean> = {
+  cho_xn: (u) => !!(u.la_admin_bh || u.la_qtri),
   cho_cap: (u) => !!(u.la_admin_bh || u.la_qtri),
   cho_ke_toan: (u) => !!(u.la_ke_toan || u.la_qtri),
   cho_kho_in: (u) => !!(u.la_kho || u.la_qtri),
@@ -71,7 +78,9 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   const isKho = user.la_kho || user.la_qtri;
   const tabs = TABS.filter((t) => (isAdmin && !ktOnly) || (isKt && t.kt) || (isKho && t.kho));
   const qTab = ktOnly ? null : query.get("tab");
-  const macDinh = isAdmin && !ktOnly ? "cho_cap" : isKt && (!isKho || counts.ketoan_de_xuat_lk > 0) ? "cho_ke_toan" : counts.kho_lk_cho_in === 0 && counts.kho_lk_da_in > 0 ? "kho_da_in" : "cho_kho_in";
+  const macDinh = isAdmin && !ktOnly
+    ? counts.admin_xn_tieu_hao > 0 ? "cho_xn" : counts.admin_de_xuat_cho_cap > 0 ? "cho_cap" : "dang_cap"
+    : isKt && !isKho ? "tru_cn" : counts.kho_lk_cho_in === 0 && counts.kho_lk_da_in > 0 ? "kho_da_in" : "cho_kho_in";
   const [tab, setTab] = useState(tabs.find((t) => t.key === qTab)?.key || macDinh);
   // 05/11/2026: ghi tab dang mo len URL (?dx=) de menu KTV dem dung theo tab.
   useEffect(() => {
@@ -88,8 +97,23 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   // 06/11/2026 - "các tab đang bị lỗi đếm số lượng ca tồn cần xử lý": so ca (tab Kho: so phieu PXK) cua MOI tab.
   const [dem, setDem] = useState<Dem>({});
   const [lkSync, setLkSync] = useState<{ cho: number; loi: number } | null>(null);
+  const [cnSync, setCnSync] = useState<{ cho: number; loi: number } | null>(null);
+  const [xnFor, setXnFor] = useState<DeXuatLk[] | null>(null);
   const [lkBusy, setLkBusy] = useState(false);
-  const loadDem = () => api.get<{ dem: Dem; lk?: { cho: number; loi: number } }>("/de-xuat/dem").then((r) => { setDem(r.dem); setLkSync(r.lk ?? null); }).catch(() => {});
+  const loadDem = () => api.get<{ dem: Dem; lk?: { cho: number; loi: number }; cn?: { cho: number; loi: number } }>("/de-xuat/dem").then((r) => { setDem(r.dem); setLkSync(r.lk ?? null); setCnSync(r.cn ?? null); }).catch(() => {});
+  // 16/11/2026: gui lai / dong bo don tru cong no + tra hang sua chua.
+  const guiLaiCn = async () => {
+    setLkBusy(true);
+    try {
+      const r = await api.post<{ da_tao: number; loi: number }>("/de-xuat/day-tru-cong-no", {});
+      toast(r.loi ? `Đã tạo ${r.da_tao} đơn, còn ${r.loi} lỗi` : `Đã đồng bộ (${r.da_tao} đơn mới)`, r.loi ? "error" : "ok");
+      after();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setLkBusy(false);
+    }
+  };
   // 12/11/2026: gui lai ngay cac phieu chua dong bo sang app Dat linh kien (don "Sua chua tai kho").
   const guiLaiLk = async () => {
     setLkBusy(true);
@@ -121,7 +145,18 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
   useEffect(() => setSelected(new Set()), [page, tab, flt.query]);
   const choKt = tab === "cho_ke_toan" && isKt;
   const khoTab = KHO_TABS.includes(tab) && isKho;
-  const choCap = (tab === "cho_cap" && isAdmin) || choKt || khoTab;
+  const choXn = tab === "cho_xn" && isAdmin;
+  const choCap = choXn || choKt || khoTab;
+  const chuyenAppLk = async (d: DeXuatLk) => {
+    if (!window.confirm(`Chuyển ${d.id} (${nameOf(d.ma_lk)} ×${d.so_luong}) sang app Đặt linh kiện thành đơn CÔNG NỢ SỬA CHỮA?`)) return;
+    try {
+      const r = await api.post<{ ddh: string }>(`/de-xuat/${d.id}/chuyen-app-lk`, {});
+      toast(`Đã tạo đơn ${r.ddh} bên app Đặt linh kiện.`, "ok");
+      after();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
   // Kho: da_in (in phieu) | chua_in (doi lai) | da_xuat (xuat luon, khong can in).
   // 06/11/2026: Kho xu ly ca phieu PXK (pxk[]) - backend gom moi de xuat cung ma PXK.
   const khoLam = async (pxk: string[], hanhDong: "da_in" | "chua_in" | "da_xuat") => {
@@ -179,10 +214,18 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
               Từ chối
             </Btn>
           </span>
+        ) : choXacNhanTieuHao(r) && isAdmin ? (
+          <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Btn size="sm" variant="success" onClick={() => setXnFor([r])}>
+              ✔ Xác nhận
+            </Btn>
+          </span>
+        ) : r.xn_luc && isAdmin ? (
+          <CongNoNut d={r} onDone={after} />
         ) : r.trang_thai === "cho_cap" && isAdmin ? (
           <span className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-            <Btn size="sm" variant="success" onClick={() => setCapFor([r])}>
-              Cấp
+            <Btn size="sm" variant="success" onClick={() => chuyenAppLk(r)}>
+              → App Đặt LK
             </Btn>
             <Btn size="sm" variant="ghost" onClick={() => setTuChoiFor(r)}>
               Từ chối
@@ -194,17 +237,23 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     { key: "unit", header: "Đơn bảo hành", render: (r) => <span className="font-mono text-xs">{r.unit_id}</span> },
     { key: "lk", header: "Linh kiện xin cấp", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span> },
     { key: "sl", header: "SL", render: (r) => <b>×{r.so_luong}</b> },
-    { key: "nv", header: "NV đề xuất", render: (r) => <UserName email={r.nguoi_de_xuat} /> },
+    ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+      ? { key: "nv", header: "NV sửa chữa", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") }
+      : { key: "nv", header: "NV đề xuất", render: (r) => <UserName email={r.nguoi_de_xuat} /> },
     { key: "gc", header: "Ghi chú", render: (r) => <span className="block max-w-[220px] truncate" title={r.ghi_chu || ""}>{r.ghi_chu || "—"}</span> },
     { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}<LkSyncTag d={r} /></span> },
+    ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+      ? { key: "ma", header: tab === "dang_cap" ? "Đơn Đặt LK" : "Trừ công nợ", render: (r) => (tab === "dang_cap" ? <span className="text-xs"><span className="font-mono">{r.lk_ddh_id}</span> · {r.lk_nhan || "—"}</span> : <CongNoTag d={r} />) }
+      : { key: "ma", header: "Mã ĐH / MISA", render: (r) => <span className="text-xs">{[r.ma_don_hang && `ĐH ${r.ma_don_hang}`, r.ma_misa && `MISA ${r.ma_misa}`].filter(Boolean).join(" · ") || "—"}<LkSyncTag d={r} /></span> },
     tab === "cho_cap" || tab === "cho_ke_toan"
       ? { key: "sla", header: "Chờ", render: (r) => <span className="flex items-center gap-1"><SlaBadge since={tab === "cho_ke_toan" ? r.xu_ly_luc || r.created_at : r.created_at} />{r.ly_do_tu_choi && tab === "cho_cap" && <span className="text-xs text-[var(--red-700,#b91c1c)] truncate max-w-[200px]" title={r.ly_do_tu_choi}>↩ {r.ly_do_tu_choi}</span>}</span> }
       : KHO_TABS.includes(tab)
         ? { key: "sla", header: "Chờ Kho", render: (r) => <SlaBadge since={(tab === "kho_da_in" ? r.kho_in_luc : null) || r.kt_luc || r.updated_at} /> }
         : tab === "kho_da_xuat"
           ? { key: "xl", header: "Kho xuất", render: (r) => <span className="text-xs">{r.kho_xuat_boi ? <UserName email={r.kho_xuat_boi} /> : "—"} · {fmtDate(r.kho_xuat_luc || r.kt_luc)}</span> }
-          : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
+          : ["dang_cap", "cho_xn", "tru_cn"].includes(tab)
+            ? { key: "cn", header: "Cập nhật", render: (r) => <span className="text-xs">{fmtDate(r.xn_luc || r.updated_at)}</span> }
+            : { key: "xl", header: "Xử lý", render: (r) => <span className="text-xs">{r.ly_do_tu_choi || (r.kt_boi ? "KT đã xác nhận" : "—")} · {fmtDate(r.kt_luc || r.xu_ly_luc)}</span> },
   ];
 
   if (loading && rows.length === 0 && total === 0 && !flt.active) return <Spinner />;
@@ -214,13 +263,19 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     <Card className="p-3">
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔩 Cấp linh kiện sửa chữa</h3>
+        {isAdmin && cnSync && cnSync.cho > 0 && (
+          <span className="text-xs text-[var(--red-700,#b91c1c)]">
+            ⚠ {cnSync.cho} lần cấp chưa tạo được đơn trừ công nợ / trả hàng bên app Đặt LK ·{" "}
+            <button className="underline font-semibold" disabled={lkBusy} onClick={guiLaiCn}>{lkBusy ? "Đang gửi…" : "Gửi lại"}</button>
+          </span>
+        )}
         {lkSync && lkSync.loi > 0 && (
           <span className="text-xs text-[var(--red-700,#b91c1c)]">
             ⚠ {lkSync.loi} phiếu chưa đồng bộ sang app Đặt linh kiện ·{" "}
             <button className="underline font-semibold" disabled={lkBusy} onClick={guiLaiLk}>{lkBusy ? "Đang gửi…" : "Gửi lại"}</button>
           </span>
         )}
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -248,7 +303,11 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
         {selected.size > 0 && !pxkTab && (
           <div className="ml-auto flex items-center gap-2">
             <Badge tone="blue">{selected.size} đã chọn</Badge>
-            {choKt ? (
+            {choXn ? (
+              <Btn variant="success" onClick={() => setXnFor(rows.filter((r) => selected.has(r.id)))}>
+                ✔ Xác nhận tiêu hao {selected.size} lần cấp
+              </Btn>
+            ) : choKt ? (
               <Btn variant="success" onClick={() => setKtFor(rows.filter((r) => selected.has(r.id)))}>
                 ✔ Duyệt {selected.size} đề xuất (nhập MISA)
               </Btn>
@@ -260,7 +319,10 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
           </div>
         )}
       </div>
-      {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV sửa chữa xin cấp linh kiện để sửa. Bấm "Cấp", nhập mã đơn hàng (mã MISA tuỳ chọn) → đề xuất chuyển sang Kế toán xác nhận. Bấm dòng để mở đơn bảo hành.</p>}
+      {tab === "cho_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">Đề xuất theo luồng cũ còn dở. Luồng Kế toán xác nhận ở app này đã đóng — bấm "→ App Đặt LK" để tạo đơn CÔNG NỢ SỬA CHỮA bên app Đặt linh kiện (Kế toán / Kho xử lý bên đó), hoặc "Từ chối".</p>}
+      {tab === "dang_cap" && <p className="text-xs text-[var(--ink-soft)] mb-2">Đơn CÔNG NỢ SỬA CHỮA đang xử lý bên app Đặt linh kiện (Kế toán duyệt, Kho xuất, NV xác nhận nhận hàng) — trạng thái tự đồng bộ về.</p>}
+      {tab === "cho_xn" && <p className="text-xs text-[var(--ink-soft)] mb-2">NV đã nhận linh kiện. Khi NV sửa xong và giao xác + linh kiện dư, Admin BH xác nhận số đã dùng và tình trạng xác → hệ thống tự tạo đơn trừ công nợ / trả hàng bên app Đặt linh kiện.</p>}
+      {tab === "tru_cn" && <p className="text-xs text-[var(--ink-soft)] mb-2">Lần cấp đã xác nhận tiêu hao: đơn "TRỪ CÔNG NỢ - SỬA CHỮA" (Kế toán chốt trên app Đặt linh kiện → trừ công nợ NV) và "TRẢ HÀNG CÔNG NỢ - SỬA CHỮA" (linh kiện dư NV trả kho). Xác "Trả đối tác" theo dõi ở màn Trả xác.</p>}
       {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA — mỗi khối là 1 phiếu PXK. Bấm khối để xem các đơn bảo hành bên trong; "🖨 Đã in" / "📦 Đã xuất" áp cho toàn bộ phiếu.</p>}
       {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu PXK — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in"), áp cho toàn bộ phiếu.</p>}
       {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
@@ -320,6 +382,17 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
           onClose={() => setTraLaiFor(null)}
           onDone={() => {
             setTraLaiFor(null);
+            after();
+          }}
+        />
+      )}
+      {xnFor && (
+        <XacNhanTieuHaoModal
+          list={xnFor}
+          onClose={() => setXnFor(null)}
+          onDone={() => {
+            setXnFor(null);
+            setSelected(new Set());
             after();
           }}
         />

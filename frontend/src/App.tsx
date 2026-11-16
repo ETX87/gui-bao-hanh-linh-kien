@@ -25,6 +25,7 @@ import { KtvHomeScreen } from "./screens/ktv/KtvHome";
 import { isPureKtv } from "./layout/routes";
 import { KtvNhanHangScreen } from "./screens/ktv/NhanHang";
 import { AdminDeXuatScreen } from "./screens/adminbh/DeXuatLinhKien";
+import { LinhKienCuaToiScreen } from "./screens/nv/LinhKienCuaToi";
 
 // Giai doan 4: port day du 13 man hinh nghiep vu cua prototype-html/index.html sang React that, dung
 // backend Giai doan 3 (12 route file da kiem thu end-to-end 0 loi). Dispatch theo dung ROUTES_BY_ROLE
@@ -55,6 +56,8 @@ function Routed({ user }: { user: AppUser }) {
   if ((user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_view || user.la_qtri) && path === "/phieu-tra") return <PhieuTraScreen user={user} />;
   if ((user.la_admin_bh || user.la_qtri) && path === "/quan-tri") return <QuanTriScreen user={user} />;
   if ((user.la_admin_bh || user.la_ke_toan || user.la_kho || user.la_qtri) && path === "/admin/de-xuat") return <AdminDeXuatScreen user={user} />;
+  // 16/11/2026: linh kien cap cho NV sua chua - dung / tra kho / tru cong no.
+  if ((user.la_nv_sua_chua || user.la_admin_bh || user.la_ke_toan || user.la_qtri || user.la_giam_sat || user.la_view) && path === "/nv/linh-kien") return <LinhKienCuaToiScreen user={user} />;
 
   // KTV: 3 man rieng (toi uu dien thoai, v1.048). Giam sat / Admin "tao ho" dung tab "Thùng nháp" cua man
   // Thùng hàng (cung component KtvTaoPhieuScreen).

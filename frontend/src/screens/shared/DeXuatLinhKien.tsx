@@ -10,6 +10,7 @@ import { UserName } from "../../hooks/useUserNames";
 import { DE_XUAT_TT_LABELS } from "../../lib/constants";
 import { fmtDate } from "../../lib/format";
 import type { AppUser, DeXuatLk } from "../../lib/types";
+import { CongNoNut, CongNoTag, XacNhanTieuHaoModal, choXacNhanTieuHao } from "./TruCongNo";
 
 // De xuat linh kien sua chua (12/10/2026): moi de xuat la DON CON cua don vi bao hanh. NV dang sua
 // don nay xin cap linh kien (nhieu lan, khong gioi han) -> Admin BH len MISA xuat kho roi bam "Cap"
@@ -389,6 +390,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
   const [traLaiFor, setTraLaiFor] = useState<DeXuatLk | null>(null);
   const [suaFor, setSuaFor] = useState<DeXuatLk | null>(null);
   const [lkLoi, setLkLoi] = useState<string | null>(null);
+  const [xnFor, setXnFor] = useState<DeXuatLk[] | null>(null);
   const load = () =>
     api
       .get<{ de_xuat: DeXuatLk[]; lk_loi?: string | null }>(`/de-xuat/don-vi/${unitId}`)
@@ -413,6 +415,17 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
     load();
     onChanged();
   };
+  // 16/11/2026: de xuat luong cu con "Cho Admin cap" -> chuyen sang app Dat linh kien (luong cu Ke toan xac nhan o day da dong).
+  const chuyenAppLk = async (d: DeXuatLk) => {
+    if (!window.confirm(`Chuyển ${d.id} (${nameOf(d.ma_lk)} ×${d.so_luong}) sang app Đặt linh kiện thành đơn CÔNG NỢ SỬA CHỮA?`)) return;
+    try {
+      const r = await api.post<{ ddh: string }>(`/de-xuat/${d.id}/chuyen-app-lk`, {});
+      toast(`Đã tạo đơn ${r.ddh} bên app Đặt linh kiện.`, "ok");
+      after();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
   // De xuat moi: nguoi tao / NV dang sua / Admin BH sua, huy (huy can ly do - gui sang app Dat linh kien).
   const duocSua = (d: DeXuatLk) => isAdmin || d.nguoi_de_xuat === user.email || nguoiSuaChua === user.email;
   const huy = async (d: DeXuatLk) => {
@@ -436,9 +449,9 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
       title={`🔩 Đề xuất linh kiện (${list.length})`}
       right={
         <>
-          {isAdmin && choCap.length > 1 && (
-            <Btn size="sm" variant="success" onClick={() => setCapFor(choCap)}>
-              Cấp tất cả {choCap.length}
+          {isAdmin && list.filter(choXacNhanTieuHao).length > 0 && (
+            <Btn size="sm" variant="success" onClick={() => setXnFor(list.filter(choXacNhanTieuHao))}>
+              ✔ Xác nhận tiêu hao ({list.filter(choXacNhanTieuHao).length})
             </Btn>
           )}
           {canDeXuat && (
@@ -466,24 +479,17 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                       <Btn size="sm" variant="ghost" onClick={() => setTuChoiFor(d)}>
                         Từ chối
                       </Btn>
-                      <Btn size="sm" variant="success" onClick={() => setCapFor([d])}>
-                        Cấp
+                      <Btn size="sm" variant="success" onClick={() => chuyenAppLk(d)}>
+                        Chuyển sang app Đặt LK
                       </Btn>
                     </>
                   )}
-                  {d.trang_thai === "cho_ke_toan" && isKt && (
-                    <>
-                      <Btn size="sm" variant="ghost" onClick={() => setTraLaiFor(d)}>
-                        ↩ Trả lại
-                      </Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => setTuChoiFor(d)}>
-                        Từ chối
-                      </Btn>
-                      <Btn size="sm" variant="success" onClick={() => setKtFor([d])}>
-                        Duyệt (MISA)
-                      </Btn>
-                    </>
+                  {isAdmin && choXacNhanTieuHao(d) && (
+                    <Btn size="sm" variant="success" onClick={() => setXnFor([d])}>
+                      ✔ Xác nhận tiêu hao
+                    </Btn>
                   )}
+                  {isAdmin && <CongNoNut d={d} onDone={after} />}
                   {d.nguon === "doitra" && d.trang_thai === "lien_ket" && !!d.lk_sua_duoc && duocSua(d) && (
                     <Btn size="sm" variant="ghost" onClick={() => setSuaFor(d)}>
                       ✎ Sửa
@@ -508,6 +514,11 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 {(d.trang_thai === "da_cap" || d.trang_thai === "cho_ke_toan") && `${d.ma_misa ? ` · MISA ${d.ma_misa}` : ""}${d.ma_don_hang ? ` · ĐH ${d.ma_don_hang}` : ""}`}
                 {d.nguon ? <LkDonTag d={d} /> : <LkSyncTag d={d} />}
                 {d.trang_thai === "cho_cap" && d.ly_do_tu_choi ? ` · ↩ ${d.ly_do_tu_choi}` : ""}
+                {d.trang_thai === "lien_ket" && (
+                  <span className="block mt-0.5">
+                    <CongNoTag d={d} />
+                  </span>
+                )}
                 {(d.trang_thai === "tu_choi" || d.trang_thai === "huy") && d.ly_do_tu_choi ? ` · ${d.ly_do_tu_choi}` : ""}
                 {d.nguoi_xu_ly && d.trang_thai !== "cho_cap" && (
                   <>
@@ -521,6 +532,16 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
         </ul>
       )}
       {lkLoi && <p className="mt-1 text-xs text-[var(--red-700,#b91c1c)]">⚠ {lkLoi} — trạng thái đang hiện là lần cập nhật gần nhất.</p>}
+      {xnFor && (
+        <XacNhanTieuHaoModal
+          list={xnFor}
+          onClose={() => setXnFor(null)}
+          onDone={() => {
+            setXnFor(null);
+            after();
+          }}
+        />
+      )}
       {suaFor && (
         <SuaDeXuatModal
           dx={suaFor}

@@ -215,6 +215,25 @@ export interface DeXuatLk {
   nguoi_xu_ly: string | null;
   xu_ly_luc: string | null;
   updated_at: string;
+  // 16/11/2026: tru cong no sua chua (Admin BH xac nhan tieu hao) - migration 0040.
+  sl_dung?: number | null;
+  sl_tra?: number | null;
+  sl_tru?: number | null;
+  xac_kq?: string | null;
+  tru_that_lac?: number | null;
+  xn_boi?: string | null;
+  xn_luc?: string | null;
+  xn_ghi_chu?: string | null;
+  tru_ddh_id?: string | null;
+  tru_nhan?: string | null;
+  tru_buoc?: string | null;
+  tra_ddh_id?: string | null;
+  tra_nhan?: string | null;
+  tra_buoc?: string | null;
+  cn_loi?: string | null;
+  xac_tt?: string | null;
+  thung_xac_id?: string | null;
+  nguoi_sua_chua?: string | null;
   // join them o GET /de-xuat
   unit_trang_thai?: string;
   ma_lk_thuc_te?: string | null;

@@ -41,6 +41,7 @@ const MUC: Partial<Record<keyof Counts, MucDef>> = {
   admin_cho_phan_loai: { vai: "Admin BH", nhan: "đơn chờ phân loại", link: "/don?tab=xu_ly" },
   admin_cho_xac_nhan_hoan_tat: { vai: "Admin BH", nhan: "đơn chờ xác nhận hoàn tất", link: "/don?tab=hoan_tat" },
   admin_de_xuat_cho_cap: { vai: "Admin BH", nhan: "ca xin linh kiện chờ cấp", link: "/admin/de-xuat" },
+  admin_xn_tieu_hao: { vai: "Admin BH", nhan: "ca linh kiện chờ xác nhận tiêu hao (trừ công nợ NV)", link: "/admin/de-xuat?tab=cho_xn" },
   admin_thieu_hang_da_ve: { vai: "Admin BH", nhan: "yêu cầu thiếu hàng đã có kết quả", link: "/don?tab=thieu_hang" },
   admin_san_sang_gom: { vai: "Admin BH", nhan: "đơn xử lý xong chờ tạo phiếu trả", link: "/phieu-tra?tab=cho_tao" },
   nv_cho_chan_doan: { vai: "NV sửa chữa", nhan: "đơn chờ bạn sửa / nộp kết quả", link: "/don?tab=nv" },
