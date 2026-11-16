@@ -7283,3 +7283,5 @@ Hỏi lại qua AskUserQuestion, người dùng chốt: import **"Kết quả x�
 **(c) Ghi nhận:** URL `?loai=` không phải bộ lọc màn hình (chỉ `?ktv=` đồng bộ từ URL) — lúc kiểm thử phải lọc qua ô lọc. Tab Cấp linh kiện mở bằng `?tab=` (URL ghi thêm `?dx=` cho menu KTV).
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (D1 sao `buocqa` + 2 đề xuất mẫu, đã xoá): import 13 dòng → 7 hợp lệ (2 thùng mới MOI / MỚI-B, tiêu huỷ DX kèm ghi chú, thất lạc, không có xác, trả ngoài) + 6 lỗi đúng lý do (trùng mã, không tìm thấy, kết quả sai, thiếu mã thùng, thùng không tồn tại, đưa lại khi chưa có kết quả); áp dụng ghi đúng 7, nhật ký đúng 8 dòng (gồm lần đưa lại); file mẫu tải về đọc lại được (báo "chưa điền Kết quả"); file CSV điền 3 dòng → xem trước 2 hợp lệ / 1 lỗi → áp dụng → xác vào đúng TX-000001, hộp tự đóng. Tải Excel: Chờ phân loại 4, Đang sửa 8, Hoàn tất 1, Xác chờ gom 17 (lọc Loại = Sau sửa chữa → 2), Đã xử lý khác 4, Thùng nháp 2, Cấp LK Kho đã xuất 2; nút khoá khi danh sách trống.
+
+**Deploy (16/11/2026):** `npm run deploy` (Version ID `d8eda33e`), không có migration mới.
