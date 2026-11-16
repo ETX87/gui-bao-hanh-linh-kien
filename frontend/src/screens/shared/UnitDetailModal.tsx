@@ -42,6 +42,7 @@ import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 import type { AppUser, DonCha, DonVi, GhiChuLog, LogRow } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
+import { ThongTinBhKv } from "./ThongTinBh";
 import { Kv, SectionTitle, Section, SummaryBox, CopyBtn, DETAIL_MAX_W } from "../../ui/DetailParts";
 
 interface PhieuGuiTomTat {
@@ -627,6 +628,9 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
 
             {/* Xu ly - chi hien truong co gia tri */}
             <Section title="🛠 Xử lý">
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 mb-1.5">
+                <ThongTinBhKv u={u} sua={user.la_admin_bh || user.la_qtri} onSaved={load} />
+              </dl>
               {daPhanLoai ? (
                 <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
                   {u.loai_bao_hanh && <Kv k="Loại bảo hành" v={LOAI_BAO_HANH_LABELS[u.loai_bao_hanh] ?? u.loai_bao_hanh} />}

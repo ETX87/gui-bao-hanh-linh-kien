@@ -13,7 +13,7 @@ import type { AppUser } from "../types";
 export const VIEW_AS_COOKIE = "suachua_view_as";
 export const VIEW_AS_USER_COOKIE = "suachua_view_as_user";
 
-export const VIEW_AS_ROLE_KEYS = ["ktv", "ve_tinh", "kho", "admin_bh", "nv_sua_chua", "ke_toan", "giam_sat", "view"] as const;
+export const VIEW_AS_ROLE_KEYS = ["ktv", "ve_tinh", "kho", "admin_bh", "nv_sua_chua", "ke_toan", "giam_sat", "view", "tra_xac"] as const;
 export type ViewAsRole = (typeof VIEW_AS_ROLE_KEYS)[number];
 
 export function isViewAsRole(v: unknown): v is ViewAsRole {
@@ -29,6 +29,7 @@ const FLAG_OF: Record<ViewAsRole, keyof AppUser> = {
   ke_toan: "la_ke_toan",
   giam_sat: "la_giam_sat",
   view: "la_view",
+  tra_xac: "la_tra_xac",
 };
 
 /** Tat het co (ke ca la_qtri) roi bat dung 1 co cua vai tro mau - khong con duong "|| la_qtri" nao sot. */
@@ -43,6 +44,7 @@ export function applyViewAsRole(user: AppUser, role: ViewAsRole): AppUser {
     la_ke_toan: false,
     la_giam_sat: false,
     la_view: false,
+    la_tra_xac: false,
     la_qtri: false,
     [FLAG_OF[role]]: true,
   };

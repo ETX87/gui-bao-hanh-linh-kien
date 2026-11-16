@@ -35,6 +35,7 @@ export interface DonSc {
   sua_duoc: boolean;
   giai_doan: string | null;
   yeu_cau_huy_bo_phan: string | null;
+  loai_de_xuat?: string | null; // 16/11/2026 (v1.142): CÔNG NỢ SỬA CHỮA / HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA -> de_xuat.lk_loai
 }
 
 export type KqGoi<T> = { ok: true; data: T } | { ok: false; status: number; error: string; body?: Record<string, unknown> };
@@ -89,13 +90,13 @@ export function moTaLoi(k: { error: string; body?: Record<string, unknown> }): s
 // tao dong de xuat moi (nguon 'linhkien') neu ma don bao hanh khop 1 don vi (ma don vi, hoac ma don cha -> don vi dau tien).
 async function ghiDonSc(db: D1Database, r: DonSc, now: string): Promise<void> {
   const ttDx = r.buoc === "dong" ? "huy" : "lien_ket";
-  const cot = [r.ma_lk, r.so_luong, r.tt, r.nhan, r.buoc, r.sua_duoc ? 1 : 0, r.giai_doan, r.pxk_id, r.yeu_cau_huy_bo_phan, ttDx];
+  const cot = [r.ma_lk, r.so_luong, r.tt, r.nhan, r.buoc, r.sua_duoc ? 1 : 0, r.giai_doan, r.pxk_id, r.yeu_cau_huy_bo_phan, ttDx, r.loai_de_xuat ?? null];
   const set =
-    "ma_lk = ?, so_luong = ?, lk_tt = ?, lk_nhan = ?, lk_buoc = ?, lk_sua_duoc = ?, lk_giai_doan = ?, lk_pxk = ?, lk_yeu_cau_huy = ?, trang_thai = ?";
+    "ma_lk = ?, so_luong = ?, lk_tt = ?, lk_nhan = ?, lk_buoc = ?, lk_sua_duoc = ?, lk_giai_doan = ?, lk_pxk = ?, lk_yeu_cau_huy = ?, trang_thai = ?, lk_loai = COALESCE(?, lk_loai)";
   // Chi doi updated_at khi co gi thay doi that (tranh "moi cap nhat" gia).
   const khac = `(COALESCE(ma_lk,'') <> COALESCE(?,'') OR so_luong <> ? OR COALESCE(lk_tt,'') <> COALESCE(?,'') OR COALESCE(lk_nhan,'') <> COALESCE(?,'')
     OR COALESCE(lk_buoc,'') <> COALESCE(?,'') OR lk_sua_duoc <> ? OR COALESCE(lk_giai_doan,'') <> COALESCE(?,'') OR COALESCE(lk_pxk,'') <> COALESCE(?,'')
-    OR COALESCE(lk_yeu_cau_huy,'') <> COALESCE(?,'') OR trang_thai <> ?)`;
+    OR COALESCE(lk_yeu_cau_huy,'') <> COALESCE(?,'') OR trang_thai <> ? OR COALESCE(lk_loai,'') <> COALESCE(?, lk_loai, ''))`;
   if (r.nguon_tao === "doitra" && r.nguon_tao_id) {
     await db.batch([
       db.prepare(`UPDATE de_xuat_linh_kien_bh SET ${set}, updated_at = ? WHERE id = ? AND lk_ddh_id = ? AND ${khac}`).bind(...cot, now, r.nguon_tao_id, r.id, ...cot),
@@ -121,11 +122,11 @@ async function ghiDonSc(db: D1Database, r: DonSc, now: string): Promise<void> {
   await db
     .prepare(
       `INSERT INTO de_xuat_linh_kien_bh (id, unit_id, ma_lk, so_luong, ghi_chu, trang_thai, nguoi_de_xuat, created_at, updated_at, nguon, lk_ddh_id,
-         lk_tt, lk_nhan, lk_buoc, lk_sua_duoc, lk_giai_doan, lk_pxk, lk_yeu_cau_huy, lk_dong_bo_luc)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'linhkien', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         lk_tt, lk_nhan, lk_buoc, lk_sua_duoc, lk_giai_doan, lk_pxk, lk_yeu_cau_huy, lk_dong_bo_luc, lk_loai)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'linhkien', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(id, unit.id, r.ma_lk, r.so_luong, r.ghi_chu, ttDx, r.nguoi_tao, r.ngay_tao, now, r.id, r.tt, r.nhan, r.buoc, r.sua_duoc ? 1 : 0, r.giai_doan,
-      r.pxk_id, r.yeu_cau_huy_bo_phan, now)
+      r.pxk_id, r.yeu_cau_huy_bo_phan, now, r.loai_de_xuat ?? null)
     .run();
 }
 

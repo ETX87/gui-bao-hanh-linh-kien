@@ -1,3 +1,4 @@
+import { HANG_SQL, DOI_TAC_TEN_SQL, DOI_TAC_KAROFI_SQL } from "../lib/doiTac";
 import { dongBoTaiKhoan } from "../lib/taiKhoan";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
@@ -181,7 +182,10 @@ const DON_VI_COT = `u.id, u.parent_id, p.case_id, COALESCE(u.ma_lk_thuc_te, p.ma
   COALESCE(NULLIF(TRIM(p.san_pham_bh), ''), CASE WHEN json_valid(s.data) THEN json_extract(s.data, '$.san_pham_bao_hanh') END) AS san_pham_bh,
   COALESCE(NULLIF(TRIM(p.ten_khach_hang), ''), (SELECT kh.ten FROM khach_hang_bh kh WHERE kh.id = p.khach_hang_id),
     CASE WHEN json_valid(s.data) THEN json_extract(s.data, '$.khach_hang') END) AS ten_khach_hang,
-  u.trang_thai, u.nguoi_sua_chua`;
+  u.trang_thai, u.nguoi_sua_chua,
+  ${HANG_SQL("p")} AS hang, ${DOI_TAC_TEN_SQL("p")} AS doi_tac, ${DOI_TAC_KAROFI_SQL("p")} AS doi_tac_karofi, u.loai_bao_hanh, u.huong_xu_ly`;
+// 16/11/2026 (v1.142): + hang / doi_tac / doi_tac_karofi / loai_bao_hanh -> linh-kien-app tu chon loai de xuat cap linh kien (Karofi con BH =
+// HỖ TRỢ SỬA CHỮA 0 ĐỒNG, doi tac khac con BH = CÔNG NỢ SỬA CHỮA, het BH = MUA HÀNG SỬA CHỮA - lib/doiTac.ts loaiDeXuatSuaChua).
 sync.get("/don-vi-sua-chua", async (c) => {
   const email = (c.req.query("email") ?? "").trim().toLowerCase();
   const q = (c.req.query("q") ?? "").trim().toUpperCase();

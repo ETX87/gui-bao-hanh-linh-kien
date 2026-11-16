@@ -21,6 +21,7 @@ import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
 import { mienScope, mienOfStaff, syncPhieuTraMien } from "../lib/mien";
 import { pushBoxDoneToKhovan } from "../lib/khovanPushClient";
 import { lanTruocSql } from "../lib/lanTruoc";
+import { HANG_SQL, DOI_TAC_ID_SQL, COT_HANG_DOI_TAC, loaiDeXuatSuaChua } from "../lib/doiTac";
 import { kiemTraCase, ghiDoiCase } from "../lib/kiemTraCase";
 
 // Man hinh Admin bao hanh - port dung toan bo luong tu prototype-html/index.html: tiep nhan noi bo,
@@ -396,7 +397,7 @@ adminBH.get("/don-vi", async (c) => {
   const tongSql = `SELECT COUNT(DISTINCT u.parent_id) AS cnt, COUNT(*) AS units FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
      LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
      WHERE u.trang_thai IN ('cho_phan_loai', 'admin_can_xem_lai', 'cho_bo_sung_tt') AND (p.phieu_gui_id IS NULL OR g.admin_tiep_nhan = 1)${pv.sql}`;
-  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.so_luong_khai, p.so_luong_thuc_nhan, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx`;
+  const selectCols = `SELECT u.*, p.case_id, p.ma_lk, p.so_luong_khai, p.so_luong_thuc_nhan, p.mo_ta_loi, p.phieu_gui_id, p.nguon_tao, p.ten_khach_hang, p.sdt_khach_hang, p.san_pham_bh, p.loai_doi_tru_de_xuat, p.mien, p.case_xac_minh, p.case_xac_minh_loi, ${lanTruocSql("p", "COALESCE(u.ma_lk_nhan, p.ma_lk)")} AS lan_truoc, g.nguoi_tao AS ktv, (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_khach_hang, (SELECT json_extract(cs.data, '$.ngay_mua') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_mua, (SELECT json_extract(cs.data, '$.thoi_gian_cskh_tiep_nhan') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_tiep_nhan, (SELECT json_extract(cs.data, '$.seri_san_pham') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_serial, (SELECT json_extract(cs.data, '$.ngay_san_xuat') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS case_ngay_sx, ${COT_HANG_DOI_TAC("p")}`;
 
   // 05/10/2026 ("Cac danh sach table dai phai phan trang, toi da 20 dong/trang"): ?group=1 -> phan
   // trang theo DON CHA (moi trang toi da `limit` don cha + du moi don vi cua chung) - bang thong nhat
@@ -492,6 +493,10 @@ adminBH.get("/don-vi/:id", async (c) => {
   // KHONG can 1 prop "parent" rieng khi mo tu chinh modal chi tiet nay (dong bo voi cach bang thong
   // nhat AdminUnifiedTable.tsx da co san 2 truong nay qua JOIN cua GET /don-vi).
   if (p) Object.assign(u, { ma_lk: p.ma_lk, loai_doi_tru_de_xuat: p.loai_doi_tru_de_xuat, phieu_gui_id: p.phieu_gui_id });
+  // 16/11/2026 (v1.142): Hang / Doi tac hieu luc (Admin chot > CRM) + loai de xuat cap linh kien sua chua tuong ung.
+  const hdt = await c.env.DB.prepare(`SELECT ${COT_HANG_DOI_TAC("p")}, p.hang AS hang_chot, p.doi_tac_id AS doi_tac_chot FROM phieu_sua_chua_bh p WHERE p.id = ?`)
+    .bind(uRow.parent_id).first<{ hang: string | null; doi_tac_id: number | null; doi_tac: string | null; doi_tac_karofi: number | null; hang_chot: string | null; doi_tac_chot: number | null }>();
+  if (hdt) Object.assign(u, { ...hdt, ldx_sua_chua: loaiDeXuatSuaChua((u as { loai_bao_hanh: string | null }).loai_bao_hanh, hdt.doi_tac_karofi) });
 
   const [ctLogs, pLogs, ctAnh, pAnh, baoCaoSai] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_sc_ct' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
@@ -584,6 +589,46 @@ interface PhanLoaiBody {
   // cho tat ca cac don xu ly" - huong doi_moi BAT BUOC chon xu ly xac ngay luc phan loai (don le, hang
   // loat, FAST), khong doi toi luc xac nhan hoan tat moi hoi.
   xu_ly_xac?: string;
+  // 16/11/2026 (v1.142): Hang + Doi tac cua don cha - BAT BUOC du khi day sang NV sua chua (huong HUONG_CAN_NV); khong gui = giu gia tri hien
+  // tai (Admin da chot hoac theo CRM). Doi tac la id danh muc doi_tac_bh.
+  hang?: string | null;
+  doi_tac_id?: number | null;
+}
+
+// Hang / Doi tac hieu luc cua don cha (Admin chot > CRM) - lib/doiTac.ts.
+async function hangDoiTacCha(db: D1Database, parentId: string): Promise<{ hang: string | null; doi_tac_id: number | null; doi_tac: string | null; la_karofi: number | null }> {
+  const r = await db.prepare(`SELECT ${HANG_SQL("p")} AS hang, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id FROM phieu_sua_chua_bh p WHERE p.id = ?`).bind(parentId)
+    .first<{ hang: string | null; doi_tac_id: number | null }>();
+  const dt = r?.doi_tac_id ? await db.prepare("SELECT ten, la_karofi FROM doi_tac_bh WHERE id = ?").bind(r.doi_tac_id).first<{ ten: string; la_karofi: number }>() : null;
+  return { hang: r?.hang ?? null, doi_tac_id: dt ? r!.doi_tac_id : null, doi_tac: dt?.ten ?? null, la_karofi: dt?.la_karofi ?? null };
+}
+
+// Ghi Hang / Doi tac Admin chon vao don cha (chi khi doi). Tra mo ta thay doi cho nhat ky ("" = khong doi) hoac loi.
+async function chotHangDoiTac(db: D1Database, parentId: string, hangMoi: string | null | undefined, doiTacMoi: number | null | undefined, batBuoc: boolean): Promise<{ error: string } | { ghi: string; laKarofi: number | null; doiTac: string | null }> {
+  const cu = await hangDoiTacCha(db, parentId);
+  const hang = hangMoi === undefined ? cu.hang : (hangMoi ?? "").trim().slice(0, 100) || null;
+  let doiTacId = doiTacMoi === undefined ? cu.doi_tac_id : doiTacMoi;
+  let ten = cu.doi_tac;
+  let laKarofi = cu.la_karofi;
+  if (doiTacMoi !== undefined && doiTacMoi !== null) {
+    const dt = await db.prepare("SELECT id, ten, la_karofi FROM doi_tac_bh WHERE id = ?").bind(doiTacMoi).first<{ id: number; ten: string; la_karofi: number }>();
+    if (!dt) return { error: "DOI_TAC_KHONG_CO" };
+    doiTacId = dt.id;
+    ten = dt.ten;
+    laKarofi = dt.la_karofi;
+  } else if (doiTacMoi === null) {
+    doiTacId = null;
+    ten = null;
+    laKarofi = null;
+  }
+  if (batBuoc && (!hang || !doiTacId)) return { error: "REQUIRE_HANG_DOI_TAC" };
+  const p = await db.prepare("SELECT hang, doi_tac_id FROM phieu_sua_chua_bh WHERE id = ?").bind(parentId).first<{ hang: string | null; doi_tac_id: number | null }>();
+  if (p?.hang === hang && p?.doi_tac_id === doiTacId) return { ghi: "", laKarofi, doiTac: ten };
+  await db.prepare("UPDATE phieu_sua_chua_bh SET hang = ?, doi_tac_id = ? WHERE id = ?").bind(hang, doiTacId, parentId).run();
+  const doi: string[] = [];
+  if (hang !== cu.hang) doi.push(`Hãng: ${cu.hang || "—"} → ${hang || "—"}`);
+  if (doiTacId !== cu.doi_tac_id) doi.push(`Đối tác: ${cu.doi_tac || "—"} → ${ten || "—"}`);
+  return { ghi: doi.length ? doi.join(" · ") : `Hãng ${hang || "—"} · Đối tác ${ten || "—"}`, laKarofi, doiTac: ten };
 }
 
 const XU_LY_XAC_VALUES = ["tra_doi_tac", "tieu_huy", "luu_kho"];
@@ -603,6 +648,20 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
   if (body.huong_xu_ly === "tu_choi" && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
   if (body.huong_xu_ly === "doi_moi" && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return { error: "REQUIRE_XU_LY_XAC" };
   if ((await quaHanBuoc(db, unit.trang_thai, unit.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
+  // 16/11/2026 (v1.142): "khi đẩy 1 đơn sang nv sửa chữa, bắt buộc phải chọn đủ Hãng, Đối tác, còn bảo hành/hết bảo hành" (con / het bao hanh =
+  // loai_bao_hanh, da bat buoc o tren). Huong khac: chi ghi neu Admin co gui.
+  const canNv = HUONG_CAN_NV.includes(body.huong_xu_ly);
+  let ghiHdt = "";
+  let ldxSc: string | null = null;
+  if (canNv || body.hang !== undefined || body.doi_tac_id !== undefined) {
+    const pid = (await db.prepare("SELECT parent_id FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(unit.id).first<{ parent_id: string }>())?.parent_id;
+    if (pid) {
+      const kq = await chotHangDoiTac(db, pid, body.hang, body.doi_tac_id, canNv);
+      if ("error" in kq) return kq;
+      ghiHdt = kq.ghi;
+      if (canNv) ldxSc = loaiDeXuatSuaChua(body.loai_bao_hanh, kq.laKarofi);
+    }
+  }
 
   let trangThaiMoi = unit.trang_thai;
   if (HUONG_CAN_NV.includes(body.huong_xu_ly)) trangThaiMoi = "cho_chan_doan";
@@ -649,7 +708,9 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       (body.huong_xu_ly === "doi_moi" ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
       (body.ma_lk_nhan ? ` | LK thực tế gửi về: ${body.ma_lk_nhan}` : "") +
       (body.ma_lk_thuc_te ? ` | LK đổi mới: ${body.ma_lk_thuc_te}` : "") +
-      (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""),
+      (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : "") +
+      (ghiHdt ? ` | ${ghiHdt}` : "") +
+      (ldxSc ? ` | Cấp linh kiện sửa chữa: ${ldxSc}` : ""),
   );
   return { ok: true };
 }
@@ -665,6 +726,30 @@ adminBH.post("/don-vi/:id/phan-loai", async (c) => {
   const result = await applyPhanLoaiToUnit(c.env.DB, unit, body, user.email);
   if ("error" in result) return c.json(result, 400);
   return c.json({ ok: true });
+});
+
+// POST /don-vi/:id/thong-tin-bh {hang?, doi_tac_id?, loai_bao_hanh?} (16/11/2026, v1.142 - "admin BH có thể sửa lại nếu chưa chính xác"): sua
+// Hang / Doi tac (don cha) + con / het bao hanh (don vi) bat ky luc nao don chua ket thuc. Don dang o NV sua chua thi khong de trong duoc.
+adminBH.post("/don-vi/:id/thong-tin-bh", async (c) => {
+  const user = c.get("user");
+  if (!requireAdminBH(c)) return c.json({ error: "FORBIDDEN" }, 403);
+  const u = await c.env.DB.prepare("SELECT id, parent_id, trang_thai, loai_bao_hanh, huong_xu_ly FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(c.req.param("id"))
+    .first<{ id: string; parent_id: string; trang_thai: string; loai_bao_hanh: string | null; huong_xu_ly: string | null }>();
+  if (!u) return c.json({ error: "NOT_FOUND" }, 404);
+  if (u.trang_thai.startsWith("ket_thuc")) return c.json({ error: "WRONG_STATE" }, 400);
+  const b = await c.req.json<{ hang?: string | null; doi_tac_id?: number | null; loai_bao_hanh?: string }>().catch(() => ({}) as { hang?: string | null; doi_tac_id?: number | null; loai_bao_hanh?: string });
+  if (b.loai_bao_hanh !== undefined && !["trong_bh", "ngoai_bh"].includes(b.loai_bao_hanh)) return c.json({ error: "INVALID_LOAI_BAO_HANH" }, 400);
+  const canNv = u.trang_thai === "cho_chan_doan" && HUONG_CAN_NV.includes(u.huong_xu_ly as HuongXuLy);
+  const kq = await chotHangDoiTac(c.env.DB, u.parent_id, b.hang, b.doi_tac_id, canNv);
+  if ("error" in kq) return c.json(kq, 400);
+  const doiBh = b.loai_bao_hanh !== undefined && b.loai_bao_hanh !== u.loai_bao_hanh;
+  if (doiBh) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET loai_bao_hanh = ?, updated_at = updated_at WHERE id = ?").bind(b.loai_bao_hanh, u.id).run();
+  const ghi = [kq.ghi, doiBh ? `Bảo hành: ${LBL[u.loai_bao_hanh ?? ""] || "—"} → ${LBL[b.loai_bao_hanh!]}` : ""].filter(Boolean).join(" · ");
+  if (ghi) {
+    const ldx = loaiDeXuatSuaChua(doiBh ? b.loai_bao_hanh : u.loai_bao_hanh, kq.laKarofi);
+    await addLog(c.env.DB, "phieu_sc_ct", u.id, u.trang_thai, u.trang_thai, user.email, `Sửa thông tin đơn bảo hành: ${ghi}${canNv && ldx ? ` | Cấp linh kiện sửa chữa: ${ldx}` : ""}`);
+  }
+  return c.json({ ok: true, doi: !!ghi });
 });
 
 adminBH.post("/don-vi/phan-loai-hang-loat", async (c) => {
@@ -1176,6 +1261,8 @@ interface FastActionBody {
   ghi_chu_huy?: string;
   ly_do_cham?: string;
   xu_ly_xac?: string;
+  hang?: string | null; // 16/11/2026 (v1.142) - Hang / Doi tac khi day sang NV sua chua
+  doi_tac_id?: number | null;
 }
 
 // Lay loai_doi_tru mac dinh theo de xuat cua KTV luc gui hang - dung mau da chot 22/08/2026.
@@ -1241,6 +1328,8 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
       ly_do_cham: body.ly_do_cham,
       // 20/10/2026: FAST Doi moi khong hoi xu ly xac - mac dinh "tra doi tac", Admin doi lai sau.
       xu_ly_xac: meta.huong === "doi_moi" ? body.xu_ly_xac || "tra_doi_tac" : body.xu_ly_xac,
+      hang: body.hang,
+      doi_tac_id: body.doi_tac_id,
     },
     actor,
   );

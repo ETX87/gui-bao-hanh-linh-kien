@@ -45,7 +45,7 @@ function Routed({ user }: { user: AppUser }) {
   // 11/11/2026: tai lieu logic he thong cho vai tro BO (moi tai khoan khong phai KTV thuan).
   if (path === "/logic" && !isPureKtv(user)) return <LogicHeThongScreen />;
   // 13/11/2026: module tra xac linh kien.
-  if (path === "/tra-xac" && (user.la_admin_bh || user.la_ke_toan || user.la_view || user.la_qtri)) return <TraXacScreen user={user} />;
+  if (path === "/tra-xac" && (user.la_admin_bh || user.la_ke_toan || user.la_view || user.la_qtri || user.la_tra_xac)) return <TraXacScreen user={user} />;
   // 13/11/2026: bao cao ket qua lam viec BO theo thang.
   if (path === "/bao-cao-bo" && (user.la_admin_bh || user.la_view || user.la_qtri)) return <BaoCaoBoScreen />;
   if (path === "/bao-cao-nghen" && (user.la_admin_bh || user.la_view || user.la_giam_sat || user.la_qtri)) return <BaoCaoNghenScreen user={user} />;

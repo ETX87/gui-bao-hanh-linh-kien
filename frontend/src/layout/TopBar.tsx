@@ -21,6 +21,7 @@ const ROLE_LABELS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ke_toan", label: "Kế toán" },
   { flag: "la_giam_sat", label: "Giám sát" },
   { flag: "la_view", label: "View" },
+  { flag: "la_tra_xac", label: "Trả xác" },
   { flag: "la_qtri", label: "Admin hệ thống" },
 ];
 

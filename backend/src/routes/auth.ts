@@ -214,12 +214,12 @@ auth.get("/view-as-user/options", verifySessionMiddleware, loadUser, async (c) =
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM (
        SELECT u.email, COALESCE(u.ten, k.ten_hien_thi) AS ten, k.ma_ktv, 1 AS da_dang_nhap,
-              u.la_ktv_dvbh, u.la_ve_tinh, u.la_kho, u.la_admin_bh, u.la_nv_sua_chua, u.la_ke_toan, u.la_giam_sat, u.la_view, u.la_qtri
+              u.la_ktv_dvbh, u.la_ve_tinh, u.la_kho, u.la_admin_bh, u.la_nv_sua_chua, u.la_ke_toan, u.la_giam_sat, u.la_view, u.la_qtri, u.la_tra_xac
        FROM users u LEFT JOIN ktv_lien_he_bh k ON k.email_dang_nhap = u.email
        WHERE u.trang_thai_duyet = 'Da duyet' AND COALESCE(u.bi_khoa, 0) = 0 AND u.email != ?
        UNION ALL
        SELECT k.email_dang_nhap, k.ten_hien_thi, k.ma_ktv, 0,
-              CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 0 ELSE 1 END, CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 1 ELSE 0 END, 0, 0, 0, 0, 0, 0, 0
+              CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 0 ELSE 1 END, CASE WHEN k.vai_tro_ktv = 'Ve tinh' THEN 1 ELSE 0 END, 0, 0, 0, 0, 0, 0, 0, 0
        FROM ktv_lien_he_bh k
        WHERE k.email_dang_nhap IS NOT NULL AND k.email_dang_nhap != '' AND NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.email = k.email_dang_nhap)
      ) t

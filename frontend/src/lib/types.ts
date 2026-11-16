@@ -16,6 +16,9 @@ export interface AppUser {
   la_giam_sat: boolean;
   la_view: boolean;
   la_qtri: boolean;
+  // 16/11/2026 (v1.142): vai tro "Tra xac" + doi tac duoc xu ly (doi_tac_ids chi tra o GET /users).
+  la_tra_xac?: boolean;
+  doi_tac_ids?: number[];
   // 11/10/2026: mien phu trach cua nguoi xu ly - MB / MN / ALL (ca 2) / null (chua gan = thay tat ca).
   mien?: "MB" | "MN" | "ALL" | null;
   // 16/10/2026: trang thai tren ETX nhan su (chi tra o GET /users) - 'on' dang lam / 'off' da nghi / null khong co tren ETX.
@@ -115,6 +118,12 @@ export interface DonCha {
 }
 
 export interface DonVi {
+  // 16/11/2026 (v1.142): Hang / Doi tac hieu luc cua don cha (Admin chot > CRM) + loai cap linh kien sua chua tuong ung.
+  hang?: string | null;
+  doi_tac_id?: number | null;
+  doi_tac?: string | null;
+  doi_tac_karofi?: number | null;
+  ldx_sua_chua?: string | null;
   ktv_thieu?: number; // 31/10/2026: KTV bao khong nhan duoc mon nay
   that_lac?: number; // Kho danh gia mon nay that lac
   id: string;
@@ -223,6 +232,8 @@ export interface DeXuatLk {
   tru_that_lac?: number | null;
   xn_boi?: string | null;
   xn_luc?: string | null;
+  // 16/11/2026 (v1.142): loai de xuat cua don cap ben app Dat LK (CÔNG NỢ SỬA CHỮA / HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA); NULL = cu (CÔNG NỢ).
+  lk_loai?: string | null;
   xn_ghi_chu?: string | null;
   tru_ddh_id?: string | null;
   tru_nhan?: string | null;

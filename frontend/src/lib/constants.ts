@@ -201,3 +201,11 @@ export const FAST_ACTION_ICONS: Record<string, string> = {
   tru_no_pd: "💳✅",
   sua_chua_pd: "🔧✅",
 };
+
+// 16/11/2026 (v1.142) - loai de xuat cap linh kien sua chua theo don bao hanh (ban sao backend lib/doiTac.ts loaiDeXuatSuaChua + linh-kien-app
+// loaiDeXuatTheoDonBh - doi 1 ben doi ca 3). Het BH -> MUA HÀNG SỬA CHỮA; con BH + doi tac Karofi -> HỖ TRỢ SỬA CHỮA 0 ĐỒNG; con lai CÔNG NỢ SỬA CHỮA.
+export function loaiDeXuatSuaChua(loaiBaoHanh: string | null | undefined, laKarofi: number | boolean | null | undefined): string | null {
+  if (loaiBaoHanh === "ngoai_bh") return "MUA HÀNG SỬA CHỮA";
+  if (loaiBaoHanh !== "trong_bh" || laKarofi === null || laKarofi === undefined) return null;
+  return laKarofi ? "HỖ TRỢ SỬA CHỮA 0 ĐỒNG" : "CÔNG NỢ SỬA CHỮA";
+}

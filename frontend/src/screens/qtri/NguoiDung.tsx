@@ -9,6 +9,7 @@ import { Modal } from "../../ui/Modal";
 import { Field, Input } from "../../ui/primitives";
 import type { AppUser } from "../../lib/types";
 import { MIEN_USER_OPTIONS } from "../../lib/mien";
+import { DoiTacTraXacBtn } from "./DoiTac";
 
 const ROLE_FLAGS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ktv_dvbh", label: "KTV" },
@@ -19,6 +20,7 @@ const ROLE_FLAGS: Array<{ flag: keyof AppUser; label: string }> = [
   { flag: "la_ke_toan", label: "Kế toán" },
   { flag: "la_giam_sat", label: "Giám sát" },
   { flag: "la_view", label: "View" },
+  { flag: "la_tra_xac", label: "Trả xác" },
   { flag: "la_qtri", label: "Admin hệ thống" },
 ];
 
@@ -227,6 +229,11 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                     ))}
                   </Select>
                 </div>
+                {u.la_tra_xac && (
+                  <div className="mt-2 text-sm">
+                    Đối tác trả xác: <DoiTacTraXacBtn email={u.email} ids={u.doi_tac_ids ?? []} onDone={reload} />
+                  </div>
+                )}
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {ROLE_FLAGS.map((r) => (
                     <label key={r.flag} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-2 text-sm text-[var(--ink-body)]">
@@ -259,6 +266,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                     {r.label}
                   </th>
                 ))}
+                <th className="text-left text-xs font-semibold text-[var(--ink-soft)]">Đối tác trả xác</th>
                 <th className="" />
               </tr>
             </thead>
@@ -311,6 +319,7 @@ export function QtriNguoiDungScreen({ currentEmail }: { currentEmail: string }) 
                         />
                       </td>
                     ))}
+                    <td className="">{u.la_tra_xac ? <DoiTacTraXacBtn email={u.email} ids={u.doi_tac_ids ?? []} onDone={reload} /> : null}</td>
                     <td className="text-right">
                       {u.email !== currentEmail && (
                         <Btn variant="ghost" onClick={() => xoa(u.email)} className="!text-[var(--red-600)] !px-2">

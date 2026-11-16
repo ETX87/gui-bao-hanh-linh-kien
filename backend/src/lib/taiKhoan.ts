@@ -58,7 +58,7 @@ export async function dongBoTaiKhoan(db: D1Database, email?: string): Promise<Do
              WHERE email_dang_nhap IS NOT NULL GROUP BY LOWER(TRIM(email_dang_nhap))) k
        WHERE users.trang_thai_duyet = 'Da duyet' AND LOWER(users.email) = k.em${em ? " AND LOWER(users.email) = ?" : ""}
          AND users.la_ktv_dvbh + users.la_ve_tinh + users.la_kho + users.la_admin_bh + users.la_nv_sua_chua + users.la_ke_toan
-             + users.la_giam_sat + users.la_view + users.la_qtri = 0`,
+             + users.la_giam_sat + users.la_view + users.la_qtri + users.la_tra_xac = 0`,
     )
     .bind(now, ...(em ? [em] : []))
     .run();

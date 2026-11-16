@@ -16,6 +16,7 @@ export const VIEW_AS_ROLES: { key: string; label: string; desc: string }[] = [
   { key: "ke_toan", label: "Kế toán", desc: "Duyệt phiếu trả" },
   { key: "giam_sat", label: "Giám sát", desc: "Tổng quan, tra cứu khu vực mình, tạo hộ" },
   { key: "view", label: "View", desc: "Chỉ xem tổng quan & tra cứu" },
+  { key: "tra_xac", label: "Trả xác", desc: "Gom thùng trả xác theo đối tác được gán" },
 ];
 export const VIEW_AS_ROLE_LABELS: Record<string, string> = Object.fromEntries(VIEW_AS_ROLES.map((r) => [r.key, r.label]));
 
@@ -28,6 +29,7 @@ const FLAG_LABELS: [string, string][] = [
   ["la_ke_toan", "Kế toán"],
   ["la_giam_sat", "Giám sát"],
   ["la_view", "View"],
+  ["la_tra_xac", "Trả xác"],
   ["la_qtri", "Admin hệ thống"],
 ];
 

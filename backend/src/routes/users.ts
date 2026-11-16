@@ -13,7 +13,7 @@ import { parsePage } from "../lib/pagination";
 const users = new Hono<{ Bindings: Env }>();
 users.use("*", verifySessionMiddleware, loadUser);
 
-const ROLE_FLAGS = ["la_ktv_dvbh", "la_ve_tinh", "la_kho", "la_admin_bh", "la_nv_sua_chua", "la_ke_toan", "la_giam_sat", "la_view", "la_qtri"] as const;
+const ROLE_FLAGS = ["la_ktv_dvbh", "la_ve_tinh", "la_kho", "la_admin_bh", "la_nv_sua_chua", "la_ke_toan", "la_giam_sat", "la_view", "la_qtri", "la_tra_xac"] as const;
 type RoleFlag = (typeof ROLE_FLAGS)[number];
 function isRoleFlag(v: unknown): v is RoleFlag {
   return typeof v === "string" && (ROLE_FLAGS as readonly string[]).includes(v);
@@ -62,7 +62,8 @@ users.get("/", async (c) => {
   const [{ results }, totalRow] = await Promise.all([
     c.env.DB.prepare(`SELECT email, ten, ten_tay, bi_khoa, khoa_boi_etx, trang_thai_duyet, mien, ${ROLE_FLAGS.join(", ")}, created_at,
        (SELECT MAX(e.trang_thai_lam_viec) FROM etx_nhan_su_bh e WHERE e.gmail = LOWER(users.email)) AS etx_trang_thai,
-       (SELECT json_group_array(json_object('ma', k.ma_ktv, 'ten', k.ten_hien_thi)) FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(users.email)) AS ktv_json
+       (SELECT json_group_array(json_object('ma', k.ma_ktv, 'ten', k.ten_hien_thi)) FROM ktv_lien_he_bh k WHERE LOWER(k.email_dang_nhap) = LOWER(users.email)) AS ktv_json,
+       (SELECT json_group_array(ud.doi_tac_id) FROM user_doi_tac_bh ud WHERE ud.email = users.email) AS doi_tac_json
        FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all(),
@@ -70,7 +71,15 @@ users.get("/", async (c) => {
   ]);
   // 05/11/2026 - "ưu tiên hiện thị tên trên app linh-kien-app (theo mã ktv - ví dụ (id.ktv) tên ktv": tai khoan co trong
   // danh ba KTV -> ten_ktv = "(ma) Ten" (nhieu ma cung email: "(ma1, ma2) Ten").
-  const users = (results as Array<Record<string, unknown>>).map(({ ktv_json, ...u }) => {
+  const users = (results as Array<Record<string, unknown>>).map(({ ktv_json, doi_tac_json, ...u0 }) => {
+    // 16/11/2026 (v1.142): doi tac vai tro "Tra xac" duoc xu ly.
+    let doiTac: number[] = [];
+    try {
+      doiTac = (JSON.parse(String(doi_tac_json || "[]")) as (number | null)[]).filter((x): x is number => typeof x === "number");
+    } catch {
+      doiTac = [];
+    }
+    const u: Record<string, unknown> = { ...u0, doi_tac_ids: doiTac };
     let ds: Array<{ ma: string | null; ten: string | null }> = [];
     try {
       ds = JSON.parse(String(ktv_json || "[]"));
@@ -135,6 +144,7 @@ interface PatchBody {
   trang_thai_duyet?: "Cho duyet" | "Da duyet" | "Tu choi";
   mien?: "MB" | "MN" | "ALL" | null;
   ten?: string;
+  doi_tac_ids?: number[];
 }
 
 // PATCH /api/users/:email - sua 1 co vai tro (body {flag, value}), hoac bi_khoa/trang_thai_duyet.
@@ -169,6 +179,15 @@ users.patch("/:email", async (c) => {
   if (body.ten !== undefined) {
     const ten = String(body.ten).trim().slice(0, 200);
     await c.env.DB.prepare("UPDATE users SET ten = ?, ten_tay = ?, updated_at = ? WHERE email = ?").bind(ten || null, ten ? 1 : 0, nowVN(), targetEmail).run();
+  }
+  // 16/11/2026 (v1.142): danh sach doi tac vai tro "Tra xac" duoc xu ly (thay ca bo).
+  if (body.doi_tac_ids !== undefined) {
+    if (!Array.isArray(body.doi_tac_ids)) return c.json({ error: "INVALID_DOI_TAC" }, 400);
+    const ids = [...new Set(body.doi_tac_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
+    await c.env.DB.batch([
+      c.env.DB.prepare("DELETE FROM user_doi_tac_bh WHERE email = ?").bind(targetEmail),
+      ...ids.map((id) => c.env.DB.prepare("INSERT OR IGNORE INTO user_doi_tac_bh (email, doi_tac_id) SELECT ?, id FROM doi_tac_bh WHERE id = ?").bind(targetEmail, id)),
+    ]);
   }
   if (body.trang_thai_duyet !== undefined) {
     await c.env.DB.prepare("UPDATE users SET trang_thai_duyet = ?, updated_at = ? WHERE email = ?").bind(body.trang_thai_duyet, nowVN(), targetEmail).run();

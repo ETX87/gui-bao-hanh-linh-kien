@@ -25,11 +25,17 @@ export const XAC_KQ_TIEU_HAO_NHAN: Record<string, string> = Object.fromEntries(X
 const tone = (b: string | null | undefined): "green" | "amber" | "red" | "gray" => (b === "xong" ? "green" : b === "dong" ? "red" : b ? "amber" : "gray");
 
 // Lan cap qua app Dat LK ma NV da nhan, chua xac nhan tieu hao.
-export const choXacNhanTieuHao = (d: DeXuatLk) => d.trang_thai === "lien_ket" && d.lk_buoc === "xong" && !d.xn_luc;
+// 16/11/2026 (v1.142): "Chỉ có đơn CÔNG NỢ SỬA CHỮA mới cần lên đơn trừ công nợ" - lan cap HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA khong xac nhan.
+export const laCongNoSc = (d: DeXuatLk) => !d.lk_loai || d.lk_loai === "CÔNG NỢ SỬA CHỮA";
+export const choXacNhanTieuHao = (d: DeXuatLk) => d.trang_thai === "lien_ket" && d.lk_buoc === "xong" && !d.xn_luc && laCongNoSc(d);
+// Sua / huy xac nhan duoc khi don tru / tra chua duoc Ke toan chot va xac chua vao thung (backend kiem tra lai).
+export const suaXacNhanDuoc = (d: DeXuatLk) =>
+  !!d.xn_luc && d.tru_buoc !== "xong" && d.tra_buoc !== "xong" && !d.thung_xac_id && d.xac_tt !== "trong_thung" && d.xac_tt !== "da_tra";
 
 // Dong tinh trang tru cong no 1 lan cap (dung o UI chi tiet don, man Cap linh kien, man Linh kien cua toi).
 export function CongNoTag({ d }: { d: DeXuatLk }) {
   if (d.trang_thai !== "lien_ket") return null;
+  if (!laCongNoSc(d)) return <Badge tone="gray">{d.lk_loai} — không trừ công nợ</Badge>;
   if (!d.xn_luc) {
     return d.lk_buoc === "xong" ? <Badge tone="amber">Chờ Admin xác nhận tiêu hao (nhận {d.so_luong})</Badge> : null;
   }
@@ -76,11 +82,38 @@ export function CongNoNut({ d, onDone }: { d: DeXuatLk; onDone: () => void }) {
       setBusy(false);
     }
   };
+  const [sua, setSua] = useState(false);
   const canTruTl = d.xac_kq === "that_lac" && d.tru_that_lac === 0 && (d.sl_dung ?? 0) > 0;
+  const canSua = suaXacNhanDuoc(d);
+  const huy = async () => {
+    const lyDo = window.prompt(`Hủy xác nhận tiêu hao ${d.id}? Đơn trừ / trả công nợ bên app Đặt linh kiện sẽ hủy theo, lần cấp về "Chờ xác nhận".\nLý do:`);
+    if (!lyDo?.trim()) return;
+    setBusy(true);
+    try {
+      await api.post(`/de-xuat/${d.id}/huy-tieu-hao`, { ly_do: lyDo.trim() });
+      toast("Đã hủy xác nhận tiêu hao.", "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
   const canGuiLai = !!d.xn_luc && (!!d.cn_loi || d.tru_buoc === "dong" || d.tra_buoc === "dong" || ((d.sl_tru ?? 0) > 0 && !d.tru_ddh_id) || ((d.sl_tra ?? 0) > 0 && !d.tra_ddh_id));
-  if (!canTruTl && !canGuiLai) return null;
+  if (!canTruTl && !canGuiLai && !canSua) return null;
   return (
     <span className="inline-flex gap-1" onClick={(e) => e.stopPropagation()}>
+      {canSua && (
+        <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setSua(true)} title="Sửa số đã dùng / xác — trước khi Kế toán chốt">
+          ✎ Sửa xác nhận
+        </Btn>
+      )}
+      {canSua && (
+        <Btn size="sm" variant="ghost" disabled={busy} onClick={huy} className="!text-[var(--red-600)]" title="Hủy xác nhận — đơn trừ / trả bên app Đặt linh kiện hủy theo">
+          ✕ Hủy xác nhận
+        </Btn>
+      )}
+      {sua && <XacNhanTieuHaoModal list={[d]} sua onClose={() => setSua(false)} onDone={() => { setSua(false); onDone(); }} />}
       {canTruTl && (
         <Btn size="sm" variant="ghost" disabled={busy} onClick={() => window.confirm(`Trừ công nợ NV ${d.sl_dung} linh kiện (xác thất lạc ${d.id})?`) && goi(`/de-xuat/${d.id}/tru-that-lac`, "Đã tạo đơn trừ công nợ.")}>
           Trừ công nợ (thất lạc)
@@ -102,11 +135,14 @@ interface DongNhap {
 }
 
 // Admin BH xac nhan tieu hao 1 hoac nhieu lan cap.
-export function XacNhanTieuHaoModal({ list, onClose, onDone }: { list: DeXuatLk[]; onClose: () => void; onDone: () => void }) {
+// sua = sua xac nhan da co (1 lan cap, v1.142): huy don tru / tra cu ben app Dat LK + tao lai theo so moi (POST /de-xuat/:id/sua-tieu-hao).
+export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXuatLk[]; onClose: () => void; onDone: () => void; sua?: boolean }) {
   const toast = useToast();
   const { nameOf } = useLkName();
-  const [nhap, setNhap] = useState<Record<string, DongNhap>>(() => Object.fromEntries(list.map((d) => [d.id, { sl_dung: String(d.so_luong), xac: "tra_doi_tac", tru_that_lac: false }])));
-  const [ghiChu, setGhiChu] = useState("");
+  const [nhap, setNhap] = useState<Record<string, DongNhap>>(() =>
+    Object.fromEntries(list.map((d) => [d.id, sua ? { sl_dung: String(d.sl_dung ?? d.so_luong), xac: d.xac_kq || "tra_doi_tac", tru_that_lac: !!d.tru_that_lac } : { sl_dung: String(d.so_luong), xac: "tra_doi_tac", tru_that_lac: false }])),
+  );
+  const [ghiChu, setGhiChu] = useState(sua ? list[0]?.xn_ghi_chu || "" : "");
   const [busy, setBusy] = useState(false);
   const set = (id: string, patch: Partial<DongNhap>) => setNhap((s) => ({ ...s, [id]: { ...s[id], ...patch } }));
   const apTatCa = (xac: string) => setNhap((s) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, { ...v, xac }])));
@@ -124,6 +160,19 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone }: { list: DeXuatLk[
   const tong = list.reduce((a, d) => { const t = tinh(d); return { tru: a.tru + t.tru, tra: a.tra + t.tra }; }, { tru: 0, tra: 0 });
   const submit = async () => {
     setBusy(true);
+    if (sua) {
+      try {
+        const d = list[0];
+        const r = await api.post<{ loi_tao_don: string | null }>(`/de-xuat/${d.id}/sua-tieu-hao`, { sl_dung: Number(nhap[d.id].sl_dung), xac: tinh(d).xac, tru_that_lac: nhap[d.id].tru_that_lac, ghi_chu: ghiChu.trim() || undefined });
+        toast(r.loi_tao_don ? `Đã sửa — chưa tạo lại được đơn: ${r.loi_tao_don}` : "Đã sửa xác nhận, đơn trừ / trả công nợ đã tạo lại.", r.loi_tao_don ? "error" : "ok");
+        onDone();
+      } catch (e) {
+        toast(errorMessage(e), "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const r = await api.post<{ ok: number; loi: { id: string; error: string }[]; loi_tao_don: { id: string; cn_loi: string }[] }>("/de-xuat/xac-nhan-tieu-hao", {
         items: list.map((d) => ({ id: d.id, sl_dung: Number(nhap[d.id].sl_dung), xac: tinh(d).xac, tru_that_lac: nhap[d.id].tru_that_lac, ghi_chu: ghiChu.trim() || undefined })),
@@ -139,7 +188,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone }: { list: DeXuatLk[
   };
   return (
     <Modal
-      title={`Xác nhận tiêu hao linh kiện (${list.length} lần cấp)`}
+      title={sua ? `Sửa xác nhận tiêu hao ${list[0]?.id}` : `Xác nhận tiêu hao linh kiện (${list.length} lần cấp)`}
       onClose={onClose}
       maxWidthClass="max-w-5xl"
       footerActions={

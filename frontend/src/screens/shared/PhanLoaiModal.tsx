@@ -4,7 +4,8 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, SectionLabel, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
-import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS } from "../../lib/constants";
+import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS, loaiDeXuatSuaChua } from "../../lib/constants";
+import { DoiTacSelect, useDoiTac } from "../qtri/DoiTac";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
 import { useLinhKien, lkOptions, lkLabel } from "../../hooks/useLinhKien";
@@ -44,11 +45,17 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [xuLyXac, setXuLyXac] = useState(unit.xu_ly_xac || "");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
+  // 16/11/2026 (v1.142): Hang + Doi tac (dien san theo CRM, Admin sua) - BAT BUOC khi giao NV sua chua.
+  const [hang, setHang] = useState(unit.hang || "");
+  const [doiTacId, setDoiTacId] = useState<number | null>(unit.doi_tac_id ?? null);
+  const dsDoiTac = useDoiTac();
 
   const needsNv = HUONG_CAN_NV.includes(huongXuLy);
   const needsTuChoi = huongXuLy === "tu_choi";
   const needsXuLyXac = huongXuLy === "doi_moi";
   const lkName = (ma: string) => lkLabel(linhKien.find((l) => l.ma_lk === ma)?.ten_lk, ma);
+  const karofi = doiTacId ? (dsDoiTac.find((d) => d.id === doiTacId)?.la_karofi ?? unit.doi_tac_karofi ?? null) : null;
+  const ldxSc = needsNv ? loaiDeXuatSuaChua(loaiBaoHanh, karofi) : null;
 
   const submit = async () => {
     if (!confirmKtvChange(ktvChangeLines([unit], loaiDoiTru, maLkNhan, lkName))) return;
@@ -68,6 +75,8 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
         ma_lk_thuc_te: maLkThucTe && maLkThucTe !== maLkNhan ? maLkThucTe : "",
         xu_ly_xac: needsXuLyXac ? xuLyXac : undefined,
         ly_do_cham: overdue ? lyDoCham : undefined,
+        hang: hang.trim() || null,
+        doi_tac_id: doiTacId,
       });
       toast("Đã phân loại đơn vị.", "ok");
       onDone();
@@ -78,7 +87,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     }
   };
 
-  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac) && (!overdue || lyDoCham);
+  const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || (nguoiSuaChua && hang.trim() && doiTacId)) && (!needsTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac) && (!overdue || lyDoCham);
 
   return (
     <Modal
@@ -123,6 +132,26 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
             </Select>
           </Field>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Hãng" required={needsNv} hint="Lấy từ CRM — sửa nếu chưa đúng">
+            <Input value={hang} onChange={(e) => setHang(e.target.value)} placeholder="VD: Karofi" className={needsNv && !hang.trim() ? "!border-[var(--red-500)]" : ""} />
+          </Field>
+          <Field label="Đối tác" required={needsNv} hint="Lấy từ CRM — danh mục ở Cài đặt › Đối tác">
+            <DoiTacSelect value={doiTacId} onChange={setDoiTacId} />
+          </Field>
+        </div>
+        {needsNv && (
+          <p className={`rounded-lg px-3 py-2 text-xs ${ldxSc ? "bg-[var(--surface-2)] text-[var(--ink-body)]" : "bg-[var(--red-50)] text-[var(--red-700)]"}`}>
+            {ldxSc ? (
+              <>
+                Linh kiện cấp cho NV sửa chữa sẽ đặt dạng <b>{ldxSc}</b>
+                {ldxSc === "CÔNG NỢ SỬA CHỮA" ? " — sửa xong Admin BH xác nhận tiêu hao để trừ công nợ NV." : ldxSc === "MUA HÀNG SỬA CHỮA" ? " — hết bảo hành, NV chuyển tiền mua." : " — đối tác Karofi còn bảo hành, không tính công nợ."}
+              </>
+            ) : (
+              "Giao NV sửa chữa bắt buộc chọn đủ Hãng, Đối tác và Loại bảo hành (còn / hết bảo hành)."
+            )}
+          </p>
+        )}
         {loaiBaoHanh === "ngoai_bh" && (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Thông tin mail phê duyệt" required>

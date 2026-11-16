@@ -1,3 +1,4 @@
+import { DX_CONG_NO_SQL, DOI_TAC_ID_SQL } from "./doiTac";
 import type { AppUser } from "../types";
 import { mienScope } from "./mien";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM } from "./xac";
@@ -186,7 +187,7 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       }),
       // 16/11/2026: lan cap linh kien (app Dat LK) NV da nhan, cho Admin BH xac nhan tieu hao -> tru cong no NV.
       one(
-        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND u.trang_thai <> 'cho_chan_doan'${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND u.trang_thai <> 'cho_chan_doan' AND ${DX_CONG_NO_SQL("d")}${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.admin_xn_tieu_hao = r?.cnt ?? 0;
@@ -216,6 +217,28 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       // 20/10/2026: phieu tra Ke toan tu choi, tra ve Admin BH.
       one(`SELECT COUNT(*) as cnt FROM phieu_tra_bh t WHERE t.trang_thai = 'nhap' AND t.ly_do_tu_choi_kt IS NOT NULL${mt.sql}`, ...mt.binds).then((r) => {
         counts.admin_phieu_tra_tu_choi = r?.cnt ?? 0;
+      }),
+    );
+  }
+
+  // ---- Tra xac (16/11/2026, v1.142): cung so viec cua Admin BH o man Tra xac, chi xac / thung cua doi tac duoc gan ----
+  if (user.la_tra_xac && !(user.la_admin_bh || user.la_qtri)) {
+    const { results: dts } = await db.prepare("SELECT doi_tac_id FROM user_doi_tac_bh WHERE email = ?").bind(user.email).all<{ doi_tac_id: number }>();
+    const ds = JSON.stringify(dts.map((r) => r.doi_tac_id));
+    const dtP = ` AND ${DOI_TAC_ID_SQL("p")} IN (SELECT value FROM json_each(?))`;
+    jobs.push(
+      one(
+        `SELECT (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_CHO_GOM}${dtP}${mp.sql})
+          + (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_DX_CHO_GOM}${dtP}${mp.sql}) as cnt`,
+        ds, ...mp.binds, ds, ...mp.binds,
+      ).then((r) => {
+        counts.admin_xac_cho_gom = r?.cnt ?? 0;
+      }),
+      one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'nhap' AND t.doi_tac_id IN (SELECT value FROM json_each(?))${mt.sql}`, ds, ...mt.binds).then((r) => {
+        counts.admin_thung_xac_nhap = r?.cnt ?? 0;
+      }),
+      one(`SELECT COUNT(*) as cnt FROM thung_xac_bh t WHERE t.trang_thai = 'nhap' AND t.ly_do_tra_lai IS NOT NULL AND t.doi_tac_id IN (SELECT value FROM json_each(?))${mt.sql}`, ds, ...mt.binds).then((r) => {
+        counts.admin_thung_xac_tra_lai = r?.cnt ?? 0;
       }),
     );
   }

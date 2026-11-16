@@ -5,6 +5,7 @@ import { QtriKhuVucScreen } from "../qtri/KhuVuc";
 import { QtriCaiDatScreen } from "../qtri/CaiDat";
 import { LinhKienScreen } from "../shared/LinhKienScreen";
 import { KhachHangScreen } from "../adminbh/KhachHang";
+import { DoiTacCard } from "../qtri/DoiTac";
 import type { AppUser } from "../../lib/types";
 
 // 31/10/2026 - MAN CHUNG "Quản trị" (#/quan-tri) gop 5 man danh muc / quan tri: Người dùng, Danh sách KTV,
@@ -15,6 +16,8 @@ export function QuanTriScreen({ user }: { user: AppUser }) {
   const tabs: TabDef[] = [
     { key: "linh_kien", label: "Danh mục linh kiện", show: (u) => u.la_admin_bh || u.la_qtri, render: () => <LinhKienScreen /> },
     { key: "khach_hang", label: "Khách hàng / NPP", show: (u) => u.la_admin_bh || u.la_qtri, render: () => <KhachHangScreen canEdit={!!(user.la_admin_bh || user.la_qtri)} /> },
+    // 16/11/2026 (v1.142): danh muc Doi tac (Hang / Doi tac don bao hanh, loai cap linh kien, vai tro Tra xac) - Admin BH + qtri.
+    { key: "doi_tac", label: "Đối tác", show: (u) => u.la_admin_bh || u.la_qtri, render: () => <div className="max-w-3xl"><DoiTacCard /></div> },
     { key: "nguoi_dung", label: "Người dùng & phân quyền", show: q, render: () => <QtriNguoiDungScreen currentEmail={user.email} /> },
     { key: "ktv", label: "Danh sách KTV", show: q, render: () => <QtriKtvScreen /> },
     { key: "khu_vuc", label: "Giám sát khu vực", show: q, render: () => <QtriKhuVucScreen /> },

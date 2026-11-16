@@ -20,6 +20,7 @@ import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser } from "../../lib/types";
 import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
 import { ImportXacModal } from "./ImportXac";
+import { DoiTacSelect } from "../qtri/DoiTac";
 
 // 13/11/2026 - Module quan ly tra xac linh kien. Nguyen van: "linh kiện được gửi về bh, admin bh duyệt đổi mới =>
 // xác nhận trạng thái trả xác => admin bh định kỳ sẽ gom nhiều xác linh kiện và trả về 1 đợt cho nhà máy => tạo
@@ -49,11 +50,14 @@ export interface XacRow {
   ktv: string | null;
   khach_hang: string | null;
   updated_at: string;
+  doi_tac_id?: number | null; // 16/11/2026 (v1.142): doi tac cua don bao hanh (Admin chot > CRM)
+  doi_tac?: string | null;
 }
 interface ThungXac {
   id: string;
   trang_thai: "nhap" | "cho_ke_toan" | "da_duyet";
   doi_tac: string | null;
+  doi_tac_id?: number | null;
   ma_eo: string | null;
   ghi_chu: string | null;
   mien: "MB" | "MN" | null;
@@ -81,6 +85,8 @@ interface ThungLog {
 const TT_LABEL: Record<string, string> = { nhap: "Nháp", cho_ke_toan: "Chờ KT duyệt", da_duyet: "KT đã duyệt — kết thúc" };
 const TT_TONE: Record<string, "gray" | "amber" | "green"> = { nhap: "gray", cho_ke_toan: "amber", da_duyet: "green" };
 const ERR: Record<string, string> = {
+  NGOAI_DOI_TAC_DUOC_GAN: "Không thuộc đối tác bạn được gán",
+  DOI_TAC_MISMATCH: "Khác đối tác của thùng (1 thùng 1 đối tác)",
   REQUIRE_MA_EO: "Cần nhập mã EO trước khi gửi / duyệt.",
   THUNG_RONG: "Thùng chưa có xác nào.",
   THUNG_CON_XAC: "Thùng còn xác — bỏ hết xác trước khi xoá.",
@@ -90,7 +96,9 @@ const ERR: Record<string, string> = {
 };
 const err = (e: unknown) => ERR[(e as { code?: string })?.code || ""] || errorMessage(e);
 
-const admin = (u: AppUser) => u.la_admin_bh || u.la_qtri;
+// 16/11/2026 (v1.142): vai tro "Tra xac" lam phan viec cua Admin BH o man nay voi xac / thung cua doi tac duoc gan (backend loc + chan).
+const admin = (u: AppUser) => u.la_admin_bh || u.la_qtri || !!u.la_tra_xac;
+const quanTri = (u: AppUser) => u.la_admin_bh || u.la_qtri; // import ket qua hang loat: chi Admin BH
 const kt = (u: AppUser) => u.la_ke_toan || u.la_qtri;
 const xem = (u: AppUser) => admin(u) || kt(u) || u.la_view || u.la_giam_sat;
 
@@ -106,7 +114,8 @@ const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person",
 // 16/11/2026 ("Bộ lọc nhanh thêm lọc theo từ ngày đến ngày xử lý"): ngay xu ly = luc danh dau ket qua (tieu huy / that lac...)
 // hoac luc xac phat sinh (Admin chot doi moi / Kho xuat linh kien sua chua) - backend x.ngay_xl, tham so ?xl=tu:..:..
 const XL_DEF: FilterDef = { key: "xl", label: "Ngày xử lý (từ → đến)", range: true };
-const XAC_DEFS: FilterDef[] = [XL_DEF, LOAI_DEF, KQ_DEF, NGUOI_GUI, NV_DEF, LK_A_DEF, LK_XAC_DEF, LK_C_DEF, MIEN_DEF, { ...KHOANG_DEF, label: "Cập nhật" }];
+const DOI_TAC_DEF: FilterDef = { key: "doi_tac", label: "Đối tác", noneLabel: "Chưa có đối tác" };
+const XAC_DEFS: FilterDef[] = [XL_DEF, DOI_TAC_DEF, LOAI_DEF, KQ_DEF, NGUOI_GUI, NV_DEF, LK_A_DEF, LK_XAC_DEF, LK_C_DEF, MIEN_DEF, { ...KHOANG_DEF, label: "Cập nhật" }];
 const XAC_KEYS = [...XAC_DEFS.map((d) => d.key), "f_id", "f_case", "f_mota"];
 // Cot khong hien tren bang nhung van loc duoc (chip + nut cot o che do nhom).
 const XAC_EXTRA_COLS: FilterCol[] = [
@@ -138,6 +147,7 @@ function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void, ngo
     { key: "ktv", header: "KTV gửi", filter: { type: "multi", def: NGUOI_GUI }, sortKey: "ktv", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : "Khách lẻ") },
     { key: "case", header: "Case · Khách", filter: { type: "text", key: "f_case", placeholder: "Mã case / tên khách…" }, sortKey: "case", render: (r) => <span className="text-xs">{[r.case_id, r.khach_hang].filter(Boolean).join(" · ") || "—"}</span> },
     { key: "mien", header: "Miền", filter: { type: "multi", def: MIEN_DEF }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
+    { key: "doi_tac", header: "Đối tác", filter: { type: "multi", def: DOI_TAC_DEF }, sortKey: "doi_tac", render: (r) => <span className="block max-w-[180px] truncate text-xs" title={r.doi_tac || undefined}>{r.doi_tac || "—"}</span> },
     { key: "xl", header: "Ngày xử lý", filter: { type: "date", key: "xl" }, sortKey: "xl", render: (r) => <span className="text-xs">{r.ngay_xl ? fmtDate(r.ngay_xl) : "—"}</span> },
   ];
   if (ngoai)
@@ -172,6 +182,7 @@ function xacExportCols(nameOf: (m: string | null | undefined) => string): Export
     { header: "Khách hàng", value: (r) => r.khach_hang, width: 22 },
     { header: "Mô tả lỗi", value: (r) => r.mo_ta_loi, width: 36 },
     { header: "Miền", value: (r) => mienTxt(r.mien), width: 12 },
+    { header: "Đối tác", value: (r) => r.doi_tac, width: 24 },
     { header: "Kết quả", value: (r) => (r.thung_xac_id ? `Trong thùng ${r.thung_xac_id}` : r.xac_tt ? XAC_KQ_LABEL[r.xac_tt] || r.xac_tt : "Chờ gom"), width: 22 },
     { header: "Người ghi kết quả", value: (r) => (r.xac_xl_boi ? displayName(r.xac_xl_boi) : ""), width: 24 },
     { header: "Ghi chú kết quả", value: (r) => r.xac_xl_ghi_chu, width: 30 },
@@ -352,7 +363,7 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng</h3>
         <span className="text-xs text-[var(--ink-soft)]">Xác KTV gửi về (đơn Đổi mới, "Trả đối tác") + xác linh kiện thay khi sửa chữa (linh kiện cấp đã xuất) — chưa vào thùng trả xác.</span>
-        {isA && (
+        {quanTri(user) && (
           <Btn size="sm" variant="secondary" className="ml-auto" onClick={() => setImp(true)} title="Ghi kết quả / đưa vào thùng cho nhiều xác bằng file Excel">
             ⬆ Import kết quả
           </Btn>
@@ -433,14 +444,14 @@ function NgoaiModal({ n, kq, onClose, onOk }: { n: number; kq: string; onClose: 
 
 function TaoThungModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => void; onDone: (id: string) => void }) {
   const toast = useToast();
-  const [doiTac, setDoiTac] = useState("");
+  const [doiTac, setDoiTac] = useState<number | null>(null);
   const [eo, setEo] = useState("");
   const [ghi, setGhi] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true);
     try {
-      const r = await api.post<{ id: string; ok: number; loi: { id: string; error: string }[] }>("/tra-xac/thung", { unit_ids: ids, doi_tac: doiTac, ma_eo: eo, ghi_chu: ghi });
+      const r = await api.post<{ id: string; ok: number; loi: { id: string; error: string }[] }>("/tra-xac/thung", { unit_ids: ids, doi_tac_id: doiTac, ma_eo: eo, ghi_chu: ghi });
       toast(`Đã tạo ${r.id} với ${r.ok} xác${r.loi.length ? ` — ${r.loi.length} xác không thêm được (${r.loi.map((l) => `${l.id}: ${ERR[l.error] || l.error}`).join("; ")})` : ""}.`, r.loi.length ? "error" : "ok");
       onDone(r.id);
     } catch (e) {
@@ -452,7 +463,7 @@ function TaoThungModal({ ids, onClose, onDone }: { ids: string[]; onClose: () =>
   return (
     <Modal title={`Tạo thùng trả xác (${ids.length} xác)`} onClose={onClose} maxWidthClass="max-w-lg" footerActions={<><Btn variant="ghost" onClick={onClose}>Huỷ</Btn><Btn variant="primary" disabled={busy} onClick={submit}>Tạo thùng</Btn></>}>
       <div className="space-y-2">
-        <Field label="Đối tác / nhà máy nhận xác"><Input value={doiTac} onChange={(e) => setDoiTac(e.target.value)} placeholder="VD: Nhà máy Karofi" /></Field>
+        <Field label="Đối tác nhận xác" hint="Bỏ trống = lấy theo đối tác của xác đầu tiên. 1 thùng chỉ chứa xác của 1 đối tác."><DoiTacSelect value={doiTac} onChange={setDoiTac} /></Field>
         <Field label="Mã EO" hint="Có thể nhập sau — bắt buộc trước khi gửi Kế toán"><Input value={eo} onChange={(e) => setEo(e.target.value)} /></Field>
         <Field label="Ghi chú"><Textarea rows={2} value={ghi} onChange={(e) => setGhi(e.target.value)} /></Field>
       </div>
@@ -569,7 +580,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   useUserNames();
   const [d, setD] = useState<{ thung: ThungXac; xac: XacRow[]; logs: ThungLog[] } | null>(null);
   const [loi, setLoi] = useState("");
-  const [f, setF] = useState({ doi_tac: "", ma_eo: "", ghi_chu: "" });
+  const [f, setF] = useState<{ doi_tac_id: number | null; ma_eo: string; ghi_chu: string }>({ doi_tac_id: null, ma_eo: "", ghi_chu: "" });
   const [busy, setBusy] = useState(false);
   const [them, setThem] = useState(false);
   const [traLai, setTraLai] = useState(false);
@@ -578,7 +589,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
     try {
       const r = await api.get<{ thung: ThungXac; xac: XacRow[]; logs: ThungLog[] }>(`/tra-xac/thung/${id}`);
       setD(r);
-      setF({ doi_tac: r.thung.doi_tac || "", ma_eo: r.thung.ma_eo || "", ghi_chu: r.thung.ghi_chu || "" });
+      setF({ doi_tac_id: r.thung.doi_tac_id ?? null, ma_eo: r.thung.ma_eo || "", ghi_chu: r.thung.ghi_chu || "" });
     } catch (e) {
       setLoi(err(e));
     }
@@ -592,7 +603,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const isK = kt(user);
   const suaXac = !!t && isA && (t.trang_thai === "nhap" || t.trang_thai === "cho_ke_toan");
   const suaTT = !!t && ((isA && (t.trang_thai === "nhap" || t.trang_thai === "cho_ke_toan")) || (isK && t.trang_thai === "cho_ke_toan"));
-  const doiTT = !!t && (f.doi_tac !== (t.doi_tac || "") || f.ma_eo !== (t.ma_eo || "") || f.ghi_chu !== (t.ghi_chu || ""));
+  const doiTT = !!t && (f.doi_tac_id !== (t.doi_tac_id ?? null) || f.ma_eo !== (t.ma_eo || "") || f.ghi_chu !== (t.ghi_chu || ""));
   const tt = useMemo(() => (d ? tomTat(d.xac, nameOf) : []), [d, nameOf]);
   const tomTatText = t && d ? `Thùng trả xác ${t.id}${t.ma_eo ? ` — EO ${t.ma_eo}` : ""}${t.doi_tac ? ` — ${t.doi_tac}` : ""}\nTổng: ${d.xac.length} xác (SL ${d.xac.reduce((a, r) => a + (Number(r.so_luong) || 1), 0)})\n${tt.map((x, i) => `${i + 1}) ${x.ten} × ${x.n}`).join("\n")}` : "";
 
@@ -669,7 +680,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
           <Section title="🧾 Thông tin trả xác" right={suaTT && doiTT ? <Btn size="sm" variant="primary" disabled={busy} onClick={() => run(luu, "Đã lưu thông tin thùng.")}>Lưu</Btn> : undefined}>
             {suaTT ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Field label="Đối tác / nhà máy"><Input value={f.doi_tac} disabled={!isA} onChange={(e) => setF({ ...f, doi_tac: e.target.value })} /></Field>
+                <Field label="Đối tác">{isA ? <DoiTacSelect value={f.doi_tac_id} onChange={(v) => setF({ ...f, doi_tac_id: v })} /> : <Input value={t.doi_tac || ""} disabled />}</Field>
                 <Field label="Mã EO" required><Input value={f.ma_eo} onChange={(e) => setF({ ...f, ma_eo: e.target.value })} /></Field>
                 <div className="sm:col-span-2"><Field label="Ghi chú"><Textarea rows={2} value={f.ghi_chu} onChange={(e) => setF({ ...f, ghi_chu: e.target.value })} /></Field></div>
               </div>
