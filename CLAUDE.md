@@ -7364,3 +7364,5 @@ Câu 3 ghi đè quyết định (2) cũ bên linh-kien-app (trả đối tác �
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi. Chạy câu điều kiện trên D1 production (chỉ đọc): case 1013414 + LK 2010020014 (đơn duy nhất đã bị từ chối) → không trùng (cho tạo lại); case + LK của đơn đang xử lý gần nhất → trả DH-006690 (chặn). Chưa bấm thử giao diện.
 
+
+**Deploy (16/11/2026):** `npm run deploy` (Version ID `59eb5b9a`), không có migration. `/api/phieu-gui/kiem-tra-trung` trả 401 khi chưa đăng nhập (route có thật).
