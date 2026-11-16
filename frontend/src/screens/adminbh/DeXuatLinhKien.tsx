@@ -17,6 +17,8 @@ import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { CapLinhKienModal, DeXuatBadge, KtTraLaiDeXuatModal, KtXacNhanDeXuatModal, LkSyncTag, TuChoiDeXuatModal } from "../shared/DeXuatLinhKien";
 import { useRoute } from "../../router/Router";
 import type { AppUser, DeXuatLk } from "../../lib/types";
+import { ExcelExportButton } from "../../ui/ExcelExport";
+import { deXuatExportCols } from "../shared/exportCols";
 
 // Man "Cap linh kien sua chua" (Admin BH, 12/10/2026): de xuat linh kien cua NV (don con cua don vi bao
 // hanh). Admin len phieu xuat MISA roi bam "Cap" (1 hoac nhieu de xuat chung 1 ma MISA), hoac "Tu choi".
@@ -262,7 +264,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
       {tab === "cho_kho_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kế toán đã xác nhận MISA — mỗi khối là 1 phiếu PXK. Bấm khối để xem các đơn bảo hành bên trong; "🖨 Đã in" / "📦 Đã xuất" áp cho toàn bộ phiếu.</p>}
       {tab === "kho_da_in" && <p className="text-xs text-[var(--ink-soft)] mb-2">Kho đã in phiếu PXK — xuất linh kiện cho NV sửa chữa rồi bấm "📦 Đã xuất" (in nhầm thì "↩ Chưa in"), áp cho toàn bộ phiếu.</p>}
       {tab === "cho_ke_toan" && <p className="text-xs text-[var(--ink-soft)] mb-2">Admin BH đã đồng ý cấp. Kế toán nhập mã phiếu xuất MISA rồi "Duyệt", hoặc "Trả lại" Admin BH sửa, hoặc "Từ chối" (kết thúc).</p>}
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đề xuất, đơn, linh kiện, MISA, NV, KTV, case…" extra={<ExcelExportButton file={`cap-linh-kien_${tab}`} disabled={!total} sources={[{ path: withQuery(`/de-xuat?trang_thai=${tab}`, flt.query), itemsKey: "de_xuat", sheet: "Cap linh kien", cols: deXuatExportCols(nameOf) }]} />} />
       {pxkTab ? (
         <PxkGroups rows={rows} nameOf={nameOf} canAct={isKho && KHO_TABS.includes(tab)} tab={tab} busy={khoBusy} onLam={khoLam} onOpen={setDetailId} onSuaPxk={isKt && tab === "cho_kho_in" ? setSuaPxk : undefined} />
       ) : choKt ? (

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Badge, Btn, Card, Input } from "../../ui/primitives";
+import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
+import { displayName } from "../../hooks/useUserNames";
+import { fmtDate as fmtD } from "../../lib/format";
 import { Table, type Column } from "../../ui/Table";
 import { Pagination } from "../../ui/Pagination";
 import { usePagedApi } from "../../hooks/usePagedApi";
@@ -124,6 +127,11 @@ export function ThieuHangListScreen({ user }: { user: AppUser }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã đơn, ticket, linh kiện, case, khách…" className="w-full sm:w-80" />
+          <ExcelExportButton
+            file={`thieu-hang_${nhom}`}
+            disabled={!pg.total}
+            sources={[{ path, itemsKey: "rows", sheet: "Thieu hang", cols: THIEU_HANG_EXPORT }]}
+          />
           {quanLy && chon.size > 0 && (
             <Btn size="sm" variant="primary" onClick={() => daNam([...chon])}>
               ✔ Đã nắm {chon.size}
@@ -142,3 +150,22 @@ export function ThieuHangListScreen({ user }: { user: AppUser }) {
     </Card>
   );
 }
+
+// 16/11/2026: cot file Excel "tải theo bộ lọc" tab Thiếu hàng.
+const THIEU_HANG_EXPORT: ExportCol<ThieuHangRow>[] = [
+  { header: "Đơn vị BH", value: (r) => r.unit_id, width: 16 },
+  { header: "Ticket", value: (r) => r.ticket_id, width: 14 },
+  { header: "Trạng thái", value: (r) => r.trang_thai, width: 22 },
+  { header: "Mã LK", value: (r) => r.ma_lk, width: 14 },
+  { header: "Tên linh kiện", value: (r) => r.ten_lk, width: 34 },
+  { header: "SL", value: (r) => r.so_luong, width: 6 },
+  { header: "Mã case", value: (r) => r.case_id, width: 16 },
+  { header: "KTV", value: (r) => (r.ktv ? displayName(r.ktv) : ""), width: 28 },
+  { header: "Miền", value: (r) => (r.mien === "MB" ? "Miền Bắc" : r.mien === "MN" ? "Miền Nam" : ""), width: 12 },
+  { header: "Lý do", value: (r) => r.ly_do, width: 24 },
+  { header: "Người báo", value: (r) => (r.nguoi_bao ? displayName(r.nguoi_bao) : ""), width: 24 },
+  { header: "Ngày báo", value: (r) => fmtD(r.ngay_bao), width: 16 },
+  { header: "Ngày dự kiến", value: (r) => r.ngay_du_kien, width: 14 },
+  { header: "Mã EO mua", value: (r) => r.ma_eo_mua, width: 14 },
+  { header: "Ghi chú xử lý", value: (r) => r.ghi_chu_xu_ly, width: 30 },
+];

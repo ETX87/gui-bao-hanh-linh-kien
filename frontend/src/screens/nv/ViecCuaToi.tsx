@@ -11,6 +11,8 @@ import { LOAI_BAO_HANH_LABELS, HUONG_XU_LY_LABELS } from "../../lib/constants";
 import { useLkName } from "../../hooks/useLinhKien";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser, DonVi } from "../../lib/types";
+import { ExcelExportButton } from "../../ui/ExcelExport";
+import { donViExportCols } from "../shared/exportCols";
 
 // "Viec cua toi" (NV sua chua) - port dung renderNvViecCuaToi(). Click dong mo UnitDetailModal (da co
 // san nut "Nop ket qua sua chua" + khoi "De xuat linh kien" trong chi tiet). Phan trang that (server LIMIT/OFFSET).
@@ -60,7 +62,7 @@ export function NvViecCuaToiScreen({ user }: { user: AppUser }) {
   return (
     <Card className="p-3">
       <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">🔧 Việc của tôi ({total})</h3>
-      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" total={total} unit="đơn" />
+      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" total={total} unit="đơn" extra={<ExcelExportButton file="viec-sua-cua-toi" disabled={!total} sources={[{ path: withQuery("/nv/viec-cua-toi", flt.query), itemsKey: "don_vi", sheet: "Viec sua", cols: donViExportCols(nameOf) }]} />} />
       <Table flt={flt} columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có việc nào đang chờ."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

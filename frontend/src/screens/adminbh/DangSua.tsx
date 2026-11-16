@@ -14,6 +14,8 @@ import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { HUONG_XU_LY_LABELS } from "../../lib/constants";
 import type { AppUser, DonVi } from "../../lib/types";
 import { LocSelect } from "./PhieuTraList";
+import { ExcelExportButton } from "../../ui/ExcelExport";
+import { donViExportCols } from "../shared/exportCols";
 
 // Menu rieng "KTV đang sửa" (21/10/2026, nguyen van: "các đơn đang chờ nv sửa chữa xử lý tách riêng menu
 // 'KTV đang sửa'") - don vi dang o buoc NV sua chua (cho_chan_doan). Admin BH theo doi: NV nao dang giu bao
@@ -87,7 +89,7 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
           })}
         </div>
       )}
-      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, NV, KTV, khách, serial…" total={total} unit="đơn" />
+      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, NV, KTV, khách, serial…" total={total} unit="đơn" extra={<ExcelExportButton file="dang-sua" disabled={!total} sources={[{ path, itemsKey: "don_vi", sheet: "Dang sua", cols: donViExportCols(nameOf) }]} />} />
       <Table flt={flt} columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào đang chờ NV sửa chữa."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (

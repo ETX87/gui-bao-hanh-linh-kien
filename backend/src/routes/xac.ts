@@ -9,6 +9,7 @@ import { parsePage } from "../lib/pagination";
 import { eqFilters, distinctOpts, timeFilter, joinF, textFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienAllowed } from "../lib/mien";
+import { normVi } from "../lib/timKiem";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM, XAC_KQ, XAC_KQ_LABEL, XAC_KQ_SQL, laDx } from "../lib/xac";
 
 // 13/11/2026 - Module quan ly tra xac linh kien (xem migrations/0031_thung_tra_xac.sql).
@@ -394,6 +395,177 @@ xac.post("/thung/:id/kt-tra-lai", async (c) => {
   if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
   const ok = await chuyen(c.env.DB, t, "nhap", ", ly_do_tra_lai = ?, tra_lai_boi = ?, tra_lai_luc = ?", [lyDo, user.email, nowVN()], user.email, `Kế toán trả lại Admin BH: ${lyDo}`);
   return ok ? c.json({ ok: true }) : c.json({ error: "WRONG_STATE" }, 400);
+});
+
+
+// ---- Import ket qua xac hang loat (16/11/2026) ----
+// Nguyen van: "thêm tính năng import hàng loạt (có file mẫu kèm sheet hướng dẫn chi tiết có dữ liệu các lựa chọn mặc định cần
+// setup theo)" - chot: import KET QUA XAC. Moi dong: ma xac (DH-..-n / DX-..) + ket qua + (ma thung khi dua vao thung) + ghi chu.
+// POST /import {rows, ap_dung}: ap_dung=false -> chi kiem tra tung dong (xem truoc); true -> ghi cac dong hop le (theo lo, CAS).
+// Ma thung "MOI" / "MOI-<ten>" (khong phan biet dau / hoa thuong) = tao thung moi, cung ten -> cung 1 thung.
+const IMPORT_MAX = 1000;
+const KQ_IMPORT: [string, string[]][] = [
+  ["vao_thung", ["vao thung", "dua vao thung", "dua vao thung tra xac", "thung", "tra doi tac"]],
+  ["tieu_huy", ["tieu huy", "xac da tieu huy", "da tieu huy"]],
+  ["that_lac", ["that lac", "xac that lac"]],
+  ["khong_co", ["khong co xac", "khong co"]],
+  ["ngoai", ["ngoai", "tra ngoai he thong", "da tra ngoai he thong", "da xu ly ngoai he thong", "xu ly ngoai"]],
+  ["dua_lai", ["dua lai", "dua lai cho gom"]],
+];
+const chuan = (s: string) => normVi(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function kqImport(raw: string): string | null {
+  const n = chuan(raw);
+  if (!n) return null;
+  for (const [k, alias] of KQ_IMPORT) if (n === k.replace("_", " ") || alias.includes(n)) return k;
+  return null;
+}
+const laThungMoi = (s: string) => /^moi(\s|$)/.test(chuan(s));
+
+interface ImportRow { dong?: number; ma?: string; kq?: string; thung?: string; ghi_chu?: string }
+interface XacInfo { id: string; mien: string | null; cho_gom: number; xac_tt: string | null; thung_xac_id: string | null }
+
+async function layXac(db: D1Database, ids: string[]): Promise<Map<string, XacInfo>> {
+  const out = new Map<string, XacInfo>();
+  const units = ids.filter((i) => !laDx(i));
+  const dxs = ids.filter((i) => laDx(i));
+  for (let i = 0; i < units.length; i += 90) {
+    const part = units.slice(i, i + 90);
+    const { results } = await db
+      .prepare(`SELECT u.id, p.mien, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, u.xac_tt, u.thung_xac_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id IN (${part.map(() => "?").join(",")}) AND u.huong_xu_ly = 'doi_moi'`)
+      .bind(...part)
+      .all<XacInfo>();
+    for (const r of results) out.set(r.id, r);
+  }
+  for (let i = 0; i < dxs.length; i += 90) {
+    const part = dxs.slice(i, i + 90);
+    const { results } = await db
+      .prepare(`SELECT d.id, p.mien, (CASE WHEN ${XAC_DX_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, d.xac_tt, d.thung_xac_id FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.id IN (${part.map(() => "?").join(",")})`)
+      .bind(...part)
+      .all<XacInfo>();
+    for (const r of results) out.set(r.id, r);
+  }
+  return out;
+}
+
+xac.post("/import", async (c) => {
+  const user = c.get("user");
+  if (!isAdmin(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const body = await c.req.json<{ rows?: ImportRow[]; ap_dung?: boolean }>().catch(() => ({}) as { rows?: ImportRow[]; ap_dung?: boolean });
+  const input = (body.rows || []).filter((r) => (r.ma || "").trim() || (r.kq || "").trim());
+  if (!input.length) return c.json({ error: "MISSING_ROWS" }, 400);
+  if (input.length > IMPORT_MAX) return c.json({ error: "IMPORT_QUA_NHIEU", message: `Tối đa ${IMPORT_MAX} dòng / lần.` }, 400);
+
+  const ids = [...new Set(input.map((r) => (r.ma || "").trim().toUpperCase()).filter(Boolean))];
+  const info = await layXac(c.env.DB, ids);
+  const maThung = [...new Set(input.map((r) => (r.thung || "").trim().toUpperCase()).filter((t) => t && !laThungMoi(t)))];
+  const thungs = new Map<string, Thung>();
+  for (let i = 0; i < maThung.length; i += 90) {
+    const part = maThung.slice(i, i + 90);
+    const { results } = await c.env.DB.prepare(`SELECT * FROM thung_xac_bh WHERE id IN (${part.map(() => "?").join(",")})`).bind(...part).all<Thung>();
+    for (const t of results) thungs.set(t.id, t);
+  }
+
+  const daGap = new Set<string>();
+  const mienNhom = new Map<string, string | null>(); // mien cua tung thung (co san / moi) sau khi nhan cac dong truoc
+  for (const t of thungs.values()) mienNhom.set(t.id, t.mien);
+  type Kq = { dong: number; ma: string; kq: string | null; thung: string | null; ghi_chu: string | null; ok: boolean; loi?: string };
+  const out: Kq[] = input.map((r, i) => {
+    const dong = r.dong ?? i + 2;
+    const ma = (r.ma || "").trim().toUpperCase();
+    const kq = kqImport(r.kq || "");
+    const thungRaw = (r.thung || "").trim();
+    const ghi = (r.ghi_chu || "").trim().slice(0, 500) || null;
+    const base = { dong, ma, kq, thung: null as string | null, ghi_chu: ghi };
+    const loi = (m: string): Kq => ({ ...base, ok: false, loi: m });
+    if (!ma) return loi("Thiếu mã xác");
+    if (daGap.has(ma)) return loi("Trùng mã xác trong file");
+    daGap.add(ma);
+    const x = info.get(ma);
+    if (!x) return loi("Không tìm thấy xác (mã đơn vị Đổi mới DH-…-n hoặc mã đề xuất DX-…)");
+    if (!mienAllowed(user, x.mien)) return loi("Xác thuộc miền khác miền bạn phụ trách");
+    if (!kq) return loi(`Kết quả "${r.kq || ""}" không hợp lệ — xem sheet Hướng dẫn`);
+    if (kq === "dua_lai") {
+      if (!x.xac_tt || !(XAC_KQ as readonly string[]).includes(x.xac_tt) || x.thung_xac_id) return loi("Chỉ đưa lại được xác đang ở tab \"Đã xử lý khác\"");
+      return { ...base, ok: true };
+    }
+    if (!x.cho_gom) return loi(x.thung_xac_id ? `Xác đang trong thùng ${x.thung_xac_id}` : x.xac_tt ? `Xác đã có kết quả: ${XAC_KQ_LABEL[x.xac_tt] || x.xac_tt}` : "Xác không ở danh sách chờ gom");
+    if (kq !== "vao_thung") return { ...base, ok: true };
+    if (!thungRaw) return loi("Kết quả \"Vào thùng\" cần cột Mã thùng (TX-… hoặc MOI)");
+    let key: string;
+    if (laThungMoi(thungRaw)) key = `MOI:${chuan(thungRaw)}`;
+    else {
+      const t = thungs.get(thungRaw.toUpperCase());
+      if (!t) return loi(`Không tìm thấy thùng ${thungRaw}`);
+      if (!SUA_DUOC.includes(t.trang_thai)) return loi(`Thùng ${t.id} đã được Kế toán duyệt — không thêm xác được`);
+      if (!mienAllowed(user, t.mien)) return loi(`Thùng ${t.id} thuộc miền khác`);
+      key = t.id;
+    }
+    const m = mienNhom.has(key) ? mienNhom.get(key)! : null;
+    if (m && x.mien && m !== x.mien) return loi(`Xác miền ${x.mien} khác miền thùng (${m})`);
+    if (!m && x.mien) mienNhom.set(key, x.mien);
+    else if (!mienNhom.has(key)) mienNhom.set(key, null);
+    return { ...base, thung: key, ok: true };
+  });
+  const tom = { tong: out.length, hop_le: out.filter((r) => r.ok).length, loi: out.filter((r) => !r.ok).length, thung_moi: [...new Set(out.filter((r) => r.ok && r.thung?.startsWith("MOI:")).map((r) => r.thung))].length };
+  const hien = (r: Kq) => ({ ...r, thung: r.thung?.startsWith("MOI:") ? `Thùng mới (${r.thung.slice(4).toUpperCase()})` : r.thung });
+  if (!body.ap_dung) return c.json({ rows: out.map(hien), ...tom });
+
+  // ---- Ap dung ----
+  const db = c.env.DB;
+  const now = nowVN();
+  const moiId = new Map<string, string>();
+  for (const key of new Set(out.filter((r) => r.ok && r.thung?.startsWith("MOI:")).map((r) => r.thung!))) {
+    const id = await nextSequentialId(db, "thung_xac_bh", "TX");
+    await db.prepare("INSERT INTO thung_xac_bh (id, trang_thai, mien, ghi_chu, nguoi_tao, created_at, updated_at) VALUES (?, 'nhap', ?, ?, ?, ?, ?)").bind(id, mienNhom.get(key) ?? null, `Tạo từ file import (${key.slice(4).toUpperCase()})`, user.email, now, now).run();
+    await logThung(db, id, null, "nhap", user.email, "Tạo thùng trả xác từ file import");
+    moiId.set(key, id);
+  }
+  const stmts: D1PreparedStatement[] = [];
+  const kind: ("upd" | "log")[] = [];
+  const logStmt = (ma: string, ghi: string) => {
+    const unitExpr = laDx(ma) ? "(SELECT unit_id FROM de_xuat_linh_kien_bh WHERE id = ?1)" : "?1";
+    const text = laDx(ma) ? `Xác sửa chữa ${ma}: ${ghi}` : `Xác: ${ghi}`;
+    return db
+      .prepare(`INSERT INTO logs_bh (entity_type, entity_id, tu_trang_thai, den_trang_thai, nguoi_thuc_hien, thoi_gian, ghi_chu)
+        SELECT 'phieu_sc_ct', ${unitExpr}, u.trang_thai, u.trang_thai, ?2, ?3, ?4 FROM phieu_sua_chua_bh_ct u WHERE u.id = ${unitExpr} AND changes() > 0`)
+      .bind(ma, user.email, now, text);
+  };
+  const theoThung = new Map<string, string[]>();
+  for (const r of out.filter((x) => x.ok)) {
+    const dx = laDx(r.ma);
+    const tbl = dx ? "de_xuat_linh_kien_bh AS d" : "phieu_sua_chua_bh_ct AS u";
+    const a = dx ? "d" : "u";
+    const choGom = dx ? XAC_DX_CHO_GOM : XAC_CHO_GOM;
+    let ghi: string;
+    if (r.kq === "vao_thung") {
+      const tid = r.thung!.startsWith("MOI:") ? moiId.get(r.thung!)! : r.thung!;
+      stmts.push(db.prepare(`UPDATE ${tbl} SET thung_xac_id = ?, xac_tt = 'trong_thung'${dx ? "" : ", updated_at = updated_at"} WHERE ${a}.id = ? AND ${choGom}`).bind(tid, r.ma));
+      ghi = `đưa vào thùng trả xác ${tid} (import)`;
+      theoThung.set(tid, [...(theoThung.get(tid) || []), r.ma]);
+    } else if (r.kq === "dua_lai") {
+      stmts.push(db.prepare(`UPDATE ${tbl} SET xac_tt = NULL, xac_xl_boi = NULL, xac_xl_luc = NULL, xac_xl_ghi_chu = NULL WHERE ${a}.id = ? AND ${a}.xac_tt IN (${XAC_KQ_SQL}) AND ${a}.thung_xac_id IS NULL`).bind(r.ma));
+      ghi = "đưa lại danh sách chờ gom thùng trả xác (import)";
+    } else {
+      stmts.push(db.prepare(`UPDATE ${tbl} SET xac_tt = ?, xac_xl_boi = ?, xac_xl_luc = ?, xac_xl_ghi_chu = ? WHERE ${a}.id = ? AND ${choGom}`).bind(r.kq, user.email, now, r.ghi_chu, r.ma));
+      ghi = `${XAC_KQ_LABEL[r.kq!]} (import)${r.ghi_chu ? ` | ${r.ghi_chu}` : ""}`;
+    }
+    kind.push("upd");
+    stmts.push(logStmt(r.ma, ghi));
+    kind.push("log");
+  }
+  let ok = 0;
+  for (let i = 0; i < stmts.length; i += 100) {
+    const res = await db.batch(stmts.slice(i, i + 100));
+    res.forEach((x, j) => {
+      if (kind[i + j] === "upd" && x.meta.changes) ok++;
+    });
+  }
+  for (const [tid, mas] of theoThung) {
+    const m = [...mienNhom.entries()].find(([k]) => k === tid || moiId.get(k) === tid)?.[1] ?? null;
+    await db.prepare(`UPDATE thung_xac_bh SET updated_at = ?${m ? ", mien = COALESCE(mien, ?)" : ""} WHERE id = ?`).bind(...(m ? [now, m, tid] : [now, tid])).run();
+    await logThung(db, tid, null, null, user.email, `Thêm ${mas.length} xác từ file import: ${mas.slice(0, 30).join(", ")}${mas.length > 30 ? "…" : ""}`);
+  }
+  return c.json({ ok, bo_qua: tom.hop_le - ok, loi: tom.loi, thung_moi: [...moiId.values()] });
 });
 
 export default xac;

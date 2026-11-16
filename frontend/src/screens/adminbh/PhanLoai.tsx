@@ -1,3 +1,6 @@
+import { fmtDate } from "../../lib/format";
+import { displayName } from "../../hooks/useUserNames";
+import { useLkName } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { BuocChips } from "../shared/BuocChips";
 import { useWorkload } from "../../hooks/useWorkload";
@@ -24,6 +27,9 @@ import { BaoCaoSaiModal } from "../shared/BaoCaoSaiModal";
 import type { AppUser, DonCha, DonVi } from "../../lib/types";
 import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
 import { StatusBadge } from "../../ui/StatusBadge";
+import { ExcelExportButton } from "../../ui/ExcelExport";
+import { donViExportCols } from "../shared/exportCols";
+import type { ExportCol } from "../../ui/ExcelExport";
 
 // Man hinh chinh Admin BH - port dung "Bang thong nhat" (renderAdminUnifiedTable) da chot 22/08/2026:
 // 1) Thung cho xac nhan tiep nhan noi bo tu Kho, 2) Bang thong nhat GOP ca don cha (cho xac nhan SL)
@@ -40,6 +46,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   // 16/11/2026: loc kieu Excel (tieu de cot + chip + nut loc theo cot o che do nhom). O "Người gửi" (ktv) tu dong bo
   // voi ?ktv= cua menu 2 (useListFilters). Lua chon lay tu GET /admin/don-vi/loc-options (tra ve {loc}).
   const flt = useListFilters("/admin/don-vi/loc-options", ADMIN_FILTER_KEYS);
+  const { nameOf } = useLkName();
   const qs = flt.query;
   const [bulkSlOpen, setBulkSlOpen] = useState(false);
   // 02/11/2026: 3 che do xem - Danh sach (bang thong nhat) / nhom theo KTV / nhom theo linh kien. Che do
@@ -212,6 +219,16 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           placeholder="Mã đơn / case / phiếu gửi, khách hàng, serial, linh kiện, KTV, mô tả lỗi…"
           total={donChaTotal + donViUnits}
           unit="đơn"
+          extra={
+            <ExcelExportButton
+              file="cho-phan-loai"
+              disabled={!(donChaTotal + donViUnits)}
+              sources={[
+                { path: `/admin/don-vi?view=nhom${qs ? "&" + qs : ""}`, itemsKey: "don_vi", sheet: "Don vi can xu ly", cols: donViExportCols(nameOf) },
+                { path: `/admin/don-cha?view=nhom${qs ? "&" + qs : ""}`, itemsKey: "don_cha", sheet: "Cho xac nhan SL", cols: DON_CHA_EXPORT(nameOf) },
+              ]}
+            />
+          }
         />
         {grouped ? (
           <GroupedDonView rows={gRows} mode={mode as "ktv" | "lk"} selected={selected} onToggle={toggleAll} emptyText="Không có đơn nào cần xử lý." />
@@ -373,4 +390,19 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
       {detailId && <UnitDetailModal unitId={detailId} user={user} onClose={() => setDetailId(null)} onChanged={afterChange} />}
     </div>
   );
+}
+
+// 16/11/2026: cot file Excel cho don cha cho xac nhan so luong (tai theo bo loc).
+function DON_CHA_EXPORT(nameOf: (m: string | null | undefined) => string): ExportCol<DonCha>[] {
+  return [
+    { header: "Đơn cha", value: (r) => r.id, width: 14 },
+    { header: "Thùng", value: (r) => r.phieu_gui_id, width: 12 },
+    { header: "KTV / Nguồn", value: (r) => (r.ktv ? displayName(r.ktv) : r.ten_khach_hang ? `Khách lẻ · ${r.ten_khach_hang}` : "Khách lẻ"), width: 30 },
+    { header: "Mã case", value: (r) => r.case_id, width: 16 },
+    { header: "Linh kiện KTV chọn", value: (r) => (r.ma_lk ? nameOf(r.ma_lk) : ""), width: 34 },
+    { header: "SL khai", value: (r) => r.so_luong_khai, width: 8 },
+    { header: "Mô tả lỗi", value: (r) => r.mo_ta_loi, width: 40 },
+    { header: "Miền", value: (r) => (r.mien === "MB" ? "Miền Bắc" : r.mien === "MN" ? "Miền Nam" : "Chưa khai báo"), width: 12 },
+    { header: "Tạo lúc", value: (r) => fmtDate(r.created_at), width: 16 },
+  ];
 }

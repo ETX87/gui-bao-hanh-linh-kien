@@ -18,6 +18,8 @@ import { useToast } from "../../ui/Toast";
 import { fmtDate } from "../../lib/format";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import type { AppUser } from "../../lib/types";
+import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
+import { ImportXacModal } from "./ImportXac";
 
 // 13/11/2026 - Module quan ly tra xac linh kien. Nguyen van: "linh kiện được gửi về bh, admin bh duyệt đổi mới =>
 // xác nhận trạng thái trả xác => admin bh định kỳ sẽ gom nhiều xác linh kiện và trả về 1 đợt cho nhà máy => tạo
@@ -153,6 +155,46 @@ function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void, ngo
   return cols;
 }
 
+// 16/11/2026: cot file Excel "tải theo bộ lọc" cua danh sach xac.
+function xacExportCols(nameOf: (m: string | null | undefined) => string): ExportCol<XacRow>[] {
+  const mienTxt = (v: string | null) => (v === "MB" ? "Miền Bắc" : v === "MN" ? "Miền Nam" : "Chưa khai báo");
+  return [
+    { header: "Mã xác", value: (r) => r.id, width: 16 },
+    { header: "Loại", value: (r) => (r.loai === "sua_chua" ? "Sau sửa chữa" : "Đổi mới"), width: 14 },
+    { header: "Đơn vị BH", value: (r) => r.unit_id, width: 16 },
+    { header: "Mã LK xác (B)", value: (r) => r.ma_lk_xac, width: 14 },
+    { header: "Linh kiện xác (B)", value: (r) => nameOf(r.ma_lk_xac), width: 34 },
+    { header: "LK KTV chọn (A)", value: (r) => (r.ma_lk ? nameOf(r.ma_lk) : ""), width: 30 },
+    { header: "LK đổi mới (C)", value: (r) => (r.ma_lk_thuc_te ? nameOf(r.ma_lk_thuc_te) : ""), width: 30 },
+    { header: "SL", value: (r) => r.so_luong ?? 1, width: 6 },
+    { header: "KTV gửi", value: (r) => (r.ktv ? displayName(r.ktv) : "Khách lẻ"), width: 28 },
+    { header: "Mã case", value: (r) => r.case_id, width: 16 },
+    { header: "Khách hàng", value: (r) => r.khach_hang, width: 22 },
+    { header: "Mô tả lỗi", value: (r) => r.mo_ta_loi, width: 36 },
+    { header: "Miền", value: (r) => mienTxt(r.mien), width: 12 },
+    { header: "Kết quả", value: (r) => (r.thung_xac_id ? `Trong thùng ${r.thung_xac_id}` : r.xac_tt ? XAC_KQ_LABEL[r.xac_tt] || r.xac_tt : "Chờ gom"), width: 22 },
+    { header: "Người ghi kết quả", value: (r) => (r.xac_xl_boi ? displayName(r.xac_xl_boi) : ""), width: 24 },
+    { header: "Ghi chú kết quả", value: (r) => r.xac_xl_ghi_chu, width: 30 },
+    { header: "Ngày xử lý", value: (r) => (r.ngay_xl ? fmtDate(r.ngay_xl) : ""), width: 16 },
+    { header: "Cập nhật", value: (r) => fmtDate(r.updated_at), width: 16 },
+  ];
+}
+
+const THUNG_EXPORT: ExportCol<ThungXac>[] = [
+  { header: "Mã thùng", value: (r) => r.id, width: 14 },
+  { header: "Trạng thái", value: (r) => TT_LABEL[r.trang_thai] || r.trang_thai, width: 20 },
+  { header: "Đối tác", value: (r) => r.doi_tac, width: 26 },
+  { header: "Mã EO", value: (r) => r.ma_eo, width: 16 },
+  { header: "Miền", value: (r) => (r.mien === "MB" ? "Miền Bắc" : r.mien === "MN" ? "Miền Nam" : ""), width: 12 },
+  { header: "Số xác", value: (r) => r.so_xac ?? 0, width: 8 },
+  { header: "Người tạo", value: (r) => (r.nguoi_tao ? displayName(r.nguoi_tao) : ""), width: 24 },
+  { header: "Tạo lúc", value: (r) => fmtDate(r.created_at), width: 16 },
+  { header: "Gửi KT lúc", value: (r) => (r.gui_kt_luc ? fmtDate(r.gui_kt_luc) : ""), width: 16 },
+  { header: "KT duyệt", value: (r) => (r.kt_luc ? `${fmtDate(r.kt_luc)} · ${r.kt_boi ? displayName(r.kt_boi) : ""}` : ""), width: 28 },
+  { header: "Lý do KT trả lại", value: (r) => r.ly_do_tra_lai, width: 30 },
+  { header: "Ghi chú", value: (r) => r.ghi_chu, width: 30 },
+];
+
 function LoaiBadge({ r }: { r: XacRow }) {
   return r.loai === "sua_chua" ? <Badge tone="violet">Sau sửa chữa</Badge> : <Badge tone="blue">Đổi mới</Badge>;
 }
@@ -178,8 +220,12 @@ function XacBrowser({
   extra,
   reloadRef,
   ngoai,
+  pathRef,
+  file = "tra-xac",
 }: {
   ngoai?: boolean;
+  pathRef?: { current: string };
+  file?: string;
   base: string;
   viewKey: string;
   placeholder: string;
@@ -195,6 +241,9 @@ function XacBrowser({
   const { items, total, page, pageCount, setPage, reload, loading, raw } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", grouped ? 500 : 50);
   const tongSl = Number(raw.tong_sl ?? 0);
   if (reloadRef) reloadRef.current = reload;
+  const listPath = withQuery(base, flt.query);
+  if (pathRef) pathRef.current = listPath;
+  const { nameOf } = useLkName();
   const toggleOne = setSel ? (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) : undefined;
   const cols = useXacCols(sel, toggleOne, ngoai);
   useEffect(() => setSel?.(() => new Set()), [flt.query, page, mode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -233,7 +282,12 @@ function XacBrowser({
         unit={tongSl > total ? `xác · SL ${tongSl}` : "xác"}
         colButtons={grouped}
         compactSearch
-        extra={<DonViewToggle value={mode} onChange={setMode} modes={["list", "ktv", "lk", "sc"]} />}
+        extra={
+          <>
+            <ExcelExportButton file={file} disabled={!total} sources={[{ path: listPath, itemsKey: "xac", sheet: ngoai ? "Xac da xu ly khac" : "Xac", cols: xacExportCols(nameOf) }]} />
+            <DonViewToggle value={mode} onChange={setMode} modes={["list", "ktv", "lk", "sc"]} />
+          </>
+        }
       />
       {sel && setSel && (
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -282,6 +336,8 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
   const base = "/tra-xac/xac?nhom=cho_gom";
   const reloadRef = useRef<(() => void) | null>(null);
   const reload = () => reloadRef.current?.();
+  const pathRef = useRef(base);
+  const [imp, setImp] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [tao, setTao] = useState(false);
@@ -296,7 +352,13 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng</h3>
         <span className="text-xs text-[var(--ink-soft)]">Xác KTV gửi về (đơn Đổi mới, "Trả đối tác") + xác linh kiện thay khi sửa chữa (linh kiện cấp đã xuất) — chưa vào thùng trả xác.</span>
+        {isA && (
+          <Btn size="sm" variant="secondary" className="ml-auto" onClick={() => setImp(true)} title="Ghi kết quả / đưa vào thùng cho nhiều xác bằng file Excel">
+            ⬆ Import kết quả
+          </Btn>
+        )}
       </div>
+      {imp && <ImportXacModal listPath={pathRef.current} onClose={() => setImp(false)} onDone={() => { setImp(false); done(); }} />}
       {isA && sel.size > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 mb-2 rounded-lg px-2.5 py-1.5 bg-[var(--brand-50)] border border-[var(--brand-200)]">
           {(
@@ -317,6 +379,8 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
       <XacBrowser
         base={base}
         viewKey="xac_view_cho_gom"
+        file="xac-cho-gom"
+        pathRef={pathRef}
         placeholder="Tìm mã đơn, case, linh kiện, KTV, khách…"
         sel={isA ? sel : undefined}
         setSel={isA ? setSel : undefined}
@@ -454,7 +518,7 @@ function ThungList({ user, tt, traLai, title, empty, onChanged }: { user: AppUse
   return (
     <Card className="p-3">
       <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">{title} ({total})</h3>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, EO, đối tác, mã đơn / case / linh kiện bên trong…" />
+      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, EO, đối tác, mã đơn / case / linh kiện bên trong…" extra={<ExcelExportButton file={`thung-tra-xac_${tt}`} disabled={!total} sources={[{ path: withQuery(base, flt.query), itemsKey: "thung", sheet: "Thung tra xac", cols: THUNG_EXPORT }]} />} />
       {loading && !items.length ? <Spinner /> : <Table columns={cols} rows={items} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)} emptyText={empty} />}
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {open && <ThungXacDetailModal id={open} user={user} onClose={() => setOpen(null)} onChanged={() => { reload(); onChanged(); }} />}
@@ -486,6 +550,7 @@ function XacNgoai({ user, onChanged }: { user: AppUser; onChanged: () => void })
       <XacBrowser
         base={base}
         viewKey="xac_view_ngoai"
+        file="xac-da-xu-ly-khac"
         placeholder="Tìm mã đơn, case, linh kiện, KTV…"
         ngoai
         onOpen={(r) => setOpenUnit(r.unit_id)}

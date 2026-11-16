@@ -1,3 +1,4 @@
+import { useLkName } from "../../hooks/useLinhKien";
 import { useEffect, useState } from "react";
 import { ExcelToolbar, type FilterCol } from "../../ui/ColumnFilter";
 import { useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
@@ -13,6 +14,8 @@ import { HUONG_XU_LY_LABELS, ketQuaLabel, KET_QUA_NV_OPTIONS } from "../../lib/c
 const KET_QUA_NV_LABELS: Record<string, string> = Object.fromEntries(KET_QUA_NV_OPTIONS.map((o) => [o.value, o.label]));
 import type { AppUser, DonVi } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
+import { ExcelExportButton } from "../../ui/ExcelExport";
+import { donViExportCols } from "../shared/exportCols";
 
 // Hang doi "Xac nhan hoan tat" (sau khi NV nop ket qua chan doan) - port dung GET /admin/xac-nhan.
 // Click dong mo UnitDetailModal (da co san nut "Xac nhan hoan tat / Yeu cau lam lai" o footer). Phan
@@ -34,6 +37,7 @@ const EXTRA_COLS: FilterCol[] = [
 export function AdminXacNhanScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const flt = useListFilters("/admin/xac-nhan", [...DEFS.map((d) => d.key), "f_id", "f_gc"]);
+  const { nameOf } = useLkName();
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(withQuery("/admin/xac-nhan", flt.query), "don_vi");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -101,7 +105,7 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
           </div>
         )}
       </div>
-      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" total={total} unit="đơn" />
+      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" total={total} unit="đơn" extra={<ExcelExportButton file="cho-xac-nhan-hoan-tat" disabled={!total} sources={[{ path: withQuery("/admin/xac-nhan", flt.query), itemsKey: "don_vi", sheet: "Cho xac nhan hoan tat", cols: donViExportCols(nameOf) }]} />} />
       <Table flt={flt} columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào chờ xác nhận."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {bulkOpen && (
