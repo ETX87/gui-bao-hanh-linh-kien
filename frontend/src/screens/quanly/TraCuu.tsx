@@ -138,22 +138,30 @@ function NhomGdBadge({ gd }: { gd: string }) {
 // Phat hien 12 vong ra soat UX: nhan ?trang_thai= tu man Tong quan (bam 1 o dem) -> loc san + hien
 // chip "dang loc" bo duoc.
 
-export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
-  const { query, nav } = useRoute();
+// 16/11/2026: 3 tab ket thuc dung chung man nay - loc co dinh o server (?ket_thuc=), 20 dong / trang, khong dem tren menu.
+export type KetThucTab = "hom_nay" | "xong" | "huy";
+const KT_TITLE: Record<KetThucTab, string> = {
+  hom_nay: "✅ Đơn xong trong ngày — hoàn tất, huỷ, từ chối hôm nay",
+  xong: "🏁 Đơn đã xong — KTV đã nhận, kết thúc không gửi, chuyển kho, thất lạc",
+  huy: "🚫 Đơn huỷ / từ chối — thùng bị huỷ, Admin từ chối / huỷ bảo hành",
+};
+
+export function QuanLyTraCuuScreen({ user, ketThuc }: { user: AppUser; ketThuc?: KetThucTab }) {
+  const { query: rq, nav } = useRoute();
   const toast = useToast();
-  const stFilter = query.get("trang_thai") || "";
-  const bttUrl = query.get("buoc_tt") || "";
-  const flt = useListFilters("/tra-cuu/don-vi", FILTER_KEYS);
+  const stFilter = ketThuc ? "" : rq.get("trang_thai") || "";
+  const bttUrl = ketThuc ? "" : rq.get("buoc_tt") || "";
+  const flt = useListFilters(ketThuc ? `/tra-cuu/don-vi?ket_thuc=${ketThuc}` : "/tra-cuu/don-vi", FILTER_KEYS);
   const { buoc } = useBuoc();
   const BUOC_DEF: FilterDef = {
     key: "giai_doan",
     label: "Bước đang dừng",
     static: buoc.filter((b) => !b.ket_thuc).map((b) => ({ value: b.gd, label: `${b.so}. ${b.ten} (${CHU_BUOC_LABEL[b.chu]})` })),
   };
-  const baseQ = [stFilter ? `trang_thai=${encodeURIComponent(stFilter)}` : "", bttUrl && !/(^|&)buoc_tt=/.test(flt.query) ? `buoc_tt=${encodeURIComponent(bttUrl)}` : ""].filter(Boolean).join("&");
+  const baseQ = [ketThuc ? `ket_thuc=${ketThuc}` : "", stFilter ? `trang_thai=${encodeURIComponent(stFilter)}` : "", bttUrl && !/(^|&)buoc_tt=/.test(flt.query) ? `buoc_tt=${encodeURIComponent(bttUrl)}` : ""].filter(Boolean).join("&");
   const base = baseQ ? `/tra-cuu/don-vi?${baseQ}` : "/tra-cuu/don-vi";
   // 02/11/2026: 3 che do xem (danh sach / nhom theo KTV / nhom theo linh kien) - che do nhom lay toi da 1000 dong 1 lan.
-  const [mode, setMode] = useDonViewMode("don_view_tat_ca");
+  const [mode, setMode] = useDonViewMode(ketThuc ? `don_view_kt_${ketThuc}` : "don_view_tat_ca");
   const grouped = mode !== "list";
   const listPath = withQuery(base, flt.query);
   const path = grouped ? `${listPath}${listPath.includes("?") ? "&" : "?"}view=nhom` : listPath;
@@ -184,8 +192,13 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
       ),
     },
     { key: "st", header: "Giai đoạn", filter: { type: "multi", def: NHOM_DEF }, sortKey: "gd", render: (r) => <NhomGdBadge gd={r.giai_doan} /> },
-    { key: "buoc", header: "Bước đang dừng", filter: { type: "multi", def: BUOC_DEF }, render: (r) => <BuocCell r={r} /> },
-    { key: "sla", header: "SLA bước", filter: { type: "single", def: BUOC_TT_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} /> },
+    // Tab don da ket thuc: khong co buoc dang dung / SLA -> an 2 cot nay.
+    ...(ketThuc
+      ? []
+      : ([
+          { key: "buoc", header: "Bước đang dừng", filter: { type: "multi", def: BUOC_DEF }, render: (r) => <BuocCell r={r} /> },
+          { key: "sla", header: "SLA bước", filter: { type: "single", def: BUOC_TT_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} /> },
+        ] as Column<TraCuuRow>[])),
     {
       key: "gui",
       header: "Thùng / Phiếu trả",
@@ -214,6 +227,9 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
     },
     { key: "nv", header: "NV sửa", filter: { type: "multi", def: NV_DEF }, sortKey: "nv", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") },
     { key: "mota", header: "Mô tả lỗi", filter: { type: "text", key: "f_mota", placeholder: "Từ trong mô tả…" }, sortKey: "mota", className: "max-w-[220px] truncate", render: (r) => r.mo_ta_loi },
+    ...(ketThuc
+      ? [{ key: "xong", header: "Xong lúc", sortKey: "sla", render: (r: TraCuuRow) => <span className="text-xs">{fmtDate(r.buoc_tu || r.updated_at)}</span> } as Column<TraCuuRow>]
+      : []),
     { key: "tao", header: "Tạo lúc", filter: { type: "date", key: "khoang" }, sortKey: "tao", render: (r) => <span className="text-xs">{fmtDate(r.created_at)}</span> },
   ];
 
@@ -290,7 +306,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         ngaySx: r.ngay_sx,
         moTa: r.mo_ta_loi,
         status: <NhomGdBadge gd={r.giai_doan} />,
-        sla: <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} />,
+        sla: ketThuc ? <span className="text-xs text-[var(--ink-soft)]">{fmtDate(r.buoc_tu || r.updated_at)}</span> : <SlaBadge since={r.buoc_tu || r.updated_at} gd={r.giai_doan} />,
         badge: r.loai === "parent" && r.so_luong > 1 ? <span className="text-xs text-[var(--ink-soft)]">×{r.so_luong}</span> : undefined,
         onClick: () => openRow(r),
       }))
@@ -301,7 +317,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
   return (
     <Card className="p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">🔍 Tra cứu mọi đơn — mọi giai đoạn</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">{ketThuc ? KT_TITLE[ketThuc] : "🔍 Tra cứu mọi đơn — mọi giai đoạn"}</h3>
         <div className="flex flex-wrap items-center gap-2">
           <Btn size="sm" onClick={taiExcel} disabled={!!dl || total === 0} title="Tải toàn bộ danh sách đang lọc / sắp xếp ra file Excel">
             {dl || "⬇ Tải Excel"}
@@ -316,6 +332,7 @@ export function QuanLyTraCuuScreen({ user }: { user: AppUser }) {
         total={total}
         totalAll={totalAll}
         unit="đơn"
+        colButtons={grouped}
         extra={
           (stFilter || bttUrl) && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--blue-100)] text-[var(--blue-700)] text-xs font-semibold px-2.5 py-1 whitespace-nowrap">

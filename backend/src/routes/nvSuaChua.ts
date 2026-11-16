@@ -7,7 +7,7 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { quaHanBuoc } from "../lib/buoc";
 import { LBL, KHACH_LE_KEY, KET_QUA_NV_VALUES, KET_QUA_NV_TO_CU, type KetQuaNv } from "../lib/constants";
-import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { parsePage } from "../lib/pagination";
 import { nextSequentialId } from "../lib/idCounter";
@@ -41,7 +41,8 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
   if (c.req.query("loc_only")) {
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?", [user.email]) });
   }
-  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"));
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"), textFilters(c, { f_id: "u.id", f_mota: { expr: "p.mo_ta_loi", normExpr: "p.tim_kiem" } }));
+  const spNv = sortParam(c, { id: "u.id", lk: `COALESCE(${tenLkOf("COALESCE(u.ma_lk_nhan, p.ma_lk)")}, p.ma_lk, '')`, huong: "COALESCE(u.huong_xu_ly,'')", sla: "u.updated_at", mota: "COALESCE(p.mo_ta_loi,'')", tao: "p.created_at", lbh: "COALESCE(u.loai_bao_hanh,'')" });
   kw.sql += f.sql;
   kw.binds.push(...(f.binds as string[]));
   const [{ results }, totalRow] = await Promise.all([
@@ -50,7 +51,7 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
          (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai IN ('cho_cap', 'cho_ke_toan')) AS so_dx_cho_cap,
          (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'da_cap') AS so_dx_da_cap
        FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
-       WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?${kw.sql} ORDER BY u.updated_at LIMIT ? OFFSET ?`,
+       WHERE u.trang_thai = 'cho_chan_doan' AND u.nguoi_sua_chua = ?${kw.sql} ORDER BY ${spNv ? `${spNv.expr} ${spNv.dir}, u.id` : "u.updated_at"} LIMIT ? OFFSET ?`,
     )
       .bind(user.email, ...kw.binds, limit, offset)
       .all(),

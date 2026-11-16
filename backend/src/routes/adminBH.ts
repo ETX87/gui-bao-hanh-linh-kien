@@ -757,14 +757,16 @@ adminBH.get("/dang-sua", async (c) => {
   const baseFw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql}`;
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseFw, ms0.binds) });
-  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"));
+  // 16/11/2026 (loc kieu Excel tren tieu de cot): them loc chu ma don + sap xep theo cot.
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"), textFilters(c, { f_id: "u.id", f_mota: { expr: "p.mo_ta_loi", normExpr: "p.tim_kiem" } }));
+  const spDs = sortParam(c, { id: "u.id", lk: `COALESCE(${tenLkOf("COALESCE(u.ma_lk_nhan, p.ma_lk)")}, p.ma_lk, '')`, huong: "COALESCE(u.huong_xu_ly,'')", sla: "u.updated_at", mota: "COALESCE(p.mo_ta_loi,'')", tao: "p.created_at", nv: "COALESCE((SELECT us.ten FROM users us WHERE us.email = u.nguoi_sua_chua), u.nguoi_sua_chua, '')", ktv: "COALESCE((SELECT us.ten FROM users us WHERE us.email = g.nguoi_tao), g.nguoi_tao, '')", mien: "COALESCE(p.mien,'')" });
   const binds = [...ms0.binds, ...kw.binds, ...nvBinds, ...f.binds];
   const fw = `${baseFw}${kw.sql}${nvSql}${f.sql}`;
   const [{ results }, totalRow, nvRows] = await Promise.all([
     c.env.DB.prepare(`SELECT u.*, p.mien, p.ma_lk, p.mo_ta_loi, p.case_id, p.phieu_gui_id, p.ten_khach_hang, g.nguoi_tao AS ktv,
       (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai IN ('cho_cap', 'cho_ke_toan')) AS dx_cho_cap,
       (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.unit_id = u.id AND d.trang_thai = 'da_cap') AS dx_da_cap
-      ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all(),
+      ${fw} ORDER BY ${spDs ? `${spDs.expr} ${spDs.dir}, u.id` : "u.updated_at"} LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fw}`).bind(...binds).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT u.nguoi_sua_chua AS nv, COUNT(*) AS n FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
       WHERE u.trang_thai = 'cho_chan_doan'${ms0.sql} GROUP BY u.nguoi_sua_chua ORDER BY n DESC`).bind(...ms0.binds).all<{ nv: string | null; n: number }>(),
@@ -783,11 +785,12 @@ adminBH.get("/xac-nhan", async (c) => {
   const LOC = { nv: "u.nguoi_sua_chua", ktv: "(SELECT g.nguoi_tao FROM phieu_gui_bh g WHERE g.id = p.phieu_gui_id)", huong_xu_ly: "u.huong_xu_ly", ket_qua: "u.ket_qua_nv", lk_a: "p.ma_lk", lk_b: "COALESCE(u.ma_lk_nhan, p.ma_lk)", lk: "COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan, p.ma_lk)", mien: "p.mien" };
   const baseXn = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms0.sql}`;
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, baseXn, ms0.binds) });
-  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"));
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "p.created_at"), slaFilter(c, "u.updated_at"), textFilters(c, { f_id: "u.id", f_gc: { expr: "u.ghi_chu_nv" } }));
+  const spXn = sortParam(c, { id: "u.id", lk: `COALESCE(${tenLkOf("COALESCE(u.ma_lk_nhan, p.ma_lk)")}, p.ma_lk, '')`, huong: "COALESCE(u.huong_xu_ly,'')", sla: "u.updated_at", mota: "COALESCE(p.mo_ta_loi,'')", tao: "p.created_at", nv: "COALESCE((SELECT us.ten FROM users us WHERE us.email = u.nguoi_sua_chua), u.nguoi_sua_chua, '')", kq: "COALESCE(u.ket_qua_nv,'')" });
   const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   const fw = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.trang_thai = 'cho_admin_xac_nhan'${ms.sql}`;
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT u.*, p.mien ${fw} ORDER BY u.updated_at LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT u.*, p.mien ${fw} ORDER BY ${spXn ? `${spXn.expr} ${spXn.dir}, u.id` : "u.updated_at"} LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fw}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ don_vi: results, total: totalRow?.cnt ?? 0 });

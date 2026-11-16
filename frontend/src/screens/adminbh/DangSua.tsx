@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { ExcelToolbar, type FilterCol } from "../../ui/ColumnFilter";
+import { useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useLkName } from "../../hooks/useLinhKien";
@@ -20,19 +21,22 @@ import { LocSelect } from "./PhieuTraList";
 
 type Row = DonVi & { ktv?: string | null; mo_ta_loi?: string | null; ten_khach_hang?: string | null; dx_cho_cap?: number; dx_da_cap?: number };
 
-const DEFS: FilterDef[] = [
-  { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
-  ...LK_ABC_DEFS,
-  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
-  CANH_BAO_DEF,
-  KHOANG_DEF,
+const KTV: FilterDef = { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" };
+const HUONG: FilterDef = { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS };
+const MIEN: FilterDef = { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" };
+const DEFS: FilterDef[] = [KTV, ...LK_ABC_DEFS, HUONG, CANH_BAO_DEF, KHOANG_DEF];
+// 16/11/2026: loc kieu Excel - cot khong hien tren bang (LK A / C, thoi gian tao) van loc duoc qua chip / nut cot.
+const EXTRA_COLS: FilterCol[] = [
+  { key: "lk_a", label: "LK KTV chọn (A)", filter: { type: "multi", def: LK_A_DEF } },
+  { key: "lk_c", label: "LK đổi mới (C)", filter: { type: "multi", def: LK_ABC_DEFS[2] } },
+  { key: "tao", label: "Thời gian tạo", filter: { type: "date", key: "khoang" }, sortKey: "tao" },
 ];
 
 export function AdminDangSuaScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
   const { nameOf } = useLkName();
   useUserNames();
-  const flt = useListFilters("/admin/dang-sua", ["nv", ...DEFS.map((d) => d.key)]);
+  const flt = useListFilters("/admin/dang-sua", ["nv", ...DEFS.map((d) => d.key), "mien", "f_id", "f_mota"]);
   const nv = flt.values.nv || "";
   const setNv = (v: string) => flt.set("nv", v);
   const path = withQuery("/admin/dang-sua", flt.query);
@@ -42,10 +46,10 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
   const tongTatCa = theoNv.reduce((s, x) => s + x.n, 0);
 
   const cols: Column<Row>[] = [
-    { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
-    { key: "nv", header: "NV sửa chữa", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : <Badge tone="red">Chưa gán</Badge>) },
-    { key: "lk", header: "Linh kiện", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk_nhan || r.ma_lk || "")}>{nameOf(r.ma_lk_nhan || r.ma_lk || "")}</span> },
-    { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
+    { key: "id", header: "ID", filter: { type: "text", key: "f_id", placeholder: "Mã đơn…" }, sortKey: "id", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
+    { key: "nv", header: "NV sửa chữa", sortKey: "nv", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : <Badge tone="red">Chưa gán</Badge>) },
+    { key: "lk", header: "Linh kiện", filter: { type: "multi", def: LK_B_DEF }, sortKey: "lk", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk_nhan || r.ma_lk || "")}>{nameOf(r.ma_lk_nhan || r.ma_lk || "")}</span> },
+    { key: "hxl", header: "Hướng xử lý", filter: { type: "multi", def: HUONG }, sortKey: "huong", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
     {
       key: "dx",
       header: "Linh kiện xin cấp",
@@ -59,10 +63,10 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
           "—"
         ),
     },
-    { key: "nguon", header: "Nguồn", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : r.ten_khach_hang ? `Khách lẻ · ${r.ten_khach_hang}` : "—") },
-    { key: "loi", header: "Mô tả lỗi", render: (r) => <span className="block max-w-[260px] truncate" title={r.mo_ta_loi || ""}>{r.mo_ta_loi || "—"}</span> },
-    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
+    { key: "nguon", header: "Nguồn", filter: { type: "multi", def: KTV }, sortKey: "ktv", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : r.ten_khach_hang ? `Khách lẻ · ${r.ten_khach_hang}` : "—") },
+    { key: "loi", header: "Mô tả lỗi", filter: { type: "text", key: "f_mota", placeholder: "Từ trong mô tả…" }, sortKey: "mota", render: (r) => <span className="block max-w-[260px] truncate" title={r.mo_ta_loi || ""}>{r.mo_ta_loi || "—"}</span> },
+    { key: "mien", header: "Miền", filter: { type: "multi", def: MIEN }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
+    { key: "sla", header: "SLA", filter: { type: "single", def: CANH_BAO_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
   ];
 
   return (
@@ -83,8 +87,8 @@ export function AdminDangSuaScreen({ user }: { user: AppUser }) {
           })}
         </div>
       )}
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, NV, KTV, khách, serial…" />
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào đang chờ NV sửa chữa."} />
+      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, NV, KTV, khách, serial…" total={total} unit="đơn" />
+      <Table flt={flt} columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào đang chờ NV sửa chữa."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {detailId && (
         <UnitDetailModal

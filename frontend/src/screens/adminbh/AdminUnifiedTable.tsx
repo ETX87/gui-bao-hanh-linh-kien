@@ -11,6 +11,9 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DonCha, DonVi } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 import { computeWarranty } from "../../lib/warranty";
+import { ColHeader } from "../../ui/ColumnFilter";
+import type { ListFilters } from "../../ui/FilterBar";
+import { ADMIN_COL_FILTERS } from "./adminExcel";
 
 // "Bang thong nhat" Admin BH - port dung renderAdminUnifiedTable() cua prototype: 1 bang GOP ca don
 // cha (dang cho_xac_nhan_so_luong) LAN don vi (dang can xu ly) lam 1, cot tuy bien duoc (bat/tat, keo
@@ -45,7 +48,7 @@ function Ellipsis({ text, title }: { text: ReactNode; title?: string }) {
   );
 }
 
-export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onToggleAll, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai }: Props) {
+export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, onToggleAll, onOpenXacNhanSl, onOpenDetail, onOpenPhanLoai, onOpenFast, onOpenBoSung, onOpenBaoCaoSai, flt }: Props & { flt?: ListFilters }) {
   const { items: linhKienList } = useLinhKien();
   const lkName = (ma: string | null | undefined) => (ma ? lkLabel(linhKienList.find((lk) => lk.ma_lk === ma)?.ten_lk, ma) : "Cả sản phẩm");
   const phanLoai = (ma: string | null | undefined): ReactNode => {
@@ -467,7 +470,9 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     onChange={(e) => onToggleAll(visibleSelectable, e.target.checked)}
                   />
                 </th>
-                <th className="text-left font-semibold text-[var(--ink-soft)] text-xs">ID</th>
+                <th className="text-left font-semibold text-[var(--ink-soft)] text-xs">
+                  <ColHeader col={{ key: "id", label: "ID", filter: ADMIN_COL_FILTERS.id, sortKey: "id" }} flt={flt} />
+                </th>
                 <th className="text-left font-semibold text-[var(--ink-soft)] text-xs">
                   <span className="flex items-center justify-between gap-2">
                     Hành động
@@ -488,7 +493,7 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
                     onDrop={() => onColDrop(k)}
                     className={`relative text-left font-semibold text-[var(--ink-soft)] text-xs cursor-move select-none ${dragOverKey === k ? "bg-[var(--accent-soft)]" : ""}`}
                   >
-                    {ADMIN_COLS_DEF[k].label}
+                    <ColHeader col={{ key: k, label: ADMIN_COLS_DEF[k].label, filter: ADMIN_COL_FILTERS[k], sortKey: k }} flt={flt} />
                     <span
                       onMouseDown={(e) => onResizeStart(e, k)}
                       title="Kéo để đổi độ rộng"

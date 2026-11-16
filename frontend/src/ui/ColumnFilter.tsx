@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { KHOANG_DEF, NONE, useOptsOf, type FilterDef, type ListFilters } from "./FilterBar";
+import { KHOANG_DEF, NONE, useOptsOf, QuickFilterGrid, type FilterDef, type ListFilters } from "./FilterBar";
 import { Input } from "./primitives";
 import { normalizeVi } from "../lib/normalizeVi";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -455,6 +455,8 @@ export function ExcelToolbar({
   totalAll,
   unit = "dòng",
   extra,
+  defs,
+  colButtons,
 }: {
   flt: ListFilters;
   cols: FilterCol[];
@@ -463,8 +465,13 @@ export function ExcelToolbar({
   totalAll?: number | null;
   unit?: string;
   extra?: ReactNode;
+  // 16/11/2026: bo loc nhanh (luoi o chon) - AN mac dinh, nut "⚙ Bộ lọc nhanh" mo ra (trung voi loc tieu de cot).
+  defs?: FilterDef[];
+  // Hien hang nut loc theo cot ca tren may tinh (che do xem nhom Theo KTV / Theo linh kien khong co tieu de cot).
+  colButtons?: boolean;
 }) {
   const isMobile = useIsMobile();
+  const [quickOpen, setQuickOpen] = useState(false);
   const optsOf = useOptsOf(flt);
   const activeCols = cols.filter((c) => c.filter && isActive(flt, c.filter));
   const sortCol = cols.find((c) => c.sortKey && c.sortKey === flt.sort);
@@ -477,6 +484,16 @@ export function ExcelToolbar({
           <Input type="search" value={flt.qInput} onChange={(e) => flt.setQ(e.target.value)} placeholder={`🔍 ${placeholder}`} />
         </div>
         {extra}
+        {defs && defs.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setQuickOpen((v) => !v)}
+            className="shrink-0 self-start md:self-auto rounded-lg border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-body)] hover:bg-[var(--surface-2)]"
+            title="Bộ lọc dạng ô chọn (trùng với lọc trên tiêu đề cột)"
+          >
+            ⚙ Bộ lọc nhanh {quickOpen ? "▴" : "▾"}
+          </button>
+        )}
         <span className="shrink-0 text-xs font-semibold text-[var(--ink-soft)]" title="Số dòng sau khi lọc / tổng số dòng">
           {anyActive && totalAll != null && totalAll !== total ? (
             <>
@@ -489,8 +506,13 @@ export function ExcelToolbar({
           )}
         </span>
       </div>
-      {isMobile && (
-        // Dien thoai: bang thanh the, khong co tieu de cot -> nut loc / sap xep theo cot.
+      {quickOpen && defs && (
+        <div className="fbar rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5">
+          <QuickFilterGrid f={flt} defs={defs} />
+        </div>
+      )}
+      {(isMobile || colButtons) && (
+        // Dien thoai / che do nhom: khong co tieu de cot -> nut loc / sap xep theo cot.
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin">
           {cols
             .filter((c) => c.filter || c.sortKey)

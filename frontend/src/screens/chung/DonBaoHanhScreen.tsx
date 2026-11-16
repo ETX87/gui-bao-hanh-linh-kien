@@ -36,7 +36,11 @@ export function DonBaoHanhScreen({ user }: { user: AppUser }) {
       hint: "Yêu cầu thiếu linh kiện gửi Kho / Mua hàng — theo dõi hàng đã về",
       render: () => <ThieuHangListScreen user={user} />,
     },
-    { key: "tat_ca", label: "Mọi giai đoạn", show: theoDoi, hint: "Tra cứu mọi đơn, kể cả thùng chưa về Kho", render: () => <QuanLyTraCuuScreen user={user} /> },
+    { key: "tat_ca", label: "Mọi giai đoạn", show: theoDoi, hint: "Tra cứu mọi đơn, kể cả thùng chưa về Kho", render: () => <QuanLyTraCuuScreen key="tat_ca" user={user} /> },
+    // 16/11/2026: 3 tab don da ket thuc - KHONG dem so tren tab (giam tai D1), chi tai khi bam vao, 20 dong / trang.
+    { key: "xong_hom_nay", label: "✅ Đơn xong trong ngày", show: theoDoi, hint: "Mọi đơn kết thúc hôm nay: hoàn tất, huỷ, từ chối", render: () => <QuanLyTraCuuScreen key="kt_hom_nay" user={user} ketThuc="hom_nay" /> },
+    { key: "da_xong", label: "🏁 Đơn xong", show: theoDoi, hint: "Đơn đã kết thúc: KTV đã nhận, kết thúc không gửi, chuyển kho, thất lạc", render: () => <QuanLyTraCuuScreen key="kt_xong" user={user} ketThuc="xong" /> },
+    { key: "huy_tu_choi", label: "🚫 Đơn huỷ / từ chối", show: theoDoi, hint: "Thùng bị huỷ, đơn Admin từ chối / huỷ bảo hành", render: () => <QuanLyTraCuuScreen key="kt_huy" user={user} ketThuc="huy" /> },
   ];
   return <TabScreen user={user} title="🗂️ Đơn bảo hành" tabs={tabs} />;
 }

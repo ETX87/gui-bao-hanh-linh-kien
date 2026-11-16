@@ -26,6 +26,7 @@ const TAB_GD: Record<string, Record<string, { gd: string; nhan: string }>> = {
     dang_sua: { gd: "cho_chan_doan", nhan: "Đang sửa (NV)" },
     hoan_tat: { gd: "cho_admin_xac_nhan", nhan: "Chờ xác nhận hoàn tất" },
     tat_ca: { gd: "*", nhan: "Mọi giai đoạn" },
+    huy_tu_choi: { gd: "thung_da_huy,ket_thuc_tu_choi", nhan: "Đơn huỷ / từ chối" },
   },
   "/thung": {
     nhap: { gd: "thung_nhap", nhan: "Thùng nháp" },

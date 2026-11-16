@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { ExcelToolbar, type FilterCol } from "../../ui/ColumnFilter";
+import { useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { useWorkload } from "../../hooks/useWorkload";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { Badge, Btn, Card, Spinner } from "../../ui/primitives";
@@ -17,19 +18,22 @@ import { UserName } from "../../hooks/useUserNames";
 // Click dong mo UnitDetailModal (da co san nut "Xac nhan hoan tat / Yeu cau lam lai" o footer). Phan
 // trang that (server LIMIT/OFFSET). 12/10/2026 (de xuat #12): chon nhieu dong -> xac nhan hang loat.
 
-const DEFS: FilterDef[] = [
-  { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Không qua NV" },
-  { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
-  { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS },
-  { key: "ket_qua", label: "Kết quả NV", kind: "map", labels: KET_QUA_NV_LABELS, noneLabel: "Chưa có" },
-  ...LK_ABC_DEFS,
-  CANH_BAO_DEF,
-  KHOANG_DEF,
+const NV: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Không qua NV" };
+const KTV: FilterDef = { key: "ktv", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" };
+const HUONG: FilterDef = { key: "huong_xu_ly", label: "Hướng xử lý", kind: "map", labels: HUONG_XU_LY_LABELS };
+const KQ: FilterDef = { key: "ket_qua", label: "Kết quả NV", kind: "map", labels: KET_QUA_NV_LABELS, noneLabel: "Chưa có" };
+const DEFS: FilterDef[] = [NV, KTV, HUONG, KQ, ...LK_ABC_DEFS, CANH_BAO_DEF, KHOANG_DEF];
+const EXTRA_COLS: FilterCol[] = [
+  { key: "ktv", label: "KTV gửi", filter: { type: "multi", def: KTV } },
+  { key: "lk_a", label: "LK KTV chọn (A)", filter: { type: "multi", def: LK_A_DEF } },
+  { key: "lk_b", label: "LK gửi về (B)", filter: { type: "multi", def: LK_B_DEF }, sortKey: "lk" },
+  { key: "lk_c", label: "LK đổi mới (C)", filter: { type: "multi", def: LK_ABC_DEFS[2] } },
+  { key: "tao", label: "Thời gian tạo", filter: { type: "date", key: "khoang" }, sortKey: "tao" },
 ];
 
 export function AdminXacNhanScreen({ user }: { user: AppUser }) {
   const { refresh } = useWorkload();
-  const flt = useListFilters("/admin/xac-nhan", DEFS.map((d) => d.key));
+  const flt = useListFilters("/admin/xac-nhan", [...DEFS.map((d) => d.key), "f_id", "f_gc"]);
   const { items: rows, total, page, pageCount, setPage, loading, reload } = usePagedApi<DonVi>(withQuery("/admin/xac-nhan", flt.query), "don_vi");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -67,12 +71,14 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
           <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span>
         </span>
       ),
+      filter: { type: "text", key: "f_id", placeholder: "Mã đơn…" },
+      sortKey: "id",
     },
-    { key: "hxl", header: "Hướng xử lý", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
-    { key: "nv", header: "NV phụ trách", render: (r) => <UserName email={r.nguoi_sua_chua} /> },
-    { key: "kq", header: "Kết quả NV", render: (r) => ketQuaLabel(r) || "—" },
-    { key: "gcnv", header: "Ghi chú NV", render: (r) => <span className="block max-w-[240px] truncate" title={r.ghi_chu_nv || ""}>{r.ghi_chu_nv || "—"}</span> },
-    { key: "sla", header: "SLA", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
+    { key: "hxl", header: "Hướng xử lý", filter: { type: "multi", def: HUONG }, sortKey: "huong", render: (r) => (r.huong_xu_ly ? HUONG_XU_LY_LABELS[r.huong_xu_ly] || r.huong_xu_ly : "—") },
+    { key: "nv", header: "NV phụ trách", filter: { type: "multi", def: NV }, sortKey: "nv", render: (r) => <UserName email={r.nguoi_sua_chua} /> },
+    { key: "kq", header: "Kết quả NV", filter: { type: "multi", def: KQ }, sortKey: "kq", render: (r) => ketQuaLabel(r) || "—" },
+    { key: "gcnv", header: "Ghi chú NV", filter: { type: "text", key: "f_gc", placeholder: "Từ trong ghi chú…" }, render: (r) => <span className="block max-w-[240px] truncate" title={r.ghi_chu_nv || ""}>{r.ghi_chu_nv || "—"}</span> },
+    { key: "sla", header: "SLA", filter: { type: "single", def: CANH_BAO_DEF }, sortKey: "sla", render: (r) => <SlaBadge since={r.updated_at} entityType="phieu_sc_ct" entityId={r.id} clickable /> },
   ];
 
   return (
@@ -95,8 +101,8 @@ export function AdminXacNhanScreen({ user }: { user: AppUser }) {
           </div>
         )}
       </div>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" />
-      <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào chờ xác nhận."} />
+      <ExcelToolbar flt={flt} cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...EXTRA_COLS]} defs={DEFS} placeholder="Tìm mã đơn, case, linh kiện, lỗi, KTV, khách, serial…" total={total} unit="đơn" />
+      <Table flt={flt} columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setDetailId(r.id)} emptyText={flt.active ? "Không có đơn nào khớp bộ lọc." : "Không có đơn nào chờ xác nhận."} />
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {bulkOpen && (
         <BulkXacNhanHoanTatModal

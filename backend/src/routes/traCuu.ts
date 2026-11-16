@@ -12,6 +12,7 @@ import { GS_KTV_SUBQUERY } from "../lib/gs";
 import { mienScope } from "../lib/mien";
 import { BUOC_DUNG, cauHinhBuoc, sqlQuaHan } from "../lib/buoc";
 import { sqlDaGiaiTrinh } from "../lib/giaiTrinh";
+import { nowVN } from "../lib/vnTime";
 
 // Man hinh "Giam sat" (la_giam_sat, scope qua email_gs) va "View" (la_view, scope theo Khu vuc qua
 // user_khu_vuc_bh) - THUAN CHI XEM, khong co route nao lam doi du lieu o day (dung nguyen tac da
@@ -76,6 +77,15 @@ export const NHOM_GD: Record<string, string[]> = {
 function gdCuaNhom(v: string): string[] {
   return v.split(",").map((x) => x.trim()).flatMap((k) => NHOM_GD[k] || []);
 }
+// 16/11/2026: 3 tab ket thuc cua man Don bao hanh - "Đơn xong trong ngày" (moi don ket thuc / huy / tu choi trong ngay,
+// moc = x.buoc_tu = luc vao giai doan cuoi), "Đơn xong", "Đơn hủy/từ chối". ?ket_thuc=hom_nay|xong|huy (loc o server,
+// khong dem tren menu de do ton D1).
+const KT_HUY = ["thung_da_huy", "ket_thuc_tu_choi"];
+export const KET_THUC_GD: Record<string, string[]> = {
+  xong: NHOM_GD.ket_thuc,
+  huy: KT_HUY,
+  hom_nay: [...NHOM_GD.ket_thuc, ...KT_HUY],
+};
 function boNhanhCha(gd: readonly string[] | undefined): boolean {
   return !!locTruocDonVi(gd) && !gd!.some((x) => GD_DON_CHA.includes(x));
 }
@@ -112,6 +122,16 @@ traCuu.get("/don-vi", async (c) => {
   // ma da troi qua 24h SLA (bo Chu nhat, moc cat tinh bang JS).
   const st = (c.req.query("trang_thai") || "").trim();
   const chBuoc = await cauHinhBuoc(c.env.DB);
+  const kt = (c.req.query("ket_thuc") || "").trim();
+  const ktGd = KET_THUC_GD[kt] || null;
+  if (ktGd) {
+    where += ` AND x.giai_doan IN (${ktGd.map(() => "?").join(",")})`;
+    binds.push(...ktGd);
+    if (kt === "hom_nay") {
+      where += " AND x.buoc_tu >= ?";
+      binds.push(nowVN().slice(0, 10) + " 00:00:00");
+    }
+  }
   if (st === "qua_han") {
     // 15/11/2026: qua han theo SLA RIENG tung buoc (lib/buoc.ts).
     const qh = sqlQuaHanX(chBuoc, BUOC_DUNG);
@@ -122,6 +142,10 @@ traCuu.get("/don-vi", async (c) => {
     where += ` AND x.giai_doan IN (${ds.map(() => "?").join(",")})`;
     binds.push(...ds);
   }
+  // Dieu kien "co dinh" cua man (tab ket thuc / o dem Trang chu) - so "x / tong" dem tren tap nay.
+  const baseWhere = where;
+  const baseBinds = [...binds];
+  const baseGd = ktGd || (st && st !== "qua_han" ? st.split(",").map((x) => x.trim()).filter(Boolean) : st === "qua_han" ? BUOC_DUNG : []);
   // 14/11/2026: loc theo nhom giai doan (9 nhom theo luong).
   const nhomGd = gdCuaNhom(c.req.query("nhom") || "");
   if (c.req.query("nhom")) {
@@ -144,7 +168,10 @@ traCuu.get("/don-vi", async (c) => {
   }
   // 21/10/2026: loc KTV gui / NV sua chua / huong xu ly / linh kien / mien.
   const LOC = { ktv: "x.ktv", nv: "x.nguoi_sua_chua", huong_xu_ly: "x.huong_xu_ly", lk_a: "x.lk_a", lk_b: "x.lk_b", lk: "x.ma_lk", mien: "x.mien" };
-  if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
+  if (c.req.query("loc_only")) {
+    if (ktGd) return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere, ktGd)} WHERE ${baseWhere}`, [...scopeBinds, ...scopeBinds, ...baseBinds]) });
+    return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM ${allRowsSql(scopeWhere)} WHERE 1=1`, [...scopeBinds, ...scopeBinds]) });
+  }
   // 01/11/2026: loc giai doan (frontend gui 1 giai doan hoac nhom "a,b,c" -> IN).
   // 13/11/2026 (bang kieu Excel): them loc chu / so theo tung cot.
   const f = joinF(
@@ -175,7 +202,7 @@ traCuu.get("/don-vi", async (c) => {
   binds.push(...kw.binds);
   // Loc truoc theo giai doan khi dang loc giai doan (o dem Tong quan / o loc cot) - xem locTruocDonVi.
   const gdRieng = (c.req.query("giai_doan") || "").split(",").map((x) => x.trim()).filter(Boolean);
-  const gdLoc = st === "qua_han" ? BUOC_DUNG : st ? st.split(",").map((x) => x.trim()).filter(Boolean) : nhomGd.length ? nhomGd : gdRieng.length ? gdRieng : ["qua_han", "chua_gt", "trong_han"].includes(btt) ? BUOC_DUNG : [];
+  const gdLoc = ktGd ? ktGd : st === "qua_han" ? BUOC_DUNG : st ? st.split(",").map((x) => x.trim()).filter(Boolean) : nhomGd.length ? nhomGd : gdRieng.length ? gdRieng : ["qua_han", "chua_gt", "trong_han"].includes(btt) ? BUOC_DUNG : [];
   const from = `FROM ${allRowsSql(scopeWhere, gdLoc.length ? gdLoc : undefined)} WHERE ${where}`;
   const allBinds = [...scopeBinds, ...scopeBinds, ...binds];
   const sp = sortParam(c, {
@@ -193,13 +220,13 @@ traCuu.get("/don-vi", async (c) => {
     tao: "x.created_at",
     sla: "x.buoc_tu",
   });
-  const order = sp ? `${sp.expr} ${sp.dir}, x.id` : "x.updated_at DESC";
-  // So dong truoc khi loc (de hien "x / tong dong").
-  const coLoc = binds.length > 0 || where !== "1=1";
+  const order = sp ? `${sp.expr} ${sp.dir}, x.id` : ktGd ? "x.buoc_tu DESC, x.id" : "x.updated_at DESC";
+  // So dong truoc khi loc (de hien "x / tong dong") - tren tap dieu kien co dinh cua man (baseWhere).
+  const coLoc = where !== baseWhere;
   const [{ results }, totalRow, tongRow] = await Promise.all([
     c.env.DB.prepare(`SELECT x.*, json_extract(s.data, '$.seri_san_pham') AS serial, json_extract(s.data, '$.ngay_mua') AS ngay_mua, json_extract(s.data, '$.ngay_san_xuat') AS ngay_sx FROM ${allRowsSql(scopeWhere)} LEFT JOIN case_lookup_snapshot s ON s.case_id = x.case_id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).bind(...allBinds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${from}`).bind(...allBinds).first<{ cnt: number }>(),
-    coLoc ? c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM ${allRowsSql(scopeWhere)}`).bind(...scopeBinds, ...scopeBinds).first<{ cnt: number }>() : Promise.resolve(null),
+    coLoc ? c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM ${allRowsSql(scopeWhere, baseGd.length ? baseGd : undefined)} WHERE ${baseWhere}`).bind(...scopeBinds, ...scopeBinds, ...baseBinds).first<{ cnt: number }>() : Promise.resolve(null),
   ]);
   const total = totalRow?.cnt ?? 0;
   return c.json({ don_vi: results, total, total_all: tongRow ? tongRow.cnt : total });

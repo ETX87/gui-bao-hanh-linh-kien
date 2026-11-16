@@ -12,9 +12,9 @@ import { BulkPhanLoaiModal } from "./BulkPhanLoaiModal";
 import { BulkXacNhanSoLuongModal } from "./BulkXacNhanSoLuongModal";
 import { BulkDoiLinhKienModal } from "./BulkDoiLinhKienModal";
 import { ThungChoNhanLink } from "./ThungNoiBo";
-import { useRoute } from "../../router/Router";
-import { setUrlKtv } from "../../layout/KtvMenu";
-import { AdminFilterBar, EMPTY_FILTER, filterQuery, type AdminFilter } from "./AdminFilterBar";
+import { useListFilters } from "../../ui/FilterBar";
+import { ExcelToolbar } from "../../ui/ColumnFilter";
+import { ADMIN_FILTER_COLS, ADMIN_FILTER_KEYS, ADMIN_QUICK_DEFS } from "./adminExcel";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
 import { PhanLoaiModal } from "../shared/PhanLoaiModal";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
@@ -37,18 +37,10 @@ import { StatusBadge } from "../../ui/StatusBadge";
 // nen bang van toi da 20 dong khi chua so ra).
 
 export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
-  const urlKtv = useRoute().query.get("ktv") || "";
-  const [filter, setFilterRaw] = useState<AdminFilter>({ ...EMPTY_FILTER, ktv: urlKtv });
-  // 04/11/2026: o "Người gửi" dong bo voi ?ktv= (menu 2 danh sach KTV).
-  useEffect(() => {
-    setFilterRaw((f) => (f.ktv === urlKtv ? f : { ...f, ktv: urlKtv }));
-  }, [urlKtv]);
-  const setFilter = (f: AdminFilter) => {
-    setFilterRaw(f);
-    if (f.ktv !== urlKtv) setUrlKtv(f.ktv);
-  };
-  const qs = filterQuery(filter);
-  const [optsKey, setOptsKey] = useState(0);
+  // 16/11/2026: loc kieu Excel (tieu de cot + chip + nut loc theo cot o che do nhom). O "Người gửi" (ktv) tu dong bo
+  // voi ?ktv= cua menu 2 (useListFilters). Lua chon lay tu GET /admin/don-vi/loc-options (tra ve {loc}).
+  const flt = useListFilters("/admin/don-vi/loc-options", ADMIN_FILTER_KEYS);
+  const qs = flt.query;
   const [bulkSlOpen, setBulkSlOpen] = useState(false);
   // 02/11/2026: 3 che do xem - Danh sach (bang thong nhat) / nhom theo KTV / nhom theo linh kien. Che do
   // nhom lay toi da 1000 don cha + 1000 don vi 1 lan (hang doi bi gate nen thuc te khong lon).
@@ -94,7 +86,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
   const afterChange = () => {
     reloadDonCha();
     reloadDonVi();
-    setOptsKey((k) => k + 1);
+    flt.reloadLoc();
     refresh();
   };
 
@@ -209,10 +201,18 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
         <BuocChips
           gds={["cho_xac_nhan_so_luong", "cho_phan_loai", "admin_can_xem_lai", "cho_bo_sung_tt"]}
           nhan={{ cho_xac_nhan_so_luong: "Xác nhận SL", cho_phan_loai: "Chờ phân loại", admin_can_xem_lai: "Cần xem lại", cho_bo_sung_tt: "Chờ KTV bổ sung" }}
-          value={filter.tt}
-          onChange={(gd) => setFilter({ ...filter, tt: gd })}
+          value={flt.values.tt || ""}
+          onChange={(gd) => flt.set("tt", gd)}
         />
-        <AdminFilterBar value={filter} onChange={setFilter} reloadKey={optsKey} />
+        <ExcelToolbar
+          flt={flt}
+          cols={ADMIN_FILTER_COLS}
+          defs={ADMIN_QUICK_DEFS}
+          colButtons={grouped}
+          placeholder="Mã đơn / case / phiếu gửi, khách hàng, serial, linh kiện, KTV, mô tả lỗi…"
+          total={donChaTotal + donViUnits}
+          unit="đơn"
+        />
         {grouped ? (
           <GroupedDonView rows={gRows} mode={mode as "ktv" | "lk"} selected={selected} onToggle={toggleAll} emptyText="Không có đơn nào cần xử lý." />
         ) : (
@@ -228,6 +228,7 @@ export function AdminPhanLoaiScreen({ user }: { user: AppUser }) {
           onOpenFast={(u) => setFastFor(u)}
           onOpenBoSung={(pid) => setBoSungFor(pid)}
           onOpenBaoCaoSai={(pid) => setBaoCaoSaiFor(pid)}
+          flt={flt}
         />
         )}
         {!grouped && donChaPageCount > 1 && (

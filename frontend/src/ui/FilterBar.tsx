@@ -267,3 +267,22 @@ function FilterBarView({ f, defs: visible, optsOf, placeholder, extra, collapsib
     </div>
   );
 }
+
+// 16/11/2026 ("Các công cụ filter bên trên trùng với filter bên dưới => cho mặc định ẩn đi"): luoi o loc nhanh dung
+// trong ExcelToolbar (an mac dinh, mo bang nut "⚙ Bộ lọc nhanh") - cung trang thai loc voi bo loc tieu de cot.
+export function QuickFilterGrid({ f, defs }: { f: ListFilters; defs: FilterDef[] }) {
+  const optsOf = useOptsOf(f);
+  const visible = defs.filter((d) => d.static || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
+  if (!visible.length) return <p className="text-xs text-[var(--ink-faint)]">Không có bộ lọc nào.</p>;
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5">
+      {visible.map((d) =>
+        d.key === "khoang" ? (
+          <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} />
+        ) : (
+          <FilterSelect key={d.key} label={d.label} value={(f.values[d.key] || "").includes(",") ? "" : f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
+        ),
+      )}
+    </div>
+  );
+}
