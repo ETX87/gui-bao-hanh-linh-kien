@@ -1,4 +1,4 @@
-import { DX_CONG_NO_SQL, DOI_TAC_ID_SQL } from "./doiTac";
+import { DX_XAC_NHAN_SQL, DOI_TAC_ID_SQL } from "./doiTac";
 import type { AppUser } from "../types";
 import { mienScope } from "./mien";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM } from "./xac";
@@ -187,7 +187,7 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       }),
       // 16/11/2026: lan cap linh kien (app Dat LK) NV da nhan, cho Admin BH xac nhan tieu hao -> tru cong no NV.
       one(
-        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND u.trang_thai <> 'cho_chan_doan' AND ${DX_CONG_NO_SQL("d")}${mp.sql}`,
+        `SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(p.case_id), ''), u.id)) as cnt FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND u.trang_thai <> 'cho_chan_doan' AND ${DX_XAC_NHAN_SQL("d")}${mp.sql}`,
         ...mp.binds,
       ).then((r) => {
         counts.admin_xn_tieu_hao = r?.cnt ?? 0;

@@ -153,7 +153,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   DOI_TAC_MISMATCH: "1 thùng chỉ chứa xác của 1 đối tác.",
   XAC_TRONG_THUNG: "Xác đã vào thùng trả xác — bỏ khỏi thùng trước.",
   KE_TOAN_DA_CHOT: "Kế toán đã chốt phiếu trừ / trả công nợ — không sửa / hủy được nữa.",
-  KHONG_PHAI_CONG_NO_SUA_CHUA: "Lần cấp không phải CÔNG NỢ SỬA CHỮA — không cần xác nhận tiêu hao.",
+  KHONG_PHAI_CONG_NO_SUA_CHUA: "Lần cấp MUA HÀNG SỬA CHỮA (hết bảo hành) không qua bước xác nhận xác / trừ công nợ.",
   CHUA_XAC_NHAN: "Lần cấp chưa xác nhận tiêu hao.",
   REQUIRE_LY_DO_TU_CHOI: "Vui lòng chọn lý do huỷ/từ chối.",
   REQUIRE_XU_LY_XAC: "Vui lòng chọn cách xử lý xác linh kiện (trả đối tác / tiêu huỷ / lưu kho).",

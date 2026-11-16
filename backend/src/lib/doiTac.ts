@@ -24,8 +24,20 @@ export function loaiDeXuatSuaChua(loaiBaoHanh: string | null | undefined, laKaro
   if (loaiBaoHanh !== "trong_bh" || laKarofi === null || laKarofi === undefined) return null;
   return laKarofi ? LDX_HO_TRO_SC : LDX_CONG_NO_SC;
 }
+// v1.143: loai de xuat cua 1 don vi (gui kem khi tao don cap linh kien ben app Dat LK - khong de ben do phai goi nguoc tra cuu: goi nguoc loi /
+// cham thi don tung roi ve CÔNG NỢ SỬA CHỮA am tham). null = don chua du Hang / Doi tac / bao hanh.
+export async function loaiDeXuatCuaDonVi(db: D1Database, unitId: string): Promise<string | null> {
+  const r = await db.prepare(`SELECT u.loai_bao_hanh, ${DOI_TAC_KAROFI_SQL("p")} AS karofi FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ?`)
+    .bind(unitId).first<{ loai_bao_hanh: string | null; karofi: number | null }>();
+  return r ? loaiDeXuatSuaChua(r.loai_bao_hanh, r.karofi) : null;
+}
 // Lan cap la CÔNG NỢ SỬA CHỮA (lk_loai NULL = lan cap cu, truoc 16/11 deu la loai nay) - CHI loai nay tao don tru cong no.
 export const DX_CONG_NO_SQL = (d = "d") => `(${d}.lk_loai IS NULL OR ${d}.lk_loai = '${LDX_CONG_NO_SC}')`;
+// v1.143 (chot 16/11/2026 - "công nợ sửa chữa thì cần xác nhận xác và trừ công nợ cho nv sửa chữa, hỗ trợ 0 đồng thì không cần trừ công nợ
+// nhưng vẫn cần xác nhận luồng cho xác"): lan cap can Admin BH xac nhan (SL dung + ket qua xac) = CÔNG NỢ + HỖ TRỢ 0 ĐỒNG. MUA HÀNG SỬA CHỮA
+// (het BH, NV / khach tra tien) khong qua buoc nay.
+export const DX_XAC_NHAN_SQL = (d = "d") => `(${d}.lk_loai IS NULL OR ${d}.lk_loai IN ('${LDX_CONG_NO_SC}', '${LDX_HO_TRO_SC}'))`;
+export const laLoaiXacNhan = (lkLoai: string | null | undefined) => !lkLoai || lkLoai === LDX_CONG_NO_SC || lkLoai === LDX_HO_TRO_SC;
 
 // ---- Vai tro "Tra xac" ----
 export const laQuanTriXac = (u: AppUser) => u.la_admin_bh || u.la_qtri;

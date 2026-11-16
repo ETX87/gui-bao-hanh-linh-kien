@@ -470,7 +470,7 @@ xac.post("/thung/:id/kt-tra-lai", async (c) => {
   const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
   const lyDo = (body.ly_do || "").trim().slice(0, 1000);
   if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
-  const ok = await chuyen(c.env.DB, t, "nhap", ", ly_do_tra_lai = ?, tra_lai_boi = ?, tra_lai_luc = ?", [lyDo, user.email, nowVN()], user.email, `Kế toán trả lại Admin BH: ${lyDo}`);
+  const ok = await chuyen(c.env.DB, t, "nhap", ", ly_do_tra_lai = ?, tra_lai_boi = ?, tra_lai_luc = ?", [lyDo, user.email, nowVN()], user.email, `Kế toán trả lại người gom thùng: ${lyDo}`);
   return ok ? c.json({ ok: true }) : c.json({ error: "WRONG_STATE" }, 400);
 });
 

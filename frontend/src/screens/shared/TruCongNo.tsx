@@ -27,7 +27,10 @@ const tone = (b: string | null | undefined): "green" | "amber" | "red" | "gray" 
 // Lan cap qua app Dat LK ma NV da nhan, chua xac nhan tieu hao.
 // 16/11/2026 (v1.142): "Chỉ có đơn CÔNG NỢ SỬA CHỮA mới cần lên đơn trừ công nợ" - lan cap HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA khong xac nhan.
 export const laCongNoSc = (d: DeXuatLk) => !d.lk_loai || d.lk_loai === "CÔNG NỢ SỬA CHỮA";
-export const choXacNhanTieuHao = (d: DeXuatLk) => d.trang_thai === "lien_ket" && d.lk_buoc === "xong" && !d.xn_luc && laCongNoSc(d);
+// v1.143: HỖ TRỢ SỬA CHỮA 0 ĐỒNG van xac nhan xac (SL dung + ket qua xac) nhung KHONG tru cong no / tra kho. MUA HÀNG SỬA CHỮA khong xac nhan.
+export const laHoTroSc = (d: DeXuatLk) => d.lk_loai === "HỖ TRỢ SỬA CHỮA 0 ĐỒNG";
+export const canXacNhanXac = (d: DeXuatLk) => laCongNoSc(d) || laHoTroSc(d);
+export const choXacNhanTieuHao = (d: DeXuatLk) => d.trang_thai === "lien_ket" && d.lk_buoc === "xong" && !d.xn_luc && canXacNhanXac(d);
 // Sua / huy xac nhan duoc khi don tru / tra chua duoc Ke toan chot va xac chua vao thung (backend kiem tra lai).
 export const suaXacNhanDuoc = (d: DeXuatLk) =>
   !!d.xn_luc && d.tru_buoc !== "xong" && d.tra_buoc !== "xong" && !d.thung_xac_id && d.xac_tt !== "trong_thung" && d.xac_tt !== "da_tra";
@@ -35,9 +38,18 @@ export const suaXacNhanDuoc = (d: DeXuatLk) =>
 // Dong tinh trang tru cong no 1 lan cap (dung o UI chi tiet don, man Cap linh kien, man Linh kien cua toi).
 export function CongNoTag({ d }: { d: DeXuatLk }) {
   if (d.trang_thai !== "lien_ket") return null;
-  if (!laCongNoSc(d)) return <Badge tone="gray">{d.lk_loai} — không trừ công nợ</Badge>;
+  if (!canXacNhanXac(d)) return <Badge tone="gray">{d.lk_loai} — không trừ công nợ, không xác nhận xác</Badge>;
   if (!d.xn_luc) {
-    return d.lk_buoc === "xong" ? <Badge tone="amber">Chờ Admin xác nhận tiêu hao (nhận {d.so_luong})</Badge> : null;
+    return d.lk_buoc === "xong" ? <Badge tone="amber">{laHoTroSc(d) ? `Chờ Admin xác nhận xác (nhận ${d.so_luong}, HỖ TRỢ 0đ — không trừ công nợ)` : `Chờ Admin xác nhận tiêu hao (nhận ${d.so_luong})`}</Badge> : null;
+  }
+  if (laHoTroSc(d)) {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1 text-[11px]">
+        <Badge tone="blue">HỖ TRỢ 0đ — không trừ công nợ</Badge>
+        <span className="text-[var(--ink-soft)]">Nhận {d.so_luong} · Dùng <b>{d.sl_dung ?? 0}</b> · Xác: {XAC_KQ_TIEU_HAO_NHAN[d.xac_kq ?? ""] ?? "—"}</span>
+        {d.xn_boi && <span className="text-[var(--ink-faint)]">· xác nhận: <UserName email={d.xn_boi} /> {fmtDate(d.xn_luc)}</span>}
+      </span>
+    );
   }
   return (
     <span className="inline-flex flex-wrap items-center gap-1 text-[11px]">
@@ -155,6 +167,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXu
     const v = nhap[d.id];
     const dung = Number(v.sl_dung) || 0;
     const xac = dung === 0 ? "khong_co" : v.xac;
+    if (laHoTroSc(d)) return { dung, tra: 0, tru: 0, xac }; // HỖ TRỢ 0đ: chi ghi xac
     return { dung, tra: d.so_luong - dung, tru: xac === "that_lac" && !v.tru_that_lac ? 0 : dung, xac };
   };
   const tong = list.reduce((a, d) => { const t = tinh(d); return { tru: a.tru + t.tru, tra: a.tra + t.tra }; }, { tru: 0, tra: 0 });
@@ -202,7 +215,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXu
     >
       <div className="space-y-2 text-sm">
         <p className="text-xs text-[var(--ink-soft)]">
-          Nhập số linh kiện NV đã dùng và tình trạng xác. Hệ thống tự tạo bên app Đặt linh kiện: đơn <b>"TRỪ CÔNG NỢ - SỬA CHỮA"</b> (số đã dùng, 0đ — Kế toán chốt để trừ công nợ NV) và đơn <b>"TRẢ HÀNG CÔNG NỢ - SỬA CHỮA"</b> cho số còn dư (NV trả kho). Xác "Trả đối tác" vào danh sách chờ gom ở màn Trả xác.
+          Nhập số linh kiện NV đã dùng và tình trạng xác. Lần cấp <b>HỖ TRỢ SỬA CHỮA 0 ĐỒNG</b> chỉ ghi nhận xác (không trừ công nợ, không trả kho). Lần cấp <b>CÔNG NỢ SỬA CHỮA</b> — hệ thống tự tạo bên app Đặt linh kiện: đơn <b>"TRỪ CÔNG NỢ - SỬA CHỮA"</b> (số đã dùng, 0đ — Kế toán chốt để trừ công nợ NV) và đơn <b>"TRẢ HÀNG CÔNG NỢ - SỬA CHỮA"</b> cho số còn dư (NV trả kho). Xác "Trả đối tác" vào danh sách chờ gom ở màn Trả xác.
         </p>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="font-semibold">Áp xác cho tất cả:</span>
@@ -240,7 +253,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXu
                           <select value={v.xac} onChange={(e) => set(d.id, { xac: e.target.value })} className="rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-1 text-xs">
                             {XAC_KQ_TIEU_HAO.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
                           </select>
-                          {v.xac === "that_lac" && (
+                          {v.xac === "that_lac" && !laHoTroSc(d) && (
                             <label className="inline-flex items-center gap-1">
                               <input type="checkbox" checked={v.tru_that_lac} onChange={(e) => set(d.id, { tru_that_lac: e.target.checked })} /> Vẫn trừ công nợ NV
                             </label>
@@ -249,6 +262,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXu
                       )}
                     </td>
                     <td className="text-[var(--ink-soft)]">
+                      {laHoTroSc(d) && <span className="mr-1 text-[var(--ink-faint)]">HỖ TRỢ 0đ —</span>}
                       Trừ CN <b className="text-[var(--ink)]">{t.tru}</b>
                       {t.tra > 0 && <> · Trả kho <b className="text-[var(--ink)]">{t.tra}</b></>}
                       {loiDong(d) && <span className="ml-1 text-[var(--red-700,#b91c1c)]">SL {loiDong(d)}</span>}

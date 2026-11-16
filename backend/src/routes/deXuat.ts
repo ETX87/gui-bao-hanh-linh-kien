@@ -14,7 +14,7 @@ import { slaCutoffVn } from "../lib/sla";
 import { dayCapLkCho, demCapLkCho } from "../lib/capLkPush";
 import { dongBoDonSc, ghiMotDon, goiLinhKien, moTaLoi, type DonSc } from "../lib/donScLinhKien";
 import { dxChuaNhan, xacNhanDaNhan } from "../lib/daNhanLk";
-import { DX_CONG_NO_SQL, LDX_CONG_NO_SC } from "../lib/doiTac";
+import { DX_CONG_NO_SQL, DX_XAC_NHAN_SQL, LDX_HO_TRO_SC, laLoaiXacNhan, loaiDeXuatCuaDonVi } from "../lib/doiTac";
 
 // De xuat linh kien sua chua (12/10/2026) - nguyen van chot: "NV se tu bao linh kien can duoc cap, Admin
 // bao hanh se len misa de xuat tu kho sang. Cu de xuat den khi sua xong hoac xac dinh la khong sua
@@ -44,9 +44,9 @@ const AO_TAB: Record<string, string> = {
   dang_cap: "d.trang_thai = 'lien_ket' AND COALESCE(d.lk_buoc, '') <> 'xong'",
   // 16/11/2026 (v1.140): "Bàn giao sẽ triển khai bên ngoài, Admin bh sẽ tự vào xác nhận hoặc danh sách các đơn sửa xong chưa xác nhận sẽ tự
   // phân loại chờ Admin bh xác nhận xử lý" -> tach: NV dang giu (don van o buoc NV sua) / Cho Admin xac nhan (don da sua xong).
-  // 16/11/2026 (v1.142): chi lan cap CÔNG NỢ SỬA CHỮA can Admin BH xac nhan tieu hao (HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA khong tru cong no).
-  nv_giu: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND " + DX_CONG_NO_SQL("d") + " AND EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
-  cho_xn: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND " + DX_CONG_NO_SQL("d") + " AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
+  // v1.143: lan cap CÔNG NỢ (xac nhan + tru cong no) va HỖ TRỢ 0 ĐỒNG (chi xac nhan xac, khong tru) - MUA HÀNG SỬA CHỮA khong qua buoc nay.
+  nv_giu: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND " + DX_XAC_NHAN_SQL("d") + " AND EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
+  cho_xn: "d.trang_thai = 'lien_ket' AND d.lk_buoc = 'xong' AND d.xn_luc IS NULL AND " + DX_XAC_NHAN_SQL("d") + " AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh_ct ug WHERE ug.id = d.unit_id AND ug.trang_thai = 'cho_chan_doan')",
   tru_cn: "d.xn_luc IS NOT NULL",
 };
 function ttWhere(tt: string): { sql: string; binds: unknown[] } {
@@ -205,13 +205,14 @@ deXuat.post("/don-vi/:unitId", async (c) => {
   const now = nowVN();
   const ids: string[] = [];
   const ketQua: { ma_lk: string; so_luong: number; id?: string; ddh?: string; nhan?: string; loi?: string }[] = [];
+  const ldx = await loaiDeXuatCuaDonVi(c.env.DB, unitId); // v1.143: gui kem loai (Hang / Doi tac / bao hanh)
   for (const it of items) {
     const id = await nextSequentialId(c.env.DB, "de_xuat_linh_kien_bh", "DX");
     const maLk = it.ma_lk!.trim();
     const sl = it.so_luong ?? 1;
     const kq = await goiLinhKien<{ don?: DonSc }>(c.env, "/don-sc", {
       method: "POST",
-      body: { dx_id: id, unit_id: unitId, nv_email: u.nguoi_sua_chua, nguoi_thao_tac: user.email, ma_lk: maLk, so_luong: sl, ghi_chu: it.ghi_chu?.trim() || undefined },
+      body: { dx_id: id, unit_id: unitId, nv_email: u.nguoi_sua_chua, nguoi_thao_tac: user.email, ma_lk: maLk, so_luong: sl, ghi_chu: it.ghi_chu?.trim() || undefined, loai_de_xuat: ldx ?? undefined },
     });
     if (!kq.ok || !kq.data.don) {
       ketQua.push({ ma_lk: maLk, so_luong: sl, loi: kq.ok ? "Không đọc được đơn vừa tạo" : moTaLoi(kq) });
@@ -566,15 +567,16 @@ const XAC_KQ_NHAN: Record<string, string> = {
 
 type ItTieuHao = { sl_dung?: number; xac?: string; tru_that_lac?: boolean; ghi_chu?: string };
 // Tinh SL dung / tru / tra + ket qua xac tu 1 dong Admin nhap (dung chung xac nhan + sua xac nhan).
-function tinhTieuHao(it: ItTieuHao, nhan: number) {
+// khongTru (v1.143, HỖ TRỢ SỬA CHỮA 0 ĐỒNG): chi ghi SL dung + ket qua xac, KHONG tru cong no / tra kho (sl_tru = sl_tra = 0).
+function tinhTieuHao(it: ItTieuHao, nhan: number, khongTru = false) {
   const dung = Number(it.sl_dung ?? nhan);
   if (!Number.isInteger(dung) || dung < 0 || dung > nhan) return { error: "INVALID_SL_DUNG" } as const;
   let xac = (it.xac || "") as (typeof XAC_KQ_NHAP)[number];
   if (dung === 0) xac = "khong_co"; // khong dung linh kien nao -> khong co xac
   if (!XAC_KQ_NHAP.includes(xac)) return { error: "INVALID_XAC" } as const;
-  const truTl = xac === "that_lac" ? (it.tru_that_lac ? 1 : 0) : null;
-  const slTru = xac === "that_lac" && !truTl ? 0 : dung;
-  const slTra = nhan - dung;
+  const truTl = xac === "that_lac" && !khongTru ? (it.tru_that_lac ? 1 : 0) : null;
+  const slTru = khongTru || (xac === "that_lac" && !truTl) ? 0 : dung;
+  const slTra = khongTru ? 0 : nhan - dung;
   const xacTt: string | null = xac === "tra_doi_tac" ? null : xac;
   const ghi = (it.ghi_chu || "").trim().slice(0, 500) || null;
   return { dung, xac, truTl, slTru, slTra, xacTt, ghi };
@@ -599,9 +601,10 @@ deXuat.post("/xac-nhan-tieu-hao", async (c) => {
     if (!mienAllowed(user, d.mien)) { loi.push({ id: d.id, error: "FORBIDDEN" }); continue; }
     if (d.trang_thai !== "lien_ket" || d.lk_buoc !== "xong" || !d.lk_ddh_id) { loi.push({ id: d.id, error: "NV_CHUA_NHAN_HANG" }); continue; }
     if (d.xn_luc) { loi.push({ id: d.id, error: "DA_XAC_NHAN" }); continue; }
-    if (d.lk_loai && d.lk_loai !== LDX_CONG_NO_SC) { loi.push({ id: d.id, error: "KHONG_PHAI_CONG_NO_SUA_CHUA" }); continue; }
+    if (!laLoaiXacNhan(d.lk_loai)) { loi.push({ id: d.id, error: "KHONG_PHAI_CONG_NO_SUA_CHUA" }); continue; }
+    const hoTro = d.lk_loai === LDX_HO_TRO_SC;
     const nhan = d.so_luong;
-    const t = tinhTieuHao(it, nhan);
+    const t = tinhTieuHao(it, nhan, hoTro);
     if ("error" in t) { loi.push({ id: d.id, error: String(t.error) }); continue; }
     const { dung, xac, truTl, slTru, slTra, xacTt, ghi } = t;
     const r = await c.env.DB.prepare(
@@ -613,8 +616,8 @@ deXuat.post("/xac-nhan-tieu-hao", async (c) => {
     ok.push(d.id);
     await addLog(c.env.DB, "phieu_sc_ct", d.unit_id, d.unit_tt, d.unit_tt, user.email,
       `Xác nhận tiêu hao linh kiện ${d.id} (${d.ma_lk}, nhận ${nhan}): dùng ${dung}${slTra ? ` · trả kho ${slTra}` : ""} · xác: ${XAC_KQ_NHAN[xac]}` +
-      (xac === "that_lac" ? (truTl ? " — vẫn trừ công nợ NV" : " — KHÔNG trừ công nợ NV") : "") +
-      ` · trừ công nợ NV ${slTru}${ghi ? ` | ${ghi}` : ""}`);
+      (hoTro ? " — HỖ TRỢ SỬA CHỮA 0 ĐỒNG: không trừ công nợ NV" : (xac === "that_lac" ? (truTl ? " — vẫn trừ công nợ NV" : " — KHÔNG trừ công nợ NV") : "") +
+      ` · trừ công nợ NV ${slTru}`) + (ghi ? ` | ${ghi}` : ""));
   }
   // Tao don ben linh-kien-app ngay (it dong) - nhieu dong thi chay nen, cron gui lai dong loi.
   let daTao = 0;
@@ -629,6 +632,7 @@ deXuat.post("/xac-nhan-tieu-hao", async (c) => {
 // trước khi kế toán duyệt chốt trừ công nợ)". Chot: Admin BH lam o app nay -> don tru / tra ben app Dat LK huy theo (POST /tru-cong-no/:id/huy,
 // chi khi phieu chua qua buoc "Cho ke toan"), sua = huy don cu + tao lan gui moi (cn_lan + 1) theo so lieu moi.
 type DxXn = DxRow & {
+  lk_loai: string | null;
   unit_tt: string; mien: string | null; xn_luc: string | null; sl_dung: number | null; xac_kq: string | null; thung_xac_id: string | null; xac_tt: string | null;
   tru_ddh_id: string | null; tru_buoc: string | null; tra_ddh_id: string | null; tra_buoc: string | null;
 };
@@ -663,7 +667,7 @@ deXuat.post("/:id/sua-tieu-hao", async (c) => {
   if (!mienAllowed(user, d.mien)) return c.json({ error: "FORBIDDEN" }, 403);
   if (!d.xn_luc) return c.json({ error: "CHUA_XAC_NHAN" }, 400);
   if (d.thung_xac_id || d.xac_tt === "trong_thung" || d.xac_tt === "da_tra") return c.json({ error: "XAC_TRONG_THUNG", message: "Xác đã vào thùng trả xác — bỏ khỏi thùng trước" }, 409);
-  const t = tinhTieuHao(await c.req.json<ItTieuHao>().catch(() => ({}) as ItTieuHao), d.so_luong);
+  const t = tinhTieuHao(await c.req.json<ItTieuHao>().catch(() => ({}) as ItTieuHao), d.so_luong, d.lk_loai === LDX_HO_TRO_SC);
   if ("error" in t) return c.json(t, 400);
   const loi = await huyDonTruTra(c.env, d, user.email, `Admin BH sửa xác nhận tiêu hao ${d.id}`);
   if (loi) return c.json(loi, 409);
@@ -753,7 +757,7 @@ deXuat.post("/:id/chuyen-app-lk", async (c) => {
   if (!d.nguoi_sua_chua) return c.json({ error: "DON_CHUA_GIAO_NV" }, 400);
   const kq = await goiLinhKien<{ don?: DonSc }>(c.env, "/don-sc", {
     method: "POST",
-    body: { dx_id: d.id, unit_id: d.unit_id, nv_email: d.nguoi_sua_chua, nguoi_thao_tac: user.email, ma_lk: d.ma_lk, so_luong: d.so_luong, ghi_chu: d.ghi_chu || undefined },
+    body: { dx_id: d.id, unit_id: d.unit_id, nv_email: d.nguoi_sua_chua, nguoi_thao_tac: user.email, ma_lk: d.ma_lk, so_luong: d.so_luong, ghi_chu: d.ghi_chu || undefined, loai_de_xuat: (await loaiDeXuatCuaDonVi(c.env.DB, d.unit_id)) ?? undefined },
   });
   if (!kq.ok || !kq.data.don) return c.json({ error: kq.ok ? "TAO_DON_LOI" : kq.error, message: kq.ok ? "Không đọc được đơn vừa tạo" : moTaLoi(kq) }, 409);
   const now = nowVN();

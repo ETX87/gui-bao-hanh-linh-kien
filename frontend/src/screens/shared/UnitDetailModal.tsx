@@ -678,7 +678,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
               )}
             </Section>
 
-            <DeXuatSection unitId={u.id} unitTrangThai={u.trang_thai} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />
+            <DeXuatSection unitId={u.id} unitTrangThai={u.trang_thai} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} ldx={u.ldx_sua_chua} />
 
             <LichSuGiaiTrinh ids={[u.id, p.id, p.phieu_gui_id, u.phieu_tra_id]} reloadKey={gtKey} />
             <ThieuHangSection key={`thb-${u.id}`} unitId={u.id} defaultLk={u.ma_lk_thuc_te || lkB} nguoiSuaChua={u.nguoi_sua_chua} user={user} onChanged={onChanged} />

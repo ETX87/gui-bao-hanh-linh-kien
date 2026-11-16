@@ -54,7 +54,7 @@ interface Row {
 }
 
 // Form NV tao 1 hoac nhieu dong de xuat.
-export function DeXuatFormModal({ unitId, onClose, onDone }: { unitId: string; onClose: () => void; onDone: () => void }) {
+export function DeXuatFormModal({ unitId, ldx, onClose, onDone }: { unitId: string; ldx?: string | null; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const { items } = useLinhKien();
   const opts = lkOptions(items);
@@ -99,7 +99,9 @@ export function DeXuatFormModal({ unitId, onClose, onDone }: { unitId: string; o
     >
       <div className="space-y-3">
         <p className="text-sm text-[var(--ink-body)]">
-          Mỗi dòng tạo ngay 1 đơn <b>CÔNG NỢ SỬA CHỮA</b> trên app Đặt linh kiện. Kế toán duyệt và Kho xuất hàng trên app đó, trạng thái tự cập nhật về đây.
+          Mỗi dòng tạo ngay 1 đơn <b>{ldx || "CÔNG NỢ SỬA CHỮA"}</b> trên app Đặt linh kiện (loại theo Hãng / Đối tác / bảo hành của đơn).
+          {ldx === "MUA HÀNG SỬA CHỮA" ? " Hết bảo hành: NV chuyển tiền vào phiếu như đơn mua hàng, Kế toán xác nhận tiền rồi mới xuất." : ldx === "HỖ TRỢ SỬA CHỮA 0 ĐỒNG" ? " Đối tác Karofi còn bảo hành: không tính công nợ, sửa xong Admin BH vẫn xác nhận xác." : ""}{" "}
+          Kế toán duyệt và Kho xuất hàng trên app đó, trạng thái tự cập nhật về đây.
           Sửa được linh kiện / số lượng cho tới khi Kế toán xử lý. Có thể đề xuất nhiều lần cho tới khi sửa xong.
         </p>
         {rows.map((r, i) => (
@@ -379,7 +381,7 @@ export function KtTraLaiDeXuatModal({ dx, onClose, onDone }: { dx: DeXuatLk; onC
 }
 
 // Khoi trong UI chi tiet don vi: danh sach don con "de xuat linh kien" + thao tac theo vai tro.
-export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onChanged }: { unitId: string; unitTrangThai: string; nguoiSuaChua: string | null; user: AppUser; onChanged: () => void }) {
+export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onChanged, ldx }: { unitId: string; unitTrangThai: string; nguoiSuaChua: string | null; user: AppUser; onChanged: () => void; ldx?: string | null }) {
   const toast = useToast();
   const { nameOf } = useLkName();
   const [list, setList] = useState<DeXuatLk[] | null>(null);
@@ -579,6 +581,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
       {formOpen && (
         <DeXuatFormModal
           unitId={unitId}
+          ldx={ldx}
           onClose={() => setFormOpen(false)}
           onDone={() => {
             setFormOpen(false);

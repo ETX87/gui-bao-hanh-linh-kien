@@ -635,7 +635,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
       )}
       {isK && t.trang_thai === "cho_ke_toan" && (
         <>
-          <Btn variant="danger" disabled={busy} onClick={() => setTraLai(true)}>↩ Trả lại Admin BH</Btn>
+          <Btn variant="danger" disabled={busy} onClick={() => setTraLai(true)}>↩ Trả lại người gom thùng</Btn>
           <Btn variant="success" disabled={busy || !f.ma_eo.trim()} onClick={() => confirm(`Duyệt thùng ${t.id} (${d?.xac.length} xác)? Luồng trả xác sẽ kết thúc.`) && run(async () => { await luuNeuDoi(); await api.post(`/tra-xac/thung/${id}/kt-duyet`); }, `Đã duyệt ${t.id}.`)}>
             ✔ Duyệt — kết thúc trả xác
           </Btn>
