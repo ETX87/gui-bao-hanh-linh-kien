@@ -7232,3 +7232,5 @@ Nguyên văn: *"đóng luồng hoạt động trên app đổi trả, chuyển h
 **(c) Vấn đề:** heredoc Python dài trong Bash lại lỗi EOF → viết script ra file tạm. D1 thử `xacqa` cũ rỗng → dùng bản sao `buocqa` và đặt mọi đơn vị thành Đổi mới / trả đối tác.
 
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (config + D1 tạm, đã xoá): 27 xác chờ gom; `f_id=-1` + `sort=lk desc` → 22 dòng đúng thứ tự; `loc_only` có đủ `lk_a` / `lk_b` / `lk` / `nguoi_gui` / `mien`. Giao diện: Theo KTV nhóm đúng KTV → linh kiện; tích nhóm "Trần Thanh Bình" → "Đã chọn 12 xác" → Tạo thùng → TX-000001 có 12 xác, còn 15 chờ gom; Theo linh kiện nhóm LK → KTV; Danh sách có 7 tiêu đề cột lọc / sắp xếp. 375px không tràn ngang.
+
+**Deploy (16/11/2026):** `npm run deploy` (Version ID `fb71de09`), không có migration mới.
