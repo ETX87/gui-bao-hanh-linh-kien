@@ -7151,3 +7151,5 @@ Chốt qua AskUserQuestion: kênh báo **"Push + chuông trong app"**; báo cáo
 
 **Chưa làm (giai đoạn sau):** Admin BH xác nhận tiêu hao linh kiện công nợ sửa chữa + xử lý xác → báo sang linh-kien-app tự tạo đơn trừ công nợ; ngừng luồng "Đề xuất / Cấp linh kiện" cho đơn mới (xem CLAUDE.md linh-kien-app mục "CÔNG NỢ SỬA CHỮA").
 
+
+**Deploy (16/11/2026):** không có migration mới, `npm run deploy` (Version ID `d1e2b520`); route `/api/partner/sync/don-vi-sua-chua` trả 401 khi thiếu khoá (route có thật). Lưu ý: Worker `suachua` nằm trong tài khoản Cloudflare smarttrade.vp (`b1f870…`, cùng tài khoản linh-kien-app để Service Binding chạy) — tệp nhớ `node_modules/.cache/wrangler/wrangler-account.json` từng trỏ nhầm tài khoản khác (`c05f…`) làm deploy báo Authentication error 10000; đã sửa về `b1f870…`.
