@@ -10,9 +10,10 @@ import { isPureKtv } from "./routes";
 export function BuocNav({ user, collapsed }: { user: AppUser; collapsed: boolean }) {
   const enabled = !isPureKtv(user);
   const { buoc } = useBuoc();
-  const { of } = useDangDung(enabled);
+  // 16/11/2026 (v1.134): mac dinh AN, chi khi nguoi dung bam mo moi tai so lieu (khong nho trang thai mo giua cac lan vao).
+  const [open, setOpen] = useState(false);
+  const { of, loaded } = useDangDung(enabled && open);
   const { nav, path, query } = useRoute();
-  const [open, setOpen] = useState(() => localStorage.getItem("buoc_nav_open") !== "0");
   if (!enabled) return null;
   const xemTatCa = user.la_admin_bh || user.la_giam_sat || user.la_view || user.la_qtri;
   // Gom theo so buoc (buoc 5 / 8 co 2 giai doan).
@@ -23,30 +24,31 @@ export function BuocNav({ user, collapsed }: { user: AppUser; collapsed: boolean
     else nhom.push({ so: b.so, ten: b.ten, gds: [b.gd] });
   }
   const rows = nhom.map((n) => ({ ...n, ...of(n.gds) })).filter((r) => r.tong > 0);
-  if (!rows.length) return null;
   const dangLoc = path === "/don" && query.get("tab") === "tat_ca" ? query.get("trang_thai") || "" : "";
   const go = (gds: string[]) => nav(xemTatCa ? `/don?tab=tat_ca&trang_thai=${encodeURIComponent(gds.join(","))}` : GD_TAB[gds[0]] || "/home");
   const tongQua = rows.reduce((s, r) => s + r.qua_han, 0);
   return (
     <div className="space-y-0.5 pt-1">
       {collapsed ? (
-        <div className="mx-0.5 mt-1 border-t border-white/15 pt-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/55" title="Bước đang dừng">
-          Bước
-        </div>
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full mx-0.5 mt-1 border-t border-white/15 pt-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/55 hover:text-white/80"
+          title={open ? "Ẩn bước đang dừng" : "Xem bước đang dừng"}
+        >
+          Bước {open ? "▾" : "▸"}
+        </button>
       ) : (
         <button
-          onClick={() => {
-            localStorage.setItem("buoc_nav_open", open ? "0" : "1");
-            setOpen(!open);
-          }}
+          onClick={() => setOpen(!open)}
           className="w-full flex items-center gap-2 px-2.5 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-white/55 hover:text-white/80"
-          title="Số đơn đang dừng ở từng bước (đỏ = quá SLA bước)"
+          title={open ? "Ẩn bước đang dừng" : "Bấm để xem số đơn đang dừng ở từng bước (đỏ = quá SLA bước)"}
         >
           <span>{open ? "▾" : "▸"} Bước đang dừng</span>
-          {tongQua > 0 && <span className="ml-auto rounded-full bg-[#EF4444] px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">{tongQua}</span>}
+          {open && tongQua > 0 && <span className="ml-auto rounded-full bg-[#EF4444] px-1.5 text-[10px] font-bold normal-case tracking-normal text-white">{tongQua}</span>}
         </button>
       )}
-      {(open || collapsed) &&
+      {open && !rows.length && <div className="px-2.5 py-1 text-[11px] text-white/55">{loaded ? (collapsed ? "0" : "Không có đơn đang dừng") : collapsed ? "…" : "Đang tải…"}</div>}
+      {open &&
         rows.map((r) => {
           const on = dangLoc === r.gds.join(",");
           const title = `Bước ${r.so} · ${r.ten}\n${r.tong} đơn đang dừng · ${r.qua_han} quá SLA${r.chua_gt ? ` (${r.chua_gt} chưa giải trình)` : ""}${r.tam_dung ? ` · ${r.tam_dung} tạm dừng chờ hàng` : ""}`;

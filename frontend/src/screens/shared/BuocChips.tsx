@@ -4,7 +4,7 @@ import { useDangDung } from "../../hooks/useDangDung";
 // 16/11/2026: chip loc theo BUOC DANG DUNG cho man gop nhieu buoc trong 1 tab (VD tab "Chờ phân loại" = buoc 4 / 5 / 5B).
 // Moi chip: so buoc + ten + so don dang dung (+ so qua SLA do). value = giai_doan dang chon ("" = tat ca).
 export function BuocChips({ gds, value, onChange, nhan }: { gds: string[]; value: string; onChange: (gd: string) => void; nhan?: Record<string, string> }) {
-  const dd = useDangDung(true);
+  const dd = useDangDung(true, false);
   const chip = (gd: string, label: string, tong: number, qua: number) => {
     const on = value === gd;
     return (

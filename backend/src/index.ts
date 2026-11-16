@@ -41,6 +41,7 @@ import { dongBoTaiKhoan } from "./lib/taiKhoan";
 import tuChoiThungRoutes from "./routes/tuChoiThung";
 import khachHangRoutes from "./routes/khachHang";
 import { tuHuyThungQuaHan } from "./lib/tuChoiThung";
+import { tuDongXacNhanNhanHang } from "./lib/tuDongNhanHang";
 import { maybeRunUserKhuVucSync } from "./lib/userKhuVucSync";
 import { backfillCaseSnapshots, verifyPendingCases, refreshSnapshotsThieuNsx } from "./lib/caseSnapshot";
 import { capNhatTimKiem } from "./lib/timKiem";
@@ -136,6 +137,8 @@ export default {
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
     // 13/11/2026: thung bi tu choi, KTV qua 7 ngay khong phan hoi -> tu huy.
     ctx.waitUntil(tuHuyThungQuaHan(env).then(() => undefined).catch((e) => console.error("[tuHuyThung]", e instanceof Error ? e.message : e)));
+    // 16/11/2026: phieu tra "Đang gửi KTV" qua 14 ngay KTV khong xac nhan / khong bao thieu -> tu xac nhan da nhan.
+    ctx.waitUntil(tuDongXacNhanNhanHang(env).then(() => undefined).catch((e) => console.error("[tuDongNhanHang]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)).then(() => dongBoTaiKhoan(env.DB)).then(() => undefined).catch((e) => console.error("[dongBoTaiKhoan]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunUserKhuVucSync(env).catch((e) => console.error("[userKhuVucSync]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeComputeTopLinhKien(env.DB).catch((e) => console.error("[topLinhKien]", e instanceof Error ? e.message : e)));

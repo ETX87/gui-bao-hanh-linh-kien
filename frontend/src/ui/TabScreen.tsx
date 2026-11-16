@@ -32,7 +32,7 @@ export function TabScreen({ user, tabs, title, actions }: { user: AppUser; tabs:
   const vis = visibleTabs(tabs, user);
   const countOf = (t: TabDef) => (t.countKeys ?? []).reduce((s, k) => s + (counts[k] ?? 0), 0);
   const coBuoc = vis.some((t) => t.buoc?.length);
-  const dd = useDangDung(coBuoc);
+  const dd = useDangDung(coBuoc, false);
   const want = query.get("tab") || "";
   const active = vis.find((t) => t.key === want) ?? vis.find((t) => countOf(t) > 0) ?? vis[0];
 

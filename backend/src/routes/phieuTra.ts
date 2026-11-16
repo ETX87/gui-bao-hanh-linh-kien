@@ -1,5 +1,4 @@
 import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
-import { canGiaiTrinhTruoc } from "../lib/giaiTrinh";
 import { eqFilters, distinctOpts, timeFilter, joinF } from "../lib/filters";
 import { tkPhieuTraOf } from "../lib/search";
 import { normVi } from "../lib/timKiem";
@@ -761,9 +760,8 @@ phieuTra.post("/:id/ktv-xac-nhan-nhan", async (c) => {
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if (t.ktv_nhan !== user.email) return c.json({ error: "FORBIDDEN" }, 403);
   if (t.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
-  // 16/11/2026: buoc KTV giu qua SLA ma chua ai giai trinh -> phai giai trinh truoc (frontend tu mo hop giai trinh roi gui lai).
-  const gtTruoc = await canGiaiTrinhTruoc(c.env.DB, "phieu_tra", id);
-  if (gtTruoc) return c.json({ error: "REQUIRE_GIAI_TRINH", gt: gtTruoc }, 400);
+  // 16/11/2026 (v1.134): BO bat buoc giai trinh khi KTV bam "Đã nhận" - bat giai trinh truoc khi xac nhan lam KTV
+  // ngai bam (phieu treo mai o buoc 11). Viec qua SLA buoc 11 van hien o "Cần giải trình" + thong bao 12h.
   const body = await c.req.json<{ danh_gia?: string }>().catch(() => ({}) as { danh_gia?: string });
   await c.env.DB.prepare("UPDATE phieu_tra_bh SET trang_thai = 'ktv_da_nhan', danh_gia_ktv = ?, updated_at = ? WHERE id = ?").bind(body.danh_gia?.trim() || "", nowVN(), id).run();
   await addLog(c.env.DB, "phieu_tra", id, "da_gui", "ktv_da_nhan", user.email, "KTV xác nhận đã nhận hàng");
