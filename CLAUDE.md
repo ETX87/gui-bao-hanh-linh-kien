@@ -7285,3 +7285,18 @@ Hỏi lại qua AskUserQuestion, người dùng chốt: import **"Kết quả x�
 **(d) Kiểm thử:** typecheck backend + frontend 0 lỗi, build sạch. `wrangler dev` local (D1 sao `buocqa` + 2 đề xuất mẫu, đã xoá): import 13 dòng → 7 hợp lệ (2 thùng mới MOI / MỚI-B, tiêu huỷ DX kèm ghi chú, thất lạc, không có xác, trả ngoài) + 6 lỗi đúng lý do (trùng mã, không tìm thấy, kết quả sai, thiếu mã thùng, thùng không tồn tại, đưa lại khi chưa có kết quả); áp dụng ghi đúng 7, nhật ký đúng 8 dòng (gồm lần đưa lại); file mẫu tải về đọc lại được (báo "chưa điền Kết quả"); file CSV điền 3 dòng → xem trước 2 hợp lệ / 1 lỗi → áp dụng → xác vào đúng TX-000001, hộp tự đóng. Tải Excel: Chờ phân loại 4, Đang sửa 8, Hoàn tất 1, Xác chờ gom 17 (lọc Loại = Sau sửa chữa → 2), Đã xử lý khác 4, Thùng nháp 2, Cấp LK Kho đã xuất 2; nút khoá khi danh sách trống.
 
 **Deploy (16/11/2026):** `npm run deploy` (Version ID `d8eda33e`), không có migration mới.
+
+## Phân tích luồng trừ công nợ sửa chữa cho NV sửa chữa (16/11/2026) — chỉ phân tích, CHƯA sửa code
+
+**(a) Nguyên văn yêu cầu:** *"phân tích luồng quy trình trừ công nợ sửa chữa cho nv sửa chữa: 1. sau khi kho cấp LK cho nv sửa chữa => nv sửa chữa sửa xong và bàn giao sản phẩm sau sửa cho kho hoặc trực tiếp ktv 2. Đồng thời sẽ giao xác lk đã sửa hoàn trả lk mới về cho admin bảo hành 3. Admin bảo hành sẽ xác nhận lk theo các trạng thái xác khác nhau 4. Hệ thống tự tạo đơn trừ công nợ sửa chữa trên app lk 5. Kế toán duyệt và trừ công nợ 6. Toàn luồng quy trình cần minh bạch và dễ quản lý, nv sửa chữa có thể tự quản lý các lk mình đã xử dụng, tình trạng đối từ công nợ hiện tại..."*
+
+**(b) Kết quả:** bản phân tích + phương án ở `du an sua chua bao hanh/Phan-Tich-Tru-Cong-No-Sua-Chua_16-11-2026.md`.
+- Bước 1 (cấp LK công nợ — app LK v1.495–v1.504 + v1.133) và bàn giao sản phẩm đã có. Khung Kế toán chốt trừ kho bên app LK cũng đã có.
+- **Thiếu:** NV khai từng dòng linh kiện (SL dùng / dư / xác) khi nộp kết quả; Admin BH xác nhận nhận xác + linh kiện dư; tự tạo đơn "TIÊU HAO SỬA CHỮA" + "TRẢ HÀNG CÔNG NỢ" bên app LK (đúng mục "Giai đoạn sau (CHƯA làm)" của linh-kien-app); màn "🔩 Linh kiện của tôi" (Nhận – Dùng – Trả kho – Đã trừ, công nợ hiện tại).
+- **Phát hiện cần sửa:** xác sau sửa chữa (v1.137) đang tự vào "Xác chờ gom" ngay khi linh kiện giao xong — với luồng mới phải chờ Admin xác nhận đã nhận xác "Trả đối tác".
+- Production lúc phân tích: 0 đơn CÔNG NỢ SỬA CHỮA; 62 đơn chờ NV sửa, 1 đơn NV tự nộp kết quả; 105 lần cấp linh kiện luồng cũ trong tháng 11 → chưa có dữ liệu phải chuyển đổi.
+- Đề xuất 3 giai đoạn: GĐ1 NV khai + Admin xác nhận + màn theo dõi (app này); GĐ2 tự tạo đơn tiêu hao / trả hàng (2 app); GĐ3 cảnh báo + báo cáo.
+
+**Câu hỏi mở (chờ người dùng chốt):** Q1 xác thất lạc có trừ công nợ NV không; Q2 "Đã trả ngoài hệ thống" tính như trả đối tác thành công; Q3 xác trả đối tác trừ khi thùng KT duyệt (quyết định cũ) hay trừ ngay khi Admin nhận xác; Q4 NV khai SL dùng, Admin xác nhận / sửa; Q5 ngừng luồng cấp cũ cho đơn mới; Q6 diễn giải MISA đơn tiêu hao / trả hàng.
+
+**(d)** Không sửa code, không deploy. Số liệu đọc từ D1 production (chỉ đọc).
