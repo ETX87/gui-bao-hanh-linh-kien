@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TabScreen, type TabDef } from "../../ui/TabScreen";
-import { FilterBar, useListFilters, withQuery, KHOANG_DEF, type FilterDef } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, KHOANG_DEF, LK_A_DEF, LK_B_DEF, LK_C_DEF, type FilterDef } from "../../ui/FilterBar";
+import { ExcelToolbar, type FilterCol } from "../../ui/ColumnFilter";
+import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
 import { Card, Badge, Btn, Input, Textarea, Field, Spinner, EmptyState } from "../../ui/primitives";
 import { Modal } from "../../ui/Modal";
 import { Table, type Column } from "../../ui/Table";
@@ -83,20 +85,27 @@ const admin = (u: AppUser) => u.la_admin_bh || u.la_qtri;
 const kt = (u: AppUser) => u.la_ke_toan || u.la_qtri;
 const xem = (u: AppUser) => admin(u) || kt(u) || u.la_view || u.la_giam_sat;
 
-const XAC_DEFS: FilterDef[] = [
-  { key: "nguoi_gui", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" },
-  { key: "lk_b", label: "Linh kiện xác (B)", kind: "lk" },
-  { key: "mien", label: "Miền", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, kind: "map", noneLabel: "Chưa khai báo" },
-  { ...KHOANG_DEF, label: "Cập nhật" },
+const NGUOI_GUI: FilterDef = { key: "nguoi_gui", label: "KTV gửi", kind: "person", noneLabel: "Khách lẻ" };
+const MIEN_DEF: FilterDef = { key: "mien", label: "Miền", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, kind: "map", noneLabel: "Chưa khai báo" };
+const LK_XAC_DEF: FilterDef = { ...LK_B_DEF, label: "LK xác (B)" };
+// 16/11/2026: loc giong Don BH - LK A (KTV chon) / B (xac thuc te gui ve) / C (doi moi), KTV gui, mien, thoi gian
+// + loc chu tren cot ID / case / mo ta loi + sap xep (backend routes/xac.ts TXT_UNIT / SORT_UNIT).
+const XAC_DEFS: FilterDef[] = [NGUOI_GUI, LK_A_DEF, LK_XAC_DEF, LK_C_DEF, MIEN_DEF, { ...KHOANG_DEF, label: "Cập nhật" }];
+const XAC_KEYS = [...XAC_DEFS.map((d) => d.key), "f_id", "f_case", "f_mota"];
+// Cot khong hien tren bang nhung van loc duoc (chip + nut cot o che do nhom).
+const XAC_EXTRA_COLS: FilterCol[] = [
+  { key: "lk_a", label: "LK KTV chọn (A)", filter: { type: "multi", def: LK_A_DEF } },
+  { key: "mota", label: "Mô tả lỗi", filter: { type: "text", key: "f_mota", placeholder: "Từ trong mô tả…" } },
 ];
 
-// ---- Bang xac (dung chung: cho gom / trong thung / chon de them) ----
-function XacTable({ rows, selected, onToggle, onOpen, extra }: { rows: XacRow[]; selected?: Set<string>; onToggle?: (id: string) => void; onOpen?: (r: XacRow) => void; extra?: Column<XacRow> }) {
+function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void): Column<XacRow>[] {
   const { nameOf } = useLkName();
-  const cols: Column<XacRow>[] = [
+  return [
     {
       key: "id",
       header: "ID đơn",
+      filter: { type: "text", key: "f_id", placeholder: "Mã đơn…" },
+      sortKey: "id",
       render: (r) => (
         <span className="inline-flex items-center gap-1.5">
           {selected && onToggle && <input type="checkbox" checked={selected.has(r.id)} onClick={(e) => e.stopPropagation()} onChange={() => onToggle(r.id)} />}
@@ -104,15 +113,113 @@ function XacTable({ rows, selected, onToggle, onOpen, extra }: { rows: XacRow[];
         </span>
       ),
     },
-    { key: "lk", header: "Linh kiện xác (B)", render: (r) => <span className="block max-w-[300px] truncate" title={nameOf(r.ma_lk_xac)}>{nameOf(r.ma_lk_xac)}</span> },
-    { key: "c", header: "Đổi mới (C)", render: (r) => (r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs">{r.ma_lk_thuc_te}</span> : <span className="text-[var(--ink-faint)]">=B</span>) },
-    { key: "ktv", header: "KTV gửi", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : "Khách lẻ") },
-    { key: "case", header: "Case · Khách", render: (r) => <span className="text-xs">{[r.case_id, r.khach_hang].filter(Boolean).join(" · ") || "—"}</span> },
-    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "cn", header: "Cập nhật", render: (r) => <span className="text-xs">{fmtDate(r.updated_at)}</span> },
+    { key: "lk", header: "Linh kiện xác (B)", filter: { type: "multi", def: LK_XAC_DEF }, sortKey: "lk", render: (r) => <span className="block max-w-[300px] truncate" title={nameOf(r.ma_lk_xac)}>{nameOf(r.ma_lk_xac)}</span> },
+    { key: "c", header: "Đổi mới (C)", filter: { type: "multi", def: LK_C_DEF }, sortKey: "c", render: (r) => (r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title={nameOf(r.ma_lk_thuc_te)}>{r.ma_lk_thuc_te}</span> : <span className="text-[var(--ink-faint)]">=B</span>) },
+    { key: "ktv", header: "KTV gửi", filter: { type: "multi", def: NGUOI_GUI }, sortKey: "ktv", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : "Khách lẻ") },
+    { key: "case", header: "Case · Khách", filter: { type: "text", key: "f_case", placeholder: "Mã case / tên khách…" }, sortKey: "case", render: (r) => <span className="text-xs">{[r.case_id, r.khach_hang].filter(Boolean).join(" · ") || "—"}</span> },
+    { key: "mien", header: "Miền", filter: { type: "multi", def: MIEN_DEF }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
+    { key: "cn", header: "Cập nhật", filter: { type: "date", key: "khoang" }, sortKey: "cn", render: (r) => <span className="text-xs">{fmtDate(r.updated_at)}</span> },
   ];
-  if (extra) cols.push(extra);
-  return <Table columns={cols} rows={rows} rowKey={(r) => r.id} onRowClick={onOpen} emptyText="Không có xác nào." />;
+}
+
+// ---- Bang xac don gian (chi tiet thung) ----
+function XacTable({ rows, selected, onToggle, onOpen, extra }: { rows: XacRow[]; selected?: Set<string>; onToggle?: (id: string) => void; onOpen?: (r: XacRow) => void; extra?: Column<XacRow> }) {
+  const cols = useXacCols(selected, onToggle);
+  return <Table columns={extra ? [...cols, extra] : cols} rows={rows} rowKey={(r) => r.id} onRowClick={onOpen} emptyText="Không có xác nào." />;
+}
+
+type SetSel = (fn: (s: Set<string>) => Set<string>) => void;
+
+// ---- Danh sach xac co 3 che do xem (Danh sach / Theo KTV / Theo linh kien) + loc kieu Excel ----
+// 16/11/2026, nguyen van: "Menu trả xác: cho tạo logic gom linh kiện, gom ktv giống bên Đơn BH, bổ sung thêm
+// các bộ lọc tương tự". Che do nhom lay toi da 500 xac / lan (nhom tren may), nhom linh kien theo B (xac).
+function XacBrowser({
+  base,
+  viewKey,
+  placeholder,
+  sel,
+  setSel,
+  onOpen,
+  extra,
+  reloadRef,
+}: {
+  base: string;
+  viewKey: string;
+  placeholder: string;
+  sel?: Set<string>;
+  setSel?: SetSel;
+  onOpen: (r: XacRow) => void;
+  extra?: Column<XacRow>;
+  reloadRef?: { current: (() => void) | null };
+}) {
+  const flt = useListFilters(base, XAC_KEYS);
+  const [mode, setMode] = useDonViewMode(viewKey);
+  const grouped = mode !== "list";
+  const { items, total, page, pageCount, setPage, reload, loading } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", grouped ? 500 : 50);
+  if (reloadRef) reloadRef.current = reload;
+  const toggleOne = setSel ? (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) : undefined;
+  const cols = useXacCols(sel, toggleOne);
+  useEffect(() => setSel?.(() => new Set()), [flt.query, page, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const allOn = items.length > 0 && items.every((r) => sel?.has(r.id));
+  const groupRows: GroupRow[] = useMemo(
+    () =>
+      items.map((r) => ({
+        id: r.id,
+        parentId: r.parent_id,
+        ktv: r.ktv,
+        lk: r.ma_lk_xac,
+        caseId: r.case_id,
+        slDat: 1,
+        moTa: [r.khach_hang, r.mo_ta_loi].filter(Boolean).join(" · ") || null,
+        status: r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title="Linh kiện đổi mới (C)">Đổi: {r.ma_lk_thuc_te}</span> : <span className="text-xs text-[var(--ink-faint)]">Đổi mới = B</span>,
+        sla: <span className="text-xs">{fmtDate(r.updated_at)}</span>,
+        actions: extra ? extra.render(r) : undefined,
+        selectable: !!sel,
+        badge: <MienBadge mien={r.mien} short />,
+        onClick: () => onOpen(r),
+      })),
+    [items, sel, extra], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const empty = flt.active ? "Không có xác nào khớp bộ lọc." : "Không có xác nào.";
+  return (
+    <div>
+      <ExcelToolbar
+        flt={flt}
+        cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...XAC_EXTRA_COLS]}
+        defs={XAC_DEFS}
+        placeholder={placeholder}
+        total={total}
+        unit="xác"
+        colButtons={grouped}
+        extra={<DonViewToggle value={mode} onChange={setMode} />}
+      />
+      {sel && setSel && (
+        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+          <Btn size="sm" variant="ghost" disabled={!items.length} onClick={() => setSel((s) => { const n = new Set(s); items.forEach((r) => (allOn ? n.delete(r.id) : n.add(r.id))); return n; })}>
+            {allOn ? "☐ Bỏ chọn tất cả đang hiện" : `☑ Chọn tất cả đang hiện (${items.length})`}
+          </Btn>
+          {grouped && total > items.length && <span className="text-xs text-[var(--amber-700)]">Đang nhóm {items.length}/{total} xác — lọc thêm để xem đủ.</span>}
+        </div>
+      )}
+      {loading && !items.length ? (
+        <Spinner />
+      ) : grouped ? (
+        <GroupedDonView
+          rows={groupRows}
+          mode={mode as "ktv" | "lk"}
+          selected={sel}
+          onToggle={setSel ? (ids, on) => setSel((s) => { const n = new Set(s); ids.forEach((id) => (on ? n.add(id) : n.delete(id))); return n; }) : undefined}
+          emptyText={empty}
+          xac
+        />
+      ) : (
+        <>
+          <Table flt={flt} columns={extra ? [...cols, extra] : cols} rows={items} rowKey={(r) => r.id} onRowClick={onOpen} emptyText={empty} />
+          <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+        </>
+      )}
+    </div>
+  );
 }
 
 // Tom tat theo linh kien xac (de nhap phieu EO / gui nha may).
@@ -131,8 +238,8 @@ function tomTat(rows: XacRow[], nameOf: (m: string | null) => string): { ma: str
 function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }) {
   const toast = useToast();
   const base = "/tra-xac/xac?nhom=cho_gom";
-  const flt = useListFilters(base, XAC_DEFS.map((d) => d.key));
-  const { items, total, page, pageCount, setPage, reload, loading } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", 50);
+  const reloadRef = useRef<(() => void) | null>(null);
+  const reload = () => reloadRef.current?.();
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [tao, setTao] = useState(false);
@@ -140,24 +247,17 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
   const [ngoai, setNgoai] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [openThung, setOpenThung] = useState<string | null>(null);
-  useEffect(() => setSel(new Set()), [flt.query, page]);
-  const toggle = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const allOn = items.length > 0 && items.every((r) => sel.has(r.id));
   const done = () => { setSel(new Set()); reload(); onChanged(); };
   const isA = admin(user);
   return (
     <Card className="p-3">
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng ({total})</h3>
+        <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng</h3>
         <span className="text-xs text-[var(--ink-soft)]">Đơn Đổi mới có xử lý xác "Trả đối tác", chưa vào thùng trả xác nào.</span>
       </div>
-      <FilterBar f={flt} defs={XAC_DEFS} placeholder="Tìm mã đơn, case, linh kiện, KTV, khách…" />
-      {isA && (
-        <div className={`flex flex-wrap items-center gap-2 mb-2 rounded-lg px-2.5 py-1.5 ${sel.size ? "bg-[var(--brand-50)] border border-[var(--brand-200)]" : ""}`}>
-          <Btn size="sm" variant="ghost" disabled={!items.length} onClick={() => setSel(allOn ? new Set() : new Set(items.map((r) => r.id)))}>
-            {allOn ? "☐ Bỏ chọn trang này" : `☑ Chọn cả trang (${items.length})`}
-          </Btn>
-          {sel.size > 0 && (
+      {isA && sel.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 mb-2 rounded-lg px-2.5 py-1.5 bg-[var(--brand-50)] border border-[var(--brand-200)]">
+          {(
             <>
               <span className="text-sm font-semibold">Đã chọn {sel.size} xác</span>
               <span className="ml-auto flex flex-wrap gap-1.5">
@@ -169,8 +269,15 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
           )}
         </div>
       )}
-      {loading && !items.length ? <Spinner /> : <XacTable rows={items} selected={isA ? sel : undefined} onToggle={toggle} onOpen={(r) => setOpenUnit(r.id)} />}
-      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      <XacBrowser
+        base={base}
+        viewKey="xac_view_cho_gom"
+        placeholder="Tìm mã đơn, case, linh kiện, KTV, khách…"
+        sel={isA ? sel : undefined}
+        setSel={isA ? setSel : undefined}
+        onOpen={(r) => setOpenUnit(r.id)}
+        reloadRef={reloadRef}
+      />
       {tao && (
         <TaoThungModal
           ids={[...sel]}
@@ -313,8 +420,8 @@ function ThungList({ user, tt, traLai, title, empty, onChanged }: { user: AppUse
 function XacNgoai({ user, onChanged }: { user: AppUser; onChanged: () => void }) {
   const toast = useToast();
   const base = "/tra-xac/xac?nhom=ngoai";
-  const flt = useListFilters(base, XAC_DEFS.map((d) => d.key));
-  const { items, total, page, pageCount, setPage, reload, loading } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", 50);
+  const reloadRef = useRef<(() => void) | null>(null);
+  const reload = () => reloadRef.current?.();
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const duaLai = async (id: string) => {
     try {
@@ -328,17 +435,16 @@ function XacNgoai({ user, onChanged }: { user: AppUser; onChanged: () => void })
   };
   return (
     <Card className="p-3">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-1">Xác đã xử lý ngoài hệ thống ({total})</h3>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-1">Xác đã xử lý ngoài hệ thống</h3>
       <p className="text-xs text-[var(--ink-soft)] mb-2">Gồm xác của đơn tạo trước 01/11/2026 (thời AppSheet) và xác Admin đánh dấu đã trả ngoài.</p>
-      <FilterBar f={flt} defs={XAC_DEFS} placeholder="Tìm mã đơn, case, linh kiện, KTV…" />
-      {loading && !items.length ? <Spinner /> : (
-        <XacTable
-          rows={items}
-          onOpen={(r) => setOpenUnit(r.id)}
-          extra={admin(user) ? { key: "act", header: "", render: (r) => <Btn size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duaLai(r.id); }}>↺ Đưa lại chờ gom</Btn> } : undefined}
-        />
-      )}
-      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      <XacBrowser
+        base={base}
+        viewKey="xac_view_ngoai"
+        placeholder="Tìm mã đơn, case, linh kiện, KTV…"
+        onOpen={(r) => setOpenUnit(r.id)}
+        reloadRef={reloadRef}
+        extra={admin(user) ? { key: "act", header: "", render: (r) => <Btn size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duaLai(r.id); }}>↺ Đưa lại chờ gom</Btn> } : undefined}
+      />
       {openUnit && <UnitDetailModal unitId={openUnit} user={user} onClose={() => setOpenUnit(null)} onChanged={reload} />}
     </Card>
   );
@@ -502,12 +608,8 @@ function TraLaiModal({ onClose, onOk }: { onClose: () => void; onOk: (lyDo: stri
 function ThemXacModal({ thung, onClose, onDone }: { thung: ThungXac; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const base = `/tra-xac/xac?nhom=cho_gom${thung.mien ? `&mien_thung=${thung.mien}` : ""}`;
-  const flt = useListFilters(base, XAC_DEFS.map((d) => d.key));
-  const { items, total, page, pageCount, setPage, loading } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", 50);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const toggle = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const allOn = items.length > 0 && items.every((r) => sel.has(r.id));
   const submit = async () => {
     setBusy(true);
     try {
@@ -523,12 +625,14 @@ function ThemXacModal({ thung, onClose, onDone }: { thung: ThungXac; onClose: ()
   return (
     <Modal title={`Thêm xác vào ${thung.id}`} onClose={onClose} maxWidthClass="max-w-5xl" footerActions={<><Btn variant="ghost" onClick={onClose}>Huỷ</Btn><Btn variant="primary" disabled={busy || !sel.size} onClick={submit}>Thêm {sel.size} xác</Btn></>}>
       {thung.mien && <p className="text-xs text-[var(--ink-soft)] mb-1">Chỉ hiện xác cùng miền với thùng ({thung.mien}) hoặc chưa khai báo miền.</p>}
-      <FilterBar f={flt} defs={XAC_DEFS} placeholder="Tìm mã đơn, case, linh kiện, KTV…" />
-      <Btn size="sm" variant="ghost" className="mb-1" disabled={!items.length} onClick={() => setSel((s) => { const n = new Set(s); items.forEach((r) => (allOn ? n.delete(r.id) : n.add(r.id))); return n; })}>
-        {allOn ? "☐ Bỏ chọn trang này" : `☑ Chọn cả trang (${items.length})`}
-      </Btn>
-      {loading && !items.length ? <Spinner /> : <XacTable rows={items} selected={sel} onToggle={toggle} onOpen={(r) => toggle(r.id)} />}
-      <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
+      <XacBrowser
+        base={base}
+        viewKey="xac_view_them"
+        placeholder="Tìm mã đơn, case, linh kiện, KTV…"
+        sel={sel}
+        setSel={setSel}
+        onOpen={(r) => setSel((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
+      />
     </Modal>
   );
 }

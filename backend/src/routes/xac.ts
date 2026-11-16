@@ -6,7 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { parsePage } from "../lib/pagination";
-import { eqFilters, distinctOpts, timeFilter, joinF } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, joinF, textFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienAllowed } from "../lib/mien";
 import { XAC_CHO_GOM } from "../lib/xac";
@@ -30,7 +30,15 @@ const UNIT_COLS = `u.id, u.parent_id, u.so_thu_tu, u.trang_thai, u.xu_ly_xac, u.
   u.created_at, u.updated_at, p.ma_lk, p.case_id, p.mien, p.mo_ta_loi, g.nguoi_tao AS ktv, ${LK_XAC} AS ma_lk_xac,
   (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS khach_hang`;
 const UNIT_FROM = `FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id`;
-const LOC_UNIT = { nguoi_gui: "g.nguoi_tao", lk_b: LK_XAC, mien: "p.mien" };
+const LK_DOI = `COALESCE(u.ma_lk_thuc_te, ${LK_XAC})`; // C (doi moi), mac dinh = B
+// 16/11/2026: loc kieu Excel giong Don BH - LK A / B / C, KTV gui, mien + loc chu tren cot + sap xep.
+const LOC_UNIT = { nguoi_gui: "g.nguoi_tao", lk_a: "p.ma_lk", lk_b: LK_XAC, lk: LK_DOI, mien: "p.mien" };
+const TXT_UNIT = {
+  f_id: "u.id",
+  f_case: { expr: "p.case_id || ' ' || COALESCE((SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id),'')", normExpr: "p.tim_kiem" },
+  f_mota: { expr: "p.mo_ta_loi", normExpr: "p.tim_kiem" },
+};
+const SORT_UNIT: Record<string, string> = { id: "u.id", lk: LK_XAC, c: LK_DOI, ktv: "g.nguoi_tao", case: "p.case_id", mien: "p.mien", cn: "u.updated_at" };
 const UNIT_KW = ["u.id", "p.case_id", "p.ma_lk", "u.ma_lk_nhan", tenLkOf(LK_XAC), "g.nguoi_tao", tenOf("g.nguoi_tao"), "p.mo_ta_loi"];
 
 async function logThung(db: D1Database, id: string, tu: string | null, den: string | null, actor: string, ghi: string) {
@@ -60,14 +68,15 @@ xac.get("/xac", async (c) => {
   const base = `${UNIT_FROM} WHERE ${nhom === "ngoai" ? XAC_NGOAI : XAC_CHO_GOM}${ms.sql}`;
   if (c.req.query("loc_only")) return c.json({ loc: await distinctOpts(c.env.DB, LOC_UNIT, base, ms.binds) });
   const kw = kwClause(c.req.query("q"), UNIT_KW, ["p.tim_kiem"]);
-  const f = joinF(eqFilters(c, LOC_UNIT), timeFilter(c, "u.updated_at"));
+  const f = joinF(eqFilters(c, LOC_UNIT), timeFilter(c, "u.updated_at"), textFilters(c, TXT_UNIT));
+  const so = sortParam(c, SORT_UNIT);
   // Thung dang sua (de them xac): chi lay xac cung mien voi thung (mien NULL thi khong rang buoc).
   const mienThung = c.req.query("mien_thung");
   const mt = mienThung ? { sql: " AND (p.mien = ? OR p.mien IS NULL)", binds: [mienThung] } : { sql: "", binds: [] as string[] };
   const where = `${base}${kw.sql}${f.sql}${mt.sql}`;
   const binds = [...ms.binds, ...kw.binds, ...f.binds, ...mt.binds];
   const [rows, tot] = await Promise.all([
-    c.env.DB.prepare(`SELECT ${UNIT_COLS} ${where} ORDER BY u.updated_at, u.id LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT ${UNIT_COLS} ${where} ORDER BY ${so ? `${so.expr} ${so.dir}, ` : ""}u.updated_at, u.id LIMIT ? OFFSET ?`).bind(...binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) AS n ${where}`).bind(...binds).first<{ n: number }>(),
   ]);
   return c.json({ xac: rows.results, total: tot?.n ?? 0 });

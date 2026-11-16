@@ -165,12 +165,15 @@ export function GroupedDonView({
   selected,
   onToggle,
   emptyText,
+  xac,
 }: {
   rows: GroupRow[];
   mode: "ktv" | "lk";
   selected?: Set<string>;
   onToggle?: (ids: string[], checked: boolean) => void;
   emptyText?: string;
+  // 16/11/2026: man Tra xac - cot rieng (Doi moi C · Case · Khach / mo ta · Cap nhat), khong co SL / serial / ngay.
+  xac?: boolean;
 }) {
   const isMobile = useIsMobile();
   const { nameOf } = useLkName();
@@ -196,7 +199,7 @@ export function GroupedDonView({
     const sl = sumDat(rs);
     return (
       <span className="font-normal text-[var(--ink-soft)]">
-        ({rs.length}){sl > rs.length ? <span className="text-xs"> · SL {sl}</span> : null}
+        ({rs.length}){!xac && sl > rs.length ? <span className="text-xs"> · SL {sl}</span> : null}
       </span>
     );
   };
@@ -206,7 +209,7 @@ export function GroupedDonView({
   const toolbar = (
     <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-[var(--ink-soft)]">
       <span>
-        {total} nhóm {mode === "ktv" ? "KTV" : "linh kiện"} · {rows.length} đơn
+        {total} nhóm {mode === "ktv" ? "KTV" : "linh kiện"} · {rows.length} {xac ? "xác" : "đơn"}
       </span>
       <button type="button" className="focus-ring font-semibold text-[var(--link)]" onClick={() => setClosed(allClosed ? new Set() : new Set(pageItems.map((g) => g.key)))}>
         {allClosed ? "▾ Mở tất cả" : "▸ Thu gọn tất cả"}
@@ -247,6 +250,12 @@ export function GroupedDonView({
                           {r.badge}
                           <span className="ml-auto">{r.status}</span>
                         </div>
+                        {xac ? (
+                          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-[var(--ink-soft)]">
+                            <span>Case: <b className="font-mono text-[var(--ink-body)]">{r.caseId || "—"}</b></span>
+                            <span>Cập nhật: {r.sla}</span>
+                          </div>
+                        ) : (
                         <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-[var(--ink-soft)]">
                           <span>Case: <b className="font-mono text-[var(--ink-body)]">{r.caseId || "—"}</b></span>
                           <span>SL đặt / duyệt: <b className="text-[var(--ink-body)]"><SlCell r={r} kind="dat" /> / <SlCell r={r} kind="duyet" /></b></span>
@@ -255,6 +264,7 @@ export function GroupedDonView({
                           <span>Ngày SX: <b className="text-[var(--ink-body)]">{r.ngaySx ? fmtDateOnly(r.ngaySx) : "—"}</b></span>
                           {r.sla && <span>SLA: {r.sla}</span>}
                         </div>
+                        )}
                         {r.moTa && <p className="mt-1 truncate text-xs text-[var(--ink-body)]">{r.moTa}</p>}
                         {r.actions && (
                           <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -273,7 +283,7 @@ export function GroupedDonView({
     );
   }
 
-  const nCols = (hasSelect ? 1 : 0) + 11 + (rows.some((r) => r.actions) ? 1 : 0);
+  const nCols = (hasSelect ? 1 : 0) + (xac ? 6 : 11) + (rows.some((r) => r.actions) ? 1 : 0);
   const hasActions = rows.some((r) => r.actions);
   return (
     <div>
@@ -285,6 +295,15 @@ export function GroupedDonView({
               {hasSelect && <th className="w-8" />}
               <th>ID đơn</th>
               {hasActions && <th>Thao tác</th>}
+              {xac ? (
+                <>
+                  <th>Đổi mới (C)</th>
+                  <th>Mã case</th>
+                  <th>Khách · Mô tả lỗi</th>
+                  <th>Cập nhật</th>
+                </>
+              ) : (
+                <>
               <th>Trạng thái</th>
               <th>Mã case</th>
               <th className="text-right">SL đặt</th>
@@ -294,6 +313,8 @@ export function GroupedDonView({
               <th>Ngày SX</th>
               <th>Mô tả lỗi</th>
               <th>SLA</th>
+                </>
+              )}
               <th className="w-full" />
             </tr>
           </thead>
@@ -339,6 +360,15 @@ export function GroupedDonView({
                               <div className="flex gap-1">{r.actions}</div>
                             </td>
                           )}
+                          {xac ? (
+                            <>
+                              <td><Dash v={r.status} /></td>
+                              <td className="font-mono text-xs"><Dash v={r.caseId} /></td>
+                              <td className="max-w-[320px] truncate" title={r.moTa || undefined}><Dash v={r.moTa} /></td>
+                              <td><Dash v={r.sla} /></td>
+                            </>
+                          ) : (
+                          <>
                           <td>
                             <Dash v={r.status} />
                           </td>
@@ -366,6 +396,8 @@ export function GroupedDonView({
                           <td>
                             <Dash v={r.sla} />
                           </td>
+                          </>
+                          )}
                           <td />
                         </tr>
                       ))}
