@@ -7153,3 +7153,5 @@ Chốt qua AskUserQuestion: kênh báo **"Push + chuông trong app"**; báo cáo
 
 
 **Deploy (16/11/2026):** không có migration mới, `npm run deploy` (Version ID `d1e2b520`); route `/api/partner/sync/don-vi-sua-chua` trả 401 khi thiếu khoá (route có thật). Lưu ý: Worker `suachua` nằm trong tài khoản Cloudflare smarttrade.vp (`b1f870…`, cùng tài khoản linh-kien-app để Service Binding chạy) — tệp nhớ `node_modules/.cache/wrangler/wrangler-account.json` từng trỏ nhầm tài khoản khác (`c05f…`) làm deploy báo Authentication error 10000; đã sửa về `b1f870…`.
+
+**v1.132 (16/11/2026):** `/api/partner/sync/don-vi-sua-chua` trả `san_pham_bh` / `ten_khach_hang` lấy thêm từ bảng chụp case (`case_lookup_snapshot.data` → `san_pham_bao_hanh` / `khach_hang`, có `json_valid` chặn JSON hỏng) và danh bạ `khach_hang_bh` (`khach_hang_id`) — 2 cột trên đơn cha chỉ điền với khách lẻ nhập tay nên v1.131 gần như luôn NULL. Thử trên D1 thật: 89 đơn vị đang sửa của 2 NV → 87 có sản phẩm, 89 có tên khách.

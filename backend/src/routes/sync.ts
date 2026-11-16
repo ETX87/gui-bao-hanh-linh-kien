@@ -174,15 +174,19 @@ sync.post("/thieu-hang", async (c) => {
 //  - ma=<id>: tra dung 1 don vi (hoac don cha) - linh-kien-app xac minh lien ket luc tao don.
 //  - q (>= 2 ky tu): tim theo ma don vi / ma don cha / ma case o MOI trang thai (TN / GS dat ho, don da qua buoc sua), toi da 20.
 //  - mac dinh: don vi NV (email) dang sua (trang_thai 'cho_chan_doan'), moi cap nhat truoc, toi da 100.
-// CHI DOC, khong ghi gi.
+// CHI DOC, khong ghi gi. v1.132: san pham / ten khach cua don co case lay tu bang chung case (case_lookup_snapshot), khach le
+// tu danh ba khach_hang_bh - 2 cot tren don cha chi dien voi don khach le nhap tay nen truoc day hau het tra NULL.
 const DON_VI_COT = `u.id, u.parent_id, p.case_id, COALESCE(u.ma_lk_thuc_te, p.ma_lk) AS ma_lk,
   (SELECT l.ten_lk FROM linh_kien_bh l WHERE l.ma_lk = COALESCE(u.ma_lk_thuc_te, p.ma_lk)) AS ten_lk,
-  p.san_pham_bh, p.ten_khach_hang, u.trang_thai, u.nguoi_sua_chua`;
+  COALESCE(NULLIF(TRIM(p.san_pham_bh), ''), CASE WHEN json_valid(s.data) THEN json_extract(s.data, '$.san_pham_bao_hanh') END) AS san_pham_bh,
+  COALESCE(NULLIF(TRIM(p.ten_khach_hang), ''), (SELECT kh.ten FROM khach_hang_bh kh WHERE kh.id = p.khach_hang_id),
+    CASE WHEN json_valid(s.data) THEN json_extract(s.data, '$.khach_hang') END) AS ten_khach_hang,
+  u.trang_thai, u.nguoi_sua_chua`;
 sync.get("/don-vi-sua-chua", async (c) => {
   const email = (c.req.query("email") ?? "").trim().toLowerCase();
   const q = (c.req.query("q") ?? "").trim().toUpperCase();
   const ma = (c.req.query("ma") ?? "").trim().toUpperCase();
-  const tu = "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id";
+  const tu = "FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN case_lookup_snapshot s ON s.case_id = p.case_id";
   if (ma) {
     const r =
       (await c.env.DB.prepare(`SELECT ${DON_VI_COT} ${tu} WHERE u.id = ?`).bind(ma).first()) ??
