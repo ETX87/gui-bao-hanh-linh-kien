@@ -24,6 +24,8 @@ export interface FilterDef {
   static?: { value: string; label: string }[]; // lua chon co dinh (khong lay tu backend)
   noneLabel?: string; // nhan cho gia tri rong (mac dinh "(Chưa có)")
   fmt?: (v: string) => string; // nhan tuy bien (uu tien hon kind)
+  // 16/11/2026: o loc ngay dang "tu ngay - den ngay" (gia tri "tu:YYYY-MM-DD:YYYY-MM-DD", backend timeFilter(param=key)).
+  range?: boolean;
 }
 
 // 31/10/2026 ("bổ sung thêm các công cụ filter theo các dạng trạng thái, cảnh báo, thời gian, linh kiện A, B,
@@ -54,8 +56,22 @@ export const KHOANG_DEF: FilterDef = {
 
 // 01/11/2026 ("cho chọn khoảng thời gian filter"): khoang tu chon ma hoa "tu:<tu ngay>:<den ngay>" trong chinh
 // gia tri o loc (backend lib/filters.ts timeFilter). Chon "Chọn khoảng ngày…" -> hien 2 o ngay.
-export function KhoangSelect({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+export function KhoangSelect({ label, value, onChange, rangeOnly }: { label: string; value: string; onChange: (v: string) => void; rangeOnly?: boolean }) {
   const custom = value.startsWith("tu:");
+  if (rangeOnly) {
+    const [, t1 = "", d1 = ""] = custom ? value.split(":") : [];
+    const set = (a: string, b: string) => onChange(a || b ? `tu:${a}:${b}` : "");
+    return (
+      <div className="min-w-0">
+        <span className="block text-[11px] font-semibold text-[var(--ink-soft)] mb-0.5">{label}</span>
+        <div className="flex items-center gap-1">
+          <input type="date" aria-label={`${label} từ ngày`} value={t1} max={d1 || undefined} onChange={(e) => set(e.target.value, d1)} className="min-w-0 flex-1 rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-1 text-xs" />
+          <span className="text-xs text-[var(--ink-soft)]">→</span>
+          <input type="date" aria-label={`${label} đến ngày`} value={d1} min={t1 || undefined} onChange={(e) => set(t1, e.target.value)} className="min-w-0 flex-1 rounded-md border border-[var(--field-border)] bg-[var(--field-bg)] px-1.5 py-1 text-xs" />
+        </div>
+      </div>
+    );
+  }
   const [, tu = "", den = ""] = custom ? value.split(":") : [];
   const sel = custom ? "tu::" : value;
   const opts = (KHOANG_DEF.static || []).map((o) => (o.value === "tu::" && custom && (tu || den) ? { ...o, label: `📅 ${tu ? fmtNgay(tu) : "…"} → ${den ? fmtNgay(den) : "…"}` } : o));
@@ -256,8 +272,8 @@ function FilterBarView({ f, defs: visible, optsOf, placeholder, extra, collapsib
       {visible.length > 0 && (!collapsible || open) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5 mt-1.5">
           {visible.map((d) => (
-            d.key === "khoang" ? (
-              <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} />
+            d.key === "khoang" || d.range ? (
+              <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} rangeOnly={d.range} />
             ) : (
               <FilterSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
             )
@@ -272,13 +288,13 @@ function FilterBarView({ f, defs: visible, optsOf, placeholder, extra, collapsib
 // trong ExcelToolbar (an mac dinh, mo bang nut "⚙ Bộ lọc nhanh") - cung trang thai loc voi bo loc tieu de cot.
 export function QuickFilterGrid({ f, defs }: { f: ListFilters; defs: FilterDef[] }) {
   const optsOf = useOptsOf(f);
-  const visible = defs.filter((d) => d.static || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
+  const visible = defs.filter((d) => d.static || d.range || (f.loc[d.key] || []).length > 0 || f.values[d.key]);
   if (!visible.length) return <p className="text-xs text-[var(--ink-faint)]">Không có bộ lọc nào.</p>;
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-1.5">
       {visible.map((d) =>
-        d.key === "khoang" ? (
-          <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} />
+        d.key === "khoang" || d.range ? (
+          <KhoangSelect key={d.key} label={d.label} value={f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} rangeOnly={d.range} />
         ) : (
           <FilterSelect key={d.key} label={d.label} value={(f.values[d.key] || "").includes(",") ? "" : f.values[d.key] || ""} onChange={(v) => f.set(d.key, v)} options={optsOf(d)} />
         ),

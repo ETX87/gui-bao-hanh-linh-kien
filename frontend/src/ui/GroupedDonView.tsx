@@ -14,12 +14,12 @@ import { fmtDateOnly } from "../lib/format";
 // Mỗi dòng đơn có thêm SL đặt (KTV khai), SL duyệt (Admin xác nhận thực nhận), serial, ngày mua, ngày sản
 // xuất (lấy từ bằng chứng case dvbh). Linh kiện nhóm theo B (thực tế gửi về, mặc định = A KTV chọn).
 
-export type DonViewMode = "list" | "ktv" | "lk";
+export type DonViewMode = "list" | "ktv" | "lk" | "sc";
 
 export function useDonViewMode(storageKey: string): [DonViewMode, (m: DonViewMode) => void] {
   const [mode, setMode] = useState<DonViewMode>(() => {
     const v = typeof localStorage !== "undefined" ? localStorage.getItem(storageKey) : null;
-    return v === "ktv" || v === "lk" ? v : "list";
+    return v === "ktv" || v === "lk" || v === "sc" ? v : "list";
   });
   const set = (m: DonViewMode) => {
     setMode(m);
@@ -36,12 +36,14 @@ const MODES: { key: DonViewMode; label: string; short: string }[] = [
   { key: "list", label: "☰ Danh sách", short: "☰ DS" },
   { key: "ktv", label: "👷 Theo KTV", short: "👷 KTV" },
   { key: "lk", label: "🔩 Theo linh kiện", short: "🔩 LK" },
+  { key: "sc", label: "📋 Theo mã SC", short: "📋 SC" },
 ];
 
-export function DonViewToggle({ value, onChange }: { value: DonViewMode; onChange: (m: DonViewMode) => void }) {
+// modes: che do duoc hien (mac dinh 3 che do cu; man Tra xac them "sc" = nhom theo ma case).
+export function DonViewToggle({ value, onChange, modes = ["list", "ktv", "lk"] }: { value: DonViewMode; onChange: (m: DonViewMode) => void; modes?: DonViewMode[] }) {
   return (
     <div className="inline-flex rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-0.5" role="tablist" aria-label="Chế độ xem">
-      {MODES.map((m) => (
+      {MODES.filter((m) => modes.includes(m.key)).map((m) => (
         <button
           key={m.key}
           type="button"
@@ -88,10 +90,11 @@ interface Group {
 
 const ktvKey = (r: GroupRow) => r.ktv || KHACH_LE_KEY;
 const lkKey = (r: GroupRow) => r.lk || "";
+const scKey = (r: GroupRow) => r.caseId || "";
 
-function buildGroups(rows: GroupRow[], mode: "ktv" | "lk"): Group[] {
-  const k1 = mode === "ktv" ? ktvKey : lkKey;
-  const k2 = mode === "ktv" ? lkKey : ktvKey;
+function buildGroups(rows: GroupRow[], mode: "ktv" | "lk" | "sc"): Group[] {
+  const k1 = mode === "ktv" ? ktvKey : mode === "sc" ? scKey : lkKey;
+  const k2 = mode === "ktv" || mode === "sc" ? lkKey : ktvKey;
   const map = new Map<string, Map<string, GroupRow[]>>();
   for (const r of rows) {
     const a = k1(r);
@@ -168,7 +171,7 @@ export function GroupedDonView({
   xac,
 }: {
   rows: GroupRow[];
-  mode: "ktv" | "lk";
+  mode: "ktv" | "lk" | "sc";
   selected?: Set<string>;
   onToggle?: (ids: string[], checked: boolean) => void;
   emptyText?: string;
@@ -193,13 +196,22 @@ export function GroupedDonView({
 
   const ktvLabel = (k: string) => (k === KHACH_LE_KEY ? <span className="text-[var(--violet-700)]">Khách lẻ</span> : <UserName email={k} />);
   const lkLabelOf = (k: string) => (k ? nameOf(k) : "Cả sản phẩm / chưa rõ linh kiện");
-  const l1Label = (k: string) => (mode === "ktv" ? <>👷 {ktvLabel(k)}</> : <>🔩 {lkLabelOf(k)}</>);
-  const l2Label = (k: string) => (mode === "ktv" ? <>🔩 {lkLabelOf(k)}</> : <>👷 {ktvLabel(k)}</>);
+  const scLabel = (k: string) => {
+    const r0 = rows.find((r) => scKey(r) === k);
+    return (
+      <>
+        📋 <span className="font-mono">{k || "Không có mã SC"}</span>
+        {r0 && <span className="font-normal text-xs text-[var(--ink-soft)]"> · {r0.ktv && r0.ktv !== KHACH_LE_KEY ? <UserName email={r0.ktv} /> : "Khách lẻ"}</span>}
+      </>
+    );
+  };
+  const l1Label = (k: string) => (mode === "ktv" ? <>👷 {ktvLabel(k)}</> : mode === "sc" ? scLabel(k) : <>🔩 {lkLabelOf(k)}</>);
+  const l2Label = (k: string) => (mode === "ktv" || mode === "sc" ? <>🔩 {lkLabelOf(k)}</> : <>👷 {ktvLabel(k)}</>);
   const countTxt = (rs: GroupRow[]) => {
     const sl = sumDat(rs);
     return (
       <span className="font-normal text-[var(--ink-soft)]">
-        ({rs.length}){!xac && sl > rs.length ? <span className="text-xs"> · SL {sl}</span> : null}
+        ({rs.length}){sl > rs.length ? <span className="text-xs"> · SL {sl}</span> : null}
       </span>
     );
   };
@@ -209,7 +221,7 @@ export function GroupedDonView({
   const toolbar = (
     <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-[var(--ink-soft)]">
       <span>
-        {total} nhóm {mode === "ktv" ? "KTV" : "linh kiện"} · {rows.length} {xac ? "xác" : "đơn"}
+        {total} nhóm {mode === "ktv" ? "KTV" : mode === "sc" ? "mã SC" : "linh kiện"} · {rows.length} {xac ? "xác" : "đơn"}
       </span>
       <button type="button" className="focus-ring font-semibold text-[var(--link)]" onClick={() => setClosed(allClosed ? new Set() : new Set(pageItems.map((g) => g.key)))}>
         {allClosed ? "▾ Mở tất cả" : "▸ Thu gọn tất cả"}
@@ -283,7 +295,7 @@ export function GroupedDonView({
     );
   }
 
-  const nCols = (hasSelect ? 1 : 0) + (xac ? 6 : 11) + (rows.some((r) => r.actions) ? 1 : 0);
+  const nCols = (hasSelect ? 1 : 0) + (xac ? 7 : 11) + (rows.some((r) => r.actions) ? 1 : 0);
   const hasActions = rows.some((r) => r.actions);
   return (
     <div>
@@ -298,6 +310,7 @@ export function GroupedDonView({
               {xac ? (
                 <>
                   <th>Đổi mới (C)</th>
+                  <th className="text-right">SL</th>
                   <th>Mã case</th>
                   <th>Khách · Mô tả lỗi</th>
                   <th>Cập nhật</th>
@@ -363,6 +376,7 @@ export function GroupedDonView({
                           {xac ? (
                             <>
                               <td><Dash v={r.status} /></td>
+                              <td className="text-right">{r.slDat ?? 1}</td>
                               <td className="font-mono text-xs"><Dash v={r.caseId} /></td>
                               <td className="max-w-[320px] truncate" title={r.moTa || undefined}><Dash v={r.moTa} /></td>
                               <td><Dash v={r.sla} /></td>

@@ -655,7 +655,7 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                   {u.huong_xu_ly === "doi_moi" && u.xu_ly_xac === "tra_doi_tac" && (
                     <Kv
                       k="Trả xác"
-                      v={u.thung_xac_id ? `${u.xac_tt === "da_tra" ? "Đã trả đối tác" : "Trong thùng"} ${u.thung_xac_id}` : u.xac_tt === "ngoai" ? "Đã xử lý ngoài hệ thống" : "Chờ gom thùng trả xác"}
+                      v={u.thung_xac_id ? `${u.xac_tt === "da_tra" ? "Đã trả đối tác" : "Trong thùng"} ${u.thung_xac_id}` : ({ ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác" } as Record<string, string>)[u.xac_tt || ""] || "Chờ gom thùng trả xác"}
                     />
                   )}
                   {u.thong_tin_mail_pd && <Kv k="Mail phê duyệt" v={u.thong_tin_mail_pd} />}

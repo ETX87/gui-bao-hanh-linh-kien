@@ -1,6 +1,6 @@
 import type { AppUser } from "../types";
 import { mienScope } from "./mien";
-import { XAC_CHO_GOM } from "./xac";
+import { XAC_CHO_GOM, XAC_DX_CHO_GOM } from "./xac";
 
 // GET /api/workload - dem "viec can lam" cho tung nhom vai tro trong 1 request duy nhat.
 //
@@ -192,7 +192,9 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       }),
       // 13/11/2026: tra xac linh kien - xac cho gom thung, thung nhap, thung KT tra lai.
       one(
-        `SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_CHO_GOM}${mp.sql}`,
+        `SELECT (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_CHO_GOM}${mp.sql})
+          + (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_DX_CHO_GOM}${mp.sql}) as cnt`,
+        ...mp.binds,
         ...mp.binds,
       ).then((r) => {
         counts.admin_xac_cho_gom = r?.cnt ?? 0;

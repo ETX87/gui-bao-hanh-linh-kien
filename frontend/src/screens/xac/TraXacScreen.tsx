@@ -25,7 +25,14 @@ import type { AppUser } from "../../lib/types";
 // luồng trả xác. (có đủ các bước thêm, bớt linh kiện xác". Backend: routes/xac.ts (/api/tra-xac).
 
 export interface XacRow {
-  id: string;
+  id: string; // ma don vi (xac Doi moi) hoac ma de xuat DX-... (xac sua chua)
+  loai: "doi_moi" | "sua_chua";
+  unit_id: string; // don vi bao hanh chua xac (mo UI chi tiet)
+  so_luong: number;
+  xac_xl_boi: string | null;
+  xac_xl_luc: string | null;
+  xac_xl_ghi_chu: string | null;
+  ngay_xl: string | null;
   parent_id: string;
   trang_thai: string;
   xac_tt: string | null;
@@ -90,17 +97,25 @@ const MIEN_DEF: FilterDef = { key: "mien", label: "Miền", labels: { MB: "Miề
 const LK_XAC_DEF: FilterDef = { ...LK_B_DEF, label: "LK xác (B)" };
 // 16/11/2026: loc giong Don BH - LK A (KTV chon) / B (xac thuc te gui ve) / C (doi moi), KTV gui, mien, thoi gian
 // + loc chu tren cot ID / case / mo ta loi + sap xep (backend routes/xac.ts TXT_UNIT / SORT_UNIT).
-const XAC_DEFS: FilterDef[] = [NGUOI_GUI, LK_A_DEF, LK_XAC_DEF, LK_C_DEF, MIEN_DEF, { ...KHOANG_DEF, label: "Cập nhật" }];
+export const XAC_KQ_LABEL: Record<string, string> = { ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác" };
+const LOAI_DEF: FilterDef = { key: "loai", label: "Loại xác", kind: "map", labels: { doi_moi: "Đổi mới (KTV gửi về)", sua_chua: "Sau sửa chữa (LK cấp)" } };
+const KQ_DEF: FilterDef = { key: "kq", label: "Kết quả", kind: "map", labels: XAC_KQ_LABEL };
+const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" };
+// 16/11/2026 ("Bộ lọc nhanh thêm lọc theo từ ngày đến ngày xử lý"): ngay xu ly = luc danh dau ket qua (tieu huy / that lac...)
+// hoac luc xac phat sinh (Admin chot doi moi / Kho xuat linh kien sua chua) - backend x.ngay_xl, tham so ?xl=tu:..:..
+const XL_DEF: FilterDef = { key: "xl", label: "Ngày xử lý (từ → đến)", range: true };
+const XAC_DEFS: FilterDef[] = [XL_DEF, LOAI_DEF, KQ_DEF, NGUOI_GUI, NV_DEF, LK_A_DEF, LK_XAC_DEF, LK_C_DEF, MIEN_DEF, { ...KHOANG_DEF, label: "Cập nhật" }];
 const XAC_KEYS = [...XAC_DEFS.map((d) => d.key), "f_id", "f_case", "f_mota"];
 // Cot khong hien tren bang nhung van loc duoc (chip + nut cot o che do nhom).
 const XAC_EXTRA_COLS: FilterCol[] = [
   { key: "lk_a", label: "LK KTV chọn (A)", filter: { type: "multi", def: LK_A_DEF } },
+  { key: "nv", label: "NV sửa chữa", filter: { type: "multi", def: NV_DEF } },
   { key: "mota", label: "Mô tả lỗi", filter: { type: "text", key: "f_mota", placeholder: "Từ trong mô tả…" } },
 ];
 
-function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void): Column<XacRow>[] {
+function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void, ngoai?: boolean): Column<XacRow>[] {
   const { nameOf } = useLkName();
-  return [
+  const cols: Column<XacRow>[] = [
     {
       key: "id",
       header: "ID đơn",
@@ -110,16 +125,36 @@ function useXacCols(selected?: Set<string>, onToggle?: (id: string) => void): Co
         <span className="inline-flex items-center gap-1.5">
           {selected && onToggle && <input type="checkbox" checked={selected.has(r.id)} onClick={(e) => e.stopPropagation()} onChange={() => onToggle(r.id)} />}
           <span className="font-mono font-semibold text-[var(--link)]">{r.id}</span>
+          {r.loai === "sua_chua" && <span className="font-mono text-[11px] text-[var(--ink-soft)]" title="Đơn bảo hành chứa xác">{r.unit_id}</span>}
         </span>
       ),
     },
+    { key: "loai", header: "Loại", filter: { type: "multi", def: LOAI_DEF }, sortKey: "loai", render: (r) => <LoaiBadge r={r} /> },
     { key: "lk", header: "Linh kiện xác (B)", filter: { type: "multi", def: LK_XAC_DEF }, sortKey: "lk", render: (r) => <span className="block max-w-[300px] truncate" title={nameOf(r.ma_lk_xac)}>{nameOf(r.ma_lk_xac)}</span> },
     { key: "c", header: "Đổi mới (C)", filter: { type: "multi", def: LK_C_DEF }, sortKey: "c", render: (r) => (r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title={nameOf(r.ma_lk_thuc_te)}>{r.ma_lk_thuc_te}</span> : <span className="text-[var(--ink-faint)]">=B</span>) },
+    { key: "sl", header: "SL", sortKey: "sl", render: (r) => <span className="font-semibold">{r.so_luong ?? 1}</span> },
     { key: "ktv", header: "KTV gửi", filter: { type: "multi", def: NGUOI_GUI }, sortKey: "ktv", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : "Khách lẻ") },
     { key: "case", header: "Case · Khách", filter: { type: "text", key: "f_case", placeholder: "Mã case / tên khách…" }, sortKey: "case", render: (r) => <span className="text-xs">{[r.case_id, r.khach_hang].filter(Boolean).join(" · ") || "—"}</span> },
     { key: "mien", header: "Miền", filter: { type: "multi", def: MIEN_DEF }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "cn", header: "Cập nhật", filter: { type: "date", key: "khoang" }, sortKey: "cn", render: (r) => <span className="text-xs">{fmtDate(r.updated_at)}</span> },
+    { key: "xl", header: "Ngày xử lý", filter: { type: "date", key: "xl" }, sortKey: "xl", render: (r) => <span className="text-xs">{r.ngay_xl ? fmtDate(r.ngay_xl) : "—"}</span> },
   ];
+  if (ngoai)
+    cols.splice(2, 0, {
+      key: "kq",
+      header: "Kết quả",
+      filter: { type: "multi", def: KQ_DEF },
+      sortKey: "kq",
+      render: (r) => (
+        <span title={[r.xac_xl_boi && displayName(r.xac_xl_boi), r.xac_xl_ghi_chu].filter(Boolean).join(" · ") || undefined}>
+          <Badge tone={r.xac_tt === "that_lac" ? "red" : r.xac_tt === "tieu_huy" ? "orange" : "gray"}>{XAC_KQ_LABEL[r.xac_tt || ""] || r.xac_tt}</Badge>
+        </span>
+      ),
+    });
+  return cols;
+}
+
+function LoaiBadge({ r }: { r: XacRow }) {
+  return r.loai === "sua_chua" ? <Badge tone="violet">Sau sửa chữa</Badge> : <Badge tone="blue">Đổi mới</Badge>;
 }
 
 // ---- Bang xac don gian (chi tiet thung) ----
@@ -142,7 +177,9 @@ function XacBrowser({
   onOpen,
   extra,
   reloadRef,
+  ngoai,
 }: {
+  ngoai?: boolean;
   base: string;
   viewKey: string;
   placeholder: string;
@@ -155,27 +192,31 @@ function XacBrowser({
   const flt = useListFilters(base, XAC_KEYS);
   const [mode, setMode] = useDonViewMode(viewKey);
   const grouped = mode !== "list";
-  const { items, total, page, pageCount, setPage, reload, loading } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", grouped ? 500 : 50);
+  const { items, total, page, pageCount, setPage, reload, loading, raw } = usePagedApi<XacRow>(withQuery(base, flt.query), "xac", grouped ? 500 : 50);
+  const tongSl = Number(raw.tong_sl ?? 0);
   if (reloadRef) reloadRef.current = reload;
   const toggleOne = setSel ? (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) : undefined;
-  const cols = useXacCols(sel, toggleOne);
+  const cols = useXacCols(sel, toggleOne, ngoai);
   useEffect(() => setSel?.(() => new Set()), [flt.query, page, mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const allOn = items.length > 0 && items.every((r) => sel?.has(r.id));
   const groupRows: GroupRow[] = useMemo(
     () =>
       items.map((r) => ({
         id: r.id,
-        parentId: r.parent_id,
         ktv: r.ktv,
         lk: r.ma_lk_xac,
         caseId: r.case_id,
-        slDat: 1,
+        slDat: r.so_luong ?? 1,
         moTa: [r.khach_hang, r.mo_ta_loi].filter(Boolean).join(" · ") || null,
-        status: r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title="Linh kiện đổi mới (C)">Đổi: {r.ma_lk_thuc_te}</span> : <span className="text-xs text-[var(--ink-faint)]">Đổi mới = B</span>,
-        sla: <span className="text-xs">{fmtDate(r.updated_at)}</span>,
+        status: r.loai === "sua_chua" ? <span className="text-xs text-[var(--ink-soft)]">Sửa chữa · {r.unit_id}</span> : r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title="Linh kiện đổi mới (C)">Đổi: {r.ma_lk_thuc_te}</span> : <span className="text-xs text-[var(--ink-faint)]">Đổi mới = B</span>,
+        sla: <span className="text-xs">{r.ngay_xl ? fmtDate(r.ngay_xl) : "—"}</span>,
         actions: extra ? extra.render(r) : undefined,
         selectable: !!sel,
-        badge: <MienBadge mien={r.mien} short />,
+        badge: (
+          <>
+            <LoaiBadge r={r} /> {ngoai && r.xac_tt ? <Badge tone={r.xac_tt === "that_lac" ? "red" : r.xac_tt === "tieu_huy" ? "orange" : "gray"}>{XAC_KQ_LABEL[r.xac_tt] || r.xac_tt}</Badge> : null} <MienBadge mien={r.mien} short />
+          </>
+        ),
         onClick: () => onOpen(r),
       })),
     [items, sel, extra], // eslint-disable-line react-hooks/exhaustive-deps
@@ -186,12 +227,13 @@ function XacBrowser({
       <ExcelToolbar
         flt={flt}
         cols={[...cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey })), ...XAC_EXTRA_COLS]}
-        defs={XAC_DEFS}
+        defs={ngoai ? XAC_DEFS : XAC_DEFS.filter((d) => d.key !== "kq")}
         placeholder={placeholder}
         total={total}
-        unit="xác"
+        unit={tongSl > total ? `xác · SL ${tongSl}` : "xác"}
         colButtons={grouped}
-        extra={<DonViewToggle value={mode} onChange={setMode} />}
+        compactSearch
+        extra={<DonViewToggle value={mode} onChange={setMode} modes={["list", "ktv", "lk", "sc"]} />}
       />
       {sel && setSel && (
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -206,7 +248,7 @@ function XacBrowser({
       ) : grouped ? (
         <GroupedDonView
           rows={groupRows}
-          mode={mode as "ktv" | "lk"}
+          mode={mode as "ktv" | "lk" | "sc"}
           selected={sel}
           onToggle={setSel ? (ids, on) => setSel((s) => { const n = new Set(s); ids.forEach((id) => (on ? n.add(id) : n.delete(id))); return n; }) : undefined}
           emptyText={empty}
@@ -228,7 +270,7 @@ function tomTat(rows: XacRow[], nameOf: (m: string | null) => string): { ma: str
   for (const r of rows) {
     const k = r.ma_lk_xac || "";
     const cur = m.get(k) || { ma: r.ma_lk_xac, ten: nameOf(r.ma_lk_xac), n: 0 };
-    cur.n++;
+    cur.n += Number(r.so_luong) || 1;
     m.set(k, cur);
   }
   return [...m.values()].sort((a, b) => b.n - a.n);
@@ -244,7 +286,7 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
   const [busy, setBusy] = useState(false);
   const [tao, setTao] = useState(false);
   const [themVao, setThemVao] = useState(false);
-  const [ngoai, setNgoai] = useState(false);
+  const [ngoai, setNgoai] = useState<string | null>(null); // ket qua dang xac nhan: ngoai | tieu_huy | that_lac | khong_co
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   const [openThung, setOpenThung] = useState<string | null>(null);
   const done = () => { setSel(new Set()); reload(); onChanged(); };
@@ -253,7 +295,7 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
     <Card className="p-3">
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng</h3>
-        <span className="text-xs text-[var(--ink-soft)]">Đơn Đổi mới có xử lý xác "Trả đối tác", chưa vào thùng trả xác nào.</span>
+        <span className="text-xs text-[var(--ink-soft)]">Xác KTV gửi về (đơn Đổi mới, "Trả đối tác") + xác linh kiện thay khi sửa chữa (linh kiện cấp đã xuất) — chưa vào thùng trả xác.</span>
       </div>
       {isA && sel.size > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 mb-2 rounded-lg px-2.5 py-1.5 bg-[var(--brand-50)] border border-[var(--brand-200)]">
@@ -261,7 +303,10 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
             <>
               <span className="text-sm font-semibold">Đã chọn {sel.size} xác</span>
               <span className="ml-auto flex flex-wrap gap-1.5">
-                <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setNgoai(true)}>Đã trả ngoài hệ thống</Btn>
+                <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setNgoai("tieu_huy")}>🔥 Xác đã tiêu huỷ</Btn>
+                <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setNgoai("that_lac")}>❓ Xác thất lạc</Btn>
+                <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setNgoai("khong_co")}>∅ Không có xác</Btn>
+                <Btn size="sm" variant="ghost" disabled={busy} onClick={() => setNgoai("ngoai")}>Đã trả ngoài hệ thống</Btn>
                 <Btn size="sm" variant="secondary" disabled={busy} onClick={() => setThemVao(true)}>Thêm vào thùng nháp…</Btn>
                 <Btn size="sm" variant="primary" disabled={busy} onClick={() => setTao(true)}>＋ Tạo thùng trả xác ({sel.size})</Btn>
               </span>
@@ -275,7 +320,7 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
         placeholder="Tìm mã đơn, case, linh kiện, KTV, khách…"
         sel={isA ? sel : undefined}
         setSel={isA ? setSel : undefined}
-        onOpen={(r) => setOpenUnit(r.id)}
+        onOpen={(r) => setOpenUnit(r.unit_id)}
         reloadRef={reloadRef}
       />
       {tao && (
@@ -289,13 +334,14 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
       {ngoai && (
         <NgoaiModal
           n={sel.size}
-          onClose={() => setNgoai(false)}
+          kq={ngoai}
+          onClose={() => setNgoai(null)}
           onOk={async (lyDo) => {
             setBusy(true);
             try {
-              const r = await api.post<{ ok: number; bo_qua: number }>("/tra-xac/xac/ngoai", { ids: [...sel], ly_do: lyDo });
-              toast(`Đã đánh dấu ${r.ok} xác đã xử lý ngoài${r.bo_qua ? ` (${r.bo_qua} bỏ qua)` : ""}.`, "ok");
-              setNgoai(false);
+              const r = await api.post<{ ok: number; bo_qua: number }>("/tra-xac/xac/ngoai", { ids: [...sel], ly_do: lyDo, kq: ngoai });
+              toast(`${XAC_KQ_LABEL[ngoai]}: ${r.ok} xác${r.bo_qua ? ` (${r.bo_qua} bỏ qua)` : ""}.`, "ok");
+              setNgoai(null);
               done();
             } catch (e) {
               toast(err(e), "error");
@@ -311,11 +357,11 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
   );
 }
 
-function NgoaiModal({ n, onClose, onOk }: { n: number; onClose: () => void; onOk: (lyDo: string) => void }) {
+function NgoaiModal({ n, kq, onClose, onOk }: { n: number; kq: string; onClose: () => void; onOk: (lyDo: string) => void }) {
   const [lyDo, setLyDo] = useState("");
   return (
-    <Modal title="Đánh dấu xác đã xử lý ngoài hệ thống" onClose={onClose} maxWidthClass="max-w-md" footerActions={<><Btn variant="ghost" onClick={onClose}>Huỷ</Btn><Btn variant="primary" onClick={() => onOk(lyDo)}>Xác nhận {n} xác</Btn></>}>
-      <p className="text-sm mb-2">{n} xác sẽ rời danh sách chờ gom (vẫn đưa lại được ở tab "Đã xử lý ngoài").</p>
+    <Modal title={`Xác nhận: ${XAC_KQ_LABEL[kq]}`} onClose={onClose} maxWidthClass="max-w-md" footerActions={<><Btn variant="ghost" onClick={onClose}>Huỷ</Btn><Btn variant="primary" onClick={() => onOk(lyDo)}>Xác nhận {n} xác</Btn></>}>
+      <p className="text-sm mb-2">{n} xác được ghi kết quả "<b>{XAC_KQ_LABEL[kq]}</b>" và rời danh sách chờ gom (vẫn đưa lại được ở tab "Đã xử lý khác").</p>
       <Field label="Ghi chú (tuỳ chọn)"><Textarea rows={2} value={lyDo} onChange={(e) => setLyDo(e.target.value)} placeholder="VD: đã trả nhà máy theo đợt tháng 10" /></Field>
     </Modal>
   );
@@ -435,13 +481,14 @@ function XacNgoai({ user, onChanged }: { user: AppUser; onChanged: () => void })
   };
   return (
     <Card className="p-3">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-1">Xác đã xử lý ngoài hệ thống</h3>
-      <p className="text-xs text-[var(--ink-soft)] mb-2">Gồm xác của đơn tạo trước 01/11/2026 (thời AppSheet) và xác Admin đánh dấu đã trả ngoài.</p>
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-1">Xác đã xử lý khác (không qua thùng)</h3>
+      <p className="text-xs text-[var(--ink-soft)] mb-2">Xác đã tiêu huỷ / thất lạc / không có xác / đã trả ngoài hệ thống — gồm cả xác của đơn tạo trước 01/11/2026 (thời AppSheet).</p>
       <XacBrowser
         base={base}
         viewKey="xac_view_ngoai"
         placeholder="Tìm mã đơn, case, linh kiện, KTV…"
-        onOpen={(r) => setOpenUnit(r.id)}
+        ngoai
+        onOpen={(r) => setOpenUnit(r.unit_id)}
         reloadRef={reloadRef}
         extra={admin(user) ? { key: "act", header: "", render: (r) => <Btn size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duaLai(r.id); }}>↺ Đưa lại chờ gom</Btn> } : undefined}
       />
@@ -482,7 +529,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const suaTT = !!t && ((isA && (t.trang_thai === "nhap" || t.trang_thai === "cho_ke_toan")) || (isK && t.trang_thai === "cho_ke_toan"));
   const doiTT = !!t && (f.doi_tac !== (t.doi_tac || "") || f.ma_eo !== (t.ma_eo || "") || f.ghi_chu !== (t.ghi_chu || ""));
   const tt = useMemo(() => (d ? tomTat(d.xac, nameOf) : []), [d, nameOf]);
-  const tomTatText = t && d ? `Thùng trả xác ${t.id}${t.ma_eo ? ` — EO ${t.ma_eo}` : ""}${t.doi_tac ? ` — ${t.doi_tac}` : ""}\nTổng: ${d.xac.length} xác\n${tt.map((x, i) => `${i + 1}) ${x.ten} × ${x.n}`).join("\n")}` : "";
+  const tomTatText = t && d ? `Thùng trả xác ${t.id}${t.ma_eo ? ` — EO ${t.ma_eo}` : ""}${t.doi_tac ? ` — ${t.doi_tac}` : ""}\nTổng: ${d.xac.length} xác (SL ${d.xac.reduce((a, r) => a + (Number(r.so_luong) || 1), 0)})\n${tt.map((x, i) => `${i + 1}) ${x.ten} × ${x.n}`).join("\n")}` : "";
 
   const run = async (fn: () => Promise<unknown>, msg: string, close?: boolean) => {
     setBusy(true);
@@ -583,7 +630,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
           <Section title={`♻️ Xác trong thùng (${d.xac.length})`} right={suaXac ? <Btn size="sm" variant="secondary" onClick={() => setThem(true)}>＋ Thêm xác</Btn> : undefined}>
             <XacTable
               rows={d.xac}
-              onOpen={(r) => setOpenUnit(r.id)}
+              onOpen={(r) => setOpenUnit(r.unit_id)}
               extra={suaXac ? { key: "bo", header: "", render: (r) => <Btn size="sm" variant="ghost" disabled={busy} onClick={(e) => { e.stopPropagation(); run(() => api.delete(`/tra-xac/thung/${id}/xac/${r.id}`), `Đã bỏ ${r.id} khỏi thùng (về danh sách chờ gom).`); }}>✕ Bỏ</Btn> } : undefined}
             />
           </Section>
@@ -646,7 +693,7 @@ export function TraXacScreen({ user }: { user: AppUser }) {
     { key: "nhap", label: "📦 Thùng nháp", show: admin, countKeys: ["admin_thung_xac_tra_lai"], hint: "Thùng đang gom — thêm / bớt xác, nhập mã EO, gửi Kế toán", render: () => <ThungList key="nhap" user={user} tt="nhap" title="Thùng trả xác nháp" empty="Chưa có thùng nháp nào." onChanged={ch} /> },
     { key: "cho_kt", label: "⏳ Chờ KT duyệt", show: (u) => admin(u) || kt(u), countKeys: ["ketoan_thung_xac"], hint: "Kế toán kiểm tra thông tin, duyệt hoặc trả lại", render: () => <ThungList key="cho_kt" user={user} tt="cho_ke_toan" title="Thùng chờ Kế toán duyệt" empty="Không có thùng nào chờ duyệt." onChanged={ch} /> },
     { key: "da_duyet", label: "✔ Đã duyệt", show: xem, render: () => <ThungList key="da_duyet" user={user} tt="da_duyet" title="Thùng đã duyệt (kết thúc)" empty="Chưa có thùng nào được duyệt." onChanged={ch} /> },
-    { key: "ngoai", label: "Đã xử lý ngoài", show: (u) => admin(u) || u.la_view, render: () => <XacNgoai user={user} onChanged={ch} /> },
+    { key: "ngoai", label: "Đã xử lý khác", show: (u) => admin(u) || u.la_view, render: () => <XacNgoai user={user} onChanged={ch} /> },
   ];
   return <TabScreen user={user} tabs={tabs} title="Trả xác linh kiện" />;
 }

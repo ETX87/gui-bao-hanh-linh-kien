@@ -457,6 +457,7 @@ export function ExcelToolbar({
   extra,
   defs,
   colButtons,
+  compactSearch,
 }: {
   flt: ListFilters;
   cols: FilterCol[];
@@ -469,6 +470,8 @@ export function ExcelToolbar({
   defs?: FilterDef[];
   // Hien hang nut loc theo cot ca tren may tinh (che do xem nhom Theo KTV / Theo linh kien khong co tieu de cot).
   colButtons?: boolean;
+  // 16/11/2026 (man Tra xac: "thu gọn thanh tìm kiếm lại (quá dài)"): o tim rong co dinh tren may tinh, khong keo het hang.
+  compactSearch?: boolean;
 }) {
   const isMobile = useIsMobile();
   const [quickOpen, setQuickOpen] = useState(false);
@@ -480,10 +483,11 @@ export function ExcelToolbar({
   return (
     <div className="mb-2 space-y-1.5">
       <div className="flex flex-col md:flex-row md:items-center gap-1.5">
-        <div className="flex-1 min-w-0">
+        <div className={compactSearch ? "min-w-0 md:w-72 md:flex-none" : "flex-1 min-w-0"}>
           <Input type="search" value={flt.qInput} onChange={(e) => flt.setQ(e.target.value)} placeholder={`🔍 ${placeholder}`} />
         </div>
         {extra}
+        {compactSearch && <span className="hidden md:block flex-1" />}
         {defs && defs.length > 0 && (
           <button
             type="button"
