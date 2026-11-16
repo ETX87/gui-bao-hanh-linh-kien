@@ -1,5 +1,6 @@
 import { pushPhanLoaiPending } from "./lib/linhKienPush";
 import { dayCapLkCho } from "./lib/capLkPush";
+import { dongBoDonSc } from "./lib/donScLinhKien";
 import { maybeComputeTopLinhKien } from "./lib/topLinhKien";
 import { Hono } from "hono";
 import type { Env } from "./types";
@@ -128,6 +129,8 @@ export default {
     ctx.waitUntil(pushPhanLoaiPending(env).then(() => undefined).catch(() => undefined));
     // 12/11/2026: phieu cap linh kien -> don "SỬA CHỮA TẠI KHO" ben linh-kien-app (gui lai dong loi / bi lo).
     ctx.waitUntil(dayCapLkCho(env).then(() => undefined).catch((e) => console.error("[capLk]", e instanceof Error ? e.message : e)));
+    // 16/11/2026 (v1.133): keo trang thai don cap linh kien sua chua (CÔNG NỢ SỬA CHỮA) ben linh-kien-app - ca don NV dat thang ben do.
+    ctx.waitUntil(dongBoDonSc(env).then((r) => { if (r.loi) console.error("[donSc]", r.loi); }).catch((e) => console.error("[donSc]", e instanceof Error ? e.message : e)));
     // Top linh kien 30 ngay - tinh 1 lan/ngay o khung gio cai dat (05/10/2026 muc 7).
     // Thoi gian xu ly trung binh tung giai doan (30 ngay) - tinh lai toi da 1 lan/gio (12/10/2026).
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));

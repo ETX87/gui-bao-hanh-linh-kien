@@ -6,10 +6,13 @@
 export class ApiError extends Error {
   code: string;
   status: number;
-  constructor(code: string, status: number) {
+  // 16/11/2026 (v1.133): cau bao loi day du do server tra kem (vd loi chuyen tiep tu app Dat linh kien) - uu tien hien cau nay.
+  serverMessage?: string;
+  constructor(code: string, status: number, serverMessage?: string) {
     super(code);
     this.code = code;
     this.status = status;
+    this.serverMessage = serverMessage;
   }
 }
 
@@ -67,7 +70,8 @@ async function request<T>(method: string, path: string, body?: unknown, opts?: R
       if (await gtHandler(gt)) return request<T>(method, path, body, opts, true);
       throw new ApiError("GIAI_TRINH_HUY", res.status);
     }
-    throw new ApiError(code, res.status);
+    const msg = (json as { message?: unknown } | null)?.message;
+    throw new ApiError(code, res.status, typeof msg === "string" && msg ? msg : undefined);
   }
   return json as T;
 }
@@ -173,7 +177,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) return ERROR_MESSAGES[e.code] || e.code;
+  if (e instanceof ApiError) return e.serverMessage || ERROR_MESSAGES[e.code] || e.code;
   if (e instanceof Error) return e.message;
   return "Đã có lỗi xảy ra.";
 }

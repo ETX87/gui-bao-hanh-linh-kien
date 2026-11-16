@@ -185,7 +185,18 @@ export interface DeXuatLk {
   ma_lk: string;
   so_luong: number;
   ghi_chu: string | null;
-  trang_thai: "cho_cap" | "cho_ke_toan" | "da_cap" | "tu_choi" | "huy";
+  trang_thai: "cho_cap" | "cho_ke_toan" | "da_cap" | "tu_choi" | "huy" | "lien_ket";
+  // 16/11/2026 (v1.133): de xuat moi = don CÔNG NỢ SỬA CHỮA ben app Dat linh kien (lien_ket). nguon: doitra (tao o app nay) | linhkien (NV dat ben do).
+  nguon?: "doitra" | "linhkien" | null;
+  lk_tt?: string | null;
+  lk_nhan?: string | null;
+  lk_buoc?: "cho" | "xu_ly" | "xong" | "dong" | null;
+  lk_sua_duoc?: number;
+  lk_giai_doan?: string | null;
+  lk_pxk?: string | null;
+  lk_yeu_cau_huy?: string | null;
+  lk_ddh_cu?: string | null;
+  lk_dong_bo_luc?: string | null;
   kt_boi?: string | null; // 02/11/2026: Ke toan xac nhan (nhap MISA)
   kt_luc?: string | null;
   kho_tt?: "cho_in" | "da_in" | "da_xuat" | null; // 04/11/2026: giai doan Kho sau khi KT xac nhan

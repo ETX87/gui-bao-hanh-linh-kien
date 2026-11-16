@@ -8,7 +8,8 @@ import type { Env } from "../types";
 // Dong can day: (da Ke toan xac nhan va dang da_cap) hoac da tung day, va updated_at khac lan day thanh cong gan nhat
 // (moi route doi de xuat deu ghi updated_at -> khong phai sua tung route). Gui ngay sau thao tac (index.ts) + cron 15 phut gui lai.
 
-const CAN_DAY_SQL = `((d.trang_thai = 'da_cap' AND d.kt_luc IS NOT NULL) OR d.lk_ddh_id IS NOT NULL)
+// 16/11/2026 (v1.133): CHI de xuat luong cu (nguon NULL) - de xuat moi la don that ben linh-kien-app (lib/donScLinhKien.ts).
+const CAN_DAY_SQL = `d.nguon IS NULL AND ((d.trang_thai = 'da_cap' AND d.kt_luc IS NOT NULL) OR d.lk_ddh_id IS NOT NULL)
   AND COALESCE(d.lk_day_luc, '') <> d.updated_at`;
 
 export async function demCapLkCho(db: D1Database): Promise<{ cho: number; loi: number }> {

@@ -35,6 +35,17 @@ export function DeXuatBadge({ tt, khoTt }: { tt: string; khoTt?: string | null }
   );
 }
 
+// 16/11/2026 (v1.133): de xuat moi = don CÔNG NỢ SỬA CHỮA ben app Dat linh kien - nhan trang thai lay tu ben do (lk_nhan / lk_buoc).
+const LK_TONE: Record<string, "amber" | "green" | "red" | "gray" | "blue"> = { cho: "amber", xu_ly: "blue", xong: "green", dong: "gray" };
+export function LkTrangThaiBadge({ d }: { d: DeXuatLk }) {
+  const buoc = d.lk_buoc || "cho";
+  return (
+    <Badge tone={LK_TONE[buoc] || "gray"} dot={buoc === "cho" || buoc === "xu_ly"}>
+      {d.lk_nhan || "Đã gửi app Đặt linh kiện"}
+    </Badge>
+  );
+}
+
 interface Row {
   ma_lk: string;
   so_luong: string;
@@ -55,8 +66,14 @@ export function DeXuatFormModal({ unitId, onClose, onDone }: { unitId: string; o
     setBusy(true);
     try {
       const its = rows.filter((r) => r.ma_lk).map((r) => ({ ma_lk: r.ma_lk, so_luong: Math.max(1, Math.round(Number(r.so_luong) || 1)), ghi_chu: r.ghi_chu }));
-      await api.post(`/de-xuat/don-vi/${unitId}`, { items: its });
-      toast(`Đã gửi ${its.length} đề xuất linh kiện cho Admin bảo hành.`, "ok");
+      const r = await api.post<{ ket_qua: { ma_lk: string; ddh?: string; nhan?: string; loi?: string }[] }>(`/de-xuat/don-vi/${unitId}`, { items: its });
+      const loi = r.ket_qua.filter((x) => x.loi);
+      const ok = r.ket_qua.filter((x) => x.ddh);
+      toast(
+        `Đã tạo ${ok.length} đơn trên app Đặt linh kiện${ok.length ? ` (${ok.map((x) => `${x.ddh}: ${x.nhan ?? ""}`).join("; ")})` : ""}` +
+          (loi.length ? ` — ${loi.length} dòng lỗi: ${loi.map((x) => `${x.ma_lk}: ${x.loi}`).join("; ")}` : ""),
+        loi.length ? "error" : "ok",
+      );
       onDone();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -80,7 +97,10 @@ export function DeXuatFormModal({ unitId, onClose, onDone }: { unitId: string; o
       }
     >
       <div className="space-y-3">
-        <p className="text-sm text-[var(--ink-body)]">Admin bảo hành sẽ lên phiếu xuất MISA để cấp linh kiện từ kho. Có thể đề xuất nhiều lần cho tới khi sửa xong.</p>
+        <p className="text-sm text-[var(--ink-body)]">
+          Mỗi dòng tạo ngay 1 đơn <b>CÔNG NỢ SỬA CHỮA</b> trên app Đặt linh kiện. Kế toán duyệt và Kho xuất hàng trên app đó, trạng thái tự cập nhật về đây.
+          Sửa được linh kiện / số lượng cho tới khi Kế toán xử lý. Có thể đề xuất nhiều lần cho tới khi sửa xong.
+        </p>
         {rows.map((r, i) => (
           <div key={i} className="rounded-lg border border-[var(--line)] p-2.5 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px] gap-2">
@@ -106,6 +126,63 @@ export function DeXuatFormModal({ unitId, onClose, onDone }: { unitId: string; o
         <Btn size="sm" onClick={() => setRows((x) => [...x, { ma_lk: "", so_luong: "1", ghi_chu: "" }])}>
           + Thêm linh kiện
         </Btn>
+      </div>
+    </Modal>
+  );
+}
+
+// 16/11/2026 (v1.133): sua de xuat moi (tao tu app nay) truoc khi Ke toan xu ly - doi ma LK / SL = app Dat linh kien huy don cu + tao don moi.
+export function SuaDeXuatModal({ dx, onClose, onDone }: { dx: DeXuatLk; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const { items } = useLinhKien();
+  const opts = lkOptions(items);
+  const [maLk, setMaLk] = useState(dx.ma_lk);
+  const [sl, setSl] = useState(String(dx.so_luong));
+  const [ghiChu, setGhiChu] = useState(dx.ghi_chu || "");
+  const [busy, setBusy] = useState(false);
+  const soLuong = Math.round(Number(sl) || 0);
+  const doi = maLk !== dx.ma_lk || soLuong !== dx.so_luong || ghiChu.trim() !== (dx.ghi_chu || "").trim();
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ thay_bang: string | null }>(`/de-xuat/${dx.id}/sua`, { ma_lk: maLk, so_luong: soLuong, ghi_chu: ghiChu });
+      toast(r.thay_bang ? `Đã sửa — đơn ${dx.lk_ddh_id} được thay bằng ${r.thay_bang} trên app Đặt linh kiện.` : "Đã sửa.", "ok");
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={`Sửa cấp linh kiện — ${dx.id}`}
+      onClose={onClose}
+      maxWidthClass="max-w-lg"
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Huỷ</Btn>
+          <Btn variant="primary" disabled={!doi || !maLk || soLuong < 1 || busy} onClick={submit}>
+            Lưu
+          </Btn>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-xs text-[var(--ink-soft)]">
+          Đổi linh kiện / số lượng: app Đặt linh kiện huỷ đơn {dx.lk_ddh_id} và tạo đơn mới (kiểm tra lại tồn kho). Chỉ sửa được khi Kế toán chưa xử lý.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px] gap-2">
+          <Field label="Linh kiện" required>
+            <SearchableSelect options={opts} value={maLk} onChange={setMaLk} placeholder="Chọn linh kiện" />
+          </Field>
+          <Field label="Số lượng" required>
+            <Input type="number" min={1} value={sl} onChange={(e) => setSl(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Ghi chú">
+          <Input value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} />
+        </Field>
       </div>
     </Modal>
   );
@@ -310,10 +387,15 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
   const [tuChoiFor, setTuChoiFor] = useState<DeXuatLk | null>(null);
   const [ktFor, setKtFor] = useState<DeXuatLk[] | null>(null);
   const [traLaiFor, setTraLaiFor] = useState<DeXuatLk | null>(null);
+  const [suaFor, setSuaFor] = useState<DeXuatLk | null>(null);
+  const [lkLoi, setLkLoi] = useState<string | null>(null);
   const load = () =>
     api
-      .get<{ de_xuat: DeXuatLk[] }>(`/de-xuat/don-vi/${unitId}`)
-      .then((r) => setList(r.de_xuat))
+      .get<{ de_xuat: DeXuatLk[]; lk_loi?: string | null }>(`/de-xuat/don-vi/${unitId}`)
+      .then((r) => {
+        setList(r.de_xuat);
+        setLkLoi(r.lk_loi ?? null);
+      })
       .catch(() => setList([]));
   useEffect(() => {
     load();
@@ -331,10 +413,18 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
     load();
     onChanged();
   };
+  // De xuat moi: nguoi tao / NV dang sua / Admin BH sua, huy (huy can ly do - gui sang app Dat linh kien).
+  const duocSua = (d: DeXuatLk) => isAdmin || d.nguoi_de_xuat === user.email || nguoiSuaChua === user.email;
   const huy = async (d: DeXuatLk) => {
+    let lyDo: string | undefined;
+    if (d.nguon) {
+      lyDo = window.prompt(`Lý do huỷ ${d.id} (đơn ${d.lk_ddh_id})`)?.trim();
+      if (!lyDo) return;
+    }
     try {
-      await api.post(`/de-xuat/${d.id}/huy`);
-      toast("Đã huỷ đề xuất.", "ok");
+      const r = await api.post<{ da_huy?: boolean; bo_phan?: string | null }>(`/de-xuat/${d.id}/huy`, lyDo ? { ly_do: lyDo } : undefined);
+      const bp: Record<string, string> = { kho: "Kho", mua_hang: "Mua hàng", ke_toan: "Kế toán" };
+      toast(d.nguon && r.da_huy === false ? `Đã gửi yêu cầu huỷ — chờ ${bp[r.bo_phan ?? ""] ?? "bộ phận"} đồng ý trên app Đặt linh kiện.` : "Đã huỷ đề xuất.", "ok");
       after();
     } catch (e) {
       toast(errorMessage(e), "error");
@@ -367,7 +457,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
             <li key={d.id} className="py-1.5 text-[13px]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
-                <DeXuatBadge tt={d.trang_thai} khoTt={d.kho_tt ?? null} />
+                {d.nguon ? <LkTrangThaiBadge d={d} /> : <DeXuatBadge tt={d.trang_thai} khoTt={d.kho_tt ?? null} />}
                 <span className="font-semibold text-[var(--ink)]">{nameOf(d.ma_lk)}</span>
                 <span className="font-semibold">×{d.so_luong}</span>
                 <span className="ml-auto flex gap-1.5">
@@ -394,6 +484,16 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                       </Btn>
                     </>
                   )}
+                  {d.nguon === "doitra" && d.trang_thai === "lien_ket" && !!d.lk_sua_duoc && duocSua(d) && (
+                    <Btn size="sm" variant="ghost" onClick={() => setSuaFor(d)}>
+                      ✎ Sửa
+                    </Btn>
+                  )}
+                  {!!d.nguon && d.trang_thai === "lien_ket" && d.lk_buoc !== "xong" && !d.lk_yeu_cau_huy && duocSua(d) && (
+                    <Btn size="sm" variant="ghost" onClick={() => huy(d)}>
+                      Huỷ
+                    </Btn>
+                  )}
                   {d.trang_thai === "cho_cap" && d.nguoi_de_xuat === user.email && (
                     <Btn size="sm" variant="ghost" onClick={() => huy(d)}>
                       Huỷ
@@ -406,7 +506,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 {nguoiSuaChua && d.nguoi_de_xuat !== nguoiSuaChua ? " (đề xuất hộ NV)" : ""} · {fmtDate(d.created_at)}
                 {d.ghi_chu ? ` · ${d.ghi_chu}` : ""}
                 {(d.trang_thai === "da_cap" || d.trang_thai === "cho_ke_toan") && `${d.ma_misa ? ` · MISA ${d.ma_misa}` : ""}${d.ma_don_hang ? ` · ĐH ${d.ma_don_hang}` : ""}`}
-                <LkSyncTag d={d} />
+                {d.nguon ? <LkDonTag d={d} /> : <LkSyncTag d={d} />}
                 {d.trang_thai === "cho_cap" && d.ly_do_tu_choi ? ` · ↩ ${d.ly_do_tu_choi}` : ""}
                 {(d.trang_thai === "tu_choi" || d.trang_thai === "huy") && d.ly_do_tu_choi ? ` · ${d.ly_do_tu_choi}` : ""}
                 {d.nguoi_xu_ly && d.trang_thai !== "cho_cap" && (
@@ -419,6 +519,17 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
             </li>
           ))}
         </ul>
+      )}
+      {lkLoi && <p className="mt-1 text-xs text-[var(--red-700,#b91c1c)]">⚠ {lkLoi} — trạng thái đang hiện là lần cập nhật gần nhất.</p>}
+      {suaFor && (
+        <SuaDeXuatModal
+          dx={suaFor}
+          onClose={() => setSuaFor(null)}
+          onDone={() => {
+            setSuaFor(null);
+            after();
+          }}
+        />
       )}
       {formOpen && (
         <DeXuatFormModal
@@ -471,6 +582,21 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
         />
       )}
     </Section>
+  );
+}
+
+// 16/11/2026 (v1.133): de xuat moi - ma don ben app Dat linh kien, nguon tao, phieu xuat, yeu cau huy dang cho, vi sao khong sua duoc.
+export function LkDonTag({ d }: { d: DeXuatLk }) {
+  const bp: Record<string, string> = { kho: "Kho", mua_hang: "Mua hàng", ke_toan: "Kế toán" };
+  return (
+    <span className="ml-1 text-[11px] text-[var(--ink-soft)]">
+      · Đặt LK <span className="font-mono">{d.lk_ddh_id}</span>
+      {d.nguon === "linhkien" ? " (đặt trên app Đặt linh kiện)" : ""}
+      {d.lk_pxk ? ` · phiếu ${d.lk_pxk}` : ""}
+      {d.lk_ddh_cu ? ` · thay cho ${d.lk_ddh_cu}` : ""}
+      {d.lk_yeu_cau_huy ? ` · ⏳ chờ ${bp[d.lk_yeu_cau_huy] ?? d.lk_yeu_cau_huy} đồng ý huỷ` : ""}
+      {d.nguon === "doitra" && d.trang_thai === "lien_ket" && !d.lk_sua_duoc && d.lk_buoc !== "xong" && d.lk_giai_doan ? ` · không sửa được: ${d.lk_giai_doan}` : ""}
+    </span>
   );
 }
 
