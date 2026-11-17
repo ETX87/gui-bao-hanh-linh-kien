@@ -7427,3 +7427,5 @@ vs CTV Vĩnh Phúc).
 
 **(d) Kiểm thử:** typecheck 2 workspace sạch; câu SQL lấy tên Odoo mới nhất chạy thử trên D1 remote (chỉ SELECT) ra đúng chuỗi mới nhất
 (`anhln.dvkh` → "… - NS-458"), ~300 rows_read / lần mở chi tiết phiếu trả. Chưa mở thử màn phiếu trả trên giao diện thật.
+
+**Deploy (17/11/2026):** `npm run deploy`, Version ID `f84dd73c`. Không có migration.
