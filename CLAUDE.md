@@ -7404,3 +7404,13 @@ Chốt qua AskUserQuestion (16/11/2026, cả 4 theo phương án đề xuất): 
 **(d) Kiểm thử:** typecheck + build 2 repo sạch. 2 Worker local nối service binding (D1 tạm, đã xoá), kịch bản 17/17: phân loại 4 đơn (Karofi / Kangaroo / Sunhouse hết BH / đổi mới); đề xuất từ app này ra đúng HỖ TRỢ 0đ / CÔNG NỢ / MUA HÀNG (bắt chuyển tiền) ngay từ lần gọi đầu; NV đã nhận; hàng đợi có HỖ TRỢ + CÔNG NỢ, không MUA; xác nhận HỖ TRỢ không tạo đơn trừ/trả; CÔNG NỢ tạo trừ 2 + trả 1 → phiếu "Cho ke toan"; Trả xác (Karofi) thấy xác đổi mới + xác HỖ TRỢ, không thấy Kangaroo, tạo thùng + gửi KT; sửa xác nhận khi xác trong thùng → `XAC_TRONG_THUNG`; xác nhận lần cấp MUA → chặn. Tổng ngày NV sau sửa = 95.000đ, phiếu MUA tính lại đúng 95.000đ.
 
 **Deploy (16/11/2026):** linh-kien-app v1.509 trước (Version ID `17ef188c`), sau đó app này `npm run deploy` (Version ID `2d6bc7df`). Không có migration mới.
+
+## Nhận việc từ Trợ lý Mây (tự sửa)
+- Issue gắn nhãn `may:phan-tich` là ĐỀ XUẤT CẢI TIẾN cần phân tích trước: workflow `may-phan-tich` chỉ ĐỌC mã để soạn BRD cho Giám đốc duyệt — không sửa mã ở bước này. Khi duyệt, BRD nằm ở đầu issue; làm đúng BRD và lưu nó vào `docs/yeu-cau/MAY-xxxxx.md`.
+- Issue gắn nhãn `may:tu-sua` là việc do Trợ lý Mây chuyển sang, mã `MAY-xxxxx` ở tiêu đề. Sửa ĐÚNG phạm vi mô tả.
+- Kiểm tra bắt buộc trước khi mở PR: `npm run build` (eslint chạy trước; đỏ = dừng). Flutter: `flutter analyze && flutter build web`.
+- Nhánh `may/may-xxxxx`, PR vào `main`, tiêu đề bắt đầu bằng mã, mô tả tiếng Việt (nguyên nhân · cách sửa · cách thử), ghi `Closes #<issue>`.
+- KHÔNG BAO GIỜ: sửa `firestore.rules`/`storage.rules`/hàm `hrLink`/secrets; chạy `firebase deploy` trần; đổi tính năng ngoài issue; xoá dữ liệu.
+- Không chắc / cần người quyết: bình luận `MÂY: CẦN NGƯỜI` + lý do rồi dừng.
+- Deploy do workflow `may-deploy` làm sau khi được duyệt — KHÔNG tự deploy trong lúc sửa.
+- Khi làm việc TRONG PHIÊN NÀY (không phải workflow) mà bản sửa giải quyết một issue Mây đang mở (`gh issue list --label may:cho-duyet,may:tu-sua`): ghi mã `MAY-xxxxx` vào dòng đầu commit → Trợ lý Mây tự báo hoàn thành, không cần Giám đốc bấm tay.
