@@ -7404,3 +7404,26 @@ Chốt qua AskUserQuestion (16/11/2026, cả 4 theo phương án đề xuất): 
 **(d) Kiểm thử:** typecheck + build 2 repo sạch. 2 Worker local nối service binding (D1 tạm, đã xoá), kịch bản 17/17: phân loại 4 đơn (Karofi / Kangaroo / Sunhouse hết BH / đổi mới); đề xuất từ app này ra đúng HỖ TRỢ 0đ / CÔNG NỢ / MUA HÀNG (bắt chuyển tiền) ngay từ lần gọi đầu; NV đã nhận; hàng đợi có HỖ TRỢ + CÔNG NỢ, không MUA; xác nhận HỖ TRỢ không tạo đơn trừ/trả; CÔNG NỢ tạo trừ 2 + trả 1 → phiếu "Cho ke toan"; Trả xác (Karofi) thấy xác đổi mới + xác HỖ TRỢ, không thấy Kangaroo, tạo thùng + gửi KT; sửa xác nhận khi xác trong thùng → `XAC_TRONG_THUNG`; xác nhận lần cấp MUA → chặn. Tổng ngày NV sau sửa = 95.000đ, phiếu MUA tính lại đúng 95.000đ.
 
 **Deploy (16/11/2026):** linh-kien-app v1.509 trước (Version ID `17ef188c`), sau đó app này `npm run deploy` (Version ID `2d6bc7df`). Không có migration mới.
+
+## Đổi tên trạm/KTV làm tách tên — "Diễn giải MISA" lấy tên KTV gần nhất (17/11/2026) — v1.144
+
+**(a) Bối cảnh / nguyên văn:** chủ hệ thống đổi tên trạm hàng loạt bên Odoo (chỉ bản ghi được đồng bộ lại mới mang tên mới); hệ DVBH đã
+sửa ở v1.621. Nguyên tắc chủ hệ thống chốt: *"báo cáo KTV ưu tiên gom theo mã KTV (phần `(ma)` đầu chuỗi), hiển thị theo tên gần nhất"*;
+bộ lọc KTV khớp mọi tên của cùng mã; bản ghi riêng lẻ vẫn hiện tên lưu trên bản ghi.
+
+**(b) Rà soát app này:** mọi báo cáo / đếm việc / bộ lọc / bảng xếp hạng KTV đã gom theo **email người tạo** (`g.nguoi_tao`, `ktv_nhan`)
+hoặc `ma_ktv` / `ma_ktv_tk` (`don_bh_odoo`, có index), tên hiển thị lấy từ danh bạ `ktv_lien_he_bh` (khoá `ma_ktv`, đồng bộ từ linh-kien-app)
+→ không tách dòng. Khớp case ↔ KTV đã theo mã (`extractMaKtv` / `maKtvCuaCase`). Chuỗi `ky_thuat_vien` thô chỉ hiện trên từng case
+(ảnh chụp case, cảnh báo "case thuộc KTV khác") — giữ nguyên theo quy tắc bản ghi riêng lẻ.
+Chỗ DUY NHẤT bị ảnh hưởng: **"Diễn giải MISA" của phiếu trả** (`GET /api/phieu-tra/:id` → `misa_ktv`) lấy chuỗi KTV của case ĐẦU TIÊN trong
+phiếu có cùng mã → phiếu có case cũ in tên trạm cũ, 2 phiếu cùng KTV ra 2 tên khác nhau trên MISA.
+Đã sửa: `lib/ktvMa.ts tenKtvMoiNhat(db, ma, caseIds)` = chuỗi mang mã đó được app nhận về MUỘN NHẤT (`synced_at`) trong: ảnh chụp các case của
+phiếu (`ky_thuat_vien` + `ktv_trien_khai`) + đơn Odoo mới nhất theo `ma_ktv` / `ma_ktv_tk`; chuẩn hoá NFC. Mã KTV của phiếu = mã của email nhận
+hàng xuất hiện trên case trong phiếu (1 email có thể nhiều mã), không có thì mã đầu tiên trong danh bạ (trước đây chỉ lấy 1 dòng `LIMIT 1`).
+
+**(c) Số liệu thật (SELECT D1 remote 17/11/2026):** 9.705 đơn Odoo + 5.116 ảnh chụp case, 200 mã KTV, **39 mã mang >1 chuỗi tên** — chủ yếu
+có/không hậu tố "- NS-xxx" (vd `anhln.dvkh` "KTV Nghệ An - Lê Ngọc Anh" vs "… - NS-458"), có mã đổi cả khu vực (`dungnt-vp.mb` CTV Tuyên Quang
+vs CTV Vĩnh Phúc).
+
+**(d) Kiểm thử:** typecheck 2 workspace sạch; câu SQL lấy tên Odoo mới nhất chạy thử trên D1 remote (chỉ SELECT) ra đúng chuỗi mới nhất
+(`anhln.dvkh` → "… - NS-458"), ~300 rows_read / lần mở chi tiết phiếu trả. Chưa mở thử màn phiếu trả trên giao diện thật.

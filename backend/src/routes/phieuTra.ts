@@ -14,6 +14,7 @@ import { parsePage } from "../lib/pagination";
 import { pushBoxToKhovan, pushBoxDoneToKhovan } from "../lib/khovanPushClient";
 import { mienScope, syncPhieuTraMien } from "../lib/mien";
 import { extractMaKtv } from "../lib/ktvCode";
+import { tenKtvMoiNhat } from "../lib/ktvMa";
 
 // Phieu tra bao hanh - Admin BH tao/gop, Ke toan duyet, Kho dong goi/gui/ket thuc, KTV xac nhan
 // nhan/khieu nai. State machine: nhap -> cho_ke_toan_duyet -> da_duyet_ke_toan -> da_gui ->
@@ -319,29 +320,26 @@ phieuTra.get("/:id", async (c) => {
     .all();
   const { results: anh } = await c.env.DB.prepare("SELECT * FROM phieu_tra_bh_anh WHERE phieu_tra_id = ?").bind(id).all();
   const { results: logs } = await c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_tra' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all();
-  // Ten KTV cho "Dien giai MISA" (02/11/2026): dung dung chuoi KTV tren CRM "(ma) Loai - Khu vuc - Ten"
-  // (uu tien case trong phieu, roi don Odoo cua KTV), khong co thi "(ma) Ten" tu danh ba.
+  // Ten KTV cho "Dien giai MISA" (02/11/2026): dung chuoi KTV tren CRM/Odoo "(ma) Loai - Khu vuc - Ten", khong co thi "(ma) Ten" tu danh ba.
+  // 17/11/2026 - doi ten tram hang loat ben Odoo: lay TEN GAN NHAT cua ma KTV (tenKtvMoiNhat), khong lay chuoi cu tren 1 case trong phieu.
+  // Ma KTV = ma cua email nhan hang co xuat hien tren case trong phieu (1 email co the co nhieu ma), khong co thi ma dau tien trong danh ba.
   let misaKtv: string | null = null;
-  const ktv = await c.env.DB.prepare("SELECT ma_ktv, ten_hien_thi FROM ktv_lien_he_bh WHERE email_dang_nhap = ? LIMIT 1")
+  const { results: ktvs } = await c.env.DB.prepare("SELECT ma_ktv, ten_hien_thi FROM ktv_lien_he_bh WHERE LOWER(email_dang_nhap) = LOWER(?) AND ma_ktv IS NOT NULL")
     .bind(t.ktv_nhan)
-    .first<{ ma_ktv: string; ten_hien_thi: string | null }>();
-  if (ktv) {
+    .all<{ ma_ktv: string; ten_hien_thi: string | null }>();
+  if (ktvs.length) {
     const caseIds = [...new Set((donVi as { case_id: string | null }[]).map((u) => u.case_id).filter(Boolean))] as string[];
-    if (caseIds.length) {
+    let ktv = ktvs[0];
+    if (caseIds.length && ktvs.length > 1) {
       const { results: snaps } = await c.env.DB.prepare(
-        `SELECT json_extract(data, '$.ky_thuat_vien') AS ktv FROM case_lookup_snapshot WHERE case_id IN (${caseIds.map(() => "?").join(",")})`,
+        "SELECT json_extract(data, '$.ky_thuat_vien') AS a, json_extract(data, '$.ktv_trien_khai') AS b FROM case_lookup_snapshot WHERE case_id IN (SELECT value FROM json_each(?))",
       )
-        .bind(...caseIds)
-        .all<{ ktv: string | null }>();
-      misaKtv = snaps.map((r) => r.ktv).find((k) => !!k && extractMaKtv(k) === ktv.ma_ktv) ?? null;
+        .bind(JSON.stringify(caseIds))
+        .all<{ a: string | null; b: string | null }>();
+      const maCase = new Set(snaps.flatMap((r) => [extractMaKtv(r.a), extractMaKtv(r.b)]));
+      ktv = ktvs.find((k) => maCase.has(k.ma_ktv)) ?? ktv;
     }
-    if (!misaKtv) {
-      const o = await c.env.DB.prepare("SELECT ky_thuat_vien FROM don_bh_odoo WHERE ma_ktv = ? AND ky_thuat_vien IS NOT NULL ORDER BY ngay_dong_bo DESC LIMIT 1")
-        .bind(ktv.ma_ktv)
-        .first<{ ky_thuat_vien: string }>();
-      misaKtv = o?.ky_thuat_vien ?? null;
-    }
-    if (!misaKtv) misaKtv = `(${ktv.ma_ktv}) ${ktv.ten_hien_thi || t.ktv_nhan}`;
+    misaKtv = (await tenKtvMoiNhat(c.env.DB, ktv.ma_ktv, caseIds)) ?? `(${ktv.ma_ktv}) ${ktv.ten_hien_thi || t.ktv_nhan}`;
   }
   return c.json({ phieu_tra: t, don_vi: donVi, anh, logs, misa_ktv: misaKtv });
 });
