@@ -3,6 +3,18 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 18/11/2026 — v1.147: Đẩy tóm tắt gửi bảo hành THEO CA sang DVBH (migration 0043)
+
+- Yêu cầu (bên DVBH, "Quản lý tồn" > Danh sách chi tiết): "Số lk thực tế đã gửi về (dựa theo api bảo hành đã tạo ở tất cả các trạng thái - trừ
+  đơn bị từ chối, bị hủy)", "Trạng thái đổi trả BH: trạng thái của đơn gửi đổi trả thấp nhất ... + 1 cột diễn giải", "Tốc độ tồn đổi trả";
+  "tận dụng tối đa các API đã có sẵn ... dữ liệu kéo về không dàn trải mỗi 1 báo cáo lại kéo 1 lần".
+- Đã làm: `lib/tomTatCa.ts` — bước mới "Đẩy tóm tắt theo ca" trong cron 15 phút (`lib/odooSync.ts runOdooSync`), gửi kèm field `ca` trong
+  `POST /api/partner/sync/sua-chua-trang-thai` SẴN CÓ của DVBH (không thêm API/luồng kéo). Mỗi ca: số LK (bỏ thùng huỷ / đơn vị huỷ-từ chối;
+  đơn chưa tách = SL khai), số LK theo từng giai đoạn, giai đoạn thấp nhất, lần gửi xe cuối (`ngay_gui_xe`), cờ hoàn tất và thời gian xử lý
+  lâu nhất (gửi xe → kết thúc) khi mọi LK đã xong. Chỉ gửi ca có thay đổi (hash trong `ca_tom_tat_sync`), chỉ xét đơn 120 ngày gần đây, ca đã
+  xong hết không xét lại trừ khi có đơn mới. Màn Cài đặt hiện thêm số "tóm tắt ca" đã đẩy.
+- Kiểm thử: typecheck sạch; chạy hàm tính trên D1 local (38 ca): giai đoạn thấp nhất / số LK đúng; endpoint DVBH local nhận + bỏ bản tin cũ.
+
 ## 18/11/2026 — v1.146: Cảnh báo thời gian tồn của thùng hàng
 
 - Yêu cầu: "danh sách các thùng hàng, thêm cảnh báo thời gian tồn cho các vai trò xác định được thùng đang tồn bao lâu rồi mà kho chưa xử lý".

@@ -133,7 +133,7 @@ function SettingListCard({ title, path, coBen }: { title: string; path: string; 
 }
 
 interface OdooSyncStatus {
-  last_run: { ok: boolean; keo_ve: number; bo_sung_ktv: number; bo_sung_id?: number; day_trang_thai: number; loi: string[]; luc: string } | null;
+  last_run: { ok: boolean; keo_ve: number; bo_sung_ktv: number; bo_sung_id?: number; day_trang_thai: number; day_tom_tat_ca?: number; loi: string[]; luc: string } | null;
   tong: number;
   cho_gui: number;
   chua_ktv: number;
@@ -183,7 +183,7 @@ function OdooSyncCard() {
         </div>
       )}
       <p className={`mt-3 text-xs ${lr && !lr.ok ? "text-[var(--red-700)] font-semibold" : "text-[var(--ink-soft)]"}`}>
-        {lr ? `Lần gần nhất ${lr.luc}: ${lr.ok ? "thành công" : "lỗi"} — kéo về ${lr.keo_ve}, bổ sung KTV ${lr.bo_sung_ktv}, bổ sung ID import ${lr.bo_sung_id ?? 0}, đẩy ${lr.day_trang_thai} trạng thái.${lr.loi.length ? " " + lr.loi.join("; ") : ""}` : "Chưa chạy lần nào."}
+        {lr ? `Lần gần nhất ${lr.luc}: ${lr.ok ? "thành công" : "lỗi"} — kéo về ${lr.keo_ve}, bổ sung KTV ${lr.bo_sung_ktv}, bổ sung ID import ${lr.bo_sung_id ?? 0}, đẩy ${lr.day_trang_thai} trạng thái, ${lr.day_tom_tat_ca ?? 0} tóm tắt ca.${lr.loi.length ? " " + lr.loi.join("; ") : ""}` : "Chưa chạy lần nào."}
       </p>
     </Card>
   );

@@ -1,6 +1,7 @@
 import type { Env } from "../types";
 import { nowVN } from "./vnTime";
 import { extractMaKtv } from "./ktvCode";
+import { dayTomTatCa } from "./tomTatCa";
 
 // Don bao hanh Odoo <-> dvbh <-> suachua (yeu cau 04/10/2026, xem CLAUDE.md muc "Keo don bao hanh
 // Odoo"). CHOT: suachua TU XIN dinh ky (cron 15 phut) thay vi dvbh day - chi phi doc/ghi 2 huong xap
@@ -324,6 +325,7 @@ export interface OdooSyncResult {
   bo_sung_id: number;
   bo_sung_tk: number;
   day_trang_thai: number;
+  day_tom_tat_ca: number;
   loi: string[];
   luc: string;
 }
@@ -331,8 +333,8 @@ export interface OdooSyncResult {
 // Chay ca 3 buoc, moi buoc doc lap (1 buoc loi khong chan buoc khac). Ghi ket qua vao sync_state de
 // man Cai dat hien "lan dong bo gan nhat".
 export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
-  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, bo_sung_id: 0, bo_sung_tk: 0, day_trang_thai: 0, loi: [], luc: nowVN() };
-  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "bo_sung_id" | "bo_sung_tk" | "day_trang_thai") => {
+  const res: OdooSyncResult = { ok: true, keo_ve: 0, bo_sung_ktv: 0, bo_sung_id: 0, bo_sung_tk: 0, day_trang_thai: 0, day_tom_tat_ca: 0, loi: [], luc: nowVN() };
+  const step = async (name: string, fn: () => Promise<number>, key: "keo_ve" | "bo_sung_ktv" | "bo_sung_id" | "bo_sung_tk" | "day_trang_thai" | "day_tom_tat_ca") => {
     try {
       res[key] = await fn();
     } catch (e) {
@@ -345,6 +347,8 @@ export async function runOdooSync(env: Env): Promise<OdooSyncResult> {
   await step("Bổ sung ID import", () => resolveMissingImportId(env), "bo_sung_id");
   await step("Bổ sung KTV triển khai", () => resolveKtvTrienKhai(env), "bo_sung_tk");
   await step("Đẩy trạng thái", () => pushStatuses(env), "day_trang_thai");
+  // 18/11/2026: tom tat gui BH theo ca cho dvbh "Quan ly ton" (lib/tomTatCa.ts) - cung endpoint, chi ca co thay doi.
+  await step("Đẩy tóm tắt theo ca", () => dayTomTatCa(env, (path, init) => callDvbh(env, path, init)), "day_tom_tat_ca");
   await setState(env.DB, "odoo_last_run", JSON.stringify(res));
   if (!res.ok) console.error("[odooSync]", res.loi.join(" | "));
   return res;
