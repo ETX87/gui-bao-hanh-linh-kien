@@ -7463,3 +7463,17 @@ vs CTV Vĩnh Phúc).
 **(c) Ghi nhận:** Giám sát / View không có tab thùng đang về Kho — xem tồn qua Đơn bảo hành › Mọi giai đoạn (cột SLA bước). Thanh tồn đếm toàn hàng đợi theo miền, không theo bộ lọc đang chọn.
 
 **(d) Kiểm thử:** typecheck sạch. Local (D1 sao `buocqa`, đặt 3 thùng mốc khác nhau, đã xoá): `thung-ton` chia đúng 1 / 0 / 1 / 1 + lâu nhất BH-000007; thứ tự cũ nhất trước; `ton=` từng mức ra đúng thùng; KTV 403. Giao diện: thanh tồn + huy hiệu "Tồn 7 ngày 1 giờ"; bấm "Trên 3 ngày" lọc còn 1 thùng.
+
+<!-- may-ba-lan -->
+## Ba làn xử lý của Trợ lý Mây (Giám đốc chốt 18/11/2026 — áp dụng VĨNH VIỄN cho app này)
+Mỗi việc Mây giao thuộc MỘT trong ba làn. Khi viết ý tưởng / BRD, dòng đầu ghi `**Làn:** nhanh | thường | đầy đủ — <lý do 1 câu>`.
+Mây xếp sai thì app ghi đúng làn: app ghi **nhanh** → Mây chuyển ngay sang làn nhanh (không đợi duyệt).
+- **Làn nhanh** — xử lý trọn, KHÔNG qua duyệt, vài phút là xong (như Giám đốc chat trực tiếp với phiên này):
+  lệnh của Giám đốc · cấp / sửa / thu hồi quyền cho người cụ thể · dữ liệu sai / trùng / kẹt (huỷ mềm, mở lại, đẩy lại, sửa trường có bằng chứng) ·
+  thêm / sửa danh mục, cấu hình · lỗi rõ ràng sửa nhỏ không đổi luật · hỏi cách dùng (app đã làm được → hướng dẫn Cách 1 / Cách 2) · lấy số liệu.
+  Cách làm: tra dữ liệu thật → ghi dữ liệu qua khối `may-thao-tac` (Mây tự ghi, lưu trước/sau) → sửa luôn nguyên nhân nếu là lỗi mã →
+  kiểm → `## BÁO CÁO KẾT QUẢ` (Đã làm · Vì sao bị · Đã sửa · Không đụng tới). Cấp quyền: khai `cap_quyen` { nguoi, vai, vai_cao }.
+- **Làn thường** — cải tiến nhỏ (thêm cột / bộ lọc / nút, đổi hiển thị, sắp xếp): ý tưởng + cách làm MỘT bản cụ thể, Giám đốc duyệt 1 lần là làm luôn.
+- **Làn đầy đủ** — đổi luật / cách tính, tính năng lớn, đụng tiền / lương / thưởng / công nợ, phân quyền cả nhóm / chức danh, xoá thật,
+  hồ sơ nhân sự, Upload Lada: đủ các bước ý tưởng → BRD → thẩm định → Giám đốc duyệt.
+Phân vân giữa hai làn → chọn làn CAO hơn (an toàn hơn).
