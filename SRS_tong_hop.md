@@ -21,7 +21,7 @@ KTV / CTV / Trạm, KTV triển khai, Kho, Admin bảo hành, NV sửa chữa, K
 | Đơn của tôi (KTV) | Tạo thùng / đơn (mobile-first, chụp ảnh, lưu nháp gửi sau, % tải ảnh), theo dõi, xác nhận nhận hàng; tab Đã xong / Huỷ - từ chối |
 | Đơn bảo hành (BO) | 3 chế độ xem Danh sách / Theo KTV / Theo linh kiện; tab Mọi giai đoạn bảng kiểu Excel + Tải Excel; "Bước đang dừng" (tải khi mở) |
 | Chi tiết đơn / thùng | Popup 95% màn hình, luồng quy trình ngang + "Xem chi tiết", nút thao tác ở tiêu đề / footer, nhật ký gộp các nguồn |
-| Tiếp nhận (Kho, Admin BH) | Thùng chờ tiếp nhận, mở xem và tiếp nhận ngay trong chi tiết, từ chối thùng |
+| Tiếp nhận (Kho, Admin BH) | Thùng chờ tiếp nhận, mở xem và tiếp nhận ngay trong chi tiết, từ chối thùng; Kho từ chối thùng chưa nhận được hàng (lý do bắt buộc, cảnh báo đỏ cho KTV) |
 | Phiếu trả | Bảng nhóm theo KTV, sửa tới khi Kế toán duyệt, diễn giải MISA, file import Odoo, in phiếu |
 | Cấp linh kiện / Linh kiện của tôi | Đề xuất, NV đang giữ, chờ Admin xác nhận tiêu hao, sửa / huỷ xác nhận |
 | Trả xác linh kiện | Xác chờ gom (theo KTV / linh kiện, lọc Excel), thùng trả xác, import kết quả xác hàng loạt |

@@ -11,6 +11,7 @@ import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { UserName } from "../../hooks/useUserNames";
 import type { PhieuGui } from "../../lib/types";
 import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { KhoTuChoiThungModal } from "../kho/KhoTuChoiThungModal";
 
 // 21/10/2026: "bổ sung tìm kiếm ở các danh sách table" - loc + tim cho danh sach thung (Admin BH).
 export const THUNG_DEFS: FilterDef[] = [
@@ -33,6 +34,7 @@ export function ThungDangGuiCard({ onDone, reloadKey, alwaysOpen }: { onDone: ()
   const [open, setOpen] = useState(!!alwaysOpen);
   const [pick, setPick] = useState<PhieuGui | null>(null);
   const [view, setView] = useState<PhieuGui | null>(null);
+  const [tc, setTc] = useState<PhieuGui | null>(null);
   if (total === 0 && !flt.active && !alwaysOpen) return null;
   return (
     <Card className="px-3 py-2">
@@ -71,12 +73,18 @@ export function ThungDangGuiCard({ onDone, reloadKey, alwaysOpen }: { onDone: ()
           onClose={() => setView(null)}
           onChanged={reload}
           actions={
-            <Btn variant="primary" onClick={() => setPick(view)}>
-              Nhận hộ Kho
-            </Btn>
+            <>
+              <Btn variant="ghost" className="text-[var(--red-700)]" onClick={() => setTc(view)}>
+                ⛔ Chưa nhận được hàng
+              </Btn>
+              <Btn variant="primary" onClick={() => setPick(view)}>
+                Nhận hộ Kho
+              </Btn>
+            </>
           }
         />
       )}
+      {tc && <KhoTuChoiThungModal gui={tc} onClose={() => setTc(null)} onDone={() => { setTc(null); setView(null); reload(); onDone(); }} />}
       {pick && (
         <NhanHoModal
           thung={pick}

@@ -21,6 +21,7 @@ const GIO_HET = 20; // sau 20h khong day push nua (tranh bao dem khuya neu cron 
 type MucDef = { vai: string; nhan: string; link: string; gap?: boolean };
 // Moi o dem -> vai tro + nhan + man mo khi bam. Thu tu = thu tu hien thi.
 const MUC: Partial<Record<keyof Counts, MucDef>> = {
+  ktv_kho_tu_choi: { vai: "KTV", nhan: "thùng Kho từ chối vì CHƯA NHẬN ĐƯỢC HÀNG — kiểm tra và gửi lại", link: "/home", gap: true },
   ktv_thung_tu_choi: { vai: "KTV", nhan: "thùng bị Admin từ chối, chờ bạn phản hồi", link: "/home", gap: true },
   ktv_cho_bo_sung: { vai: "KTV", nhan: "đơn Admin yêu cầu bổ sung thông tin", link: "/ktv/tra-cuu", gap: true },
   ktv_nhan_hang: { vai: "KTV", nhan: "phiếu hàng trả đang về, chờ bạn xác nhận nhận", link: "/ktv/nhan-hang" },

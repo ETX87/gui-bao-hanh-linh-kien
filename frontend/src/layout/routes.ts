@@ -60,7 +60,7 @@ const G = ROLE_GROUP;
 const CATALOG: CatalogItem[] = [
   { hash: "/home", label: "Trang chủ", short: "Trang chủ", icon: "🏠", group: "", desc: "Việc cần làm + tổng quan", show: () => true },
 
-  { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", short: "Gửi hàng", icon: "📦", group: G.ktv, desc: "Thùng nháp + đơn Odoo chờ gửi", countKeys: ["ktv_phieu_nhap", "ktv_odoo_cho_gui", "ktv_thung_tu_choi"], show: isKtv },
+  { hash: "/ktv/tao-phieu", label: "Gửi hàng bảo hành", short: "Gửi hàng", icon: "📦", group: G.ktv, desc: "Thùng nháp + đơn Odoo chờ gửi", countKeys: ["ktv_phieu_nhap", "ktv_odoo_cho_gui", "ktv_thung_tu_choi", "ktv_kho_tu_choi"], show: isKtv },
   { hash: "/ktv/tra-cuu", label: "Đơn của tôi", short: "Đơn của tôi", icon: "📋", group: G.ktv, desc: "Mọi đơn đã gửi (cả thùng chưa về Kho) + đơn cần bổ sung", countKeys: ["ktv_cho_bo_sung"], show: isKtv },
   { hash: "/ktv/nhan-hang", label: "Nhận hàng trả", short: "Nhận hàng", icon: "📬", group: G.ktv, desc: "Xác nhận đã nhận hàng trả về", countKeys: ["ktv_nhan_hang"], show: isKtv },
 
@@ -162,6 +162,7 @@ export const COUNT_LABEL: Record<keyof WorkloadCounts, string> = {
   kho_khieu_nai: "khiếu nại chưa đánh giá",
   kho_thung_tu_choi: "thùng Admin từ chối chờ Kho phản hồi",
   ktv_thung_tu_choi: "thùng bị từ chối chờ bạn phản hồi",
+  ktv_kho_tu_choi: "thùng Kho từ chối — chưa nhận được hàng",
   admin_cho_tiep_nhan_noi_bo: "thùng chờ nhận nội bộ",
   admin_cho_xac_nhan_sl: "đơn chờ xác nhận SL",
   admin_cho_phan_loai: "đơn chờ phân loại",

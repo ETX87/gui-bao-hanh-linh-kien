@@ -17,6 +17,7 @@ import { XAC_CHO_GOM, XAC_DX_CHO_GOM } from "./xac";
 export const EMPTY_COUNTS = {
   ktv_phieu_nhap: 0,
   ktv_thung_tu_choi: 0,
+  ktv_kho_tu_choi: 0,
   kho_thung_tu_choi: 0,
   ktv_odoo_cho_gui: 0,
   ktv_cho_bo_sung: 0,
@@ -71,6 +72,10 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       // 13/11/2026: thung bi Admin BH tu choi, Kho da dong y -> cho KTV phan hoi (7 ngay).
       one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE (nguoi_tao = ? OR nguoi_tao_ho = ?) AND tu_choi_tt = 'cho_ktv'`, user.email, user.email).then((r) => {
         counts.ktv_thung_tu_choi = r?.cnt ?? 0;
+      }),
+      // 18/11/2026: thung Kho tu choi (chua nhan duoc hang) - da ve nhap, KTV chua gui lai.
+      one(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE (nguoi_tao = ? OR nguoi_tao_ho = ?) AND trang_thai = 'nhap' AND kho_tc_luc IS NOT NULL`, user.email, user.email).then((r) => {
+        counts.ktv_kho_tu_choi = r?.cnt ?? 0;
       }),
     );
   }

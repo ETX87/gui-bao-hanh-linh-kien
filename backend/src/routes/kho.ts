@@ -8,7 +8,8 @@ import { quaHanBuoc } from "../lib/buoc";
 import { parsePage } from "../lib/pagination";
 import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
 import { kwClause, tenOf, tkThungOf } from "../lib/search";
-import { mienScope } from "../lib/mien";
+import { mienScope, mienAllowed } from "../lib/mien";
+import { sendPushToUser } from "../lib/webPush";
 
 // Man hinh Kho: "Diem tiep nhan kho" - tiep nhan o muc THUNG hang (khong mo kiem tung linh kien).
 // Port dung khoXacNhanTiepNhan()/submitSuCo() cua prototype.
@@ -125,6 +126,47 @@ kho.post("/phieu-gui/:id/bao-su-co", async (c) => {
     .run();
   await addLog(c.env.DB, "phieu_gui", id, "da_gui", "da_tiep_nhan", user.email, "Kho báo sự cố tiếp nhận: " + body.ly_do.trim() + (body.ly_do_cham ? " | Lý do chậm: " + body.ly_do_cham : ""));
   return c.json({ ok: true });
+});
+
+// 18/11/2026 ("o giai doan thung hang, KTV gui hang, kho co quyen tu choi vi co the thung do chua gui ve
+// thuc te, hien trong danh sach cho lam roi thong tin cua kho. Neu kho tu choi se day canh bao nghiem trong
+// ve cho KTV"): thung 'da_gui' -> quay ve 'nhap' cua KTV (KTV gui lai khi da gui hang that). Ly do bat buoc.
+// Canh bao: push ngay toi KTV + nguoi tao ho, the do tren Trang chu KTV, so viec ktv_kho_tu_choi, dong trao doi.
+// Admin BH cung lam duoc (dang lam ho Kho o tab "Dang gui ve Kho").
+kho.post("/phieu-gui/:id/tu-choi", async (c) => {
+  const user = c.get("user");
+  if (!(requireKho(c) || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const g = await c.env.DB.prepare("SELECT trang_thai, mien, nguoi_tao, nguoi_tao_ho, kho_tc_lan FROM phieu_gui_bh WHERE id = ?")
+    .bind(id).first<{ trang_thai: string; mien: string | null; nguoi_tao: string; nguoi_tao_ho: string | null; kho_tc_lan: number }>();
+  if (!g) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!mienAllowed(user, g.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (g.trang_thai !== "da_gui") return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ly_do?: string }>().catch(() => ({}) as { ly_do?: string });
+  const lyDo = (body.ly_do || "").trim().slice(0, 1000);
+  if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
+
+  const now = nowVN();
+  const lan = (g.kho_tc_lan || 0) + 1;
+  const r = await c.env.DB.prepare(
+    `UPDATE phieu_gui_bh SET trang_thai = 'nhap', kho_tc_ly_do = ?, kho_tc_boi = ?, kho_tc_luc = ?, kho_tc_lan = ?, updated_at = ?
+       WHERE id = ? AND trang_thai = 'da_gui'`,
+  ).bind(lyDo, user.email, now, lan, now, id).run();
+  if (!r.meta.changes) return c.json({ error: "WRONG_STATE" }, 400);
+  const ai = user.la_kho ? "Kho" : "Admin BH";
+  await c.env.DB.prepare("INSERT INTO phieu_gui_bh_ghi_chu (phieu_gui_id, tac_gia, thoi_gian, noi_dung) VALUES (?, ?, ?, ?)")
+    .bind(id, user.email, now, `⛔ [${ai} từ chối thùng — CHƯA NHẬN ĐƯỢC HÀNG] ${lyDo}. Thùng đã trả về nháp: chỉ bấm "Xác nhận đã gửi xe" lại khi hàng đã thật sự gửi.`)
+    .run();
+  await addLog(c.env.DB, "phieu_gui", id, "da_gui", "nhap", user.email, `${ai} từ chối thùng (lần ${lan}) — chưa nhận được hàng thực tế: ${lyDo}`);
+
+  const nguoiNhan = [...new Set([g.nguoi_tao, g.nguoi_tao_ho].filter((e): e is string => !!e && e !== user.email))];
+  const push = Promise.all(nguoiNhan.map((e) => sendPushToUser(c.env, e, {
+    title: `⛔ ${ai} từ chối thùng ${id}`,
+    body: `Kho chưa nhận được hàng: ${lyDo}. Thùng đã trả về nháp — chỉ gửi lại khi hàng đã thật sự gửi.`,
+    url: `/${id}`,
+  }))).catch(() => undefined);
+  try { c.executionCtx.waitUntil(push); } catch { await push; }
+  return c.json({ ok: true, lan });
 });
 
 export default kho;

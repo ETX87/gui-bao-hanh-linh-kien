@@ -28,6 +28,7 @@ import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
 import { moPhieuThung, taiPdfPhieuThung } from "../../lib/inPhieuThung";
 import { TuChoiInfo } from "../shared/TuChoiThung";
+import { KhoTuChoiBanner } from "../kho/KhoTuChoiThungModal";
 
 const HINH_THUC_OPTIONS = HINH_THUC_GUI_OPTIONS;
 
@@ -410,6 +411,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             </Banner>
           )}
 
+          <KhoTuChoiBanner g={g} />
           <TuChoiInfo g={g} />
 
           {!!g.su_co_tiep_nhan && (

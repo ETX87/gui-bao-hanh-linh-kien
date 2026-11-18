@@ -3,6 +3,13 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 18/11/2026 — v1.145: Kho từ chối thùng chưa nhận được hàng + cảnh báo KTV
+
+- Yêu cầu: "ở giai đoạn thùng hàng, KTV gửi hàng, kho có quyền từ chối vì có thể thùng đó chưa gửi về thực tế, hiện trong danh sách chờ làm rối thông tin của kho. Nếu kho từ chối sẽ đẩy cảnh báo nghiêm trọng về cho KTV để KTV nắm được thông tin".
+- Đã làm: migration 0042 (`phieu_gui_bh.kho_tc_ly_do/boi/luc/lan`); `POST /api/kho/phieu-gui/:id/tu-choi` (Kho / Admin BH / qtri, đúng miền, lý do bắt buộc): thùng `da_gui` → `nhap`, dòng trao đổi + nhật ký, Web Push ngay cho KTV + người tạo hộ. Số việc `ktv_kho_tu_choi` (menu Gửi hàng, Trang chủ, thông báo 12h mục gấp). Nút "⛔ Chưa nhận được" ở Kho › Đang gửi về Kho (dòng + chi tiết thùng) và Admin "Thùng đang gửi về Kho"; hộp lý do có gợi ý. KTV: thẻ đỏ trên cùng Trang chủ, banner đỏ trong chi tiết thùng, cột "Bước tiếp". Kho thấy nhãn "Từng bị từ chối N lần".
+- Kiểm thử: typecheck sạch; local 9/9 API (KTV bị 403, thiếu lý do 400, từ chối 2 lần 400, rời danh sách + số việc Kho giảm, KTV số việc = 1, thùng về nháp kèm lý do, thông báo 12h có mục, gửi lại yêu cầu giải trình bước 1). Giao diện: thẻ đỏ KTV (375px), banner chi tiết thùng, hộp từ chối của Kho → thùng rời danh sách.
+- Còn dở: chưa báo huỷ sang khovan (thùng bên đó vẫn "chờ xử lý"); chưa thử push trên điện thoại thật.
+
 ## 17/11/2026 — Tạo bộ tài liệu tổng hợp
 
 - Yêu cầu: "dựa theo nguyên tắc tạo 3 file bắt buộc, rà soát toàn bộ các repo và tạo 3 file rồi đẩy lên repo etx87".

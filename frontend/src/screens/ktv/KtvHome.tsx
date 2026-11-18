@@ -58,11 +58,32 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
   const theoDoi = don.filter((d) => !d.can_bo_sung && d.gui_trang_thai !== "nhap").slice(0, TRACK_LIMIT);
   const odoo = counts.ktv_odoo_cho_gui || 0;
   const tuChoi = counts.ktv_thung_tu_choi || 0;
+  // 18/11/2026: thung Kho tu choi (chua nhan duoc hang) len DAU, the do dam.
+  const khoTc = nhap.filter((g) => !!g.kho_tc_luc);
   const tongViec = canBoSung.length + tra.length + nhap.length + (odoo > 0 ? 1 : 0) + tuChoi;
 
   return (
     <div className="space-y-4">
       {/* 15/11/2026: buoc KTV giu qua SLA -> KTV giai trinh. */}
+      {/* 18/11/2026: canh bao nghiem trong - Kho tu choi thung (chua nhan duoc hang) - tren cung. */}
+      {khoTc.length > 0 && (
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+          {khoTc.map((g) => (
+            <div key={"tc" + g.id} className="rounded-xl border-2 border-[var(--red-500)] bg-[var(--red-50)] p-3 shadow-card">
+              <p className="text-[15px] font-extrabold text-[var(--red-700)]">⛔ KHO TỪ CHỐI THÙNG {g.id} — CHƯA NHẬN ĐƯỢC HÀNG</p>
+              <p className="mt-1 text-[13px] text-[var(--ink-body)]">
+                Lý do: <b>{g.kho_tc_ly_do}</b>
+              </p>
+              <p className="text-xs text-[var(--ink-soft)]">
+                {fmtDateOnly(g.kho_tc_luc)} · lần {g.kho_tc_lan} · thùng đã trả về nháp. Kiểm tra lại với nhà xe; chỉ gửi lại khi hàng đã thật sự được gửi.
+              </p>
+              <Btn variant="danger" size="touch" className="mt-2 w-full" onClick={() => setGuiId(g.id)}>
+                Mở thùng & xử lý
+              </Btn>
+            </div>
+          ))}
+        </div>
+      )}
       <CanGiaiTrinh user={user} compact />
       <section>
         <h2 className="mb-2 flex items-baseline gap-2 text-lg font-bold text-[var(--ink)]">
@@ -76,7 +97,7 @@ export function KtvHomeScreen({ user }: { user: AppUser }) {
           {tra.map((t) => (
             <KtvPhieuTraCard key={t.id} pt={t} onDone={after} onOpen={() => setTraId(t.id)} />
           ))}
-          {nhap.map((g) => {
+          {nhap.filter((g) => !g.kho_tc_luc).map((g) => {
             const soDon = (g as PhieuGui & { so_don?: number }).so_don ?? 0;
             const cu = hoursSince(g.created_at) > 24;
             return (

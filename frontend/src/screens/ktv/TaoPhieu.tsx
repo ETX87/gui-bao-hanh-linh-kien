@@ -117,7 +117,7 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
     { key: "id", header: "ID", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "st", header: "Trạng thái", render: (r) => (isSelfKtv ? <StageBadge stage={ktvGuiStage(r.trang_thai)} /> : <StatusBadge kind="gui" value={r.trang_thai} />) },
     { key: "sodon", header: "Số đơn", render: (r) => soDonOf(r) },
-    ...(isSelfKtv ? [{ key: "buoc", header: "Bước tiếp", render: (r: PhieuGui) => <span className={r.trang_thai === "nhap" ? "font-semibold text-[var(--amber-700)]" : "text-[var(--ink-soft)]"}>{buocTiep(r)}{!!r.su_co_tiep_nhan && <b className="text-[var(--red-700)]"> · ⚠ Kho báo sự cố</b>}</span> } as Column<PhieuGui>] : []),
+    ...(isSelfKtv ? [{ key: "buoc", header: "Bước tiếp", render: (r: PhieuGui) => <span className={r.trang_thai === "nhap" ? "font-semibold text-[var(--amber-700)]" : "text-[var(--ink-soft)]"}>{buocTiep(r)}{!!r.su_co_tiep_nhan && <b className="text-[var(--red-700)]"> · ⚠ Kho báo sự cố</b>}{r.trang_thai === "nhap" && !!r.kho_tc_luc && <b className="text-[var(--red-700)]"> · ⛔ Kho từ chối — chưa nhận được hàng</b>}</span> } as Column<PhieuGui>] : []),
     ...(hoMode ? [{ key: "ktv", header: "Tạo cho KTV", render: (r: PhieuGui) => <UserName email={r.nguoi_tao} className="text-xs" /> } as Column<PhieuGui>] : []),
     ...(!hoMode && dsHo.length > 0 ? [{ key: "cua", header: "Của KTV", render: (r: PhieuGui) => (r.nguoi_tao === user.email ? <span className="text-xs text-[var(--ink-soft)]">Tôi</span> : <span className="text-xs">↪ <UserName email={r.nguoi_tao} /></span>) } as Column<PhieuGui>] : []),
     { key: "ngay", header: "Ngày tạo", render: (r) => fmtDateOnly(r.ngay_tao) },

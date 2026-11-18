@@ -12,6 +12,7 @@ import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { fmtDate } from "../../lib/format";
 import { BaoSuCoModal } from "./BaoSuCoModal";
+import { KhoTuChoiThungModal } from "./KhoTuChoiThungModal";
 import { TiepNhanModal } from "./TiepNhanModal";
 import { CameraScanModal } from "./CameraScanModal";
 import { GhiChuLogModal } from "../shared/GhiChuLogModal";
@@ -47,6 +48,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
   const banGiao = usePagedApi<PhieuGui>(withQuery("/kho/phieu-gui?trang_thai=cho_ban_giao", flt.query), "phieu_gui");
   const [recent, setRecent] = useState<PhieuGui[]>([]);
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
+  const [tcFor, setTcFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
   const [logFor, setLogFor] = useState<string | null>(null);
   // 21/10/2026: "thùng hàng chờ tiếp nhận, cho phép click vào để mở nội dung thùng hàng ra để xem và tiếp
@@ -110,11 +112,15 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
                   <Btn size="sm" variant="danger" onClick={() => setSuCoFor(g)}>
                     Báo sự cố
                   </Btn>
+                  <Btn size="sm" variant="ghost" className="text-[var(--red-700)]" title="Thực tế chưa nhận được thùng này — trả về KTV + cảnh báo" onClick={() => setTcFor(g)}>
+                    ⛔ Chưa nhận được
+                  </Btn>
                   <Btn size="sm" onClick={() => setLogFor(g.id)}>💬</Btn>
                 </div>
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1 flex-1 min-w-0">
                   <UserName email={g.nguoi_tao} className="text-[var(--ink-body)] truncate" />
                   {g.so_don != null && <span className="text-xs text-[var(--ink-soft)]">{g.so_don} đơn</span>}
+                  {(g.kho_tc_lan ?? 0) > 0 && <Badge tone="red">⛔ Từng bị từ chối {g.kho_tc_lan} lần</Badge>}
                   <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
@@ -178,6 +184,9 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
           actions={
             viewFor.trang_thai === "da_gui" ? (
               <>
+                <Btn variant="ghost" className="text-[var(--red-700)]" onClick={() => setTcFor(viewFor)}>
+                  ⛔ Chưa nhận được hàng
+                </Btn>
                 <Btn variant="danger" onClick={() => setSuCoFor(viewFor)}>
                   Báo sự cố
                 </Btn>
@@ -189,6 +198,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
           }
         />
       )}
+      {tcFor && <KhoTuChoiThungModal gui={tcFor} onClose={() => setTcFor(null)} onDone={() => { setTcFor(null); setViewFor(null); afterChange(); }} />}
       {suCoFor && <BaoSuCoModal gui={suCoFor} onClose={() => setSuCoFor(null)} onDone={() => { setSuCoFor(null); setViewFor(null); afterChange(); }} />}
       {tiepNhanFor && <TiepNhanModal gui={tiepNhanFor} onClose={() => setTiepNhanFor(null)} onDone={() => { setTiepNhanFor(null); setViewFor(null); afterChange(); }} />}
       {logFor && <GhiChuLogModal guiId={logFor} onClose={() => setLogFor(null)} />}

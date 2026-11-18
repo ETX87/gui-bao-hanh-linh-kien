@@ -29,7 +29,7 @@
 
 ```
 KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng case + linh kiện) → xác nhận gửi xe / giao trực tiếp
-  → Kho tiếp nhận thùng (có thể đổi miền)  → Admin BH xác nhận nhận từ Kho (hoặc từ chối thùng → Kho / KTV phản hồi, quá 7 ngày tự huỷ)
+  → Kho tiếp nhận thùng (có thể đổi miền; thực tế chưa nhận được hàng → Kho từ chối, thùng về nháp KTV + cảnh báo đỏ)  → Admin BH xác nhận nhận từ Kho (hoặc từ chối thùng → Kho / KTV phản hồi, quá 7 ngày tự huỷ)
   → từng đơn vị: xác nhận SL → Admin phân loại Trong / Ngoài BH → hướng xử lý:
        Sửa chữa (giao NV — bắt buộc đủ Hãng, Đối tác, còn / hết BH) | Đổi mới | Từ chối / huỷ BH | Chuyển kho
        NV: Không lỗi | Sửa được | Đề xuất đổi mới (Admin duyệt) | Trả xác  → Admin xác nhận hoàn tất (có thể lùi về NV)
@@ -41,6 +41,11 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   Đã kết thúc · Đã huỷ · Bị từ chối. Định nghĩa ở `NHOM_GD` (frontend `lib/constants.ts` = backend `routes/traCuu.ts`, sửa cùng lúc).
 - 3 linh kiện của 1 đơn: **A** KTV chọn, **B** thực tế gửi về, **C** đổi mới — có đánh giá lệch A/B/C.
 - Huỷ / từ chối đơn: bắt buộc lý do. "Lùi lại" đơn, đổi linh kiện hàng loạt, tách SL đơn vị có sẵn cho Admin BH.
+- **Kho từ chối thùng chưa về** (v1.145): thùng "Đang gửi về Kho" mà thực tế chưa nhận được → Kho (hoặc Admin BH làm hộ) bấm
+  "⛔ Chưa nhận được", lý do bắt buộc → thùng về **nháp** của KTV (rời danh sách chờ Kho), cột `phieu_gui_bh.kho_tc_*` lưu lý do / người /
+  lúc / số lần. KTV nhận ngay Web Push + thẻ đỏ trên cùng Trang chủ + banner trong chi tiết thùng + số việc `ktv_kho_tu_choi` (cả thông
+  báo 12h); cảnh báo còn tới khi KTV gửi lại. Gửi lại vẫn qua quy tắc bước 1 (quá SLA từ lúc tạo thùng → phải giải trình). Kho thấy
+  nhãn "Từng bị từ chối N lần" khi thùng về lại. Thùng bên khovan không được báo huỷ (giữ "chờ xử lý").
 - SLA tính bỏ Chủ nhật; bấm số giờ SLA để ghi lý do chậm.
 
 ## 4. Cấp linh kiện sửa chữa (từ 16/11/2026 xử lý hoàn toàn ở app Đặt linh kiện)

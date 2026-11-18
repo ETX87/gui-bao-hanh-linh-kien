@@ -56,6 +56,11 @@ export interface PhieuGui {
   updated_at: string;
   so_don?: number; // GET /admin/phieu-gui (12/10/2026)
   // 13/11/2026: Admin BH tu choi tiep nhan thung (routes/tuChoiThung.ts).
+  // 18/11/2026: Kho tu choi thung dang gui (chua nhan duoc hang) - routes/kho.ts POST /phieu-gui/:id/tu-choi.
+  kho_tc_ly_do?: string | null;
+  kho_tc_boi?: string | null;
+  kho_tc_luc?: string | null;
+  kho_tc_lan?: number;
   tu_choi_tt?: "cho_kho" | "cho_ktv" | "da_huy" | null;
   tu_choi_ly_do?: string | null;
   tu_choi_boi?: string | null;
