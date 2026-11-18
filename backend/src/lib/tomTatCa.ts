@@ -67,8 +67,9 @@ const ngayGio = (s: string) => new Date(s.replace(" ", "T") + "Z").getTime();
 
 export async function tinhTomTatCa(db: D1Database, ids: string[]): Promise<TomTatCa[]> {
   const dongs: Dong[] = [];
-  for (let i = 0; i < ids.length; i += 90) {
-    const chunk = ids.slice(i, i + 90);
+  // Lo 45: cau UNION ALL bind danh sach 2 lan (D1 toi da 100 tham so / cau - lo 90 da loi "too many SQL variables" 18/11/2026).
+  for (let i = 0; i < ids.length; i += 45) {
+    const chunk = ids.slice(i, i + 45);
     const ph = chunk.map(() => "?").join(",");
     // Đơn đã tách đơn vị: mỗi đơn vị = 1 LK; chưa tách: số lượng KTV khai (cùng cách tính giai đoạn với routes/traCuu.ts allRowsSql).
     const { results } = await db

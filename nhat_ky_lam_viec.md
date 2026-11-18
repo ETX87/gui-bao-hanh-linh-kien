@@ -3,6 +3,11 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 18/11/2026 — v1.148: Sửa lỗi đẩy tóm tắt theo ca
+
+- Lần cron 11:45 sau deploy v1.147 lỗi "too many SQL variables": câu tính tóm tắt bind danh sách mã ca 2 lần (lô 90 → 180 tham số, D1 tối đa
+  100). Giảm lô còn 45 mã ca.
+
 ## 18/11/2026 — v1.147: Đẩy tóm tắt gửi bảo hành THEO CA sang DVBH (migration 0043)
 
 - Yêu cầu (bên DVBH, "Quản lý tồn" > Danh sách chi tiết): "Số lk thực tế đã gửi về (dựa theo api bảo hành đã tạo ở tất cả các trạng thái - trừ
