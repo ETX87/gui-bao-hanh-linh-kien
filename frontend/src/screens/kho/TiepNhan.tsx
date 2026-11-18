@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
-import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, TON_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { DoiMienBadge } from "../../ui/MienBadge";
 import { api } from "../../lib/api";
@@ -12,6 +12,7 @@ import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
 import { fmtDate } from "../../lib/format";
 import { BaoSuCoModal } from "./BaoSuCoModal";
+import { ThungTonBar } from "../shared/ThungTonBar";
 import { KhoTuChoiThungModal } from "./KhoTuChoiThungModal";
 import { TiepNhanModal } from "./TiepNhanModal";
 import { CameraScanModal } from "./CameraScanModal";
@@ -31,6 +32,7 @@ const DEFS: FilterDef[] = [
   { key: "tao_ho", label: "Người tạo hộ", kind: "person", noneLabel: "KTV tự tạo" },
   { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
   { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  TON_DEF,
   CANH_BAO_DEF,
   KHOANG_DEF,
 ];
@@ -92,6 +94,9 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
           <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">📥 Chờ tiếp nhận ({pendingTotal})</h3>
           <Btn onClick={() => setScanOpen(true)}>📷 Quét bằng camera</Btn>
         </div>
+        <div className="mb-2">
+          <ThungTonBar tt="da_gui" value={flt.values.ton || ""} onChange={(v) => flt.set("ton", v)} reloadKey={pendingTotal} onOpen={(id) => setViewFor(pending.find((x) => x.id === id) || ({ id, trang_thai: "da_gui" } as PhieuGui))} />
+        </div>
         {pending.length === 0 ? (
           <EmptyState text={flt.active ? "Không có thùng nào khớp bộ lọc." : "Không có thùng nào chờ tiếp nhận."} />
         ) : (
@@ -123,7 +128,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
                   {(g.kho_tc_lan ?? 0) > 0 && <Badge tone="red">⛔ Từng bị từ chối {g.kho_tc_lan} lần</Badge>}
                   <span className="text-xs text-[var(--ink-soft)]">{g.don_vi_van_chuyen}</span>
                   <span onClick={(e) => e.stopPropagation()}>
-                    <SlaBadge since={g.updated_at} entityType="phieu_gui" entityId={g.id} clickable />
+                    <SlaBadge since={g.updated_at} gd="thung_dang_gui" ton entityType="phieu_gui" entityId={g.id} clickable />
                   </span>
                 </div>
               </div>
@@ -139,6 +144,9 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
             🤝 Chờ bàn giao cho Admin bảo hành ({banGiao.total})
             <span className="ml-2 hidden md:inline text-xs font-normal text-[var(--ink-soft)]">Kho đã nhận, Admin BH chưa bấm "Xác nhận đã nhận" — mang thùng sang và nhắc. Giờ tính từ lúc Kho nhận.</span>
           </h3>
+          <div className="mb-2">
+            <ThungTonBar tt="cho_admin" value={flt.values.ton || ""} onChange={(v) => flt.set("ton", v)} reloadKey={banGiao.total} />
+          </div>
           {banGiao.items.length === 0 && <EmptyState text="Không có thùng nào chờ bàn giao cho Admin." />}
           <div className="space-y-1">
             {banGiao.items.map((g) => (
@@ -148,7 +156,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
                 <UserName email={g.nguoi_tao} className="flex-1 min-w-0 truncate text-[var(--ink-body)]" />
                 {!!g.su_co_tiep_nhan && <Badge tone="red">⚠ Có sự cố</Badge>}
                 <span className="text-xs text-[var(--ink-soft)]">Kho nhận: {fmtDate(g.thoi_gian_nhan_kho)}</span>
-                <SlaBadge since={g.thoi_gian_nhan_kho} />
+                <SlaBadge since={g.thoi_gian_nhan_kho} gd="thung_cho_admin_nhan" ton />
               </div>
             ))}
           </div>

@@ -14,7 +14,7 @@ import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, t
 import { parsePage } from "../lib/pagination";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { nhanHoThung } from "../lib/nhanHo";
-import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, numFilters, sortParam } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, textFilters, numFilters, sortParam, tonFilter } from "../lib/filters";
 import { normVi, capNhatTimKiem } from "../lib/timKiem";
 import type { Context } from "hono";
 import { kwClause, tenOf, tenLkOf, tkThungOf } from "../lib/search";
@@ -54,11 +54,11 @@ adminBH.get("/phieu-gui", async (c) => {
   const f = eqFilters(c, LOC);
   const kw = kwClause(c.req.query("q"), ["id", "ma_van_don", "ma_xe_hoac_tai_xe", "nguoi_tao", tenOf("phieu_gui_bh.nguoi_tao"), "(SELECT group_concat(p.id || ' ' || COALESCE(p.case_id,'') || ' ' || COALESCE(p.ma_lk,''), ' ') FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id)"], [tkThungOf("phieu_gui_bh.id")]);
   // 31/10/2026: loc thoi gian (ngay tao thung) + canh bao SLA (tu luc Kho nhan / gui xe).
-  const tf = joinF(timeFilter(c, "created_at"), slaFilter(c, "COALESCE(thoi_gian_nhan_kho, updated_at)"));
+  const tf = joinF(timeFilter(c, "created_at"), slaFilter(c, "COALESCE(thoi_gian_nhan_kho, updated_at)"), tonFilter(c, c.req.query("trang_thai") === "da_gui" ? "updated_at" : "COALESCE(thoi_gian_nhan_kho, updated_at)"));
   const fromWhere = base + f.sql + kw.sql + tf.sql;
   const b = [...ms.binds, ...f.binds, ...kw.binds, ...tf.binds];
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${fromWhere} ORDER BY nguoi_tao, updated_at LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don ${fromWhere} ORDER BY ${c.req.query("trang_thai") === "da_gui" ? "updated_at" : "COALESCE(thoi_gian_nhan_kho, updated_at)"} ASC LIMIT ? OFFSET ?`).bind(...b, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt ${fromWhere}`).bind(...b).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });

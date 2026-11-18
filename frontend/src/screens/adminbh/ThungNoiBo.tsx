@@ -5,6 +5,7 @@ import { usePagedApi } from "../../hooks/usePagedApi";
 import { Card, Btn, Badge, EmptyState } from "../../ui/primitives";
 import { Pagination } from "../../ui/Pagination";
 import { SlaBadge } from "../../ui/SlaBadge";
+import { ThungTonBar } from "../shared/ThungTonBar";
 import { TiepNhanNoiBoModal } from "./TiepNhanNoiBoModal";
 import { TuChoiModal } from "../shared/TuChoiThung";
 import { THUNG_DEFS, THUNG_PLACEHOLDER } from "./NhanHoKho";
@@ -58,6 +59,7 @@ export function ThungChoNhanNoiBoCard() {
     <>
       {true && (
         <Card className="px-3 py-2">
+          <div className="mb-1.5"><ThungTonBar tt="cho_admin" value={thungFlt.values.ton || ""} onChange={(v) => thungFlt.set("ton", v)} reloadKey={phieuGuiTotal} onOpen={(id) => setViewThung(phieuGui.find((x) => x.id === id) || ({ id } as PhieuGui))} /></div>
           {(phieuGuiTotal > 5 || thungFlt.active > 0) && <FilterBar f={thungFlt} defs={THUNG_DEFS} placeholder={THUNG_PLACEHOLDER} />}
           <div className="flex flex-col md:flex-row md:items-start gap-2">
             <div className="shrink-0 flex flex-wrap items-center gap-2 md:pt-0.5">
@@ -90,7 +92,7 @@ export function ThungChoNhanNoiBoCard() {
                     </Badge>
                   )}
                   <span onClick={(e) => e.stopPropagation()}>
-                    <SlaBadge since={g.thoi_gian_nhan_kho} entityType="phieu_gui" entityId={g.id} clickable />
+                    <SlaBadge since={g.thoi_gian_nhan_kho} gd="thung_cho_admin_nhan" ton entityType="phieu_gui" entityId={g.id} clickable />
                   </span>
                   <Btn
                     variant="primary"

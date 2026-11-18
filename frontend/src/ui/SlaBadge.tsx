@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, errorMessage } from "../lib/api";
-import { fmtHours, hoursSince, slaLevel } from "../lib/format";
+import { fmtHours, fmtTon, hoursSince, slaLevel } from "../lib/format";
 import { useToast } from "./Toast";
 import { Modal } from "./Modal";
 import { Btn, Field, Select } from "./primitives";
@@ -14,7 +14,7 @@ import { slaGio } from "../lib/buoc";
 // duoc de ghi ly do cham NGAY (doc lap, khong doi trang thai) - port dung
 // openQuickLyDoChamModal()/submitQuickLyDoCham().
 
-export function SlaBadge({ since, entityType, entityId, clickable, gd }: { since: string | null | undefined; entityType?: LogEntityType; entityId?: string; clickable?: boolean; gd?: string | null }) {
+export function SlaBadge({ since, entityType, entityId, clickable, gd, ton }: { since: string | null | undefined; entityType?: LogEntityType; entityId?: string; clickable?: boolean; gd?: string | null; ton?: boolean }) {
   const [open, setOpen] = useState(false);
   // 15/11/2026: muc mau theo SLA RIENG cua buoc (gd) - khong truyen gd thi 24h nhu cu.
   const level = slaLevel(since, gd);
@@ -36,7 +36,7 @@ export function SlaBadge({ since, entityType, entityId, clickable, gd }: { since
       onClick={canClick ? (e) => { e.stopPropagation(); setOpen(true); } : undefined}
     >
       {level === "critical" && "⚠ "}
-      {fmtHours(since)}
+      {ton ? `Tồn ${fmtTon(since)}` : fmtHours(since)}
     </span>
   );
 

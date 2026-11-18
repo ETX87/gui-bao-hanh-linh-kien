@@ -30,6 +30,18 @@ export interface FilterDef {
 
 // 31/10/2026 ("bổ sung thêm các công cụ filter theo các dạng trạng thái, cảnh báo, thời gian, linh kiện A, B,
 // C..."): cac o loc dung chung cho moi danh sach. Backend: lib/filters.ts slaFilter / timeFilter.
+// 18/11/2026: thoi gian ton cua thung (backend tonFilter, ?ton=).
+export const TON_DEF: FilterDef = {
+  key: "ton",
+  label: "Thời gian tồn",
+  static: [
+    { value: "lt1", label: "🟢 Dưới 1 ngày" },
+    { value: "d1_2", label: "🟡 1–2 ngày" },
+    { value: "d2_3", label: "🟠 2–3 ngày" },
+    { value: "gt3", label: "🔴 Trên 3 ngày" },
+  ],
+};
+
 export const CANH_BAO_DEF: FilterDef = {
   key: "canh_bao",
   label: "Cảnh báo",

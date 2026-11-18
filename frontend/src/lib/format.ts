@@ -64,6 +64,16 @@ export function fmtHours(iso: string | null | undefined): string {
   return `${h}h`;
 }
 
+// 18/11/2026: thoi gian ton de doc ("5 giờ", "2 ngày 3 giờ") - gio SLA bo Chu nhat (giong hoursSince).
+export function fmtTon(iso: string | null | undefined): string {
+  const h = Math.max(0, Math.floor(hoursSince(iso)));
+  if (h < 1) return "dưới 1 giờ";
+  if (h < 24) return `${h} giờ`;
+  const d = Math.floor(h / 24);
+  const r = h % 24;
+  return r ? `${d} ngày ${r} giờ` : `${d} ngày`;
+}
+
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(parseVnWallClock(iso));

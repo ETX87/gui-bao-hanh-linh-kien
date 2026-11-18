@@ -3,6 +3,12 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 18/11/2026 — v1.146: Cảnh báo thời gian tồn của thùng hàng
+
+- Yêu cầu: "danh sách các thùng hàng, thêm cảnh báo thời gian tồn cho các vai trò xác định được thùng đang tồn bao lâu rồi mà kho chưa xử lý".
+- Đã làm: `GET /api/kho/thung-ton?tt=da_gui|cho_admin` (Kho / Admin BH / qtri, theo miền) đếm 4 mức tồn + thùng lâu nhất; bộ lọc `?ton=` cho danh sách thùng Kho + Admin; xếp thùng cũ nhất lên đầu (trước là mới nhất lên đầu). Giao diện: thanh "⏱ Tồn" (bấm mức để lọc, bấm mã thùng lâu nhất để mở) ở Kho › Đang gửi về Kho, Kho › Chờ bàn giao, Admin › Thùng đang gửi về Kho / chờ tiếp nhận nội bộ; huy hiệu "Tồn x ngày y giờ" theo SLA bước (sửa: trước đây Kho dùng mốc 24h, bước 2 thực tế 48h); ô lọc "Thời gian tồn"; KTV: cột "Bước tiếp" ghi "Chờ Kho nhận · đã gửi x", đỏ khi quá SLA.
+- Kiểm thử: typecheck sạch; local: 3 thùng chia đúng 3 mức, thứ tự cũ nhất trước, lọc từng mức đúng, KTV 403; giao diện thanh tồn + bấm "Trên 3 ngày" lọc đúng 1 thùng.
+
 ## 18/11/2026 — v1.145: Kho từ chối thùng chưa nhận được hàng + cảnh báo KTV
 
 - Yêu cầu: "ở giai đoạn thùng hàng, KTV gửi hàng, kho có quyền từ chối vì có thể thùng đó chưa gửi về thực tế, hiện trong danh sách chờ làm rối thông tin của kho. Nếu kho từ chối sẽ đẩy cảnh báo nghiêm trọng về cho KTV để KTV nắm được thông tin".

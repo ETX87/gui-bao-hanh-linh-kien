@@ -128,6 +128,19 @@ export function slaFilter(c: Context, sinceExpr: string, param = "canh_bao"): { 
   return { sql: "", binds: [] };
 }
 
+// 18/11/2026: loc theo THOI GIAN TON (gio SLA bo Chu nhat) cho danh sach thung: ?ton=lt1|d1_2|d2_3|gt3.
+export const TON_MUC: Record<string, [number, number | null]> = { lt1: [0, 24], d1_2: [24, 48], d2_3: [48, 72], gt3: [72, null] };
+export function tonFilter(c: Context, sinceExpr: string, param = "ton"): { sql: string; binds: string[] } {
+  const m = TON_MUC[(c.req.query(param) || "").trim()];
+  if (!m) return { sql: "", binds: [] };
+  const [tu, den] = m;
+  let sql = "";
+  const binds: string[] = [];
+  if (tu > 0) { sql += ` AND ${sinceExpr} < ?`; binds.push(slaCutoffVn(tu)); }
+  if (den != null) { sql += ` AND ${sinceExpr} >= ?`; binds.push(slaCutoffVn(den)); }
+  return { sql, binds };
+}
+
 // Gop nhieu bo loc {sql, binds}.
 export function joinF(...fs: { sql: string; binds: unknown[] }[]): { sql: string; binds: unknown[] } {
   return { sql: fs.map((f) => f.sql).join(""), binds: fs.flatMap((f) => f.binds) };

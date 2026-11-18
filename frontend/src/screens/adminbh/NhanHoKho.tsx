@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
+import { ThungTonBar } from "../shared/ThungTonBar";
 import { api, errorMessage } from "../../lib/api";
 import { usePagedApi } from "../../hooks/usePagedApi";
 import { useToast } from "../../ui/Toast";
@@ -10,7 +11,7 @@ import { SlaBadge } from "../../ui/SlaBadge";
 import { HINH_THUC_GUI_LABELS } from "../../lib/constants";
 import { UserName } from "../../hooks/useUserNames";
 import type { PhieuGui } from "../../lib/types";
-import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
+import { FilterBar, useListFilters, withQuery, type FilterDef, CANH_BAO_DEF, TON_DEF, KHOANG_DEF, LK_ABC_DEFS, LK_A_DEF, LK_B_DEF } from "../../ui/FilterBar";
 import { KhoTuChoiThungModal } from "../kho/KhoTuChoiThungModal";
 
 // 21/10/2026: "bổ sung tìm kiếm ở các danh sách table" - loc + tim cho danh sach thung (Admin BH).
@@ -19,6 +20,7 @@ export const THUNG_DEFS: FilterDef[] = [
   { key: "kho", label: "Kho nhận", kind: "person" },
   { key: "hinh_thuc_gui", label: "Hình thức gửi", kind: "map", labels: HINH_THUC_GUI_LABELS },
   { key: "mien", label: "Miền", kind: "map", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, noneLabel: "Chưa khai báo" },
+  TON_DEF,
   CANH_BAO_DEF,
   KHOANG_DEF,
 ];
@@ -45,7 +47,8 @@ export function ThungDangGuiCard({ onDone, reloadKey, alwaysOpen }: { onDone: ()
       </button>
       {open && (
         <>
-          <div className="mt-1.5">
+          <div className="mt-1.5 space-y-1.5">
+            <ThungTonBar tt="da_gui" value={flt.values.ton || ""} onChange={(v) => flt.set("ton", v)} reloadKey={total} onOpen={(id) => setView(items.find((x) => x.id === id) || ({ id, trang_thai: "da_gui" } as PhieuGui))} />
             <FilterBar f={flt} defs={THUNG_DEFS} placeholder={THUNG_PLACEHOLDER} />
           </div>
           {items.length === 0 && <p className="text-sm text-[var(--ink-faint)]">Không có thùng nào khớp bộ lọc.</p>}
@@ -57,7 +60,7 @@ export function ThungDangGuiCard({ onDone, reloadKey, alwaysOpen }: { onDone: ()
                 <span className="text-xs text-[var(--ink-soft)] shrink-0">
                   {g.so_don ?? 0} đơn · {HINH_THUC_GUI_LABELS[g.hinh_thuc_gui || ""] || g.hinh_thuc_gui || "—"}
                 </span>
-                <SlaBadge since={g.updated_at} />
+                <SlaBadge since={g.updated_at} gd="thung_dang_gui" ton />
                 <Btn size="sm" variant="secondary" className="ml-auto shrink-0" onClick={(e) => { e.stopPropagation(); setPick(g); }}>
                   Nhận hộ Kho
                 </Btn>

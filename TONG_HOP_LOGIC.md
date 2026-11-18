@@ -46,6 +46,10 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   lúc / số lần. KTV nhận ngay Web Push + thẻ đỏ trên cùng Trang chủ + banner trong chi tiết thùng + số việc `ktv_kho_tu_choi` (cả thông
   báo 12h); cảnh báo còn tới khi KTV gửi lại. Gửi lại vẫn qua quy tắc bước 1 (quá SLA từ lúc tạo thùng → phải giải trình). Kho thấy
   nhãn "Từng bị từ chối N lần" khi thùng về lại. Thùng bên khovan không được báo huỷ (giữ "chờ xử lý").
+- **Thời gian tồn của thùng** (v1.146): thanh "⏱ Tồn N thùng" trên danh sách thùng đang về Kho (Kho, Admin BH) và thùng Kho đã nhận
+  chờ Admin nhận nội bộ: 4 mức Dưới 1 ngày / 1–2 / 2–3 / Trên 3 ngày (giờ bỏ Chủ nhật, `GET /api/kho/thung-ton`), bấm mức để lọc
+  (`?ton=`, `tonFilter`), kèm thùng tồn lâu nhất. Danh sách xếp thùng cũ nhất lên đầu; huy hiệu ghi "Tồn x ngày y giờ" màu theo SLA
+  bước (bước 2 = 48h). KTV thấy "Chờ Kho nhận · đã gửi x ngày" (đỏ khi quá SLA). Mốc: thùng đang về = lúc KTV gửi; chờ Admin = lúc Kho nhận.
 - SLA tính bỏ Chủ nhật; bấm số giờ SLA để ghi lý do chậm.
 
 ## 4. Cấp linh kiện sửa chữa (từ 16/11/2026 xử lý hoàn toàn ở app Đặt linh kiện)

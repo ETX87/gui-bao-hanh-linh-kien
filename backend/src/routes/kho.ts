@@ -6,7 +6,8 @@ import { nowVN } from "../lib/vnTime";
 import { addLog } from "../lib/logs";
 import { quaHanBuoc } from "../lib/buoc";
 import { parsePage } from "../lib/pagination";
-import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, slaFilter, joinF, tonFilter } from "../lib/filters";
+import { slaCutoffVn } from "../lib/sla";
 import { kwClause, tenOf, tkThungOf } from "../lib/search";
 import { mienScope, mienAllowed } from "../lib/mien";
 import { sendPushToUser } from "../lib/webPush";
@@ -41,7 +42,7 @@ kho.get("/phieu-gui", async (c) => {
     return c.json({ loc: await distinctOpts(c.env.DB, LOC, `FROM phieu_gui_bh WHERE ${base}${ms0.sql}`, ms0.binds) });
   }
   const slaMoc = c.req.query("trang_thai") === "cho_ban_giao" ? "phieu_gui_bh.thoi_gian_nhan_kho" : "phieu_gui_bh.updated_at";
-  const f = joinF(eqFilters(c, LOC), timeFilter(c, "phieu_gui_bh.created_at"), slaFilter(c, slaMoc));
+  const f = joinF(eqFilters(c, LOC), timeFilter(c, "phieu_gui_bh.created_at"), slaFilter(c, slaMoc), tonFilter(c, slaMoc));
   const ms = { sql: ms0.sql + kw.sql + f.sql, binds: [...ms0.binds, ...kw.binds, ...f.binds] };
   // 09/10/2026 ("Vai tro kho thieu nhac giai doan cho ban giao cho Admin sua chua"): thung Kho da tiep
   // nhan nhung Admin BH CHUA xac nhan tiep nhan noi bo - phan trang that, cu nhat len dau.
@@ -61,10 +62,40 @@ kho.get("/phieu-gui", async (c) => {
   }
   const { limit, offset } = parsePage(c);
   const [{ results }, totalRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql} ORDER BY updated_at DESC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
+    c.env.DB.prepare(`SELECT *, (SELECT COUNT(*) FROM phieu_sua_chua_bh p WHERE p.phieu_gui_id = phieu_gui_bh.id) AS so_don FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql} ORDER BY updated_at ASC LIMIT ? OFFSET ?`).bind(...ms.binds, limit, offset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM phieu_gui_bh WHERE trang_thai = 'da_gui'${ms.sql}`).bind(...ms.binds).first<{ cnt: number }>(),
   ]);
   return c.json({ phieu_gui: results, total: totalRow?.cnt ?? 0 });
+});
+
+// 18/11/2026 ("danh sách các thùng hàng, thêm cảnh báo thời gian tồn cho các vai trò xác định được thùng đang
+// tồn bao lâu rồi mà kho chưa xử lý"): thanh tong hop thoi gian ton cua 1 hang doi thung.
+// tt=da_gui (dang ve Kho, tinh tu luc KTV gui = updated_at) | cho_admin (Kho da nhan, Admin chua nhan noi bo, tu thoi_gian_nhan_kho).
+// Gio SLA bo Chu nhat (slaCutoffVn). Kho / Admin BH / qtri, theo mien.
+kho.get("/thung-ton", async (c) => {
+  const user = c.get("user");
+  if (!(requireKho(c) || user.la_admin_bh)) return c.json({ error: "FORBIDDEN" }, 403);
+  const tt = c.req.query("tt") === "cho_admin" ? "cho_admin" : "da_gui";
+  const moc = tt === "da_gui" ? "updated_at" : "thoi_gian_nhan_kho";
+  const where = (tt === "da_gui" ? "trang_thai = 'da_gui'" : "trang_thai = 'da_tiep_nhan' AND admin_tiep_nhan = 0 AND tu_choi_tt IS NULL") + mienScope(user, "phieu_gui_bh").sql;
+  const mb = mienScope(user, "phieu_gui_bh").binds;
+  const [c24, c48, c72] = [slaCutoffVn(24), slaCutoffVn(48), slaCutoffVn(72)];
+  const [r, cu] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS tong, SUM(CASE WHEN ${moc} >= ? THEN 1 ELSE 0 END) AS lt1,
+         SUM(CASE WHEN ${moc} < ? AND ${moc} >= ? THEN 1 ELSE 0 END) AS d1_2,
+         SUM(CASE WHEN ${moc} < ? AND ${moc} >= ? THEN 1 ELSE 0 END) AS d2_3,
+         SUM(CASE WHEN ${moc} < ? THEN 1 ELSE 0 END) AS gt3
+       FROM phieu_gui_bh WHERE ${where}`,
+    ).bind(c24, c24, c48, c48, c72, c72, ...mb).first<Record<string, number | null>>(),
+    c.env.DB.prepare(`SELECT id, nguoi_tao, ${moc} AS moc FROM phieu_gui_bh WHERE ${where} ORDER BY ${moc} ASC LIMIT 1`).bind(...mb).first(),
+  ]);
+  return c.json({
+    tt,
+    tong: r?.tong ?? 0,
+    muc: { lt1: r?.lt1 ?? 0, d1_2: r?.d1_2 ?? 0, d2_3: r?.d2_3 ?? 0, gt3: r?.gt3 ?? 0 },
+    lau_nhat: cu ?? null,
+  });
 });
 
 interface ConfirmBody {
