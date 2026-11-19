@@ -76,7 +76,8 @@ export async function layCanGiaiTrinh(db: D1Database, user: AppUser): Promise<{ 
   const ch = await cauHinhBuoc(db);
   const nhom: { vai: "ktv" | "gs" | "bo"; gds: string[]; extra: number; scopeUser: typeof user; extraSql?: string; extraBinds?: unknown[] }[] = [];
   const laKtvThat = user.la_ktv_dvbh || user.la_ve_tinh;
-  if (laKtvThat) nhom.push({ vai: "ktv", gds: BUOC_KTV, extra: 0, scopeUser: { ...user, la_qtri: false, la_admin_bh: false, la_kho: false, la_ke_toan: false, la_giam_sat: false, la_view: false } });
+  // 19/11/2026: KTV khong con phai giai trinh (viec KTV qua SLA chuyen Giam sat sau len_gs).
+  if (false && laKtvThat) nhom.push({ vai: "ktv", gds: BUOC_KTV, extra: 0, scopeUser: { ...user, la_qtri: false, la_admin_bh: false, la_kho: false, la_ke_toan: false, la_giam_sat: false, la_view: false } });
   if (user.la_giam_sat) nhom.push({ vai: "gs", gds: BUOC_KTV, extra: ch.len_gs, scopeUser: { ...user, la_qtri: false, la_admin_bh: false, la_kho: false, la_ke_toan: false } });
   const boGds = buocCuaBo(user);
   if (boGds.length) {

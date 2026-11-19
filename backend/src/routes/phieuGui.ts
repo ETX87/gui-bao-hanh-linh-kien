@@ -1,5 +1,4 @@
 import { maKtvCuaEmail, caseThuocKtv, laKtvTaoHo } from "../lib/ktvMa";
-import { canGiaiTrinhTruoc } from "../lib/giaiTrinh";
 import { laCaseHomNay, normCaseId } from "../lib/caseNgay";
 import { bumpLinhKienVersion } from "../lib/linhKienVersion";
 import { Hono } from "hono";
@@ -373,8 +372,7 @@ phieuGui.post("/:id/xac-nhan-gui", async (c) => {
   const donCount = await c.env.DB.prepare("SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh WHERE phieu_gui_id = ?").bind(id).first<{ cnt: number }>();
   if ((donCount?.cnt ?? 0) === 0) return c.json({ error: "EMPTY_PHIEU" }, 400);
   // 16/11/2026: buoc KTV giu qua SLA ma chua ai giai trinh -> phai giai trinh truoc (frontend tu mo hop giai trinh roi gui lai).
-  const gtTruoc = await canGiaiTrinhTruoc(c.env.DB, "phieu_gui", id);
-  if (gtTruoc) return c.json({ error: "REQUIRE_GIAI_TRINH", gt: gtTruoc }, 400);
+  // 19/11/2026: bo bat buoc KTV giai trinh khi cham ("ktv không cần giải trình nếu đơn hàng bị chậm").
   const body = await c.req.json<{ ngay_gui_xe?: string }>().catch(() => ({}) as { ngay_gui_xe?: string });
   await c.env.DB.prepare("UPDATE phieu_gui_bh SET trang_thai = 'da_gui', ngay_gui_xe = ?, updated_at = ? WHERE id = ?")
     .bind(body.ngay_gui_xe || nowVN().slice(0, 10), nowVN(), id)
@@ -787,8 +785,7 @@ phieuGui.patch("/don-vi/:id/bo-sung", async (c) => {
   if (!laChuThung && !thayKtv) return c.json({ error: "FORBIDDEN" }, 403);
   if (u.trang_thai !== "cho_bo_sung_tt") return c.json({ error: "WRONG_STATE" }, 400);
   // 16/11/2026: buoc KTV giu qua SLA ma chua ai giai trinh -> phai giai trinh truoc (frontend tu mo hop giai trinh roi gui lai).
-  const gtTruoc = await canGiaiTrinhTruoc(c.env.DB, "phieu_sc_ct", id);
-  if (gtTruoc) return c.json({ error: "REQUIRE_GIAI_TRINH", gt: gtTruoc }, 400);
+  // 19/11/2026: bo bat buoc KTV giai trinh khi cham ("ktv không cần giải trình nếu đơn hàng bị chậm").
 
   const body = await c.req.json<BoSungBody>().catch(() => ({}) as BoSungBody);
   // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi ghi gi khac.

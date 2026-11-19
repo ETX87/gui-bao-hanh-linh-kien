@@ -7463,3 +7463,11 @@ vs CTV Vĩnh Phúc).
 **(c) Ghi nhận:** Giám sát / View không có tab thùng đang về Kho — xem tồn qua Đơn bảo hành › Mọi giai đoạn (cột SLA bước). Thanh tồn đếm toàn hàng đợi theo miền, không theo bộ lọc đang chọn.
 
 **(d) Kiểm thử:** typecheck sạch. Local (D1 sao `buocqa`, đặt 3 thùng mốc khác nhau, đã xoá): `thung-ton` chia đúng 1 / 0 / 1 / 1 + lâu nhất BH-000007; thứ tự cũ nhất trước; `ton=` từng mức ra đúng thùng; KTV 403. Giao diện: thanh tồn + huy hiệu "Tồn 7 ngày 1 giờ"; bấm "Trên 3 ngày" lọc còn 1 thùng.
+
+## KTV không phải giải trình khi chậm (19/11/2026) — v1.149
+
+**(a) Nguyên văn** (ảnh hộp "Giải trình — BH-001235" bắt buộc khi KTV bấm gửi xe): *"ktv không cần giải trình nếu đơn hàng bị chậm"*
+
+**(b) Đã làm:** bỏ cổng `REQUIRE_GIAI_TRINH` (v1.130) ở `POST /phieu-gui/:id/xac-nhan-gui` (bước 1) và `PATCH /phieu-gui/don-vi/:id/bo-sung` (5B); bước 11 đã bỏ từ v1.135. `layCanGiaiTrinh` không còn nhóm "KTV" → KTV không thấy "Cần giải trình" ở Trang chủ / thông báo 12h. Việc KTV quá SLA vẫn chuyển Giám sát khu vực sau SLA + `len_gs` (như cũ), vẫn tính vào báo cáo điểm nghẽn. KTV vẫn tự giải trình được nếu muốn (route `/buoc/giai-trinh` không đổi). Không có migration.
+
+**(d) Kiểm thử:** typecheck 0 lỗi. Chưa bấm thử trên điện thoại.
