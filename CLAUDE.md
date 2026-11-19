@@ -7471,3 +7471,16 @@ vs CTV Vĩnh Phúc).
 **(b) Đã làm:** bỏ cổng `REQUIRE_GIAI_TRINH` (v1.130) ở `POST /phieu-gui/:id/xac-nhan-gui` (bước 1) và `PATCH /phieu-gui/don-vi/:id/bo-sung` (5B); bước 11 đã bỏ từ v1.135. `layCanGiaiTrinh` không còn nhóm "KTV" → KTV không thấy "Cần giải trình" ở Trang chủ / thông báo 12h. Việc KTV quá SLA vẫn chuyển Giám sát khu vực sau SLA + `len_gs` (như cũ), vẫn tính vào báo cáo điểm nghẽn. KTV vẫn tự giải trình được nếu muốn (route `/buoc/giai-trinh` không đổi). Không có migration.
 
 **(d) Kiểm thử:** typecheck 0 lỗi. Chưa bấm thử trên điện thoại.
+<!-- may-ba-lan -->
+## Ba làn xử lý của Trợ lý Mây (Giám đốc chốt 18/11/2026 — áp dụng VĨNH VIỄN cho app này)
+Mỗi việc Mây giao thuộc MỘT trong ba làn. Khi viết ý tưởng / BRD, dòng đầu ghi `**Làn:** nhanh | thường | đầy đủ — <lý do 1 câu>`.
+Mây xếp sai thì app ghi đúng làn: app ghi **nhanh** → Mây chuyển ngay sang làn nhanh (không đợi duyệt).
+- **Làn nhanh** — xử lý trọn, KHÔNG qua duyệt, vài phút là xong (như Giám đốc chat trực tiếp với phiên này):
+  lệnh của Giám đốc · cấp / sửa / thu hồi quyền cho người cụ thể · dữ liệu sai / trùng / kẹt (huỷ mềm, mở lại, đẩy lại, sửa trường có bằng chứng) ·
+  thêm / sửa danh mục, cấu hình · lỗi rõ ràng sửa nhỏ không đổi luật · hỏi cách dùng (app đã làm được → hướng dẫn Cách 1 / Cách 2) · lấy số liệu.
+  Cách làm: tra dữ liệu thật → ghi dữ liệu qua khối `may-thao-tac` (Mây tự ghi, lưu trước/sau) → sửa luôn nguyên nhân nếu là lỗi mã →
+  kiểm → `## BÁO CÁO KẾT QUẢ` (Đã làm · Vì sao bị · Đã sửa · Không đụng tới). Cấp quyền: khai `cap_quyen` { nguoi, vai, vai_cao }.
+- **Làn thường** — cải tiến nhỏ (thêm cột / bộ lọc / nút, đổi hiển thị, sắp xếp): ý tưởng + cách làm MỘT bản cụ thể, Giám đốc duyệt 1 lần là làm luôn.
+- **Làn đầy đủ** — đổi luật / cách tính, tính năng lớn, đụng tiền / lương / thưởng / công nợ, phân quyền cả nhóm / chức danh, xoá thật,
+  hồ sơ nhân sự, Upload Lada: đủ các bước ý tưởng → BRD → thẩm định → Giám đốc duyệt.
+Phân vân giữa hai làn → chọn làn CAO hơn (an toàn hơn).
