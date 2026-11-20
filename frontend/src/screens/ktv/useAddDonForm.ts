@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, ApiError, errorMessage } from "../../lib/api";
 import { fileToDataUrl } from "../../lib/format";
 import { useToast } from "../../ui/Toast";
-import { useLinhKien } from "../../hooks/useLinhKien";
+import { useLinhKien, useLkDaDat, lkOptionsUuTien } from "../../hooks/useLinhKien";
 import { postJsonWithProgress, type UploadProgress } from "../../lib/uploadProgress";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -29,6 +29,9 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const [loaiDoiTru, setLoaiDoiTru] = useState("doi_tra");
   const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
+  // 20/11/2026 (v1.150): linh kien da dat ben app Dat LK cho case nay (bo don huy / tu choi) -> len dau o chon linh kien.
+  const lkDaDat = useLkDaDat(caseId, caseValid);
+  const lkOpts = useMemo(() => lkOptionsUuTien(linhKien, lkDaDat), [linhKien, lkDaDat]);
   const [tienDo, setTienDo] = useState<UploadProgress | null>(null);
   // 05/10/2026 muc 9: Admin BH / Giam sat (/qtri) tao don HO cho KTV khac duoc tich xac nhan tao don du
   // case thuoc KTV khac tren he thong - KTV tu tao cho chinh minh KHONG co lua chon nay.
@@ -110,5 +113,5 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
     }
   };
 
-  return { trung, linhKien, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, tienDo, valid, lyDoKhoa, submit };
+  return { trung, linhKien, lkOpts, lkDaDat, ktvEmail, allowOverride, override, setOverride, caseId, setCaseId, caseValid, setCaseValid, maLk, setMaLk, soLuong, setSoLuong, moTa, setMoTa, loaiDoiTru, setLoaiDoiTru, anhFiles, setAnhFiles, busy, tienDo, valid, lyDoKhoa, submit };
 }

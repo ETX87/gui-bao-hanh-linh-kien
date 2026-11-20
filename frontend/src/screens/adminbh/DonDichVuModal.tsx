@@ -6,7 +6,8 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Textarea, SectionLabel, Spinner } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
-import { useLinhKien, lkOptions } from "../../hooks/useLinhKien";
+import { useLinhKien, useLkDaDat, lkOptionsUuTien } from "../../hooks/useLinhKien";
+import { LkDaDatNote } from "../shared/LkDaDatNote";
 import { CaseIdField } from "../shared/CaseLookupPreviewCard";
 import type { KtvLienHe } from "../../lib/types";
 import { normalizeVi } from "../../lib/normalizeVi";
@@ -99,6 +100,7 @@ export function DonDichVuModal({ onClose, onDone, onKtvThung }: { onClose: () =>
 
   const khChon = khList?.find((k) => k.id === khId) || null;
   const hasCase = caseId.trim().length > 0;
+  const lkDaDat = useLkDaDat(caseId, caseId.trim().length >= 6);
   const khOk = taoMoi ? !!(moi.ten.trim() && moi.sdt.trim()) : !!khChon;
   const validKh = khOk && moTa.trim() && Number(soLuong) >= 1 && (hasCase || sanPham.trim());
   const lyDoKhoa = !khOk
@@ -369,7 +371,8 @@ export function DonDichVuModal({ onClose, onDone, onKtvThung }: { onClose: () =>
               )}
               <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-3">
                 <Field label="Linh kiện lỗi">
-                  <SearchableSelect options={lkOptions(linhKien)} value={maLk} onChange={setMaLk} />
+                  <SearchableSelect options={lkOptionsUuTien(linhKien, lkDaDat)} value={maLk} onChange={setMaLk} />
+                  <LkDaDatNote n={lkDaDat.length} />
                 </Field>
                 <Field label="Số lượng" required>
                   <Input type="number" min={1} value={soLuong} onChange={(e) => setSoLuong(e.target.value)} />

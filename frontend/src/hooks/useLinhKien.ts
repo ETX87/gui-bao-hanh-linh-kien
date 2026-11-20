@@ -121,3 +121,49 @@ export function useLkName() {
   };
   return { nameOf, phanLoaiOf, soThangOf, loading };
 }
+
+// 20/11/2026 (v1.150) - "khi chọn 1 mã ID => ưu tiên hiện top danh sách các mã họ đã đặt hàng bên linh kiện app liên quan đến
+// mã ID đó - chỉ tính mã chưa bị hủy hoặc từ chối". Server goi linh-kien-app (GET /case-lookup/lk-da-dat), cache theo case trong phien.
+export interface LkDaDat { ma_lk: string; ten_lk: string | null; so_luong: number; so_don: number; ngay_moi: string | null }
+const daDatCache = new Map<string, LkDaDat[]>();
+
+export function useLkDaDat(caseId: string, enabled = true): LkDaDat[] {
+  const id = caseId.trim().toUpperCase();
+  const [rows, setRows] = useState<LkDaDat[]>(() => daDatCache.get(id) ?? []);
+  useEffect(() => {
+    if (!enabled || id.length < 3) { setRows([]); return; }
+    const c = daDatCache.get(id);
+    if (c) { setRows(c); return; }
+    setRows([]);
+    let huy = false;
+    const t = setTimeout(() => {
+      api
+        .get<{ rows: LkDaDat[] }>(`/case-lookup/lk-da-dat?id=${encodeURIComponent(id)}`)
+        .then((r) => {
+          const v = Array.isArray(r.rows) ? r.rows : [];
+          daDatCache.set(id, v);
+          if (!huy) setRows(v);
+        })
+        .catch(() => undefined);
+    }, 400);
+    return () => { huy = true; clearTimeout(t); };
+  }, [id, enabled]);
+  return rows;
+}
+
+/** lkOptions + dua linh kien DA DAT cho case len dau (kem nhan "📦 Đã đặt ×SL"); linh kien chua co trong danh muc thi bo qua. */
+export function lkOptionsUuTien(items: LinhKien[], daDat: LkDaDat[]) {
+  const base = lkOptions(items);
+  if (!daDat.length) return base;
+  const byMa = new Map(items.map((lk) => [lk.ma_lk, lk]));
+  const dau: ReturnType<typeof lkOptions> = [];
+  const daCo = new Set<string>();
+  for (const d of daDat) {
+    const lk = byMa.get(d.ma_lk);
+    if (!lk || daCo.has(d.ma_lk)) continue;
+    daCo.add(d.ma_lk);
+    const hint = [`📦 Đã đặt ×${d.so_luong}`, lk.don_vi?.trim()].filter(Boolean).join(" · ");
+    dau.push({ value: lk.ma_lk, label: lkLabel(lk.ten_lk, lk.ma_lk), hint });
+  }
+  return [...dau, ...base.filter((o) => !daCo.has(o.value))];
+}

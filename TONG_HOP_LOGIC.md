@@ -39,6 +39,9 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 
 - **9 nhóm giai đoạn** (gom 21 giai đoạn chi tiết): Đơn nháp · Chờ tiếp nhận · Đã tiếp nhận · Đang sửa chữa · Chờ gửi trả · Đang gửi trả ·
   Đã kết thúc · Đã huỷ · Bị từ chối. Định nghĩa ở `NHOM_GD` (frontend `lib/constants.ts` = backend `routes/traCuu.ts`, sửa cùng lúc).
+- **Ưu tiên linh kiện đã đặt** (v1.150): chọn mã case khi thêm / sửa đơn → các linh kiện đã đặt cho case đó bên app Đặt linh kiện (trừ đơn
+  trả hàng / bị từ chối / huỷ) lên đầu ô chọn linh kiện, nhãn "📦 Đã đặt ×SL". Tra qua `GET /api/case-lookup/lk-da-dat` → linh-kien-app
+  `/api/suachua-partner/lk-theo-case`; lỗi kết nối thì danh sách giữ thứ tự thường.
 - 3 linh kiện của 1 đơn: **A** KTV chọn, **B** thực tế gửi về, **C** đổi mới — có đánh giá lệch A/B/C.
 - Huỷ / từ chối đơn: bắt buộc lý do. "Lùi lại" đơn, đổi linh kiện hàng loạt, tách SL đơn vị có sẵn cho Admin BH.
 - **Kho từ chối thùng chưa về** (v1.145): thùng "Đang gửi về Kho" mà thực tế chưa nhận được → Kho (hoặc Admin BH làm hộ) bấm

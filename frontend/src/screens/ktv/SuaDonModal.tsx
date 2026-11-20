@@ -4,7 +4,8 @@ import { Btn, Field, Select, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { useToast } from "../../ui/Toast";
 import { api, errorMessage } from "../../lib/api";
-import { lkOptions, useLinhKien } from "../../hooks/useLinhKien";
+import { useLinhKien, useLkDaDat, lkOptionsUuTien } from "../../hooks/useLinhKien";
+import { LkDaDatNote } from "../shared/LkDaDatNote";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
 
 // 31/10/2026: bam 1 don trong thung NHAP de sua: linh kien KTV chon (A - VD linh kien mac dinh tu Odoo bi sai),
@@ -22,6 +23,7 @@ export interface DonSua {
 export function SuaDonModal({ don, onClose, onDone }: { don: DonSua; onClose: () => void; onDone: () => void }) {
   const toast = useToast();
   const { items: linhKien } = useLinhKien();
+  const lkDaDat = useLkDaDat(don.case_id ?? "", !!don.case_id);
   const [maLk, setMaLk] = useState(don.ma_lk ?? "");
   const [soLuong, setSoLuong] = useState(don.so_luong_khai || 1);
   const [moTa, setMoTa] = useState(don.mo_ta_loi ?? "");
@@ -66,7 +68,8 @@ export function SuaDonModal({ don, onClose, onDone }: { don: DonSua; onClose: ()
           </p>
         )}
         <Field label="Linh kiện lỗi" required>
-          <SearchableSelect options={lkOptions(linhKien)} value={maLk} onChange={setMaLk} />
+          <SearchableSelect options={lkOptionsUuTien(linhKien, lkDaDat)} value={maLk} onChange={setMaLk} />
+          <LkDaDatNote n={lkDaDat.length} />
         </Field>
         <Field label="Số lượng" required>
           <div className="flex items-center gap-2">

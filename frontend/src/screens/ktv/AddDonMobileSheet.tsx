@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { UploadBar, uploadBtnText } from "../../ui/UploadBar";
 import { ImagePicker } from "../../ui/ImagePicker";
 import { Btn, Field, Input, Select, Textarea } from "../../ui/primitives";
-import { lkOptions } from "../../hooks/useLinhKien";
+import { LkDaDatNote } from "../shared/LkDaDatNote";
 import { SearchableSelect } from "../../ui/SearchableSelect";
 import { LOAI_DOI_TRU_LABELS } from "../../lib/constants";
 import { CaseIdField } from "../shared/CaseLookupPreviewCard";
@@ -51,7 +51,8 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
           onOverrideChange={f.setOverride}
         />
         <Field label="Linh kiện lỗi">
-          <SearchableSelect options={lkOptions(f.linhKien)} value={f.maLk} onChange={f.setMaLk} />
+          <SearchableSelect options={f.lkOpts} value={f.maLk} onChange={f.setMaLk} />
+          <LkDaDatNote n={f.lkDaDat.length} />
               {f.trung && (
                 <p className="mt-1 rounded-lg border border-[var(--red-200)] bg-[var(--red-50)] px-2 py-1.5 text-xs font-semibold text-[var(--red-600)]">
                   ⛔ Mã case này đã có đơn {f.trung.id}{f.trung.phieu_gui_id ? ` (thùng ${f.trung.phieu_gui_id})` : ""} cùng linh kiện — không thể tạo trùng. Chỉ tạo lại được khi đơn cũ bị từ chối / huỷ.

@@ -3,6 +3,18 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 20/11/2026 — v1.150: Ưu tiên linh kiện đã đặt bên app Đặt LK khi chọn mã case (+ linh-kien-app v1.539)
+
+- Yêu cầu: "khi họ chọn 1 mã ID => ưu tiên hiện top danh sách các mã họ đã đặt hàng bên linh kiện app liên quan đến mã ID đó - chỉ tính mã
+  chưa bị hủy hoặc từ chối" (VD app LK đặt A, B, C theo SC123 → KTV gửi BH chọn SC123 → A, B, C lên đầu danh sách linh kiện).
+- Đã làm: linh-kien-app `GET /api/suachua-partner/lk-theo-case?case_id=` (khớp `dat_don_hang.ma_yeu_cau_su_co` có index + `dat_don_case`, nhận
+  SC / Sc / sc; bỏ đơn trả hàng + đơn 'TN tu choi' / 'Tu choi' / 'Da huy'; gom theo mã LK, cộng SL). App này `GET /api/case-lookup/lk-da-dat?id=`
+  chuyển tiếp qua Service Binding `LINHKIEN_SERVICE`. Frontend `useLkDaDat` (trễ 400ms, nhớ theo case trong phiên) + `lkOptionsUuTien`: linh
+  kiện đã đặt (có trong danh mục) lên đầu, nhãn "📦 Đã đặt ×SL", dòng nhắc dưới ô chọn. Áp ở: Thêm đơn (desktop + mobile, sau khi mã case
+  kiểm tra hợp lệ), Sửa đơn thùng nháp, Tạo đơn dịch vụ / khách lẻ. Không tính theo người đặt (đơn đặt cho case nào cũng tính). Không có migration.
+- Kiểm thử: typecheck 2 repo sạch; câu truy vấn chạy trên D1 linh-kien-app thật (case SC261012203 ra 6 linh kiện, 26 dòng đọc). Chưa bấm thử
+  giao diện trên bản thật.
+
 ## 18/11/2026 — v1.148: Sửa lỗi đẩy tóm tắt theo ca
 
 - Lần cron 11:45 sau deploy v1.147 lỗi "too many SQL variables": câu tính tóm tắt bind danh sách mã ca 2 lần (lô 90 → 180 tham số, D1 tối đa

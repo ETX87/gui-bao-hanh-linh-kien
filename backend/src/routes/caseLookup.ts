@@ -5,6 +5,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { lookupCase, lookupCaseEx } from "../lib/caseLookupClient";
 import { nowVN } from "../lib/vnTime";
+import { goiLinhKien } from "../lib/donScLinhKien";
 
 // GET /api/case-lookup?id=... - proxy tra cuu 1 case_dvbh THEO ID sang he DVBH goc (chi doc), dung
 // chung cho autocomplete o form "Them don bao hanh" (KTV) va "Tao don dich vu tinh phi" (Admin BH) -
@@ -52,6 +53,16 @@ function msSinceVN(tsVN: string): number {
   const then = Date.parse(tsVN.replace(" ", "T") + "Z");
   return now - then;
 }
+
+// GET /api/case-lookup/lk-da-dat?id=SC123 (v1.150, 20/11/2026) - linh kien DA DAT ben app Dat linh kien cho case nay (bo don bi
+// tu choi / huy) -> form them don uu tien cac linh kien nay len dau o chon linh kien. Loi ket noi -> rows rong + loi (form van dung binh thuong).
+caseLookup.get("/lk-da-dat", async (c) => {
+  const id = normCaseId((c.req.query("id") ?? "").trim());
+  if (id.length < 3) return c.json({ rows: [] });
+  const r = await goiLinhKien<{ rows: unknown[] }>(c.env, `/lk-theo-case?case_id=${encodeURIComponent(id)}`);
+  if (!r.ok) return c.json({ rows: [], loi: r.error });
+  return c.json({ rows: Array.isArray(r.data.rows) ? r.data.rows : [] });
+});
 
 // GET /api/case-lookup/detail/:id - doc "bang chung" da luu san (case_lookup_snapshot, ghi luc tao
 // don qua POST /phieu-gui/:id/don) - CHI doc cache, KHONG tu goi lai API doi tac (dung dung tinh
