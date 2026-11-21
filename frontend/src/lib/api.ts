@@ -143,6 +143,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   REQUIRE_GIAI_TRINH: "Bước này đã quá SLA — cần giải trình trước khi tiếp tục.",
   GIAI_TRINH_HUY: "Chưa giải trình nên chưa thực hiện được — bước này đã quá SLA.",
   LY_DO_KHONG_HOP_BUOC: "Lý do này không thuộc bước đang dừng — chọn lý do khác.",
+  MISSING_LOAI_LOI: "Chọn phân loại lỗi (lỗi nội bộ / lỗi đối tác / lỗi của tôi / khác).",
+  REQUIRE_BANG_CHUNG: "Không phải lỗi của bạn thì cần có bằng chứng — ghi mô tả hoặc đính kèm ảnh.",
   REQUIRE_LY_DO_CHAM: "Đơn đã quá hạn SLA — vui lòng chọn lý do chậm trước khi tiếp tục.",
   REQUIRE_LY_DO_CHENH_LECH: "Số lượng thực nhận khác số lượng khai — vui lòng nhập lý do chênh lệch.",
   REQUIRE_MAIL_PD: "Ngoài bảo hành — vui lòng nhập thông tin mail phê duyệt.",

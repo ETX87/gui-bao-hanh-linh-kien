@@ -8,6 +8,10 @@ import { allRowsSql } from "./traCuu";
 import { isGsOfKtv } from "../lib/gs";
 import { addLog, type LogEntityType } from "../lib/logs";
 import { nowVN } from "../lib/vnTime";
+import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
+
+// 21/11/2026 (v1.153): phan loai loi khi giai trinh. Khac "ban_than" thi bat buoc bang chung (chu hoac anh).
+const LOAI_LOI: Record<string, string> = { noi_bo: "Lỗi nội bộ", doi_tac: "Lỗi đối tác", ban_than: "Lỗi của tôi", khac: "Khác" };
 
 // 15/11/2026 - quan tri theo buoc (yeu cau doi tac): danh muc buoc + SLA, so don dang dung tung buoc, danh sach can
 // giai trinh (KTV / Giam sat / BO), ghi giai trinh, cau hinh SLA (Admin he thong).
@@ -125,13 +129,20 @@ buoc.get("/giai-trinh", async (c) => {
 
 buoc.post("/giai-trinh", async (c) => {
   const user = c.get("user");
-  const body = await c.req.json<{ entity_type?: string; entity_id?: string; ly_do?: string; ghi_chu?: string }>().catch(() => ({}) as Record<string, string>);
+  const body = await c.req
+    .json<{ entity_type?: string; entity_id?: string; ly_do?: string; ghi_chu?: string; loai_loi?: string; bang_chung?: string; bang_chung_anh?: unknown }>()
+    .catch(() => ({}) as Record<string, string>);
   const type = String(body.entity_type || "");
   const id = String(body.entity_id || "").trim();
   const lyDo = String(body.ly_do || "").trim();
   if (!["phieu_gui", "phieu_sc", "phieu_sc_ct", "phieu_tra"].includes(type) || !id) return c.json({ error: "INVALID_ENTITY_TYPE" }, 400);
   if (!lyDo) return c.json({ error: "MISSING_LY_DO_CHAM" }, 400);
   const ghiChu = String(body.ghi_chu || "").trim().slice(0, 1000) || null;
+  const loaiLoi = String(body.loai_loi || "");
+  if (!LOAI_LOI[loaiLoi]) return c.json({ error: "MISSING_LOAI_LOI" }, 400);
+  const bangChung = String(body.bang_chung || "").trim().slice(0, 2000) || null;
+  const anhIn = Array.isArray(body.bang_chung_anh) ? body.bang_chung_anh : [];
+  if (loaiLoi !== "ban_than" && !bangChung && anhIn.length === 0) return c.json({ error: "REQUIRE_BANG_CHUNG" }, 400);
   const cur = await buocHienTai(c.env.DB, type, id);
   if (!cur) return c.json({ error: "NOT_FOUND" }, 404);
   const def = BUOC_MAP[cur.gd];
@@ -154,12 +165,21 @@ buoc.post("/giai-trinh", async (c) => {
   // 16/11/2026: ly do phai hop voi buoc (VD buoc Kho khong chon "Do sua chua cham").
   if (ben?.ben && BEN_THEO_CHU[def.chu] && !BEN_THEO_CHU[def.chu].includes(ben.ben)) return c.json({ error: "LY_DO_KHONG_HOP_BUOC" }, 400);
   const qua = await soGioQua(c.env.DB, cur.gd, cur.tu);
-  await c.env.DB.prepare("INSERT INTO giai_trinh_bh (entity_type, entity_id, giai_doan, vai_tro, ly_do, ben, ghi_chu, qua_gio, nguoi, luc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .bind(type, id, cur.gd, vai, lyDo, ben?.ben ?? null, ghiChu, qua, user.email, nowVN())
+  // Anh bang chung luu tren Google Drive (chi luu link trong D1) - tai len TRUOC khi ghi giai trinh.
+  let anhUrls: string[] = [];
+  try {
+    anhUrls = await chuanHoaAnh(c.env, anhIn, `giai_trinh_${id}`);
+  } catch (e) {
+    return c.json({ error: e instanceof AnhLoi ? e.code : "UPLOAD_FAILED" }, 400);
+  }
+  await c.env.DB.prepare(
+    "INSERT INTO giai_trinh_bh (entity_type, entity_id, giai_doan, vai_tro, ly_do, ben, ghi_chu, qua_gio, nguoi, luc, loai_loi, bang_chung, bang_chung_anh) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(type, id, cur.gd, vai, lyDo, ben?.ben ?? null, ghiChu, qua, user.email, nowVN(), loaiLoi, bangChung, anhUrls.length ? JSON.stringify(anhUrls) : null)
     .run();
   const vaiLabel = vai === "ktv" ? "KTV" : vai === "gs" ? "Giám sát" : "BO";
   // Khong dung cum "Lý do chậm" de hook addLog khong ghi trung giai trinh.
-  await addLog(c.env.DB, type as LogEntityType, id, null, null, user.email, `📝 Giải trình bước ${def.so} (${vaiLabel}): ${lyDo}${ghiChu ? " | " + ghiChu : ""}`);
+  await addLog(c.env.DB, type as LogEntityType, id, null, null, user.email, `📝 Giải trình bước ${def.so} (${vaiLabel}) [${LOAI_LOI[loaiLoi]}]: ${lyDo}${ghiChu ? " | " + ghiChu : ""}${bangChung ? " | Bằng chứng: " + bangChung : ""}${anhUrls.length ? ` (kèm ${anhUrls.length} ảnh)` : ""}`);
   return c.json({ ok: true, vai });
 });
 

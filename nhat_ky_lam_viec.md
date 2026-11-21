@@ -3,6 +3,20 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 21/11/2026 — v1.153: Giải trình có phân loại lỗi + bằng chứng
+
+- Yêu cầu: "khi giải trình sẽ thêm lựa chọn: Sau khi giải trình bắt lỗi: lỗi nội bộ, lỗi đối tác, lỗi của tôi, khác. Bằng chứng của việc
+  giải trình nếu không phải lỗi của bản thân".
+- Đã làm: migration `0046` thêm `giai_trinh_bh.loai_loi` (noi_bo / doi_tac / ban_than / khac), `bang_chung`, `bang_chung_anh` (JSON link Drive).
+  `POST /api/buoc/giai-trinh` bắt buộc `loai_loi` (`MISSING_LOAI_LOI`); khác `ban_than` mà không có mô tả lẫn ảnh → `REQUIRE_BANG_CHUNG`; ảnh qua
+  `chuanHoaAnh` lên Google Drive trước khi ghi. Nhật ký ghi "[Lỗi đối tác] … | Bằng chứng: … (kèm N ảnh)". Hộp giải trình: 4 nút phân loại,
+  khung "📎 Bằng chứng" (mô tả + chụp / chọn ảnh) khi không phải lỗi của mình, dòng nhắc thiếu gì; khối "📝 Giải trình" hiện nhãn phân loại +
+  bằng chứng + ảnh thu nhỏ. Hộp giải trình bắt buộc (cổng `REQUIRE_GIAI_TRINH`) dùng chung nên cũng có.
+- Kiểm thử: typecheck 0 lỗi; chạy local: thiếu phân loại / thiếu bằng chứng bị chặn, ảnh đi đường tải Drive, mô tả → ghi được, "Lỗi của tôi"
+  không cần bằng chứng; giao diện ghi giải trình "Lỗi đối tác" + bằng chứng → hiện đúng ở khối Giải trình. Chưa thử tải ảnh lên Drive thật.
+- Ghi nhận: migration 0046 đã được lệnh áp migration của phiên song song (deploy v1.152) áp luôn lên production lúc 10:03.
+- Còn dở: báo cáo "Điểm nghẽn & trách nhiệm" chưa thống kê theo phân loại lỗi.
+
 ## 21/11/2026 — v1.152: Cảnh báo lần cấp LK chọn "Khác loại gợi ý" (+ linh-kien-app v1.547)
 
 - Yêu cầu: "sẽ cho ktv chọn lại, nhưng trên app đổi trả và app linh kiện, sẽ hiện cảnh báo rất rõ ràng cho các đơn vị, bộ phận liên quan biết

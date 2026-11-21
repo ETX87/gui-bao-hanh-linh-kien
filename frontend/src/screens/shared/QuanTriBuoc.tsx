@@ -8,7 +8,8 @@ import { Modal } from "../../ui/Modal";
 import { Badge, Btn, Card, Field, Select, Textarea } from "../../ui/primitives";
 import { UserName } from "../../hooks/useUserNames";
 import { useRoute } from "../../router/Router";
-import { fmtDate } from "../../lib/format";
+import { fileToDataUrl, fmtDate } from "../../lib/format";
+import { ImagePicker } from "../../ui/ImagePicker";
 import type { AppUser } from "../../lib/types";
 import { UnitDetailModal } from "./UnitDetailModal";
 import { PhieuTraDetailModal } from "./PhieuTraDetailModal";
@@ -19,13 +20,28 @@ import { PhieuGuiDetailModal } from "../ktv/PhieuGuiDetailModal";
 
 export type GtEntity = "phieu_gui" | "phieu_sc" | "phieu_sc_ct" | "phieu_tra";
 
+// 21/11/2026 (v1.153): phan loai loi khi giai trinh - khac "Lỗi của tôi" thi bat buoc bang chung (chu hoac anh).
+export const LOAI_LOI_OPTIONS = [
+  { value: "noi_bo", label: "Lỗi nội bộ", tone: "amber" as const },
+  { value: "doi_tac", label: "Lỗi đối tác", tone: "violet" as const },
+  { value: "ban_than", label: "Lỗi của tôi", tone: "red" as const },
+  { value: "khac", label: "Khác", tone: "gray" as const },
+];
+const LOAI_LOI_MAP = Object.fromEntries(LOAI_LOI_OPTIONS.map((o) => [o.value, o]));
+
 export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone, batBuoc }: { entityType: GtEntity; entityId: string; gd: string; onClose: () => void; onDone: () => void; batBuoc?: GtYeuCau }) {
   const toast = useToast();
   // 16/11/2026: chi hien ly do thuoc ben hop voi buoc dang dung (lib/buoc.ts BEN_THEO_CHU).
   const items = lyDoHopBuoc(useLyDoCham().items, gd);
   const [lyDo, setLyDo] = useState("");
   const [ghiChu, setGhiChu] = useState("");
+  const [loaiLoi, setLoaiLoi] = useState("");
+  const [bangChung, setBangChung] = useState("");
+  const [anhFiles, setAnhFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
+  const canBangChung = !!loaiLoi && loaiLoi !== "ban_than";
+  const soAnh = anhFiles?.length || 0;
+  const thieu = !lyDo ? "Chọn lý do chậm." : !loaiLoi ? "Chọn phân loại lỗi." : canBangChung && !bangChung.trim() && !soAnh ? "Cần bằng chứng: ghi mô tả hoặc đính kèm ảnh." : "";
   const b = buocOf(gd);
   const nhom = new Map<string, typeof items>();
   for (const l of items) {
@@ -33,10 +49,15 @@ export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone, batB
     nhom.set(k, [...(nhom.get(k) || []), l]);
   }
   const submit = async () => {
-    if (!lyDo) return;
+    if (thieu) return;
     setBusy(true);
     try {
-      await api.post("/buoc/giai-trinh", { entity_type: entityType, entity_id: entityId, ly_do: lyDo, ghi_chu: ghiChu });
+      const anh = canBangChung && anhFiles && anhFiles.length ? await Promise.all(Array.from(anhFiles).map(fileToDataUrl)) : [];
+      await api.post(
+        "/buoc/giai-trinh",
+        { entity_type: entityType, entity_id: entityId, ly_do: lyDo, ghi_chu: ghiChu, loai_loi: loaiLoi, bang_chung: canBangChung ? bangChung : "", bang_chung_anh: anh },
+        { timeoutMs: 90000 },
+      );
       toast("Đã ghi giải trình.", "ok");
       onDone();
     } catch (e) {
@@ -53,7 +74,7 @@ export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone, batB
       footerActions={
         <>
           <Btn variant="ghost" onClick={onClose}>Huỷ</Btn>
-          <Btn variant="primary" onClick={submit} disabled={!lyDo || busy}>{busy ? "Đang lưu…" : "Ghi giải trình"}</Btn>
+          <Btn variant="primary" onClick={submit} disabled={!!thieu || busy}>{busy ? "Đang lưu…" : "Ghi giải trình"}</Btn>
         </>
       }
     >
@@ -85,9 +106,31 @@ export function GiaiTrinhModal({ entityType, entityId, gd, onClose, onDone, batB
             ))}
           </Select>
         </Field>
+        <Field label="Phân loại lỗi" required hint="Không phải lỗi của bạn thì phải có bằng chứng.">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {LOAI_LOI_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setLoaiLoi(o.value)}
+                className={`rounded-lg border px-2 py-2 text-sm font-semibold ${loaiLoi === o.value ? "border-[var(--accent)] bg-[var(--brand-50)] text-[var(--brand-800)]" : "border-[var(--line)] bg-white text-[var(--ink-body)]"}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        {canBangChung && (
+          <div className="space-y-2 rounded-lg border border-[var(--amber-200)] bg-[var(--amber-50)] p-2.5">
+            <p className="text-xs font-semibold text-[var(--amber-800)]">📎 Bằng chứng (bắt buộc — ghi mô tả hoặc đính kèm ảnh)</p>
+            <Textarea rows={2} value={bangChung} onChange={(e) => setBangChung(e.target.value)} placeholder="VD: tin nhắn nhà xe báo chậm, mã vận đơn, email đối tác, tên người liên quan…" />
+            <ImagePicker onChange={setAnhFiles} compact />
+          </div>
+        )}
         <Field label="Ghi chú (tuỳ chọn)">
           <Textarea rows={3} value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} placeholder="Diễn giải thêm, hẹn thời gian xử lý…" />
         </Field>
+        {thieu && <p className="text-xs text-[var(--amber-800)]">⚠ {thieu}</p>}
       </div>
     </Modal>
   );
@@ -244,9 +287,21 @@ interface GtRow {
   ly_do: string;
   ben: string | null;
   ghi_chu: string | null;
+  loai_loi: string | null;
+  bang_chung: string | null;
+  bang_chung_anh: string | null;
   qua_gio: number | null;
   nguoi: string;
   luc: string;
+}
+
+function anhCua(r: { bang_chung_anh: string | null }): string[] {
+  try {
+    const a = JSON.parse(r.bang_chung_anh || "[]");
+    return Array.isArray(a) ? a.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Lich su giai trinh cua cac doi tuong lien quan 1 don (don vi, don cha, thung, phieu tra). */
@@ -271,7 +326,27 @@ export function LichSuGiaiTrinh({ ids, reloadKey }: { ids: (string | null | unde
               <Badge tone={r.vai_tro === "gs" ? "violet" : r.vai_tro === "ktv" ? "blue" : "gray"}>{VAI_GT_LABEL[r.vai_tro] || r.vai_tro}</Badge>{" "}
               {r.ly_do}
               {r.ben && <span className="text-[var(--ink-soft)]"> ({BEN_LABEL[r.ben] || r.ben})</span>}
+              {r.loai_loi && LOAI_LOI_MAP[r.loai_loi] && (
+                <>
+                  {" "}
+                  <Badge tone={LOAI_LOI_MAP[r.loai_loi].tone}>{LOAI_LOI_MAP[r.loai_loi].label}</Badge>
+                </>
+              )}
               {r.ghi_chu && <span className="text-[var(--ink-soft)]"> — {r.ghi_chu}</span>}
+              {(r.bang_chung || r.bang_chung_anh) && (
+                <span className="mt-0.5 block rounded bg-[var(--surface-2)] px-2 py-1 text-[12px]">
+                  📎 <b>Bằng chứng:</b> {r.bang_chung || ""}
+                  {anhCua(r).length > 0 && (
+                    <span className="mt-1 flex flex-wrap gap-1.5">
+                      {anhCua(r).map((u, i) => (
+                        <a key={i} href={u} target="_blank" rel="noreferrer">
+                          <img src={u} alt={`Bằng chứng ${i + 1}`} className="h-14 w-14 rounded border border-[var(--line)] object-cover" />
+                        </a>
+                      ))}
+                    </span>
+                  )}
+                </span>
+              )}
               <span className="block text-[11px] text-[var(--ink-faint)]">
                 <UserName email={r.nguoi} /> · {fmtDate(r.luc)}
                 {r.qua_gio != null && r.qua_gio > 0 ? ` · lúc đó quá ${fmtGio(r.qua_gio)}` : ""}

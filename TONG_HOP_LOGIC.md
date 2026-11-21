@@ -59,6 +59,9 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   (`?ton=`, `tonFilter`), kèm thùng tồn lâu nhất. Danh sách xếp thùng cũ nhất lên đầu; huy hiệu ghi "Tồn x ngày y giờ" màu theo SLA
   bước (bước 2 = 48h). KTV thấy "Chờ Kho nhận · đã gửi x ngày" (đỏ khi quá SLA). Mốc: thùng đang về = lúc KTV gửi; chờ Admin = lúc Kho nhận.
 - SLA tính bỏ Chủ nhật; bấm số giờ SLA để ghi lý do chậm.
+- Giải trình bước quá SLA (hộp "📝 Giải trình"): chọn lý do chậm + **phân loại lỗi** bắt buộc (Lỗi nội bộ / Lỗi đối tác / Lỗi của tôi / Khác).
+  Khác "Lỗi của tôi" thì bắt buộc **bằng chứng**: mô tả chữ hoặc ảnh (ảnh lưu Google Drive, D1 chỉ lưu link). Lý do chậm chọn ở cổng SLA
+  (tự ghi giải trình vai BO) không có phân loại lỗi.
 
 ## 4. Cấp linh kiện sửa chữa (từ 16/11/2026 xử lý hoàn toàn ở app Đặt linh kiện)
 
