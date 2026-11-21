@@ -65,7 +65,8 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 - NV / Admin BH tạo đề xuất ở đây hoặc NV đặt trực tiếp trên app Đặt linh kiện; đơn bên app LK là nơi duy nhất Kế toán / Kho xử lý.
   Đơn tạo ở hệ nào thì chỉ sửa được ở hệ đó, và chỉ khi Kế toán chưa xử lý.
 - **Loại cấp linh kiện** theo đơn BH (`loaiDeXuatSuaChua()`, có bản sao FE và bên app LK — đổi 1 nơi đổi cả 3): hết BH → **MUA HÀNG SỬA CHỮA**
-  (NV chuyển tiền như đơn mua); còn BH + đối tác Karofi → **HỖ TRỢ SỬA CHỮA 0 ĐỒNG**; còn lại → **CÔNG NỢ SỬA CHỮA**.
+  (NV chuyển tiền như đơn mua); còn BH + đối tác Karofi → **HỖ TRỢ SỬA CHỮA 0 ĐỒNG**; còn lại → **CÔNG NỢ SỬA CHỮA**. Đây là loại GỢI Ý — từ v1.152 (app Đặt LK v1.547) NV được chọn loại khác trên app Đặt LK (VD sản
+  phẩm hết BH nhưng linh kiện bên trong còn BH); lần cấp chọn khác gợi ý lưu `lk_loai_goi_y` + lý do và hiện cảnh báo đỏ "Khác loại gợi ý".
 - Đối tác = danh mục `doi_tac_bh` (tự nạp từ CRM, đánh dấu Karofi); Hãng = chữ CRM, Admin BH sửa được.
 
 ## 5. Xác nhận tiêu hao & trừ công nợ sửa chữa

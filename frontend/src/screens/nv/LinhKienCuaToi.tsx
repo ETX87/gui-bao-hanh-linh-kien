@@ -9,7 +9,7 @@ import { fmtDate } from "../../lib/format";
 import { withQuery } from "../../ui/FilterBar";
 import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
-import { CongNoTag, XAC_KQ_TIEU_HAO_NHAN } from "../shared/TruCongNo";
+import { CongNoTag, LoaiKhacGoiY, XAC_KQ_TIEU_HAO_NHAN } from "../shared/TruCongNo";
 import type { AppUser, DeXuatLk } from "../../lib/types";
 
 // 16/11/2026 - nguyen van: "Toàn luồng quy trình cần minh bạch và dễ quản lý, nv sửa chữa có thể tự quản lý các lk mình đã xử dụng, tình trạng
@@ -62,7 +62,7 @@ export function LinhKienCuaToiScreen({ user }: { user: AppUser }) {
   const cols: Column<DeXuatLk>[] = [
     { key: "id", header: "Lần cấp", render: (r) => <span className="font-mono text-xs font-semibold text-[var(--link)]">{r.id}</span> },
     { key: "tt", header: "Tình trạng", render: (r) => (r.lk_buoc !== "xong" ? <Badge tone="blue">{r.lk_nhan || "Đang cấp"}</Badge> : <CongNoTag d={r} />) },
-    { key: "lk", header: "Linh kiện", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span> },
+    { key: "lk", header: "Linh kiện", render: (r) => <span className="flex items-center gap-1"><span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span><LoaiKhacGoiY d={r} /></span> },
     { key: "sl", header: "Nhận", render: (r) => <b>{r.so_luong}</b> },
     { key: "unit", header: "Đơn BH · case", render: (r) => <span className="text-xs"><span className="font-mono">{r.unit_id}</span>{r.case_id ? ` · ${r.case_id}` : ""}</span> },
     ...(xemTatCa && !nv ? [{ key: "nv", header: "NV sửa chữa", render: (r: DeXuatLk) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") } as Column<DeXuatLk>] : []),

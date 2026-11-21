@@ -3,6 +3,16 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 21/11/2026 — v1.152: Cảnh báo lần cấp LK chọn "Khác loại gợi ý" (+ linh-kien-app v1.547)
+
+- Yêu cầu: "sẽ cho ktv chọn lại, nhưng trên app đổi trả và app linh kiện, sẽ hiện cảnh báo rất rõ ràng cho các đơn vị, bộ phận liên quan biết
+  linh kiện này đang được chọn loại đề xuất khác với đề xuất thực tế phải chọn. (vì trong thực tế, sp hết bảo hành nhưng lk bên trong sp có thể
+  vẫn còn bảo hành)".
+- Đã làm: migration `0045` thêm `de_xuat_linh_kien_bh.lk_loai_goi_y` + `lk_loai_goi_y_ly_do`, đồng bộ từ `/suachua-partner/don-sc` (`donScLinhKien.ts`).
+  `LoaiKhacGoiY` (`TruCongNo.tsx`) hiện chip đỏ ở Cấp linh kiện, Linh kiện của tôi, hộp xác nhận tiêu hao; khối giải thích ở chi tiết đơn BH.
+  Việc tạo đơn trừ công nợ vẫn theo loại ĐANG CHỌN (`lk_loai`).
+- Kiểm thử: typecheck 0 lỗi. Chưa bấm thử trên giao diện.
+
 ## 21/11/2026 — v1.151: Tạo đơn theo mã Lada (chung ô Mã yêu cầu) + tài liệu 5W1H (+ linh-kien-app v1.544)
 
 - Yêu cầu: "Đặt đơn sửa chữa có cho phép tạo từ mã lada không? bổ sung thêm cột nhập mã lada và kéo API theo mã Lada về. nếu không tìm được

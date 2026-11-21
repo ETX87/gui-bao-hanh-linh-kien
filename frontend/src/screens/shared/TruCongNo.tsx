@@ -35,6 +35,21 @@ export const choXacNhanTieuHao = (d: DeXuatLk) => d.trang_thai === "lien_ket" &&
 export const suaXacNhanDuoc = (d: DeXuatLk) =>
   !!d.xn_luc && d.tru_buoc !== "xong" && d.tra_buoc !== "xong" && !d.thung_xac_id && d.xac_tt !== "trong_thung" && d.xac_tt !== "da_tra";
 
+// v1.152 (21/11/2026, app Dat LK v1.547 - "sẽ cho ktv chọn lại, nhưng trên app đổi trả và app linh kiện, sẽ hiện cảnh báo rất rõ ràng cho các
+// đơn vị, bộ phận liên quan biết linh kiện này đang được chọn loại đề xuất khác với đề xuất thực tế phải chọn"): lan cap NV chon KHAC loai he
+// thong goi y theo Hang / Doi tac / bao hanh (VD san pham het BH nhung linh kien ben trong con BH).
+export function LoaiKhacGoiY({ d, chiTiet }: { d: DeXuatLk; chiTiet?: boolean }) {
+  if (!d.lk_loai_goi_y) return null;
+  const title = `Đang chọn: ${d.lk_loai ?? "—"} · Hệ thống gợi ý: ${d.lk_loai_goi_y}${d.lk_loai_goi_y_ly_do ? ` (${d.lk_loai_goi_y_ly_do})` : ""}`;
+  if (!chiTiet) return <span title={title}><Badge tone="red">⚠ Khác loại gợi ý: {d.lk_loai}</Badge></span>;
+  return (
+    <span role="alert" className="mt-1 block rounded-md border-l-[3px] border-[var(--red-600,#dc2626)] bg-[var(--red-50,#fef2f2)] px-2 py-1.5 text-[12px] leading-snug text-[var(--red-700,#b91c1c)]">
+      <b>⚠ Loại đề xuất KHÁC loại hệ thống gợi ý</b> — đang chọn <b>{d.lk_loai}</b>, hệ thống gợi ý <b>{d.lk_loai_goi_y}</b>
+      {d.lk_loai_goi_y_ly_do ? ` (${d.lk_loai_goi_y_ly_do})` : ""}. NV chủ động chọn khác (VD: sản phẩm hết bảo hành nhưng linh kiện bên trong còn bảo hành) — Admin BH, Kế toán kiểm tra lại.
+    </span>
+  );
+}
+
 // Dong tinh trang tru cong no 1 lan cap (dung o UI chi tiet don, man Cap linh kien, man Linh kien cua toi).
 export function CongNoTag({ d }: { d: DeXuatLk }) {
   if (d.trang_thai !== "lien_ket") return null;
@@ -240,7 +255,7 @@ export function XacNhanTieuHaoModal({ list, onClose, onDone, sua }: { list: DeXu
                       <span className="font-mono font-semibold text-[var(--link)]">{d.id}</span>
                       <span className="block text-[10px] text-[var(--ink-faint)]">{d.unit_id}{d.lk_ddh_id ? ` · ${d.lk_ddh_id}` : ""}</span>
                     </td>
-                    <td className="max-w-[240px] truncate" title={nameOf(d.ma_lk)}>{nameOf(d.ma_lk)}</td>
+                    <td className="max-w-[240px]"><span className="block truncate" title={nameOf(d.ma_lk)}>{nameOf(d.ma_lk)}</span><LoaiKhacGoiY d={d} /></td>
                     <td className="text-right font-semibold">{d.so_luong}</td>
                     <td>
                       <Input type="number" min={0} max={d.so_luong} value={v.sl_dung} onChange={(e) => set(d.id, { sl_dung: e.target.value })} className={`!w-20 ${loiDong(d) ? "!border-[var(--red-600,#dc2626)]" : ""}`} />

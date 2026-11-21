@@ -10,7 +10,7 @@ import { UserName } from "../../hooks/useUserNames";
 import { DE_XUAT_TT_LABELS } from "../../lib/constants";
 import { fmtDate } from "../../lib/format";
 import type { AppUser, DeXuatLk } from "../../lib/types";
-import { CongNoNut, CongNoTag, XacNhanTieuHaoModal, choXacNhanTieuHao } from "./TruCongNo";
+import { CongNoNut, CongNoTag, LoaiKhacGoiY, XacNhanTieuHaoModal, choXacNhanTieuHao } from "./TruCongNo";
 
 // De xuat linh kien sua chua (12/10/2026): moi de xuat la DON CON cua don vi bao hanh. NV dang sua
 // don nay xin cap linh kien (nhieu lan, khong gioi han) -> Admin BH len MISA xuat kho roi bam "Cap"
@@ -494,6 +494,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 {d.nguon ? <LkTrangThaiBadge d={d} /> : <DeXuatBadge tt={d.trang_thai} khoTt={d.kho_tt ?? null} />}
                 <span className="font-semibold text-[var(--ink)]">{nameOf(d.ma_lk)}</span>
                 <span className="font-semibold">×{d.so_luong}</span>
+                <LoaiKhacGoiY d={d} />
                 <span className="ml-auto flex gap-1.5">
                   {d.trang_thai === "cho_cap" && isAdmin && (
                     <>
@@ -539,6 +540,7 @@ export function DeXuatSection({ unitId, unitTrangThai, nguoiSuaChua, user, onCha
                 {d.ghi_chu ? ` · ${d.ghi_chu}` : ""}
                 {(d.trang_thai === "da_cap" || d.trang_thai === "cho_ke_toan") && `${d.ma_misa ? ` · MISA ${d.ma_misa}` : ""}${d.ma_don_hang ? ` · ĐH ${d.ma_don_hang}` : ""}`}
                 {d.nguon ? <LkDonTag d={d} /> : <LkSyncTag d={d} />}
+                <LoaiKhacGoiY d={d} chiTiet />
                 {d.trang_thai === "cho_cap" && d.ly_do_tu_choi ? ` · ↩ ${d.ly_do_tu_choi}` : ""}
                 {d.trang_thai === "lien_ket" && (
                   <span className="block mt-0.5">

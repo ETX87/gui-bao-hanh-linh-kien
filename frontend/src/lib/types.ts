@@ -245,6 +245,8 @@ export interface DeXuatLk {
   xn_luc?: string | null;
   // 16/11/2026 (v1.142): loai de xuat cua don cap ben app Dat LK (CÔNG NỢ SỬA CHỮA / HỖ TRỢ SỬA CHỮA 0 ĐỒNG / MUA HÀNG SỬA CHỮA); NULL = cu (CÔNG NỢ).
   lk_loai?: string | null;
+  lk_loai_goi_y?: string | null; // v1.152 - app Dat LK: loai he thong goi y KHAC loai dang chon (NULL = khop)
+  lk_loai_goi_y_ly_do?: string | null;
   xn_ghi_chu?: string | null;
   tru_ddh_id?: string | null;
   tru_nhan?: string | null;

@@ -19,7 +19,7 @@ import { useRoute } from "../../router/Router";
 import type { AppUser, DeXuatLk } from "../../lib/types";
 import { ExcelExportButton } from "../../ui/ExcelExport";
 import { deXuatExportCols } from "../shared/exportCols";
-import { CongNoNut, CongNoTag, XacNhanTieuHaoModal, choXacNhanTieuHao } from "../shared/TruCongNo";
+import { CongNoNut, CongNoTag, LoaiKhacGoiY, XacNhanTieuHaoModal, choXacNhanTieuHao } from "../shared/TruCongNo";
 
 // Man "Cap linh kien sua chua" (Admin BH, 12/10/2026): de xuat linh kien cua NV (don con cua don vi bao
 // hanh). Admin len phieu xuat MISA roi bam "Cap" (1 hoac nhieu de xuat chung 1 ma MISA), hoac "Tu choi".
@@ -236,7 +236,7 @@ export function AdminDeXuatScreen({ user, ktOnly = false }: { user: AppUser; ktO
     },
     { key: "tt", header: "Trạng thái", render: (r) => <DeXuatBadge tt={r.trang_thai} khoTt={r.kho_tt ?? null} /> },
     { key: "unit", header: "Đơn bảo hành", render: (r) => <span className="font-mono text-xs">{r.unit_id}</span> },
-    { key: "lk", header: "Linh kiện xin cấp", render: (r) => <span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span> },
+    { key: "lk", header: "Linh kiện xin cấp", render: (r) => <span className="flex items-center gap-1"><span className="block max-w-[260px] truncate" title={nameOf(r.ma_lk)}>{nameOf(r.ma_lk)}</span><LoaiKhacGoiY d={r} /></span> },
     { key: "sl", header: "SL", render: (r) => <b>×{r.so_luong}</b> },
     ["dang_cap", "nv_giu", "cho_xn", "tru_cn"].includes(tab)
       ? { key: "nv", header: "NV sửa chữa", render: (r) => (r.nguoi_sua_chua ? <UserName email={r.nguoi_sua_chua} /> : "—") }
