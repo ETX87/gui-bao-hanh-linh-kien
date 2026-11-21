@@ -12,7 +12,7 @@ import type { DonVi } from "../../lib/types";
 // Hang / Doi tac / loai cap linh kien sua chua trong chi tiet don vi + nut Sua (Admin BH) -> POST /admin/don-vi/:id/thong-tin-bh.
 export function ThongTinBhKv({ u, sua, onSaved }: { u: DonVi; sua: boolean; onSaved: () => void }) {
   const [mo, setMo] = useState(false);
-  const ldx = u.huong_xu_ly === "sua_chua" || u.huong_xu_ly === "dich_vu_tinh_phi" ? loaiDeXuatSuaChua(u.loai_bao_hanh, u.doi_tac_karofi) : null;
+  const ldx = u.huong_xu_ly === "sua_chua" || u.huong_xu_ly === "dich_vu_tinh_phi" ? loaiDeXuatSuaChua(u.loai_bao_hanh, u.doi_tac_karofi, u.huong_xu_ly) : null;
   const nut = sua && !u.trang_thai.startsWith("ket_thuc") ? (
     <button type="button" className="ml-1 text-xs text-[var(--link)] hover:underline" onClick={() => setMo(true)}>
       ✎ Sửa
@@ -36,7 +36,7 @@ function SuaThongTinBhModal({ u, onClose, onSaved }: { u: DonVi; onClose: () => 
   const [bh, setBh] = useState(u.loai_bao_hanh || "");
   const [busy, setBusy] = useState(false);
   const canNv = u.trang_thai === "cho_chan_doan";
-  const ldx = loaiDeXuatSuaChua(bh, dt ? (ds.find((d) => d.id === dt)?.la_karofi ?? null) : null);
+  const ldx = loaiDeXuatSuaChua(bh, dt ? (ds.find((d) => d.id === dt)?.la_karofi ?? null) : null, u.huong_xu_ly);
   const luu = async () => {
     setBusy(true);
     try {

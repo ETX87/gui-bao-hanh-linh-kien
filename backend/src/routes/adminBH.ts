@@ -496,7 +496,7 @@ adminBH.get("/don-vi/:id", async (c) => {
   // 16/11/2026 (v1.142): Hang / Doi tac hieu luc (Admin chot > CRM) + loai de xuat cap linh kien sua chua tuong ung.
   const hdt = await c.env.DB.prepare(`SELECT ${COT_HANG_DOI_TAC("p")}, p.hang AS hang_chot, p.doi_tac_id AS doi_tac_chot FROM phieu_sua_chua_bh p WHERE p.id = ?`)
     .bind(uRow.parent_id).first<{ hang: string | null; doi_tac_id: number | null; doi_tac: string | null; doi_tac_karofi: number | null; hang_chot: string | null; doi_tac_chot: number | null }>();
-  if (hdt) Object.assign(u, { ...hdt, ldx_sua_chua: loaiDeXuatSuaChua((u as { loai_bao_hanh: string | null }).loai_bao_hanh, hdt.doi_tac_karofi) });
+  if (hdt) Object.assign(u, { ...hdt, ldx_sua_chua: loaiDeXuatSuaChua((u as { loai_bao_hanh: string | null }).loai_bao_hanh, hdt.doi_tac_karofi, (u as { huong_xu_ly?: string | null }).huong_xu_ly) });
 
   const [ctLogs, pLogs, ctAnh, pAnh, baoCaoSai] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM logs_bh WHERE entity_type = 'phieu_sc_ct' AND entity_id = ? ORDER BY thoi_gian DESC").bind(id).all(),
@@ -659,7 +659,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       const kq = await chotHangDoiTac(db, pid, body.hang, body.doi_tac_id, canNv);
       if ("error" in kq) return kq;
       ghiHdt = kq.ghi;
-      if (canNv) ldxSc = loaiDeXuatSuaChua(body.loai_bao_hanh, kq.laKarofi);
+      if (canNv) ldxSc = loaiDeXuatSuaChua(body.loai_bao_hanh, kq.laKarofi, body.huong_xu_ly);
     }
   }
 
@@ -746,7 +746,7 @@ adminBH.post("/don-vi/:id/thong-tin-bh", async (c) => {
   if (doiBh) await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET loai_bao_hanh = ?, updated_at = updated_at WHERE id = ?").bind(b.loai_bao_hanh, u.id).run();
   const ghi = [kq.ghi, doiBh ? `Bảo hành: ${LBL[u.loai_bao_hanh ?? ""] || "—"} → ${LBL[b.loai_bao_hanh!]}` : ""].filter(Boolean).join(" · ");
   if (ghi) {
-    const ldx = loaiDeXuatSuaChua(doiBh ? b.loai_bao_hanh : u.loai_bao_hanh, kq.laKarofi);
+    const ldx = loaiDeXuatSuaChua(doiBh ? b.loai_bao_hanh : u.loai_bao_hanh, kq.laKarofi, u.huong_xu_ly);
     await addLog(c.env.DB, "phieu_sc_ct", u.id, u.trang_thai, u.trang_thai, user.email, `Sửa thông tin đơn bảo hành: ${ghi}${canNv && ldx ? ` | Cấp linh kiện sửa chữa: ${ldx}` : ""}`);
   }
   return c.json({ ok: true, doi: !!ghi });

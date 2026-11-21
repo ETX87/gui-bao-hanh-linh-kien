@@ -55,7 +55,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const needsXuLyXac = huongXuLy === "doi_moi";
   const lkName = (ma: string) => lkLabel(linhKien.find((l) => l.ma_lk === ma)?.ten_lk, ma);
   const karofi = doiTacId ? (dsDoiTac.find((d) => d.id === doiTacId)?.la_karofi ?? unit.doi_tac_karofi ?? null) : null;
-  const ldxSc = needsNv ? loaiDeXuatSuaChua(loaiBaoHanh, karofi) : null;
+  const ldxSc = needsNv ? loaiDeXuatSuaChua(loaiBaoHanh, karofi, huongXuLy) : null;
 
   const submit = async () => {
     if (!confirmKtvChange(ktvChangeLines([unit], loaiDoiTru, maLkNhan, lkName))) return;

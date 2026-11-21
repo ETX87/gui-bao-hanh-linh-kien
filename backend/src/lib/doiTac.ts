@@ -19,7 +19,10 @@ export const COT_HANG_DOI_TAC = (p = "p") =>
 export const LDX_CONG_NO_SC = "CÔNG NỢ SỬA CHỮA";
 export const LDX_HO_TRO_SC = "HỖ TRỢ SỬA CHỮA 0 ĐỒNG";
 export const LDX_MUA_SC = "MUA HÀNG SỬA CHỮA";
-export function loaiDeXuatSuaChua(loaiBaoHanh: string | null | undefined, laKarofi: number | boolean | null | undefined): string | null {
+// v1.154 (21/11/2026 - "khi admin bh duyệt sẽ chọn loại hình thức tính phí => từ đó suy ra loại đề xuất luôn (song song với hạn bảo hành - ưu tiên
+// cái này trước)"): Huong xu ly "Dịch vụ tính phí" -> MUA HÀNG SỬA CHỮA (ưu tiên hơn trong / ngoài bảo hành).
+export function loaiDeXuatSuaChua(loaiBaoHanh: string | null | undefined, laKarofi: number | boolean | null | undefined, huongXuLy?: string | null): string | null {
+  if (huongXuLy === "dich_vu_tinh_phi") return LDX_MUA_SC;
   if (loaiBaoHanh === "ngoai_bh") return LDX_MUA_SC;
   if (loaiBaoHanh !== "trong_bh" || laKarofi === null || laKarofi === undefined) return null;
   return laKarofi ? LDX_HO_TRO_SC : LDX_CONG_NO_SC;
@@ -27,9 +30,9 @@ export function loaiDeXuatSuaChua(loaiBaoHanh: string | null | undefined, laKaro
 // v1.143: loai de xuat cua 1 don vi (gui kem khi tao don cap linh kien ben app Dat LK - khong de ben do phai goi nguoc tra cuu: goi nguoc loi /
 // cham thi don tung roi ve CÔNG NỢ SỬA CHỮA am tham). null = don chua du Hang / Doi tac / bao hanh.
 export async function loaiDeXuatCuaDonVi(db: D1Database, unitId: string): Promise<string | null> {
-  const r = await db.prepare(`SELECT u.loai_bao_hanh, ${DOI_TAC_KAROFI_SQL("p")} AS karofi FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ?`)
-    .bind(unitId).first<{ loai_bao_hanh: string | null; karofi: number | null }>();
-  return r ? loaiDeXuatSuaChua(r.loai_bao_hanh, r.karofi) : null;
+  const r = await db.prepare(`SELECT u.loai_bao_hanh, u.huong_xu_ly, ${DOI_TAC_KAROFI_SQL("p")} AS karofi FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ?`)
+    .bind(unitId).first<{ loai_bao_hanh: string | null; huong_xu_ly: string | null; karofi: number | null }>();
+  return r ? loaiDeXuatSuaChua(r.loai_bao_hanh, r.karofi, r.huong_xu_ly) : null;
 }
 // Lan cap la CÔNG NỢ SỬA CHỮA (lk_loai NULL = lan cap cu, truoc 16/11 deu la loai nay) - CHI loai nay tao don tru cong no.
 export const DX_CONG_NO_SQL = (d = "d") => `(${d}.lk_loai IS NULL OR ${d}.lk_loai = '${LDX_CONG_NO_SC}')`;

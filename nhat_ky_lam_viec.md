@@ -3,6 +3,16 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 21/11/2026 — v1.154: Hướng xử lý "Dịch vụ tính phí" → MUA HÀNG SỬA CHỮA (+ linh-kien-app v1.548)
+
+- Yêu cầu: "khi admin bh duyệt sẽ chọn loại hình thức tính phí => từ đó suy ra loại đề xuất luôn (song song với hạn bảo hành - ưu tiên cái
+  này trước)".
+- Đã làm: `loaiDeXuatSuaChua` (backend `lib/doiTac.ts` + bản sao FE `lib/constants.ts`) nhận thêm hướng xử lý: `dich_vu_tinh_phi` → MUA HÀNG SỬA
+  CHỮA, xét TRƯỚC trong / ngoài bảo hành; còn lại giữ quy tắc cũ. Áp ở loại gửi kèm khi tạo đơn cấp LK (`loaiDeXuatCuaDonVi`), chi tiết đơn BH
+  ("Cấp linh kiện sửa chữa"), hộp phân loại / duyệt, sửa thông tin BH. API `don-vi-sua-chua` vốn đã trả `huong_xu_ly` → app Đặt LK dùng cùng quy tắc.
+  Lần cấp đã tạo trước đó giữ loại cũ.
+- Kiểm thử: typecheck 0 lỗi. Chưa bấm thử trên giao diện.
+
 ## 21/11/2026 — v1.153: Giải trình có phân loại lỗi + bằng chứng
 
 - Yêu cầu: "khi giải trình sẽ thêm lựa chọn: Sau khi giải trình bắt lỗi: lỗi nội bộ, lỗi đối tác, lỗi của tôi, khác. Bằng chứng của việc
