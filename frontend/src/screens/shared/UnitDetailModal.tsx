@@ -490,6 +490,12 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
               )}
             </SummaryBox>
 
+            {p.loai_ma === "lada" && !p.lada_tim_thay && (
+              <p className="rounded-lg bg-[var(--red-100)] text-[var(--red-700)] text-xs font-bold px-3 py-2">⚠ Mã yêu cầu {p.case_id} là mã Lada KHÔNG tìm thấy trên hệ Lada — người tạo đơn đã xác nhận tự chịu trách nhiệm. Kiểm tra lại với KTV.</p>
+            )}
+            {p.loai_ma === "lada" && !!p.lada_tim_thay && (
+              <p className="rounded-lg bg-[var(--surface-2)] text-[var(--ink-body)] text-xs font-semibold px-3 py-2">🧾 Mã yêu cầu {p.case_id} là mã Lada (đơn Ecolada) — thông tin khách lấy từ hệ Lada.</p>
+            )}
             {p.case_xac_minh === 1 && (
               <p className="rounded-lg bg-[var(--amber-100)] text-[var(--amber-800)] text-xs font-bold px-3 py-2">⏳ Mã case chưa được xác minh — lúc tạo đơn hệ DVBH chưa có case này (case trong ngày, chưa kịp đồng bộ) hoặc không phản hồi. Hệ thống sẽ tự kiểm tra lại; kiểm tra kỹ mã case trước khi xử lý.</p>
             )}

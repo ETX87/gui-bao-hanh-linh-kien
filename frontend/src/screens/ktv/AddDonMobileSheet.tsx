@@ -37,9 +37,9 @@ export function AddDonMobileSheet({ guiId, ktvEmail, onClose, onDone }: { guiId:
 
       <div className="px-4 py-4 overflow-y-auto flex-1 space-y-4">
         <CaseIdField
-          label="Mã case"
+          label="Mã yêu cầu (case SC… hoặc mã Lada)"
           required
-          placeholder="Mã case bên hệ thống CRM/DVBH"
+          placeholder="VD: SC2611200123 hoặc D1154680"
           caseId={f.caseId}
           setCaseId={f.setCaseId}
           maLk={f.maLk}

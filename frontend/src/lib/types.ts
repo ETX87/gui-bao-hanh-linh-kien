@@ -113,6 +113,9 @@ export interface DonCha {
   // 30/10/2026: 0 = binh thuong, 1 = case chua xac minh (tao luc DVBH loi), 2 = xac minh that bai.
   case_xac_minh?: number | null;
   case_xac_minh_loi?: string | null;
+  // 21/11/2026: ma yeu cau la ma Lada ('lada'); lada_tim_thay 1 = co tren he Lada, 0 = khong thay (nguoi tao tu chiu trach nhiem).
+  loai_ma?: string | null;
+  lada_tim_thay?: number | null;
   // 30/10/2026: so lan san pham (cung case + cung LK) da bao hanh xong trong 90 ngay truoc.
   lan_truoc?: number | null;
   case_khach_hang?: string | null;
@@ -176,6 +179,9 @@ export interface DonVi {
   // 30/10/2026: 0 = binh thuong, 1 = case chua xac minh (tao luc DVBH loi), 2 = xac minh that bai.
   case_xac_minh?: number | null;
   case_xac_minh_loi?: string | null;
+  // 21/11/2026: ma yeu cau la ma Lada ('lada'); lada_tim_thay 1 = co tren he Lada, 0 = khong thay (nguoi tao tu chiu trach nhiem).
+  loai_ma?: string | null;
+  lada_tim_thay?: number | null;
   // 30/10/2026: so lan san pham (cung case + cung LK) da bao hanh xong trong 90 ngay truoc.
   lan_truoc?: number | null;
   case_khach_hang?: string | null;

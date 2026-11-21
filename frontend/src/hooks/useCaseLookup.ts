@@ -2,12 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { CaseLookupPreview } from "../lib/types";
 
-export type CaseLookupStatus = "idle" | "loading" | "found" | "not_found" | "error" | "dvbh_down" | "cho_dong_bo";
+export type CaseLookupStatus = "idle" | "loading" | "found" | "not_found" | "error" | "dvbh_down" | "cho_dong_bo" | "lada_found" | "lada_not_found" | "lada_down";
+
+// 21/11/2026: ma yeu cau la ma Lada (don Ecolada) - tra qua app Dat linh kien.
+export interface LadaPreview {
+  khach_hang: string | null;
+  ky_thuat_vien: string | null;
+  trang_thai: string | null;
+  model: string | null;
+  hang: string | null;
+  tinh: string | null;
+  quan_huyen: string | null;
+  ngay_khoi_tao: string | null;
+  ngay_chot_don: string | null;
+}
 
 export interface CaseLookupResult {
   preview: CaseLookupPreview | null;
   status: CaseLookupStatus;
   khopKtv: boolean | null;
+  lada: LadaPreview | null;
   check: () => void;
 }
 
@@ -23,6 +37,7 @@ export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): 
   const [preview, setPreview] = useState<CaseLookupPreview | null>(null);
   const [status, setStatus] = useState<CaseLookupStatus>("idle");
   const [khopKtv, setKhopKtv] = useState<boolean | null>(null);
+  const [lada, setLada] = useState<LadaPreview | null>(null);
   const checkedId = useRef("");
   const seq = useRef(0);
 
@@ -35,14 +50,30 @@ export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): 
       try {
         const qs = new URLSearchParams({ id });
         if (ktvEmail) qs.set("ktv_email", ktvEmail);
-        const r = await api.get<{ found: boolean; preview: CaseLookupPreview | null; khopKtv: boolean | null; loi_dvbh?: boolean; cho_dong_bo?: boolean }>(`/case-lookup?${qs.toString()}`);
+        const r = await api.get<{
+          found: boolean;
+          preview: CaseLookupPreview | null;
+          khopKtv: boolean | null;
+          loi_dvbh?: boolean;
+          cho_dong_bo?: boolean;
+          loai?: "lada";
+          lada?: { status: "found" | "not_found" | "error"; preview: LadaPreview | null; khop_ktv?: boolean | null };
+        }>(`/case-lookup?${qs.toString()}`);
         if (seq.current !== mySeq) return;
         setPreview(r.preview);
+        if (r.loai === "lada" && r.lada) {
+          setLada(r.lada.preview);
+          setStatus(r.lada.status === "found" ? "lada_found" : r.lada.status === "error" ? "lada_down" : "lada_not_found");
+          setKhopKtv(r.lada.khop_ktv ?? null);
+          return;
+        }
+        setLada(null);
         setStatus(r.found ? "found" : r.loi_dvbh ? "dvbh_down" : r.cho_dong_bo ? "cho_dong_bo" : "not_found");
         setKhopKtv(r.khopKtv ?? null);
       } catch {
         if (seq.current !== mySeq) return;
         setPreview(null);
+        setLada(null);
         setStatus("error");
         setKhopKtv(null);
       }
@@ -61,6 +92,7 @@ export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): 
       seq.current++;
       checkedId.current = "";
       setPreview(null);
+      setLada(null);
       setStatus("idle");
       setKhopKtv(null);
     }
@@ -70,5 +102,5 @@ export function useCaseLookup(caseId: string, ktvEmail?: string, auto = false): 
     run(caseId.trim());
   }, [run, caseId]);
 
-  return { preview, status, khopKtv, check };
+  return { preview, status, khopKtv, lada, check };
 }

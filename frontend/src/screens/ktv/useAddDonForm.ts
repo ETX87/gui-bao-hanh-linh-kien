@@ -60,7 +60,7 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
   const lyDoKhoa = !caseId.trim()
     ? "Nhập mã case rồi bấm “Kiểm tra”."
     : !caseValid
-      ? "Mã case chưa hợp lệ — bấm “🔍 Kiểm tra” (sửa mã case thì phải kiểm tra lại) và xem cảnh báo ngay dưới ô Mã case."
+      ? "Mã yêu cầu chưa hợp lệ — bấm “🔍 Kiểm tra” (sửa mã thì phải kiểm tra lại) và xem cảnh báo ngay dưới ô Mã yêu cầu (mã Lada không tìm thấy thì phải tích xác nhận)."
       : trung
         ? `Mã case này đã có đơn ${trung.id}${trung.phieu_gui_id ? ` (thùng ${trung.phieu_gui_id})` : ""} cùng linh kiện — không thể tạo trùng.`
       : !(Number(soLuong) >= 1)
@@ -96,6 +96,8 @@ export function useAddDonForm(guiId: string, onDone: () => void, ktvEmail: strin
           xac_nhan_khac_ktv: allowOverride && override,
           // 30/10/2026: cung o tich "override" dung cho truong hop DVBH khong phan hoi (backend chi xet khi DVBH loi).
           xac_nhan_chua_xac_minh: override,
+          // 21/11/2026: ma Lada khong tim thay -> o tich "tu chiu trach nhiem" (backend chi xet khi la ma Lada).
+          xac_nhan_lada: override,
         },
         setTienDo,
       );

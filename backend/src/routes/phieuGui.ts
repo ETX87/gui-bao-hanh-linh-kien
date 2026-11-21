@@ -139,7 +139,7 @@ phieuGui.get("/don-cua-toi", async (c) => {
   const b = [user.email, ...kw.binds, ...f.binds];
   const [{ results }, totalRow, dangRow, xongRow, huyRow, demRow] = await Promise.all([
     c.env.DB.prepare(
-      `SELECT p.id, p.case_id, p.ma_lk, p.mo_ta_loi, p.so_luong_khai, p.phieu_gui_id, p.odoo_id, p.created_at, p.case_xac_minh,
+      `SELECT p.id, p.case_id, p.ma_lk, p.mo_ta_loi, p.so_luong_khai, p.phieu_gui_id, p.odoo_id, p.created_at, p.case_xac_minh, p.loai_ma, p.lada_tim_thay,
          g.trang_thai AS gui_trang_thai, g.ngay_gui_xe, g.updated_at AS gui_updated_at,
          (SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_snapshot cs WHERE cs.case_id = p.case_id) AS khach_hang,
          (SELECT json_group_array(json_object('id', u.id, 'trang_thai', u.trang_thai, 'huong_xu_ly', u.huong_xu_ly, 'ly_do_bo_sung', u.ly_do_bo_sung,
@@ -452,6 +452,8 @@ interface AddDonBody {
   xac_nhan_khac_ktv?: boolean;
   // 30/10/2026: he DVBH loi/khong phan hoi -> nguoi tao tich "van tao, xac minh sau" (cron xac minh lai).
   xac_nhan_chua_xac_minh?: boolean;
+  // 21/11/2026: ma Lada khong tim thay -> tich "tu chiu trach nhiem".
+  xac_nhan_lada?: boolean;
 }
 
 // POST /api/phieu-gui/:id/don - them 1 don (phieu_sua_chua_bh) vao phieu gui, port dung
@@ -484,7 +486,7 @@ phieuGui.post("/:id/don", async (c) => {
   // 03/11/2026: case trong ngay chua dong bo kip -> cho tao, chua xac minh. 08/11/2026: logic tach sang lib/kiemTraCase.ts.
   const kq = await kiemTraCase(c.env, caseId, g.nguoi_tao, user, body);
   if (!kq.ok) return c.json({ error: kq.error }, 400);
-  const { casePreview, chuaXacMinh, choDongBo, xacNhanKhac } = kq;
+  const { casePreview, chuaXacMinh, choDongBo, xacNhanKhac, laLada, ladaTimThay, ladaSnap } = kq;
 
   // 12/11/2026: anh luu tren Google Drive (lib/anhDrive.ts), D1 chi giu link - tai TRUOC khi tao don de loi anh khong tao don thieu anh.
   let anhUrls: string[];
@@ -500,11 +502,16 @@ phieuGui.post("/:id/don", async (c) => {
   // dung user.email se luon tra ve NULL - da sua tan goc, khong chi vá luc them "tao ho".
   const emailGs = await computeEmailGs(c.env.DB, g.nguoi_tao);
   await c.env.DB.prepare(
-    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at, mien, case_xac_minh)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?), ?)`,
+    `INSERT INTO phieu_sua_chua_bh (id, phieu_gui_id, case_id, ma_lk, mo_ta_loi, so_luong_khai, loai_doi_tru_de_xuat, nguon_tao, trang_thai_cha, email_gs, xac_nhan_khac_ktv, ktv_tren_case, created_at, mien, case_xac_minh, loai_ma, lada_tim_thay)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'ktv', 'cho_xac_nhan_so_luong', ?, ?, ?, ?, (SELECT mien FROM phieu_gui_bh WHERE id = ?), ?, ?, ?)`,
   )
-    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview?.ky_thuat_vien ?? null, nowVN(), guiId, chuaXacMinh ? 1 : 0)
+    .bind(id, guiId, caseId, body.ma_lk || null, body.mo_ta_loi.trim(), soLuong, body.loai_doi_tru_de_xuat || "doi_tra", emailGs, xacNhanKhac, casePreview?.ky_thuat_vien ?? (ladaSnap?.ky_thuat_vien as string | null | undefined) ?? null, nowVN(), guiId, chuaXacMinh ? 1 : 0, laLada ? "lada" : null, laLada ? (ladaTimThay ? 1 : 0) : null)
     .run();
+  if (laLada) {
+    await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, ladaTimThay
+      ? `Tạo đơn theo mã Lada ${caseId} (đã tìm thấy trên hệ Lada)`
+      : `⚠ Tạo đơn theo mã Lada ${caseId} — KHÔNG tìm thấy trên hệ Lada, người tạo xác nhận tự chịu trách nhiệm về mã này`);
+  }
   if (xacNhanKhac) {
     await addLog(c.env.DB, "phieu_sc", id, null, "cho_xac_nhan_so_luong", user.email, `Xác nhận tạo đơn cho KTV ${g.nguoi_tao} dù case thuộc người khác (KTV trên case: ${casePreview?.ky_thuat_vien || "không xác định"})`);
   }
@@ -516,11 +523,11 @@ phieuGui.post("/:id/don", async (c) => {
   // Luu "bang chung" case luc tao don (yeu cau muc 2) - dung 1 bang cache dung chung
   // case_lookup_snapshot (khong phai rieng tren dong don) de moi don khac cung case_id deu doc lai
   // duoc, va Admin BH bam "dong bo lai" (POST /case-lookup/detail/:id/sync) lam moi duoc cho ca nhom.
-  if (casePreview) {
+  if (casePreview || ladaSnap) {
     await c.env.DB.prepare(
       "INSERT INTO case_lookup_snapshot (case_id, data, synced_at) VALUES (?, ?, ?) ON CONFLICT(case_id) DO UPDATE SET data = excluded.data, synced_at = excluded.synced_at",
     )
-      .bind(caseId, JSON.stringify(casePreview), nowVN())
+      .bind(caseId, JSON.stringify(casePreview ?? ladaSnap), nowVN())
       .run();
   }
   if (anhUrls.length > 0) {

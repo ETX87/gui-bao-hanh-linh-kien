@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOdooChoGui } from "../ktv/OdooDonPicker";
 import { lkLabel } from "../../hooks/useLinhKien";
-import { useCaseLookup, type CaseLookupResult } from "../../hooks/useCaseLookup";
+import { useCaseLookup, type CaseLookupResult, type LadaPreview } from "../../hooks/useCaseLookup";
 import { computeWarranty } from "../../lib/warranty";
 import { Badge, Btn, Field, Input } from "../../ui/primitives";
 import type { LinhKien } from "../../lib/types";
@@ -50,7 +50,7 @@ export function CaseLookupPreviewCard({
   override?: boolean;
   onOverrideChange?: (v: boolean) => void;
 }) {
-  const { preview, status, khopKtv } = lookup;
+  const { preview, status, khopKtv, lada } = lookup;
 
   useEffect(() => {
     if (!onValidityChange) return;
@@ -59,12 +59,37 @@ export function CaseLookupPreviewCard({
       return;
     }
     // dvbh_down (30/10/2026): DVBH loi -> tich "Vẫn tạo đơn" la hop le (dung chung o override).
-    onValidityChange((status === "found" && (khopKtv === true || (!!allowOverride && !!override))) || (status === "dvbh_down" && !!override) || status === "cho_dong_bo");
+    // 21/11/2026: ma Lada tim thay -> hop le; khong thay / he Lada loi -> tich "tu chiu trach nhiem" (dung chung override).
+    onValidityChange(
+      (status === "found" && (khopKtv === true || (!!allowOverride && !!override))) ||
+        (status === "dvbh_down" && !!override) ||
+        status === "cho_dong_bo" ||
+        status === "lada_found" ||
+        ((status === "lada_not_found" || status === "lada_down") && !!override),
+    );
   }, [ktvEmail, status, khopKtv, allowOverride, override, onValidityChange]);
 
   if (!caseId.trim()) return null;
-  if (status === "idle") return <p className="text-xs text-[var(--ink-soft)]">Bấm “Kiểm tra” (hoặc Enter) để tra cứu mã case bên hệ DVBH.</p>;
-  if (status === "loading") return <p className="text-xs text-[var(--ink-soft)]">Đang tra cứu case…</p>;
+  if (status === "idle") return <p className="text-xs text-[var(--ink-soft)]">Bấm “Kiểm tra” (hoặc Enter) để tra cứu mã case (SC…) hoặc mã Lada.</p>;
+  if (status === "loading") return <p className="text-xs text-[var(--ink-soft)]">Đang tra cứu…</p>;
+  if (status === "lada_found" && lada) return <LadaCard id={caseId} p={lada} lechKtv={!!ktvEmail && khopKtv === false} />;
+  if (status === "lada_not_found" || status === "lada_down")
+    return (
+      <div className="rounded px-2 py-1.5 bg-[var(--red-100)] border border-[var(--red-200)] space-y-1.5">
+        <p className="text-xs font-bold text-[var(--red-700)]">
+          {status === "lada_down"
+            ? `⚠ Hệ Lada đang không phản hồi — chưa kiểm tra được mã Lada ${caseId.trim().toUpperCase()}.`
+            : `⚠ Không tìm thấy mã Lada ${caseId.trim().toUpperCase()} — không có đơn Lada nào với mã này.`}{" "}
+          Kiểm tra lại mã. Nếu vẫn tạo, bạn tự chịu trách nhiệm về tính chính xác của mã (Admin bảo hành sẽ thấy cảnh báo trên đơn).
+        </p>
+        {ktvEmail && (
+          <label className="flex items-start gap-2 text-xs font-semibold text-[var(--ink)] cursor-pointer">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--accent)]" checked={!!override} onChange={(e) => onOverrideChange?.(e.target.checked)} />
+            Tôi xác nhận mã này đúng và tự chịu trách nhiệm — vẫn tạo đơn
+          </label>
+        )}
+      </div>
+    );
   if (status === "dvbh_down") {
     if (!ktvEmail) return <p className="text-xs text-[var(--amber-800)]">Hệ DVBH đang không phản hồi, chưa tra cứu được case — có thể thử “Kiểm tra” lại sau.</p>;
     return (
@@ -133,6 +158,27 @@ export function CaseLookupPreviewCard({
           ⚠ Sản phẩm này đã hết thời gian bảo hành (hạn {w.limitDate}, đã dùng {w.daysUsed} ngày / {w.months} tháng bảo hành) — chỉ là cảnh báo, vẫn chọn "Trong bảo hành" được nếu cần.
         </p>
       )}
+    </div>
+  );
+}
+
+// 21/11/2026: the ket qua tra ma Lada (don Ecolada) - thong tin de doi chieu; KTV tren don Lada khac chi canh bao mem.
+function LadaCard({ id, p, lechKtv }: { id: string; p: LadaPreview; lechKtv: boolean }) {
+  return (
+    <div className="rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] px-3 py-2.5 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone="green">✔ Tìm thấy mã Lada {id.trim().toUpperCase()}</Badge>
+        {p.khach_hang && <span className="text-sm font-semibold text-[var(--ink)]">{p.khach_hang}</span>}
+      </div>
+      <div className="text-xs text-[var(--ink-body)] grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5">
+        {p.model && <span>Model: {p.model}</span>}
+        {p.hang && <span>Hãng: {p.hang}</span>}
+        {p.trang_thai && <span>Trạng thái Lada: {p.trang_thai}</span>}
+        {(p.tinh || p.quan_huyen) && <span>Địa bàn: {[p.quan_huyen, p.tinh].filter(Boolean).join(", ")}</span>}
+        {p.ngay_chot_don && <span>Ngày chốt đơn: {p.ngay_chot_don}</span>}
+        {p.ky_thuat_vien && <span className="sm:col-span-2">Kỹ thuật viên (Lada): {p.ky_thuat_vien}</span>}
+      </div>
+      {lechKtv && <p className="text-xs font-semibold text-[var(--amber-800)]">⚠ Kỹ thuật viên trên đơn Lada khác KTV đang được tạo đơn — kiểm tra lại (chỉ là cảnh báo).</p>}
     </div>
   );
 }

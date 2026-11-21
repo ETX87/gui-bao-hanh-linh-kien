@@ -3,6 +3,23 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 21/11/2026 — v1.151: Tạo đơn theo mã Lada (chung ô Mã yêu cầu) + tài liệu 5W1H (+ linh-kien-app v1.544)
+
+- Yêu cầu: "Đặt đơn sửa chữa có cho phép tạo từ mã lada không? bổ sung thêm cột nhập mã lada và kéo API theo mã Lada về. nếu không tìm được
+  báo không thấy và cảnh báo người dùng tự chịu trách nhiệm (mã lada sẽ không có ký tự SC ở đầu) - tốt nhất là gộp chung trong cùng 1 cột mã
+  yc" + "tạo tài liệu html hướng dẫn riêng cho tính năng ưu tiên hiện thị theo mã ID đã đặt hàng và tìm đơn theo mã ID lada ... theo nguyên
+  tắc 5W 1H".
+- Đã làm: linh-kien-app `GET /api/suachua-partner/lada?id=` (dùng lại `lookupLada` + cache 10 phút, token chỉ nằm bên đó); `lk-theo-case`
+  khớp thêm `dat_don_hang.ma_lada`. App này `lib/lada.ts` (`laMaLada` = 1 chữ + ≥5 số, `traLada`, `ladaSnapshot`); `kiemTraCase`: DVBH không
+  thấy (hoặc lỗi) mà mã có dạng Lada → tra Lada: thấy → tạo được, lưu bằng chứng; không thấy / lỗi → chặn `LADA_NOT_FOUND` /
+  `LADA_KHONG_PHAN_HOI` trừ khi gửi `xac_nhan_lada`. Migration 0044: `phieu_sua_chua_bh.loai_ma`, `lada_tim_thay`. `GET /case-lookup` trả
+  `loai: "lada"` + `lada`; "Đồng bộ lại" bằng chứng cũng tra Lada. Giao diện: ô "Mã yêu cầu (case SC… hoặc mã Lada)", khung xanh thông tin
+  Lada, khung đỏ + ô tích "tự chịu trách nhiệm"; nhãn "Mã Lada" / "Lada không thấy" ở bảng Admin, dòng ghi chú trong thùng, banner chi tiết đơn.
+- Tài liệu `du an sua chua bao hanh/Huong-dan-Uu-tien-LK-va-Ma-Lada_21-11-2026.html` (5W1H, 6 ảnh chụp app chạy thử). Nguyên tắc 5W1H ghi vào
+  CLAUDE.md chung (mọi dự án).
+- Kiểm thử: typecheck 2 repo sạch; chạy local với Worker giả app Đặt LK: Lada thấy / không thấy (chặn rồi tích thì tạo) / lỗi / mã SC vẫn qua
+  DVBH đều đúng, DB lưu `loai_ma` + bằng chứng + nhật ký. Chưa thử với hệ Lada thật (cần deploy linh-kien-app).
+
 ## 20/11/2026 — v1.150: Ưu tiên linh kiện đã đặt bên app Đặt LK khi chọn mã case (+ linh-kien-app v1.539)
 
 - Yêu cầu: "khi họ chọn 1 mã ID => ưu tiên hiện top danh sách các mã họ đã đặt hàng bên linh kiện app liên quan đến mã ID đó - chỉ tính mã

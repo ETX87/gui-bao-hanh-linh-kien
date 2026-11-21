@@ -6,6 +6,7 @@ import { loadUser } from "../middleware/loadUser";
 import { lookupCase, lookupCaseEx } from "../lib/caseLookupClient";
 import { nowVN } from "../lib/vnTime";
 import { goiLinhKien } from "../lib/donScLinhKien";
+import { laMaLada, ladaSnapshot, traLada } from "../lib/lada";
 
 // GET /api/case-lookup?id=... - proxy tra cuu 1 case_dvbh THEO ID sang he DVBH goc (chi doc), dung
 // chung cho autocomplete o form "Them don bao hanh" (KTV) va "Tao don dich vu tinh phi" (Admin BH) -
@@ -38,6 +39,15 @@ caseLookup.get("/", async (c) => {
   const khopKtv = preview && ktvEmail ? await computeKhopKtv(c.env.DB, preview, ktvEmail) : null;
   // loi_dvbh (30/10/2026): DVBH loi/khong phan hoi - khac "khong tim thay" (cho tao don chua xac minh).
   // cho_dong_bo (03/11/2026): khong thay tren DVBH nhung la case trong ngay (SC+YYMMDD hom nay) -> cho tao, chua xac minh.
+  // 21/11/2026: khong thay tren DVBH ma ma co dang Lada (1 chu + so) -> tra he Lada qua app Dat linh kien.
+  if (!preview && laMaLada(id)) {
+    const ld = await traLada(c.env, id);
+    if (ld.status === "found") {
+      const lkKtv = ktvEmail && ld.preview.ky_thuat_vien ? await computeKhopKtv(c.env.DB, { ky_thuat_vien: ld.preview.ky_thuat_vien }, ktvEmail) : null;
+      return c.json({ found: false, preview: null, khopKtv: null, loai: "lada", lada: { status: "found", preview: ld.preview, khop_ktv: lkKtv } });
+    }
+    return c.json({ found: false, preview: null, khopKtv: null, loai: "lada", lada: { status: ld.status, preview: null, loi: ld.status === "error" ? ld.loi : null } });
+  }
   return c.json({ found: !!preview, preview, khopKtv, loi_dvbh: r.status === "error", cho_dong_bo: r.status === "not_found" && laCaseHomNay(id) });
 });
 
@@ -85,7 +95,12 @@ caseLookup.post("/detail/:id/sync", async (c) => {
     return c.json({ error: "TOO_SOON", retry_after_ms: MIN_SYNC_MS - msSinceVN(cached.synced_at) }, 429);
   }
 
-  const preview = await lookupCase(id, c.env);
+  let preview: unknown = await lookupCase(id, c.env);
+  // 21/11/2026: ma Lada -> lam moi bang chung tu he Lada.
+  if (!preview && laMaLada(id)) {
+    const ld = await traLada(c.env, id);
+    if (ld.status === "found") preview = ladaSnapshot(id, ld.preview);
+  }
   if (!preview) {
     // Dong bo that bai (API doi tac loi/timeout) KHAC "case khong con ton tai" - giu nguyen du lieu
     // cu + bao syncFailed, khong xoa sach chi vi 1 loi tam thoi.

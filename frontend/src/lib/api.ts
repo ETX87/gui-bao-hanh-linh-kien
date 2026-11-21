@@ -174,6 +174,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   CASE_TU_ODOO: "Đơn tạo từ Odoo — mã case lấy theo Odoo, không sửa được ở đây.",
   DON_DA_KET_THUC: "Đơn đã kết thúc, không sửa mã case được nữa.",
   CASE_NOT_FOUND: "Không tìm thấy mã sự cố này bên hệ DVBH.",
+  LADA_NOT_FOUND: "Không tìm thấy mã Lada này — tích \"tự chịu trách nhiệm\" nếu vẫn muốn tạo đơn.",
+  LADA_KHONG_PHAN_HOI: "Hệ Lada đang không phản hồi — tích \"tự chịu trách nhiệm\" nếu vẫn muốn tạo đơn, hoặc thử Kiểm tra lại.",
   DVBH_KHONG_PHAN_HOI: "Hệ DVBH đang không phản hồi — tích “Vẫn tạo đơn” để tạo trước, hệ thống sẽ tự xác minh mã case sau.",
   TRUNG_LINH_KIEN: "Mã case này đã có đơn cùng linh kiện — không thể tạo trùng (chỉ tạo lại khi đơn cũ bị từ chối / huỷ).",
   CASE_KTV_MISMATCH: "Sai mã sự vụ — mã này không thuộc về KTV đang tạo đơn.",

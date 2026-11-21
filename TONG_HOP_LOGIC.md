@@ -42,6 +42,11 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 - **Ưu tiên linh kiện đã đặt** (v1.150): chọn mã case khi thêm / sửa đơn → các linh kiện đã đặt cho case đó bên app Đặt linh kiện (trừ đơn
   trả hàng / bị từ chối / huỷ) lên đầu ô chọn linh kiện, nhãn "📦 Đã đặt ×SL". Tra qua `GET /api/case-lookup/lk-da-dat` → linh-kien-app
   `/api/suachua-partner/lk-theo-case`; lỗi kết nối thì danh sách giữ thứ tự thường.
+- **Mã yêu cầu = case DVBH hoặc mã Lada** (v1.151): cùng 1 ô. Tra DVBH trước; không thấy (hoặc DVBH lỗi) mà mã có dạng Lada (1 chữ cái +
+  ≥5 số, không "SC") → tra hệ Lada qua linh-kien-app `/api/suachua-partner/lada`. Lada thấy → tạo đơn, lưu bằng chứng (`case_lookup_snapshot`,
+  `nguon: "lada"`); Lada không thấy / lỗi → chỉ tạo khi người tạo tích "tự chịu trách nhiệm" (`xac_nhan_lada`). Đơn ghi `loai_ma = 'lada'`,
+  `lada_tim_thay` 1/0; KTV trên đơn Lada khác KTV thùng chỉ cảnh báo, không chặn. Linh kiện đã đặt theo mã Lada (`dat_don_hang.ma_lada`) cũng
+  được ưu tiên.
 - 3 linh kiện của 1 đơn: **A** KTV chọn, **B** thực tế gửi về, **C** đổi mới — có đánh giá lệch A/B/C.
 - Huỷ / từ chối đơn: bắt buộc lý do. "Lùi lại" đơn, đổi linh kiện hàng loạt, tách SL đơn vị có sẵn cho Admin BH.
 - **Kho từ chối thùng chưa về** (v1.145): thùng "Đang gửi về Kho" mà thực tế chưa nhận được → Kho (hoặc Admin BH làm hộ) bấm

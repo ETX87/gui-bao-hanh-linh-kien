@@ -67,8 +67,13 @@ export function AdminUnifiedTable({ parents, units, selected, onToggleSelect, on
       </span>
     ) : null;
   // 30/10/2026: canh bao ma case chua xac minh / xac minh that bai + san pham bao hanh lai lan N.
-  const caseBadges = (r: { case_xac_minh?: number | null; case_xac_minh_loi?: string | null; lan_truoc?: number | null }) => (
+  const caseBadges = (r: { case_xac_minh?: number | null; case_xac_minh_loi?: string | null; lan_truoc?: number | null; loai_ma?: string | null; lada_tim_thay?: number | null }) => (
     <>
+      {r.loai_ma === "lada" && (
+        <span title={r.lada_tim_thay ? "Mã yêu cầu là mã Lada (đã tìm thấy trên hệ Lada)" : "Mã Lada KHÔNG tìm thấy trên hệ Lada — người tạo xác nhận tự chịu trách nhiệm"}>
+          <Badge tone={r.lada_tim_thay ? "blue" : "red"} className="ml-1">{r.lada_tim_thay ? "Mã Lada" : "Lada không thấy"}</Badge>
+        </span>
+      )}
       {r.case_xac_minh === 1 && (
         <span title="Đơn tạo lúc hệ DVBH không phản hồi — mã case chưa được xác minh, hệ thống sẽ tự kiểm tra lại">
           <Badge tone="amber" className="ml-1">Case chưa xác minh</Badge>
