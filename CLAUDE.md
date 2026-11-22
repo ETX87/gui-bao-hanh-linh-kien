@@ -7534,3 +7534,11 @@ ký "người tạo xác nhận tự chịu trách nhiệm"; D3333333 (lỗi) �
 **(c) Ghi nhận:** lệnh áp migration của phiên song song (deploy v1.152 lúc 10:03) đã áp luôn 0046 lên production trước khi phiên này deploy — vô hại (chỉ thêm cột). Báo cáo "Điểm nghẽn & trách nhiệm" chưa thống kê theo phân loại lỗi.
 
 **(d) Kiểm thử:** typecheck 0 lỗi. Local (D1 sao `buocqa` + migration 0046, đã xoá): thiếu phân loại → `MISSING_LOAI_LOI`; Lỗi đối tác không bằng chứng → `REQUIRE_BANG_CHUNG`; có ảnh → đi đường tải Drive (`DRIVE_CHUA_CAU_HINH` vì local không có Drive); có mô tả → ghi được; Lỗi của tôi không cần bằng chứng. Giao diện: hộp giải trình DH-000013-1 hiện 4 nút + khung bằng chứng, ghi xong khối "Giải trình (1)" hiện nhãn "Lỗi đối tác" + bằng chứng. Chưa thử tải ảnh lên Drive thật.
+
+<!-- may-loi-du-lieu -->
+## Máy chạy sai luật đã chốt = LỖI, sửa luôn (Giám đốc chốt 22/11/2026 — áp dụng VĨNH VIỄN)
+- Dữ liệu / kết quả máy tạo ra sai so với luật Giám đốc đã chốt (đếm sai, chia sai người, lọc sai nhóm…) là **lỗi** → **làn nhanh**:
+  sửa cho đúng luật đã chốt, chạy lại hoặc đếm số bản ghi bị sai, báo NGẮN (lỗi gì · vì sao · đã sửa · bao nhiêu bản ghi). Không đụng dữ liệu
+  đã đẩy sang hệ thống ngoài (Lada…) — chỉ liệt kê để người điều phối xử lý.
+- KHÔNG biến lỗi thành đề xuất đổi luật, KHÔNG hỏi lại Giám đốc điều luật đã chốt, KHÔNG viết dài theo khuôn làn đầy đủ.
+- Người báo hỏi thêm việc khác trong cùng báo cáo → ghi 1 dòng "Tách việc riêng: …", không gộp vào bản sửa lỗi.
