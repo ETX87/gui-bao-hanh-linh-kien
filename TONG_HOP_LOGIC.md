@@ -54,6 +54,12 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   lúc / số lần. KTV nhận ngay Web Push + thẻ đỏ trên cùng Trang chủ + banner trong chi tiết thùng + số việc `ktv_kho_tu_choi` (cả thông
   báo 12h); cảnh báo còn tới khi KTV gửi lại. Gửi lại vẫn qua quy tắc bước 1 (quá SLA từ lúc tạo thùng → phải giải trình). Kho thấy
   nhãn "Từng bị từ chối N lần" khi thùng về lại. Thùng bên khovan không được báo huỷ (giữ "chờ xử lý").
+- **Huỷ thùng đang gửi về Kho + mở lại** (v1.156): Kho / Admin BH bấm "🗑 Huỷ" trên thùng "Đang gửi về Kho" (thực tế không về, VD thùng
+  AppSheet cũ), lý do bắt buộc → dùng chung logic huỷ thùng (`lib/tuChoiThung.ts`): thùng `da_huy` (`tu_choi_tt='da_huy'`, lý do / người / lúc
+  ở cột `tu_choi_*`), đơn cha chưa tách → `huy_thung`, đơn Odoo gỡ về "Chưa gửi" (ghi "Đơn Odoo cũ: …" vào ghi chú, cron báo DVBH xoá).
+  "↺ Mở lại" ở Thùng hàng › Từ chối › "Thùng đã huỷ" (Kho / Admin BH, lý do bắt buộc) áp cho mọi thùng đã huỷ: thùng về trạng thái trước
+  khi huỷ (đọc nhật ký: đang gửi về Kho / Kho đã nhận chờ Admin), đơn về "Chờ xác nhận SL", gắn lại đơn Odoo cũ nếu chưa gắn đơn khác và chưa
+  bị "Hủy đơn lỗi".
 - **Thời gian tồn của thùng** (v1.146): thanh "⏱ Tồn N thùng" trên danh sách thùng đang về Kho (Kho, Admin BH) và thùng Kho đã nhận
   chờ Admin nhận nội bộ: 4 mức Dưới 1 ngày / 1–2 / 2–3 / Trên 3 ngày (giờ bỏ Chủ nhật, `GET /api/kho/thung-ton`), bấm mức để lọc
   (`?ton=`, `tonFilter`), kèm thùng tồn lâu nhất. Danh sách xếp thùng cũ nhất lên đầu; huy hiệu ghi "Tồn x ngày y giờ" màu theo SLA

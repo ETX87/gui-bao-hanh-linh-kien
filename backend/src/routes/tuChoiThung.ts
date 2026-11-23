@@ -7,7 +7,7 @@ import { addLog } from "../lib/logs";
 import { parsePage } from "../lib/pagination";
 import { mienScope, mienAllowed } from "../lib/mien";
 import { kwClause, tenOf } from "../lib/search";
-import { congNgay, ghiTraoDoi, huyThung, HAN_KTV_NGAY } from "../lib/tuChoiThung";
+import { congNgay, ghiTraoDoi, huyThung, huyThungDangGui, moLaiThung, HAN_KTV_NGAY } from "../lib/tuChoiThung";
 
 // 13/11/2026 - nguyen van: "thêm chức năng từ chối cho admin bh khi tiếp nhận thùng hàng từ kho, yc nhập lý do từ chối
 // (đẩy thông báo lại cho kho - kho sẽ phải xác nhận đồng ý hoặc không đồng ý - nhập lý do +> nếu không đồng ý đẩy lại
@@ -114,6 +114,36 @@ tuChoi.post("/:id/rut-lai", async (c) => {
   await addLog(c.env.DB, "phieu_gui", id, "da_tiep_nhan", "da_tiep_nhan", user.email, "↩ Admin BH rút lại từ chối — thùng về chờ Admin tiếp nhận");
   await ghiTraoDoi(c.env.DB, id, user.email, "↩ Admin BH rút lại từ chối (từ chối nhầm) — thùng tiếp tục chờ tiếp nhận.");
   return c.json({ ok: true });
+});
+
+// 23/11/2026: POST /api/tu-choi-thung/:id/huy {ly_do} - Admin BH / Kho huy thung dang gui ve Kho (thuc te khong ve, VD thung AppSheet cu).
+tuChoi.post("/:id/huy", async (c) => {
+  const user = c.get("user");
+  if (!isAdmin(user) && !isKho(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const { lyDo } = await lyDoOf(c);
+  if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
+  const g = await loadThung(c.env.DB, id);
+  if (!g) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!mienAllowed(user, g.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (g.trang_thai !== "da_gui" || g.tu_choi_tt) return c.json({ error: "WRONG_STATE" }, 400);
+  if (!(await huyThungDangGui(c.env.DB, id, user.email, lyDo))) return c.json({ error: "WRONG_STATE" }, 400);
+  return c.json({ ok: true });
+});
+
+// 23/11/2026: POST /api/tu-choi-thung/:id/mo-lai {ly_do} - mo lai thung da huy (huy nham), ve trang thai truoc khi huy.
+tuChoi.post("/:id/mo-lai", async (c) => {
+  const user = c.get("user");
+  if (!isAdmin(user) && !isKho(user)) return c.json({ error: "FORBIDDEN" }, 403);
+  const id = c.req.param("id");
+  const { lyDo } = await lyDoOf(c);
+  if (!lyDo) return c.json({ error: "MISSING_LY_DO" }, 400);
+  const g = await loadThung(c.env.DB, id);
+  if (!g) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!mienAllowed(user, g.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+  const r = await moLaiThung(c.env.DB, id, user.email, lyDo);
+  if (!r.ok) return c.json({ error: r.error }, r.error === "NOT_FOUND" ? 404 : 400);
+  return c.json(r);
 });
 
 // POST /api/tu-choi-thung/:id/kho {dong_y, ly_do} - Kho phan hoi (ly do bat buoc).

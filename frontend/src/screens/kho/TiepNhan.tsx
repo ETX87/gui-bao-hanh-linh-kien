@@ -14,6 +14,7 @@ import { fmtDate } from "../../lib/format";
 import { BaoSuCoModal } from "./BaoSuCoModal";
 import { ThungTonBar } from "../shared/ThungTonBar";
 import { KhoTuChoiThungModal } from "./KhoTuChoiThungModal";
+import { LyDoThungModal } from "../shared/TuChoiThung";
 import { TiepNhanModal } from "./TiepNhanModal";
 import { CameraScanModal } from "./CameraScanModal";
 import { GhiChuLogModal } from "../shared/GhiChuLogModal";
@@ -51,6 +52,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
   const [recent, setRecent] = useState<PhieuGui[]>([]);
   const [suCoFor, setSuCoFor] = useState<PhieuGui | null>(null);
   const [tcFor, setTcFor] = useState<PhieuGui | null>(null);
+  const [huyFor, setHuyFor] = useState<PhieuGui | null>(null);
   const [tiepNhanFor, setTiepNhanFor] = useState<PhieuGui | null>(null);
   const [logFor, setLogFor] = useState<string | null>(null);
   // 21/10/2026: "thùng hàng chờ tiếp nhận, cho phép click vào để mở nội dung thùng hàng ra để xem và tiếp
@@ -119,6 +121,9 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
                   </Btn>
                   <Btn size="sm" variant="ghost" className="text-[var(--red-700)]" title="Thực tế chưa nhận được thùng này — trả về KTV + cảnh báo" onClick={() => setTcFor(g)}>
                     ⛔ Chưa nhận được
+                  </Btn>
+                  <Btn size="sm" variant="ghost" className="text-[var(--ink-soft)]" title="Huỷ thùng (thực tế không gửi về Kho) — mở lại được" onClick={() => setHuyFor(g)}>
+                    🗑 Huỷ
                   </Btn>
                   <Btn size="sm" onClick={() => setLogFor(g.id)}>💬</Btn>
                 </div>
@@ -192,6 +197,9 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
           actions={
             viewFor.trang_thai === "da_gui" ? (
               <>
+                <Btn variant="ghost" className="text-[var(--ink-soft)]" onClick={() => setHuyFor(viewFor)}>
+                  🗑 Huỷ thùng
+                </Btn>
                 <Btn variant="ghost" className="text-[var(--red-700)]" onClick={() => setTcFor(viewFor)}>
                   ⛔ Chưa nhận được hàng
                 </Btn>
@@ -206,6 +214,7 @@ export function KhoTiepNhanScreen({ only }: { only?: KhoPhan } = {}) {
           }
         />
       )}
+      {huyFor && <LyDoThungModal g={huyFor} kieu="huy" onClose={() => setHuyFor(null)} onDone={() => { setHuyFor(null); setViewFor(null); afterChange(); }} />}
       {tcFor && <KhoTuChoiThungModal gui={tcFor} onClose={() => setTcFor(null)} onDone={() => { setTcFor(null); setViewFor(null); afterChange(); }} />}
       {suCoFor && <BaoSuCoModal gui={suCoFor} onClose={() => setSuCoFor(null)} onDone={() => { setSuCoFor(null); setViewFor(null); afterChange(); }} />}
       {tiepNhanFor && <TiepNhanModal gui={tiepNhanFor} onClose={() => setTiepNhanFor(null)} onDone={() => { setTiepNhanFor(null); setViewFor(null); afterChange(); }} />}

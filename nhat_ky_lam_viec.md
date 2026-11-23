@@ -3,6 +3,15 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 23/11/2026 — v1.156: Huỷ thùng đang gửi về Kho (thùng AppSheet cũ) + mở lại
+
+- Yêu cầu: "đẩy sang dạng hủy (nhưng vẫn cho mở lại nếu cần) - đã có logic rồi" (37 thùng AppSheet cũ treo "Đang gửi về Kho", 75 đơn).
+- Đã làm: dùng lại logic huỷ thùng có sẵn (`huyThungCore` dùng chung cho luồng Admin từ chối và huỷ trực tiếp), thêm `moLaiThung` (chưa từng có).
+  Route `POST /tu-choi-thung/:id/huy`, `/:id/mo-lai`. Nút "🗑 Huỷ" ở Kho › Đang gửi về Kho (dòng + chi tiết), Admin › Thùng đang gửi về Kho
+  (chi tiết); "↺ Mở lại" ở danh sách Thùng đã huỷ. Huỷ hàng loạt 37 thùng AppSheet trên production bằng SQL cùng logic (xem dưới).
+- Kiểm thử: chạy local — thiếu lý do 400, huỷ → thùng da_huy, đơn huy_thung, Odoo gỡ + last_status cho_gui; huỷ lần 2 400; mở lại → thùng
+  về da_gui, đơn về chờ xác nhận SL, Odoo gắn lại, ghi chú sạch; mở lại lần 2 400. Giao diện: hộp huỷ + gợi ý lý do, danh sách đã huỷ, Mở lại.
+
 ## 23/11/2026 — v1.155: Đẩy việc cần giải trình quá hạn sang App Nhiệm vụ eOffice
 
 - Yêu cầu: "kiểm tra logic của app nhiệm vụ: đây các nhiệm vụ cần giải trình quá hạn chờ giải trình."

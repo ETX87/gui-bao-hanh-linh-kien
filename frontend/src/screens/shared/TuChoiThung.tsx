@@ -39,7 +39,7 @@ export function TuChoiInfo({ g }: { g: PhieuGui }) {
       {tt && <p className="font-semibold text-[var(--ink)]">{TT_LABEL[tt]?.label ?? tt}</p>}
       {g.tu_choi_ly_do && (tt || ph) && (
         <p>
-          <b>Admin BH từ chối</b>{g.tu_choi_lan > 1 ? ` (lần ${g.tu_choi_lan})` : ""}: {g.tu_choi_ly_do}
+          <b>{tt === "da_huy" && !g.tu_choi_lan ? "Huỷ thùng (không về Kho)" : "Admin BH từ chối"}</b>{g.tu_choi_lan > 1 ? ` (lần ${g.tu_choi_lan})` : ""}: {g.tu_choi_ly_do}
           <span className="text-[var(--ink-soft)]"> · <UserName email={g.tu_choi_boi} /> {fmtDate(g.tu_choi_luc)}</span>
         </p>
       )}
@@ -143,6 +143,7 @@ export function ThungTuChoiList({ user, tt, compact }: { user: AppUser; tt: "dan
   const { items, total, page, pageCount, setPage, reload } = usePagedApi<PhieuGui>(`/tu-choi-thung?tt=${tt}`, "phieu_gui");
   const [view, setView] = useState<PhieuGui | null>(null);
   const [phanHoi, setPhanHoi] = useState<{ g: PhieuGui; vaiTro: "kho" | "ktv" } | null>(null);
+  const [moLai, setMoLai] = useState<PhieuGui | null>(null);
   const after = () => {
     reload();
     refresh();
@@ -165,6 +166,7 @@ export function ThungTuChoiList({ user, tt, compact }: { user: AppUser; tt: "dan
       {g.tu_choi_tt === "cho_kho" && isKho && <Btn variant="primary" size="sm" onClick={() => setPhanHoi({ g, vaiTro: "kho" })}>Kho phản hồi</Btn>}
       {g.tu_choi_tt === "cho_ktv" && isOwner(g) && <Btn variant="primary" size={compact ? "touch" : "sm"} onClick={() => setPhanHoi({ g, vaiTro: "ktv" })}>Phản hồi</Btn>}
       {(g.tu_choi_tt === "cho_kho" || g.tu_choi_tt === "cho_ktv") && isAdmin && <Btn size="sm" onClick={() => rutLai(g)}>↩ Rút lại</Btn>}
+      {g.trang_thai === "da_huy" && (isAdmin || isKho) && <Btn size="sm" onClick={() => setMoLai(g)}>↺ Mở lại</Btn>}
     </div>
   );
   if (compact && total === 0) return null;
@@ -180,7 +182,7 @@ export function ThungTuChoiList({ user, tt, compact }: { user: AppUser; tt: "dan
         ))
       ) : (
         <Card className="p-3 space-y-2">
-          <h3 className="text-sm font-bold text-[var(--ink)]">{tt === "da_huy" ? `Thùng đã huỷ do từ chối (${total})` : `⛔ Thùng đang bị từ chối (${total})`}</h3>
+          <h3 className="text-sm font-bold text-[var(--ink)]">{tt === "da_huy" ? `Thùng đã huỷ (${total})` : `⛔ Thùng đang bị từ chối (${total})`}</h3>
           {items.length === 0 && <EmptyState text={tt === "da_huy" ? "Chưa có thùng nào bị huỷ." : "Không có thùng nào đang bị từ chối."} />}
           {items.map((g) => (
             <div key={g.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-2 space-y-1.5 cursor-pointer hover:bg-[var(--surface)]" onClick={() => setView(g)}>
@@ -198,6 +200,18 @@ export function ThungTuChoiList({ user, tt, compact }: { user: AppUser; tt: "dan
         </Card>
       )}
       {view && <PhieuGuiDetailModal guiId={view.id} onClose={() => setView(null)} onChanged={after} actions={nut(view)} />}
+      {moLai && (
+        <LyDoThungModal
+          g={moLai}
+          kieu="mo_lai"
+          onClose={() => setMoLai(null)}
+          onDone={() => {
+            setMoLai(null);
+            setView(null);
+            after();
+          }}
+        />
+      )}
       {phanHoi && (
         <PhanHoiTuChoiModal
           g={phanHoi.g}
@@ -211,5 +225,65 @@ export function ThungTuChoiList({ user, tt, compact }: { user: AppUser; tt: "dan
         />
       )}
     </>
+  );
+}
+
+// 23/11/2026: huy thung dang gui ve Kho (thuc te khong ve) / mo lai thung da huy - ly do bat buoc.
+const GOI_Y_HUY = ["Thùng cũ từ AppSheet, thực tế không gửi về Kho", "KTV xác nhận không gửi thùng này", "Tạo trùng thùng"];
+export function LyDoThungModal({ g, kieu, onClose, onDone }: { g: PhieuGui; kieu: "huy" | "mo_lai"; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const { refresh } = useWorkload();
+  const [lyDo, setLyDo] = useState(kieu === "mo_lai" ? "Huỷ nhầm" : "");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post<{ odoo_gan_lai?: number }>(`/tu-choi-thung/${g.id}/${kieu === "huy" ? "huy" : "mo-lai"}`, { ly_do: lyDo.trim() });
+      toast(kieu === "huy" ? `Đã huỷ thùng ${g.id}.` : `Đã mở lại thùng ${g.id}${r.odoo_gan_lai ? ` (gắn lại ${r.odoo_gan_lai} đơn Odoo)` : ""}.`, "ok");
+      refresh();
+      onDone();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={kieu === "huy" ? `🗑 Huỷ thùng ${g.id}` : `↺ Mở lại thùng ${g.id}`}
+      onClose={onClose}
+      maxWidthClass="max-w-md"
+      footerActions={
+        <>
+          <Btn onClick={onClose}>Đóng</Btn>
+          <Btn variant={kieu === "huy" ? "danger" : "primary"} disabled={busy || !lyDo.trim()} onClick={submit}>
+            {busy ? "Đang lưu…" : kieu === "huy" ? "Huỷ thùng" : "Mở lại"}
+          </Btn>
+        </>
+      }
+    >
+      <div className="space-y-2 text-sm">
+        {kieu === "huy" ? (
+          <p className="text-[var(--ink-soft)]">
+            Thùng chuyển sang <b>Đã huỷ</b>, các đơn bên trong huỷ theo thùng, đơn Odoo (nếu có) về lại "Chưa gửi" của KTV. Huỷ nhầm thì mở lại ở
+            Thùng hàng › Từ chối › "Thùng đã huỷ".
+          </p>
+        ) : (
+          <p className="text-[var(--ink-soft)]">Thùng về lại trạng thái trước khi huỷ, các đơn bên trong về "Chờ xác nhận SL", đơn Odoo cũ được gắn lại nếu chưa dùng ở thùng khác.</p>
+        )}
+        <Field label="Lý do" required>
+          <textarea className={FIELD_CLASS} rows={3} value={lyDo} onChange={(e) => setLyDo(e.target.value)} />
+        </Field>
+        {kieu === "huy" && (
+          <div className="flex flex-wrap gap-1.5">
+            {GOI_Y_HUY.map((x) => (
+              <button key={x} type="button" className="rounded-full border border-[var(--line)] px-2 py-0.5 text-xs hover:bg-[var(--surface-2)]" onClick={() => setLyDo(x)}>
+                {x}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
