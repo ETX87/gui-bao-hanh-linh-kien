@@ -7544,3 +7544,11 @@ ký "người tạo xác nhận tự chịu trách nhiệm"; D3333333 (lỗi) �
 **(c) Ghi nhận:** Admin hệ thống chỉ có cờ quản trị không nhận việc; giải trình qua cổng lý do chậm chỉ gỡ ở lần ảnh chụp sau (≤30 phút). Việc tồn từ dữ liệu AppSheet cũ cũng vào danh sách.
 
 **(d) Kiểm thử:** typecheck + build sạch; 2 truy vấn chạy chỉ đọc trên production (346 + 174 việc, ~20 nghìn dòng / lần); mô phỏng 21 người nhận.
+
+<!-- may-loi-du-lieu -->
+## Máy chạy sai luật đã chốt = LỖI, sửa luôn (Giám đốc chốt 22/11/2026 — áp dụng VĨNH VIỄN)
+- Dữ liệu / kết quả máy tạo ra sai so với luật Giám đốc đã chốt (đếm sai, chia sai người, lọc sai nhóm…) là **lỗi** → **làn nhanh**:
+  sửa cho đúng luật đã chốt, chạy lại hoặc đếm số bản ghi bị sai, báo NGẮN (lỗi gì · vì sao · đã sửa · bao nhiêu bản ghi). Không đụng dữ liệu
+  đã đẩy sang hệ thống ngoài (Lada…) — chỉ liệt kê để người điều phối xử lý.
+- KHÔNG biến lỗi thành đề xuất đổi luật, KHÔNG hỏi lại Giám đốc điều luật đã chốt, KHÔNG viết dài theo khuôn làn đầy đủ.
+- Người báo hỏi thêm việc khác trong cùng báo cáo → ghi 1 dòng "Tách việc riêng: …", không gộp vào bản sửa lỗi.
