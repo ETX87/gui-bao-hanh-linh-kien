@@ -8,6 +8,7 @@ import { Card, Btn, Input } from "../../ui/primitives";
 import type { SettingItem } from "../../lib/types";
 import { refreshLinhKien } from "../../hooks/useLinhKien";
 import { OdooImportExportModal } from "../shared/OdooImportExportModal";
+import { UserName } from "../../hooks/useUserNames";
 import { BEN_LABEL, CHU_BUOC_LABEL, loadBuoc, useBuoc } from "../../lib/buoc";
 
 // "Cai dat he thong" (qtri) - gop 2 danh muc "Ly do cham"/"Ly do huy" ve 1 trang.
@@ -547,6 +548,69 @@ function AnhDriveCard() {
   );
 }
 
+// 23/11/2026: viec can giai trinh qua han -> App Nhiem vu eOffice (Cong nhiem vu, ma app bao-hanh-quan-tri).
+type CongLast = { ok: boolean; loi?: string; so_nguoi_co_viec?: number; so_viec?: number; viecMoi?: number; khongRo?: number; luc: string };
+function CongNhiemVuCard() {
+  const toast = useToast();
+  const [st, setSt] = useState<{ co_khoa: boolean; last: CongLast | null; xem_truoc?: { email: string; so: number; khan: number; mau: string[] }[] } | null>(null);
+  const [busy, setBusy] = useState("");
+  const load = (xem = false) => api.get<typeof st>(`/buoc/cong-nhiem-vu${xem ? "?xem_truoc=1" : ""}`).then(setSt).catch(() => undefined);
+  useEffect(() => { void load(); }, []);
+  const day = async () => {
+    setBusy("day");
+    try {
+      const r = await api.post<CongLast>("/buoc/cong-nhiem-vu/day", {});
+      toast(r.ok ? `Đã đẩy ${r.so_viec} việc cho ${r.so_nguoi_co_viec} người lên App Nhiệm vụ.` : `Không đẩy được: ${r.loi}`, r.ok ? "ok" : "error");
+      void load();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy("");
+    }
+  };
+  const xem = async () => { setBusy("xem"); await load(true); setBusy(""); };
+  const l = st?.last;
+  return (
+    <Card
+      title="📲 App Nhiệm vụ eOffice — việc cần giải trình"
+      actions={
+        <div className="flex gap-2">
+          <Btn size="sm" disabled={!!busy} onClick={xem}>{busy === "xem" ? "Đang tính…" : "Xem trước"}</Btn>
+          <Btn size="sm" variant="primary" disabled={!!busy || !st?.co_khoa} onClick={day}>{busy === "day" ? "Đang đẩy…" : "Đẩy ngay"}</Btn>
+        </div>
+      }
+    >
+      <p className="text-sm text-[var(--ink-soft)]">
+        Mỗi 30 phút hệ thống gửi danh sách việc <b>quá SLA bước, chưa ai giải trình</b> sang App Nhiệm vụ (tab Liên kết) cho đúng người phải giải trình: Kho / Admin BH / Kế toán theo miền, NV sửa chữa theo đơn được giao, Giám sát theo khu vực KTV (bước KTV giữ, quá thêm thời gian chuyển GS). Giải trình xong thì việc tự gỡ.
+      </p>
+      {st && !st.co_khoa && <div className="mt-2 text-sm text-[var(--red-700)]">Chưa nạp khoá Cổng nhiệm vụ (secret TASK_FEED_KEY) — chưa gửi được.</div>}
+      {l && (
+        <div className="mt-2 text-xs text-[var(--ink-faint)]">
+          Lần gần nhất {l.luc}: {l.ok ? `${l.so_viec} việc / ${l.so_nguoi_co_viec} người, ${l.viecMoi ?? 0} việc mới được báo${l.khongRo ? `, ${l.khongRo} người không tra ra trên eOffice` : ""}` : `lỗi ${l.loi}`}
+        </div>
+      )}
+      {st?.xem_truoc && (
+        <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-[var(--line)]">
+          <table className="tbl w-full">
+            <thead><tr><th className="text-left">Người nhận</th><th>Việc</th><th>Gấp</th><th className="text-left">Ví dụ</th></tr></thead>
+            <tbody>
+              {st.xem_truoc.map((r) => (
+                <tr key={r.email}>
+                  <td><UserName email={r.email} /></td>
+                  <td className="text-center">{r.so}</td>
+                  <td className="text-center">{r.khan || ""}</td>
+                  <td className="max-w-[420px] truncate" title={r.mau.join(" | ")}>{r.mau[0]}</td>
+                </tr>
+              ))}
+              {!st.xem_truoc.length && <tr><td colSpan={4} className="text-center text-sm">Không có việc cần giải trình.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // 15/11/2026 (doi tac: quan tri theo buoc): SLA rieng tung buoc + so gio chuyen Giam sat giai trinh thay KTV.
 function BuocSlaCard() {
   const toast = useToast();
@@ -594,6 +658,7 @@ export function QtriCaiDatScreen() {
     <div className="grid md:grid-cols-2 gap-6">
       <MienCard />
       <BuocSlaCard />
+      <CongNhiemVuCard />
       <SettingListCard title="⏱ Lý do chậm (gắn bên chịu trách nhiệm)" path="/settings/ly-do-cham" coBen />
       <SettingListCard title="🚫 Lý do huỷ" path="/settings/ly-do-tu-choi" />
       <OdooSyncCard />

@@ -9,6 +9,8 @@ import { isGsOfKtv } from "../lib/gs";
 import { addLog, type LogEntityType } from "../lib/logs";
 import { nowVN } from "../lib/vnTime";
 import { AnhLoi, chuanHoaAnh } from "../lib/anhDrive";
+import { xongViec, thuKhoa } from "../lib/congNhiemVu";
+import { dayGiaiTrinhLenCong, dungViecGiaiTrinh, idViecGt } from "../lib/viecGiaiTrinhCong";
 
 // 21/11/2026 (v1.153): phan loai loi khi giai trinh. Khac "ban_than" thi bat buoc bang chung (chu hoac anh).
 const LOAI_LOI: Record<string, string> = { noi_bo: "Lỗi nội bộ", doi_tac: "Lỗi đối tác", ban_than: "Lỗi của tôi", khac: "Khác" };
@@ -180,7 +182,35 @@ buoc.post("/giai-trinh", async (c) => {
   const vaiLabel = vai === "ktv" ? "KTV" : vai === "gs" ? "Giám sát" : "BO";
   // Khong dung cum "Lý do chậm" de hook addLog khong ghi trung giai trinh.
   await addLog(c.env.DB, type as LogEntityType, id, null, null, user.email, `📝 Giải trình bước ${def.so} (${vaiLabel}) [${LOAI_LOI[loaiLoi]}]: ${lyDo}${ghiChu ? " | " + ghiChu : ""}${bangChung ? " | Bằng chứng: " + bangChung : ""}${anhUrls.length ? ` (kèm ${anhUrls.length} ảnh)` : ""}`);
+  // 23/11/2026: go viec khoi App Nhiem vu ngay (loi cong khong lam hong nghiep vu; anh chup 30 phut se don).
+  c.executionCtx.waitUntil(xongViec(c.env, [idViecGt(id, cur.gd)]).then(() => undefined).catch(() => undefined));
   return c.json({ ok: true, vai });
+});
+
+// 23/11/2026: lien thong App Nhiem vu eOffice - trang thai + xem truoc + day ngay (Admin he thong / Admin BH).
+buoc.get("/cong-nhiem-vu", async (c) => {
+  const user = c.get("user");
+  if (!user.la_qtri && !user.la_admin_bh) return c.json({ error: "FORBIDDEN" }, 403);
+  const r = await c.env.DB.prepare("SELECT value FROM sync_state WHERE key = 'cong_nv_last'").first<{ value: string }>();
+  let last: unknown = null;
+  try { last = r ? JSON.parse(r.value) : null; } catch { last = null; }
+  let xemTruoc: { email: string; so: number; khan: number; mau: string[] }[] | undefined;
+  if (c.req.query("xem_truoc") === "1") {
+    const ds = await dungViecGiaiTrinh(c.env);
+    xemTruoc = ds.filter((d) => d.items.length).map((d) => ({ email: d.email, so: d.items.length, khan: d.items.filter((i) => i.khan).length, mau: d.items.slice(0, 3).map((i) => i.title) }));
+  }
+  return c.json({ co_khoa: !!c.env.TASK_FEED_KEY, last, xem_truoc: xemTruoc });
+});
+buoc.post("/cong-nhiem-vu/day", async (c) => {
+  const user = c.get("user");
+  if (!user.la_qtri && !user.la_admin_bh) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!c.env.TASK_FEED_KEY) return c.json({ error: "CHUA_CO_KHOA" }, 400);
+  return c.json(await dayGiaiTrinhLenCong(c.env));
+});
+buoc.post("/cong-nhiem-vu/thu", async (c) => {
+  const user = c.get("user");
+  if (!user.la_qtri) return c.json({ error: "FORBIDDEN" }, 403);
+  return c.json(await thuKhoa(c.env));
 });
 
 export default buoc;

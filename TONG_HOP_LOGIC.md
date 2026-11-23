@@ -90,7 +90,7 @@ tới khi Kế toán duyệt; xác trong thùng thì không đổi xử lý xác
 
 Cron mỗi 15 phút (`*/15 * * * *`) điều phối: đồng bộ đơn Odoo về app và đẩy trạng thái về DVBH theo các đợt trong ngày, danh bạ KTV /
 khu vực từ app Đặt linh kiện mỗi giờ, ETX nhân sự (01:00), top linh kiện (02:00), báo cáo BO 1 lần / ngày, **thông báo tổng hợp 12h trưa**
-theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày. Chi tiết thứ tự: mục 12 của `Luong-Quy-Trinh-Tong-Bao-Hanh.html`.
+theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, **đẩy việc cần giải trình sang App Nhiệm vụ eOffice 30 phút / lần**. Chi tiết thứ tự: mục 12 của `Luong-Quy-Trinh-Tong-Bao-Hanh.html`.
 
 ## 8. Kết nối hệ khác
 
@@ -101,6 +101,7 @@ theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày. Chi tiết t
 | Odoo | Kéo đơn bảo hành về, xuất file import kết quả |
 | khovan | Đẩy thùng khi gửi thật |
 | ETX nhân sự | Tự duyệt / khoá tài khoản |
+| App Nhiệm vụ eOffice (Cổng nhiệm vụ `taskFeedNhan`, mã app `bao-hanh-quan-tri`, secret TASK_FEED_KEY) | Việc **quá SLA bước, chưa ai giải trình** (cùng luật màn "Cần giải trình"), gửi ảnh chụp đủ 30 phút / lần (`lib/viecGiaiTrinhCong.ts`). Người nhận: bước Kho / Admin BH / Kế toán → mọi tài khoản giữ vai đó cùng miền (chưa gán / Cả 2 miền thấy hết, đơn chưa khai báo miền hiện cho mọi miền); bước NV sửa → NV được giao (người kiêm Admin / Kho / KT nhận cả bước NV theo miền); bước KTV giữ quá SLA + thời gian chuyển GS → Giám sát khu vực của KTV. KTV và Admin hệ thống (chỉ cờ quản trị) không nhận. id việc = `GT-<mã thùng / đơn / phiếu trả>-<bước>`, link mở thẳng `/<mã>`, gấp (🔴) khi quá 3 × SLA. Ghi giải trình → gửi "xong" ngay. Cài đặt › "App Nhiệm vụ eOffice": xem trước, đẩy ngay |
 
 ## 9. Tài liệu liên quan
 

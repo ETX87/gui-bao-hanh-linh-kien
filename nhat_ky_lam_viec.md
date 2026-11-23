@@ -3,6 +3,18 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 23/11/2026 — v1.155: Đẩy việc cần giải trình quá hạn sang App Nhiệm vụ eOffice
+
+- Yêu cầu: "kiểm tra logic của app nhiệm vụ: đây các nhiệm vụ cần giải trình quá hạn chờ giải trình."
+- Kiểm tra: app chưa từng nối Cổng nhiệm vụ (đã có khoá `bao-hanh-quan-tri` do BOD cấp nhưng chưa dùng) → việc giải trình chỉ hiện trong app.
+- Đã làm: `lib/congNhiemVu.ts` (gửi cổng, thử lại lỗi 5xx), `lib/viecGiaiTrinhCong.ts` (tính 1 lần toàn hệ thống bằng đúng luật "Cần giải
+  trình", chia cho từng người, gửi ảnh chụp đủ). Cron 15 phút chạy 30 phút / lần; ghi giải trình gửi "xong" ngay. API `GET /buoc/cong-nhiem-vu`
+  (+`?xem_truoc=1`), `POST /buoc/cong-nhiem-vu/day`, `/thu`. Cài đặt có thẻ "📲 App Nhiệm vụ eOffice". Khoá nạp vào secret TASK_FEED_KEY.
+- Kiểm thử: typecheck + build sạch; chạy 2 truy vấn (chỉ đọc) trên D1 production: 346 việc bước BO + 174 việc bước KTV (cho GS), ~20 nghìn
+  dòng đọc / lần; mô phỏng chia: 21 người nhận, nhiều nhất GS Phạm Duy Khánh 172, Phùng Thị Doanh 147, KHO VẬN 3T 108. Kết quả gửi thật: xem dưới.
+- Ghi nhận: nhiều việc tồn từ dữ liệu AppSheet cũ (VD thùng "đang gửi về Kho" từ 11/2025) cũng vào danh sách — đúng như màn "Cần giải trình".
+  Cổng chỉ hiện 20 dòng / người (gộp "+N việc khác"); lần gửi đầu của app không bắn thông báo.
+
 ## 21/11/2026 — v1.154: Hướng xử lý "Dịch vụ tính phí" → MUA HÀNG SỬA CHỮA (+ linh-kien-app v1.548)
 
 - Yêu cầu: "khi admin bh duyệt sẽ chọn loại hình thức tính phí => từ đó suy ra loại đề xuất luôn (song song với hạn bảo hành - ưu tiên cái

@@ -35,6 +35,8 @@ export interface Env {
   VAPID_SERVER_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
   THONG_BAO_NOW_TEST?: string; // chi chay thu local
+  // 23/11/2026: khoa Cong nhiem vu eOffice (App Nhiem vu), ma app "bao-hanh-quan-tri" - secret, lib/congNhiemVu.ts.
+  TASK_FEED_KEY?: string;
   ASSETS: Fetcher;
   BOOTSTRAP_ADMIN_EMAIL: string;
   GOOGLE_REDIRECT_URI: string;

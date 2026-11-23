@@ -36,6 +36,7 @@ import xacRoutes from "./routes/xac";
 import thongBaoRoutes from "./routes/thongBao";
 import baoCaoNghenRoutes from "./routes/baoCaoNghen";
 import { maybeRunDigest } from "./lib/thongBao";
+import { maybeDayGiaiTrinhLenCong } from "./lib/viecGiaiTrinhCong";
 import { maybeComputeGiaiDoanTb } from "./lib/canhBao";
 import { runOdooSync } from "./lib/odooSync";
 import { maybeRunEtxSync } from "./lib/etxSync";
@@ -126,6 +127,8 @@ export default {
     ctx.waitUntil(runOdooSync(env).then(() => undefined));
     // 15/11/2026: tu 12h, day ban tong hop viec ton cho nguoi da bat thong bao (moi lan 25 nguoi).
     ctx.waitUntil(maybeRunDigest(env).then(() => undefined).catch((e) => console.error("[thongBao]", e instanceof Error ? e.message : e)));
+    // 23/11/2026: viec can giai trinh qua han -> App Nhiem vu eOffice (anh chup du, 30 phut / lan).
+    ctx.waitUntil(maybeDayGiaiTrinhLenCong(env).catch((e) => console.error("[congNhiemVu]", e instanceof Error ? e.message : e)));
     // 12/11/2026: chuyen dan anh cu (base64 trong D1) sang Google Drive, moi lan toi da 25 anh.
     ctx.waitUntil(chuyenAnhCuSangDrive(env, 25, 120000).then(() => undefined).catch((e) => console.error("[anhDrive]", e instanceof Error ? e.message : e)));
     // 04/11/2026: thieu hang bao hanh - gui yeu cau con cho + keo trang thai ticket ben linh-kien-app.
