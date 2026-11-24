@@ -4,6 +4,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { App } from "./App";
 import { captureDeepLinkFromHash, captureOpenIdFromPath } from "./lib/deepLink";
 import "./styles/tokens.css";
+import { CuaSoThongTin } from "./components/CuaSoThongTin";
 
 // Ghi nho link truy cap truc tiep 1 phieu tra (vd "#/ktv/nhan-hang/TR-000001") CANG SOM CANG TOT,
 // truoc ca khi React mount - xem giai thich day du trong lib/deepLink.ts (can bat duoc hash truoc khi
@@ -15,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
       <App />
+      <CuaSoThongTin />
     </AuthProvider>
   </StrictMode>,
 );

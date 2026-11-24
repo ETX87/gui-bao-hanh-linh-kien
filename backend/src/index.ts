@@ -53,6 +53,7 @@ import thieuHangRoutes from "./routes/thieuHang";
 import anhRoutes from "./routes/anh";
 import { chuyenAnhCuSangDrive } from "./lib/anhDrive";
 import { dongBoThieuHang, guiThieuHangCho, layVaXoaCoYeuCauMoi } from "./lib/thieuHang";
+import { layCuaSoThongTin } from "./lib/cuaSoThongTin";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
@@ -62,6 +63,9 @@ const app = new Hono<{ Bindings: Env }>();
 
 // 04/11/2026: thao tac vua tao yeu cau thieu hang (ly do cham "Khong co linh kien" / "Het hang ton kho", ghi qua addLog) -> gui sang
 // linh-kien-app ngay sau khi tra loi, khong cho cron 15 phut. Loi thi cron gui lai.
+// Cua so thong tin eOffice (2026-11-24, lib/cuaSoThongTin.ts): khong can dang nhap - hien ca o man dang nhap.
+app.get("/api/cua-so", async (c) => c.json(await layCuaSoThongTin(c.env.CUA_SO_KHOA)));
+
 app.use("/api/*", async (c, next) => {
   await next();
   if (c.req.method !== "GET" && layVaXoaCoYeuCauMoi()) {

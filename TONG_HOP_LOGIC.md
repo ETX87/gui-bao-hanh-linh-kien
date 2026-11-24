@@ -113,3 +113,7 @@ theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, **đẩy vi�
 
 `CLAUDE.md`, `DEPLOY.md`, `DESIGN_SYSTEM.md`, `SRS_tong_hop.md`, `nhat_ky_lam_viec.md`, thư mục `du an sua chua bao hanh/` (kế hoạch, phân tích,
 hướng dẫn KTV / Admin BH / cấp LK & trả xác).
+
+## Cửa sổ thông tin eOffice (popup Giám đốc)
+
+`GET /api/cua-so` (không cần đăng nhập) → Worker gọi `csApi` eOffice bằng secret `CUA_SO_KHOA`, đệm 60 giây, kèm tranh SVG. Frontend `CuaSoThongTin` hiện mỗi lần mở app (và khi quay lại sau ≥ 10 phút ẩn), nút "Vào app" khoá theo `khoaNutGiay`. Lỗi / chậm / chưa có khoá → không hiện, vào app bình thường. Cùng 1 bộ mã ở mọi app hệ DVBH (bản gốc ở linh-kien-app).

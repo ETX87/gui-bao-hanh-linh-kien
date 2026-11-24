@@ -29,6 +29,8 @@ export interface AppUser {
 }
 
 export interface Env {
+  // Ma khoa API "Cua so thong tin" eOffice (popup Giam doc) - lib/cuaSoThongTin.ts. Chua dat -> khong hien popup.
+  CUA_SO_KHOA?: string;
   DB: D1Database;
   // 15/11/2026: Web Push (lib/webPush.ts).
   VAPID_SERVER_PUBLIC_KEY?: string;
