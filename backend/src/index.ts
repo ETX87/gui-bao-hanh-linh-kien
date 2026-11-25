@@ -55,6 +55,8 @@ import anhRoutes from "./routes/anh";
 import { chuyenAnhCuSangDrive } from "./lib/anhDrive";
 import { dongBoThieuHang, guiThieuHangCho, layVaXoaCoYeuCauMoi } from "./lib/thieuHang";
 import { layCuaSoThongTin } from "./lib/cuaSoThongTin";
+import { danhDauXacDonCu } from "./lib/xac";
+import { nowVN } from "./lib/vnTime";
 
 // He doc lap "Sua chua bao hanh" (Worker "suachua"). Giai doan 3: mount toan bo route nghiep vu (KTV/
 // Kho/Admin BH/NV sua chua/Ke toan/Giam sat/View), port dung tu prototype-html/index.html - xem
@@ -156,6 +158,8 @@ export default {
     ctx.waitUntil(maybeComputeGiaiDoanTb(env.DB).catch((e) => console.error("[giaiDoanTb]", e instanceof Error ? e.message : e)));
     // 13/11/2026: thung bi tu choi, KTV qua 7 ngay khong phan hoi -> tu huy.
     ctx.waitUntil(tuHuyThungQuaHan(env).then(() => undefined).catch((e) => console.error("[tuHuyThung]", e instanceof Error ? e.message : e)));
+    // 25/11/2026 (v1.160): xac don truoc 01/11/2026 phan loai muon -> tu danh dau "da xu ly ngoai" (luat chot 13/11).
+    ctx.waitUntil(danhDauXacDonCu(env.DB, nowVN()).then(() => undefined).catch((e) => console.error("[xacDonCu]", e instanceof Error ? e.message : e)));
     // 16/11/2026: phieu tra "Đang gửi KTV" qua 14 ngay KTV khong xac nhan / khong bao thieu -> tu xac nhan da nhan.
     ctx.waitUntil(tuDongXacNhanNhanHang(env).then(() => undefined).catch((e) => console.error("[tuDongNhanHang]", e instanceof Error ? e.message : e)));
     ctx.waitUntil(maybeRunEtxSync(env).catch((e) => console.error("[etxSync]", e instanceof Error ? e.message : e)).then(() => dongBoTaiKhoan(env.DB)).then(() => undefined).catch((e) => console.error("[dongBoTaiKhoan]", e instanceof Error ? e.message : e)));

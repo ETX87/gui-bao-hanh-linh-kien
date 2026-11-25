@@ -93,13 +93,13 @@ Xác chờ gom (đơn vị Đổi mới / sửa có thay LK, xử lý xác "Tr�
 tới khi Kế toán duyệt (Kế toán không duyệt thùng rỗng); xác trong thùng thì không đổi xử lý xác / không lùi đơn. Luật 1 miền 1 đối tác áp cả bấm tay lẫn
 import Excel (thùng mới từ import lấy đối tác + miền của xác đầu). Người gom "Huỷ gửi KT" khi chưa duyệt; thùng nháp rỗng xoá được. Kết quả ngoài thùng:
 tiêu huỷ / thất lạc / không có xác / đã trả ngoài (+ "Lưu kho" ghi từ xác nhận tiêu hao) → tab "Đã xử lý khác", đưa lại chờ gom được; đơn trước
-01/11/2026 coi như đã xử lý ngoài. Hướng dẫn: `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
+01/11/2026 coi như đã xử lý ngoài (cron 15 phút tự đánh dấu cả đơn cũ phân loại muộn). Hướng dẫn: `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
 
 ## 7. Lịch chạy tự động
 
 Cron mỗi 15 phút (`*/15 * * * *`) điều phối: đồng bộ đơn Odoo về app và đẩy trạng thái về DVBH theo các đợt trong ngày, danh bạ KTV /
 khu vực từ app Đặt linh kiện mỗi giờ, ETX nhân sự (01:00), top linh kiện (02:00), báo cáo BO 1 lần / ngày, **thông báo tổng hợp 12h trưa**
-theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, **đẩy việc cần giải trình sang App Nhiệm vụ eOffice 30 phút / lần**. Chi tiết thứ tự: mục 12 của `Luong-Quy-Trinh-Tong-Bao-Hanh.html`.
+theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, tự đánh dấu "đã xử lý ngoài" xác đơn trước 01/11/2026, **đẩy việc cần giải trình sang App Nhiệm vụ eOffice 30 phút / lần**. Chi tiết thứ tự: mục 12 của `Luong-Quy-Trinh-Tong-Bao-Hanh.html`.
 
 ## 8. Kết nối hệ khác
 

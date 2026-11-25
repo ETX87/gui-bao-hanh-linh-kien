@@ -7616,3 +7616,17 @@ thùng MOI → lỗi, vào TX có sẵn khác đối tác → lỗi; áp dụng:
 
 **(f) Còn mở (không làm trong đợt này):** chi tiết thùng trả xác chưa có luồng ngang + "▾ Xem chi tiết"; bộ lọc tab Thùng nháp / Chờ KT / Đã duyệt
 (`ThungList`) còn ô `<select>` chọn 1 giá trị.
+
+## Đánh dấu xác đơn trước 01/11/2026 "đã xử lý ngoài" (25/11/2026) — v1.160
+
+**(a) Nguyên văn:** *"Có, đếm giúp"* → đếm trên D1 thật (chỉ đọc): 0 thùng trả xác, 0 lần import — lỗi import trộn đối tác (v1.159) chưa làm sai bản ghi nào;
+3.075 xác Đổi mới chờ gom, trong đó 44 xác đơn trước 01/11/2026. Rồi *"Có, đánh dấu"*.
+
+**(b) Lỗi:** luật chốt 13/11/2026 "xác đơn trước 01/11/2026 coi như đã xử lý ngoài" chỉ chạy 1 lần trong migration 0031 (và 0039 cho đề xuất). Đơn cũ được
+phân loại Đổi mới + "Trả đối tác" sau đó lọt vào "Xác chờ gom" (44 xác, đều cập nhật sau 13/11). 62 đơn vị đơn cũ còn chưa phân loại → sẽ lặp.
+
+**(c) Đã làm:** D1 thật: INSERT 44 dòng `logs_bh` (`nguoi_thuc_hien = 'he-thong'`) + UPDATE 44 đơn vị `xac_tt = 'ngoai'`, `xac_xl_luc`, `xac_xl_ghi_chu`
+(giữ `updated_at`). Mã: `danhDauXacDonCu(db, now)` trong `lib/xac.ts`, gọi ở cron 15 phút (`index.ts`), cùng điều kiện migration 0031 + `thung_xac_id IS NULL`.
+
+**(d) Kiểm thử:** sau UPDATE: 0 xác đơn cũ chờ gom, 44 đã đánh dấu, chờ gom còn 3.031. Typecheck + build sạch. Xác bị đánh dấu nhầm (thực tế còn xác cần trả):
+tab "Đã xử lý khác" → "↺ Đưa lại chờ gom" (tay hoặc import `dua_lai`) — cron bỏ qua đơn vị có nhật ký "đưa lại danh sách chờ gom", không đánh dấu lại.

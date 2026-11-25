@@ -3,6 +3,16 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 25/11/2026 — v1.160: Đánh dấu 44 xác đơn trước 01/11/2026 "đã xử lý ngoài" + cron tự đánh dấu
+
+- Yêu cầu (nguyên văn): "Có, đánh dấu" (trả lời câu hỏi đánh dấu 44 xác đơn trước 01/11 là "đã xử lý ngoài hệ thống").
+- Dữ liệu D1 thật (được đồng ý): lưu danh sách 44 đơn vị trước khi sửa (đều xác Đổi mới, 0 xác sau sửa chữa) → ghi 44 dòng nhật ký đơn
+  (`he-thong`) + đặt `xac_tt = 'ngoai'`, giờ xử lý, ghi chú luật; giữ nguyên `updated_at`. Kiểm lại: còn 0 xác đơn trước 01/11 chờ gom; chờ gom còn 3.031.
+- Nguyên nhân: migration 0031 chỉ đánh dấu 1 lần; đơn cũ phân loại Đổi mới + "Trả đối tác" sau đó lọt lại. Còn 62 đơn vị đơn cũ chưa phân loại → sẽ lặp.
+- Sửa mã: `danhDauXacDonCu()` (`lib/xac.ts`) chạy trong cron 15 phút, đánh dấu + ghi nhật ký các xác đơn cũ mới lọt;
+  bỏ qua xác người dùng đã "Đưa lại chờ gom" (có nhật ký đưa lại).
+- Kiểm thử: typecheck + build; SQL của hàm giống câu đã chạy thành công trên D1 thật (44 dòng). Chưa chạy thử cron trên local.
+
 ## 25/11/2026 — Đếm thùng trả xác trộn đối tác trên D1 thật (chỉ đọc, không đổi dữ liệu)
 
 - Yêu cầu (nguyên văn): "Có, đếm giúp" (đồng ý chạy truy vấn chỉ đọc trên D1 thật sau v1.159).
