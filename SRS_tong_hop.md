@@ -33,7 +33,7 @@ KTV / CTV / Trạm, KTV triển khai, Kho, Admin bảo hành, NV sửa chữa, K
 
 - Mã case bắt buộc mỗi đơn, phải khớp KTV (lệch KTV thì tạo thay có ghi nhận); không trùng case + linh kiện đang mở.
 - Giao NV sửa: bắt buộc Hãng, Đối tác, còn / hết bảo hành. Huỷ / từ chối / trả lại: bắt buộc lý do.
-- Thùng trả xác gửi Kế toán: bắt buộc mã EO + ≥ 1 xác.
+- Thùng trả xác gửi Kế toán / Kế toán duyệt: bắt buộc mã EO + ≥ 1 xác; 1 thùng 1 miền 1 đối tác (cả khi import Excel).
 
 ## 5. Yêu cầu chung
 

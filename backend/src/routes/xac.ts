@@ -393,6 +393,7 @@ xac.delete("/thung/:id", async (c) => {
   const t = await getThung(c.env.DB, c.req.param("id"));
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if ((await quyenThung(c.env.DB, user, t)) === false) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!mienAllowed(user, t.mien)) return c.json({ error: "FORBIDDEN" }, 403); // 25/11/2026 (v1.159)
   if (t.trang_thai !== "nhap") return c.json({ error: "WRONG_STATE" }, 400);
   if ((await demXac(c.env.DB, t.id)) > 0) return c.json({ error: "THUNG_CON_XAC" }, 400);
   await c.env.DB.batch([c.env.DB.prepare("DELETE FROM thung_xac_log_bh WHERE thung_id = ?").bind(t.id), c.env.DB.prepare("DELETE FROM thung_xac_bh WHERE id = ?").bind(t.id)]);
@@ -434,6 +435,7 @@ xac.post("/thung/:id/huy-gui", async (c) => {
   const t = await getThung(c.env.DB, c.req.param("id"));
   if (!t) return c.json({ error: "NOT_FOUND" }, 404);
   if ((await quyenThung(c.env.DB, user, t)) === false) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!mienAllowed(user, t.mien)) return c.json({ error: "FORBIDDEN" }, 403); // 25/11/2026 (v1.159): dong bo voi cac thao tac thung khac
   if (t.trang_thai !== "cho_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
   const ok = await chuyen(c.env.DB, t, "nhap", "", [], user.email, "Huỷ gửi Kế toán");
   return ok ? c.json({ ok: true }) : c.json({ error: "WRONG_STATE" }, 400);
@@ -448,6 +450,8 @@ xac.post("/thung/:id/kt-duyet", async (c) => {
   if (t.trang_thai !== "cho_ke_toan") return c.json({ error: "WRONG_STATE" }, 400);
   const body = await c.req.json<{ ghi_chu?: string }>().catch(() => ({}) as { ghi_chu?: string });
   if (!t.ma_eo) return c.json({ error: "REQUIRE_MA_EO" }, 400);
+  // 25/11/2026 (v1.159): thung dang cho KT van bot xac duoc -> bot het roi thi khong duyet thung rong (luat >= 1 xac).
+  if (!(await demXac(c.env.DB, t.id))) return c.json({ error: "THUNG_RONG" }, 400);
   const now = nowVN();
   const ok = await chuyen(c.env.DB, t, "da_duyet", ", kt_boi = ?, kt_luc = ?, ly_do_tra_lai = NULL", [user.email, now], user.email, `Kế toán duyệt — kết thúc trả xác${body.ghi_chu?.trim() ? ` | ${body.ghi_chu.trim().slice(0, 500)}` : ""}`);
   if (!ok) return c.json({ error: "WRONG_STATE" }, 400);
@@ -500,7 +504,7 @@ function kqImport(raw: string): string | null {
 const laThungMoi = (s: string) => /^moi(\s|$)/.test(chuan(s));
 
 interface ImportRow { dong?: number; ma?: string; kq?: string; thung?: string; ghi_chu?: string }
-interface XacInfo { id: string; mien: string | null; cho_gom: number; xac_tt: string | null; thung_xac_id: string | null }
+interface XacInfo { id: string; mien: string | null; cho_gom: number; xac_tt: string | null; thung_xac_id: string | null; doi_tac_id: number | null }
 
 async function layXac(db: D1Database, ids: string[]): Promise<Map<string, XacInfo>> {
   const out = new Map<string, XacInfo>();
@@ -509,7 +513,7 @@ async function layXac(db: D1Database, ids: string[]): Promise<Map<string, XacInf
   for (let i = 0; i < units.length; i += 90) {
     const part = units.slice(i, i + 90);
     const { results } = await db
-      .prepare(`SELECT u.id, p.mien, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, u.xac_tt, u.thung_xac_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id IN (${part.map(() => "?").join(",")}) AND u.huong_xu_ly = 'doi_moi'`)
+      .prepare(`SELECT u.id, p.mien, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, u.xac_tt, u.thung_xac_id, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id IN (${part.map(() => "?").join(",")}) AND u.huong_xu_ly = 'doi_moi'`)
       .bind(...part)
       .all<XacInfo>();
     for (const r of results) out.set(r.id, r);
@@ -517,7 +521,7 @@ async function layXac(db: D1Database, ids: string[]): Promise<Map<string, XacInf
   for (let i = 0; i < dxs.length; i += 90) {
     const part = dxs.slice(i, i + 90);
     const { results } = await db
-      .prepare(`SELECT d.id, p.mien, (CASE WHEN ${XAC_DX_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, d.xac_tt, d.thung_xac_id FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.id IN (${part.map(() => "?").join(",")})`)
+      .prepare(`SELECT d.id, p.mien, (CASE WHEN ${XAC_DX_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, d.xac_tt, d.thung_xac_id, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE d.id IN (${part.map(() => "?").join(",")})`)
       .bind(...part)
       .all<XacInfo>();
     for (const r of results) out.set(r.id, r);
@@ -546,6 +550,9 @@ xac.post("/import", async (c) => {
   const daGap = new Set<string>();
   const mienNhom = new Map<string, string | null>(); // mien cua tung thung (co san / moi) sau khi nhan cac dong truoc
   for (const t of thungs.values()) mienNhom.set(t.id, t.mien);
+  // 25/11/2026 (v1.159): import "Vao thung" cung phai giu luat 1 thung 1 doi tac (v1.142) nhu duong bam tay (themXac) - truoc day bo sot.
+  const dtNhom = new Map<string, number | null>();
+  for (const t of thungs.values()) dtNhom.set(t.id, t.doi_tac_id ?? null);
   type Kq = { dong: number; ma: string; kq: string | null; thung: string | null; ghi_chu: string | null; ok: boolean; loi?: string };
   const out: Kq[] = input.map((r, i) => {
     const dong = r.dong ?? i + 2;
@@ -580,6 +587,9 @@ xac.post("/import", async (c) => {
     }
     const m = mienNhom.has(key) ? mienNhom.get(key)! : null;
     if (m && x.mien && m !== x.mien) return loi(`Xác miền ${x.mien} khác miền thùng (${m})`);
+    const dt = dtNhom.get(key) ?? null;
+    if (dt && x.doi_tac_id && dt !== x.doi_tac_id) return loi("Xác khác đối tác với thùng — 1 thùng chỉ chứa xác của 1 đối tác");
+    if (!dt && x.doi_tac_id) dtNhom.set(key, x.doi_tac_id);
     if (!m && x.mien) mienNhom.set(key, x.mien);
     else if (!mienNhom.has(key)) mienNhom.set(key, null);
     return { ...base, thung: key, ok: true };
@@ -594,7 +604,11 @@ xac.post("/import", async (c) => {
   const moiId = new Map<string, string>();
   for (const key of new Set(out.filter((r) => r.ok && r.thung?.startsWith("MOI:")).map((r) => r.thung!))) {
     const id = await nextSequentialId(db, "thung_xac_bh", "TX");
-    await db.prepare("INSERT INTO thung_xac_bh (id, trang_thai, mien, ghi_chu, nguoi_tao, created_at, updated_at) VALUES (?, 'nhap', ?, ?, ?, ?, ?)").bind(id, mienNhom.get(key) ?? null, `Tạo từ file import (${key.slice(4).toUpperCase()})`, user.email, now, now).run();
+    const dtId = dtNhom.get(key) ?? null;
+    await db
+      .prepare("INSERT INTO thung_xac_bh (id, trang_thai, mien, doi_tac_id, doi_tac, ghi_chu, nguoi_tao, created_at, updated_at) VALUES (?, 'nhap', ?, ?, (SELECT ten FROM doi_tac_bh WHERE id = ?), ?, ?, ?, ?)")
+      .bind(id, mienNhom.get(key) ?? null, dtId, dtId, `Tạo từ file import (${key.slice(4).toUpperCase()})`, user.email, now, now)
+      .run();
     await logThung(db, id, null, "nhap", user.email, "Tạo thùng trả xác từ file import");
     moiId.set(key, id);
   }
@@ -641,6 +655,8 @@ xac.post("/import", async (c) => {
   for (const [tid, mas] of theoThung) {
     const m = [...mienNhom.entries()].find(([k]) => k === tid || moiId.get(k) === tid)?.[1] ?? null;
     await db.prepare(`UPDATE thung_xac_bh SET updated_at = ?${m ? ", mien = COALESCE(mien, ?)" : ""} WHERE id = ?`).bind(...(m ? [now, m, tid] : [now, tid])).run();
+    const dtThung = [...dtNhom.entries()].find(([k]) => k === tid || moiId.get(k) === tid)?.[1] ?? null;
+    if (dtThung) await db.prepare("UPDATE thung_xac_bh SET doi_tac_id = ?1, doi_tac = COALESCE(doi_tac, (SELECT ten FROM doi_tac_bh WHERE id = ?1)) WHERE id = ?2 AND doi_tac_id IS NULL").bind(dtThung, tid).run();
     await logThung(db, tid, null, null, user.email, `Thêm ${mas.length} xác từ file import: ${mas.slice(0, 30).join(", ")}${mas.length > 30 ? "…" : ""}`);
   }
   return c.json({ ok, bo_qua: tom.hop_le - ok, loi: tom.loi, thung_moi: [...moiId.values()] });

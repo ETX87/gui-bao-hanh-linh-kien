@@ -107,7 +107,7 @@ const MIEN_DEF: FilterDef = { key: "mien", label: "Miền", labels: { MB: "Miề
 const LK_XAC_DEF: FilterDef = { ...LK_B_DEF, label: "LK xác (B)" };
 // 16/11/2026: loc giong Don BH - LK A (KTV chon) / B (xac thuc te gui ve) / C (doi moi), KTV gui, mien, thoi gian
 // + loc chu tren cot ID / case / mo ta loi + sap xep (backend routes/xac.ts TXT_UNIT / SORT_UNIT).
-export const XAC_KQ_LABEL: Record<string, string> = { ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác" };
+export const XAC_KQ_LABEL: Record<string, string> = { ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác", luu_kho: "Lưu kho" }; // v1.159: them luu_kho (= BE lib/xac.ts XAC_KQ_LABEL)
 const LOAI_DEF: FilterDef = { key: "loai", label: "Loại xác", kind: "map", labels: { doi_moi: "Đổi mới (KTV gửi về)", sua_chua: "Sau sửa chữa (LK cấp)" } };
 const KQ_DEF: FilterDef = { key: "kq", label: "Kết quả", kind: "map", labels: XAC_KQ_LABEL };
 const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" };

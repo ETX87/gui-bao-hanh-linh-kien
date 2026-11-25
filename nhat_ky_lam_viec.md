@@ -3,6 +3,22 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 25/11/2026 — v1.159: Rà soát luồng trả xác — sửa 4 lỗi nhỏ + tài liệu HTML 5W1H
+
+- Yêu cầu (nguyên văn): "rà soát lại luồng trả trả xác linh kiện, kiểm tra xem đã có tài liệu hướng dẫn, mô tả html chưa?" → sau báo cáo rà soát, chọn "Làm cả hai" (sửa lỗi + bổ sung tài liệu).
+- Rà soát: tài liệu `Huong_dan_cap_LK_sua_chua_tra_xac.html` (v1.143) đã có phần trả xác, code trả xác không đổi từ đó → nội dung đúng nhưng thiếu:
+  huỷ gửi KT, xoá thùng rỗng, tab Đã xử lý khác / đưa lại, cách import, luật 1 miền, nhiều mã lỗi; chưa theo 5W1H. `Luong-Quy-Trinh-Tong-Bao-Hanh.html`
+  chưa có làn trả xác.
+- Đã sửa mã: (1) nhãn "Lưu kho" thiếu ở FE (tab Đã xử lý khác / Excel / bộ lọc hiện mã `luu_kho`); (2) **import "Vào thùng" không giữ luật 1 thùng 1 đối tác**
+  (v1.142) và thùng mới từ import không ghi đối tác → nay chặn từng dòng + ghi đối tác cho thùng; (3) Kế toán duyệt được thùng rỗng (khi đã bớt hết xác
+  lúc chờ duyệt) → chặn `THUNG_RONG`; (4) "Huỷ gửi KT" / "Xoá thùng" thiếu kiểm miền như các thao tác thùng khác. Thêm câu báo cho 5 mã lỗi trả xác.
+- Tài liệu: mới `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html` (5W1H, luồng ngang, 9 ảnh chụp app chạy thử, phân quyền, mã lỗi,
+  tình huống; nguồn + ảnh + `build.py` ở `Huong-dan-Tra-xac/`); thêm làn "♻️ Thùng xác" vào Hình 4 + khối luồng trả xác ở mục 6 của luồng tổng; link từ mục 4.4 tài liệu cũ.
+- Kiểm thử (local D1, dữ liệu mẫu): tạo / gửi / duyệt thùng; chặn `MIEN_MISMATCH`, `REQUIRE_MA_EO`, `THUNG_CON_XAC`; import: dòng khác đối tác với thùng mới
+  và thùng có sẵn bị báo lỗi, thùng tạo từ import có đối tác + miền; tab Đã xử lý khác hiện "Lưu kho". Typecheck + build sạch.
+- Còn mở: chưa đếm trên D1 thật số thùng đã lỡ trộn 2 đối tác qua import (cần đồng ý chạy truy vấn đọc); thùng trả xác chưa có luồng ngang trong
+  chi tiết, bộ lọc tab Thùng nháp / Chờ KT / Đã duyệt còn ô chọn 1 giá trị (chưa theo luật lọc chọn nhiều).
+
 ## 25/11/2026 — v1.158: BC KPIs nhân viên theo tháng (nút tải số liệu + tải Excel)
 
 - Yêu cầu (nguyên văn): "đây là báo cáo kpis tháng 10 của tôi cho nhân viên. hãy phân tích các chỉ số => liệt kê các số liệu cần thiết

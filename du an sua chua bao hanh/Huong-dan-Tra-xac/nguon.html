@@ -1,0 +1,232 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hướng dẫn Trả xác linh kiện — Bảo hành đổi trả 3T</title>
+<style>
+body{font-family:"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:#f4f8f5;color:#1f2937;line-height:1.55}
+header{background:linear-gradient(135deg,#0f5132,#15803f);color:#fff;padding:28px 24px}
+header h1{margin:0 0 6px;font-size:24px} header p{margin:0;opacity:.92}
+main{max-width:1080px;margin:0 auto;padding:20px}
+section{background:#fff;border:1px solid #d7e1e9;border-radius:14px;padding:20px;margin:18px 0;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+h2{color:#116a34;margin-top:0} h3{color:#1f2937;margin:18px 0 8px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid #eef2f6;text-align:left;vertical-align:top}
+thead th{background:#ecfdf5;color:#116a34}
+table.w5 th{width:150px;background:#ecfdf5;border-bottom:1px solid #d1fae5;white-space:nowrap}
+.k{display:inline-block;min-width:60px;background:#15803f;color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px;margin-right:8px;text-align:center}
+figure{margin:14px 0;text-align:center} figure img{max-width:100%;border:1px solid #d7e1e9;border-radius:10px;cursor:zoom-in;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+figcaption{font-size:13px;color:#4b5563;margin-top:6px}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:14px;margin:10px 0}
+.warn{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:14px;margin:10px 0}
+.ok{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:14px;margin:10px 0}
+code{background:#f3f4f6;border-radius:4px;padding:1px 5px;font-size:13px}
+nav a{color:#fff;margin-right:14px;font-weight:600;font-size:14px}
+ol li,ul li{margin:4px 0}
+/* luong ngang dang duong */
+.luong{position:relative;display:flex;justify-content:space-between;margin:26px 4px 8px;overflow-x:auto}
+.luong:before{content:"";position:absolute;left:30px;right:30px;top:15px;height:3px;background:#a7f3d0;z-index:0}
+.moc{position:relative;z-index:1;flex:1;min-width:110px;text-align:center;font-size:12.5px}
+.moc .c{width:30px;height:30px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:#15803f;border:3px solid #fff;box-shadow:0 0 0 2px #15803f}
+.moc.tu .c{background:#2563eb;box-shadow:0 0 0 2px #2563eb}
+.moc.kt .c{background:#d97706;box-shadow:0 0 0 2px #d97706}
+.moc.xong .c{background:#065f46;box-shadow:0 0 0 2px #065f46}
+.moc b{display:block;color:#111827} .moc i{color:#6b7280;font-style:normal;font-size:11.5px}
+.chu{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#4b5563}
+.chu span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.chu .a:before{background:#15803f}.chu .b:before{background:#2563eb}.chu .c2:before{background:#d97706}.chu .d:before{background:#065f46}
+.nhanh{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.nhanh div{flex:1;min-width:260px;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 12px;background:#f8fafc}
+#hop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;align-items:center;justify-content:center}
+#hop img{max-width:96vw;max-height:94vh;border-radius:8px}
+@media print{section{break-inside:avoid} header{-webkit-print-color-adjust:exact;print-color-adjust:exact} nav{display:none}}
+</style></head><body>
+<header>
+<h1>♻️ Hướng dẫn Trả xác linh kiện</h1>
+<p>Dành cho <b>Admin bảo hành</b>, vai trò <b>Trả xác</b>, <b>Kế toán</b> (và View / Giám sát để theo dõi) — app <b>Bảo hành đổi trả 3T</b>, menu <b>Trả xác</b>.</p>
+<p>Áp dụng từ 25/11/2026 · app v1.159 · bổ sung cho mục 4.4 / 5.2 / 6 của tài liệu <i>Hướng dẫn cấp linh kiện sửa chữa, xác nhận xác, trả xác &amp; trừ công nợ</i>.</p>
+<p style="margin-top:10px"><nav><a href="#tq">Tổng quan 5W1H</a><a href="#nguon">Xác nào cần trả</a><a href="#gom">Gom thùng</a><a href="#nhap">Thùng nháp</a><a href="#kt">Kế toán duyệt</a><a href="#khac">Xử lý khác</a><a href="#import">Import</a><a href="#quyen">Phân quyền</a><a href="#loi">Mã lỗi</a><a href="#hoi">Tình huống</a></nav></p>
+</header>
+<main>
+
+<section id="tq">
+<h2>Tổng quan — luồng trả xác nhìn 1 giây</h2>
+<div class="chu"><span class="b">Hệ thống tự làm</span><span class="a">Admin BH / Trả xác</span><span class="c2">Kế toán</span><span class="d">Kết thúc</span></div>
+<div class="luong">
+ <div class="moc tu"><div class="c">1</div><b>Xác phát sinh</b><i>Đổi mới "Trả đối tác" / lần cấp LK đã xác nhận xác</i></div>
+ <div class="moc tu"><div class="c">2</div><b>Xác chờ gom</b><i>tự vào danh sách</i></div>
+ <div class="moc"><div class="c">3</div><b>Tạo thùng TX-…</b><i>1 miền · 1 đối tác</i></div>
+ <div class="moc"><div class="c">4</div><b>Nhập Mã EO</b><i>thêm / bớt xác</i></div>
+ <div class="moc"><div class="c">5</div><b>Gửi Kế toán</b><i>cần EO + ≥ 1 xác</i></div>
+ <div class="moc kt"><div class="c">6</div><b>Kế toán duyệt</b><i>hoặc trả lại (có lý do)</i></div>
+ <div class="moc xong"><div class="c">✔</div><b>Đã trả đối tác</b><i>thùng khoá</i></div>
+</div>
+<div class="nhanh">
+ <div><b>Nhánh trả lại:</b> Kế toán "Trả lại người gom thùng" (bắt buộc lý do) → thùng về <b>Thùng nháp</b>, có nhãn đỏ "↩ KT trả lại" → sửa → gửi lại. Người gom cũng tự <b>"↩ Huỷ gửi KT"</b> được khi Kế toán chưa duyệt.</div>
+ <div><b>Nhánh không qua thùng:</b> xác đã tiêu huỷ / thất lạc / không có xác / đã trả ngoài hệ thống → ghi kết quả, xác chuyển sang tab <b>"Đã xử lý khác"</b>; ghi nhầm thì <b>"↺ Đưa lại chờ gom"</b>.</div>
+</div>
+
+<h3>5W1H của tính năng</h3>
+<table class="w5">
+<tr><th><span class="k">WHO</span>Ai</th><td><b>Admin BH</b> (theo miền) và vai trò <b>Trả xác</b> (chỉ đối tác được gán) gom thùng, ghi kết quả xác. <b>Kế toán</b> duyệt / trả lại thùng. View, Giám sát xem. Đối tác (Karofi, hãng…) là bên nhận xác.</td></tr>
+<tr><th><span class="k">WHEN</span>Khi nào</th><td>Sau khi đơn vị bảo hành được phân loại <b>Đổi mới</b> với xử lý xác "Trả đối tác", hoặc sau khi Admin BH <b>xác nhận tiêu hao</b> lần cấp linh kiện sửa chữa với xác "Trả đối tác" (số đã dùng &gt; 0). Gom thùng khi chuẩn bị giao xác cho đối tác (theo đợt, theo xe).</td></tr>
+<tr><th><span class="k">WHERE</span>Ở đâu</th><td>Menu <b>Trả xác</b> (<code>#/tra-xac</code>), 5 tab: ♻️ Xác chờ gom · 📦 Thùng nháp · ⏳ Chờ KT duyệt · ✔ Đã duyệt · Đã xử lý khác. Trên điện thoại bảng chuyển thành thẻ.</td></tr>
+<tr><th><span class="k">WHAT</span>Làm gì</th><td>Theo dõi từng xác linh kiện từ lúc phát sinh tới khi đã giao đối tác: gom vào thùng trả xác <code>TX-…</code> kèm <b>Mã EO</b>, Kế toán kiểm tra và chốt. Xác không trả qua thùng thì ghi kết quả (tiêu huỷ / thất lạc / không có / trả ngoài). Có import Excel hàng loạt, tải Excel theo bộ lọc.</td></tr>
+<tr><th><span class="k">WHY</span>Tại sao</th><td>Đối tác / hãng chỉ đối trừ bảo hành khi nhận đủ xác. Không theo dõi thì xác thất lạc, không chứng minh được đã trả, mất tiền đối trừ; Kế toán không có chứng từ (EO) để khớp. Luật 1 thùng 1 miền 1 đối tác giúp mỗi thùng khớp đúng 1 chứng từ giao nhận.</td></tr>
+<tr><th><span class="k">HOW</span>Làm thế nào</th><td>Tích xác ở tab Xác chờ gom → <b>＋ Tạo thùng trả xác</b> (hoặc <b>Thêm vào thùng nháp…</b>) → mở thùng nhập <b>Mã EO</b> → <b>Gửi Kế toán</b> → Kế toán mở tab Chờ KT duyệt → <b>✔ Duyệt — kết thúc trả xác</b> hoặc <b>↩ Trả lại người gom thùng</b>. Chi tiết từng bước ở các mục dưới.</td></tr>
+</table>
+</section>
+
+<section id="nguon">
+<h2>1. Xác nào vào danh sách "Xác chờ gom"</h2>
+<table>
+<thead><tr><th>Loại xác</th><th>Điều kiện vào danh sách</th><th>Linh kiện / SL tính</th></tr></thead>
+<tr><td><b>Đổi mới</b> (KTV gửi về)</td><td>Đơn vị hướng xử lý <b>Đổi mới</b> + xử lý xác <b>"Trả đối tác"</b>, đã qua bước phân loại (không ở Chờ phân loại / Admin cần xem lại / Chờ KTV bổ sung), chưa bị từ chối / chuyển kho.</td><td>Linh kiện <b>B</b> (thực tế gửi về), SL 1</td></tr>
+<tr><td><b>Sau sửa chữa</b> (LK cấp)</td><td>Lần cấp linh kiện sửa chữa đã được Admin BH <b>xác nhận tiêu hao</b> với xác <b>"Trả đối tác"</b> và số đã dùng &gt; 0 (luồng cũ: phiếu cấp Kho đã xuất).</td><td>Linh kiện cấp, SL = số đã dùng</td></tr>
+</table>
+<div class="note">Không vào danh sách: xử lý xác "Tiêu huỷ" / "Lưu kho"; lần cấp MUA HÀNG SỬA CHỮA; đơn tạo trước 01/11/2026 (thời AppSheet) — được coi là <b>đã xử lý ngoài hệ thống</b> và nằm sẵn ở tab "Đã xử lý khác".</div>
+<div class="warn">Xác đã vào thùng thì <b>không đổi được xử lý xác, không lùi đơn, không sửa / huỷ xác nhận tiêu hao</b> (báo <code>XAC_TRONG_THUNG</code>) — bỏ xác khỏi thùng trước.</div>
+</section>
+
+<section id="gom">
+<h2>2. Gom thùng trả xác — Admin BH / Trả xác</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Admin BH (miền phụ trách), Trả xác (đối tác được gán), Admin hệ thống.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Có xác chờ gom và chuẩn bị đợt giao cho đối tác.</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Trả xác › <b>♻️ Xác chờ gom</b>. Xem theo Danh sách / Theo KTV / Theo linh kiện / Theo mã SC (chế độ nhóm cho tích cả nhóm).</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>Tạo thùng <code>TX-…</code> trạng thái Nháp chứa các xác đã chọn.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Mỗi thùng = 1 lần giao xác cho 1 đối tác, có chứng từ EO để đối chiếu.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li>Lọc trên tiêu đề cột (Đối tác, Miền, Linh kiện, KTV…, chọn nhiều giá trị được) để ra đúng đợt cần gom.</li>
+<li>Tích từng xác hoặc "☑ Chọn tất cả đang hiện". Thanh thao tác xanh hiện số đã chọn.</li>
+<li>Bấm <b>＋ Tạo thùng trả xác (N)</b> → chọn <b>Đối tác nhận xác</b> (bỏ trống = lấy theo xác đầu tiên), nhập Mã EO nếu đã có, ghi chú → <b>Tạo thùng</b>. Hoặc <b>Thêm vào thùng nháp…</b> để bỏ vào thùng đang mở.</li>
+<li>Hệ thống mở luôn chi tiết thùng vừa tạo. Xác không hợp lệ được báo riêng từng dòng (khác miền, khác đối tác, không còn chờ gom).</li>
+</ol>
+</td></tr>
+</table>
+<figure><img src="{{tx-01-cho-gom}}" alt="Xác chờ gom"><figcaption>Tab Xác chờ gom — đã tích 2 xác, thanh thao tác: tiêu huỷ / thất lạc / không có xác / trả ngoài / thêm vào thùng nháp / tạo thùng</figcaption></figure>
+<figure><img src="{{tx-02-tao-thung}}" alt="Tạo thùng"><figcaption>Hộp Tạo thùng trả xác — chọn đối tác, Mã EO (nhập sau được), ghi chú</figcaption></figure>
+<div class="note"><b>Luật thùng:</b> 1 thùng chỉ chứa xác <b>cùng 1 miền</b> và <b>cùng 1 đối tác</b> (thùng chưa có thì lấy theo xác đầu tiên). Luật áp cho cả bấm tay lẫn import Excel.</div>
+</section>
+
+<section id="nhap">
+<h2>3. Thùng nháp — nhập Mã EO, thêm / bớt xác, gửi Kế toán</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Người gom thùng (Admin BH / Trả xác).</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Thùng ở trạng thái <b>Nháp</b> (mới tạo hoặc bị Kế toán trả lại).</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Trả xác › <b>📦 Thùng nháp</b> → bấm mã thùng để mở chi tiết.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>Hoàn thiện thông tin thùng trước khi gửi duyệt: đối tác, <b>Mã EO</b> (bắt buộc), ghi chú, danh sách xác, bảng tổng hợp theo linh kiện (sao chép được), nhật ký thay đổi.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Kế toán chỉ duyệt khi có Mã EO khớp chứng từ và đúng xác thực giao.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li>Nhập / sửa <b>Mã EO</b>, ghi chú, đổi đối tác (chỉ khi mọi xác trong thùng cùng đối tác mới).</li>
+<li><b>＋ Thêm xác</b> (chỉ hiện xác cùng miền thùng) hoặc <b>✕ Bỏ</b> từng xác (xác về lại danh sách chờ gom).</li>
+<li><b>Gửi Kế toán</b>: nút chỉ bật khi đã có Mã EO và ≥ 1 xác.</li>
+<li>Thùng tạo nhầm: bỏ hết xác rồi bấm <b>🗑 Xoá thùng rỗng</b> (chỉ thùng Nháp, không còn xác).</li>
+</ol>
+</td></tr>
+</table>
+<figure><img src="{{tx-04-thung-nhap}}" alt="Thùng nháp"><figcaption>Tab Thùng nháp — cột Mã EO đỏ "Chưa có" nhắc cần nhập trước khi gửi</figcaption></figure>
+</section>
+
+<section id="kt">
+<h2>4. Kế toán duyệt / trả lại thùng</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td><b>Kế toán</b> (theo miền), Admin hệ thống. Người gom thùng chỉ được <b>↩ Huỷ gửi KT</b>.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Thùng ở <b>⏳ Chờ KT duyệt</b> (số đỏ trên tab = số thùng đang chờ).</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Trả xác › <b>⏳ Chờ KT duyệt</b> → mở thùng. Nút ở chân hộp chi tiết, luôn nhìn thấy.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td><b>✔ Duyệt — kết thúc trả xác</b>: thùng sang <b>Đã duyệt</b>, mọi xác trong thùng thành "đã trả đối tác", ghi nhật ký từng đơn. <b>↩ Trả lại người gom thùng</b>: thùng về Nháp kèm lý do. Kế toán sửa được Mã EO / ghi chú khi thùng đang chờ.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Chốt chứng từ giao xác, khoá thùng để số liệu đối trừ với đối tác không bị đổi sau đó.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li>Kiểm tra đối tác, Mã EO, bảng tổng hợp theo linh kiện so với biên bản / EO thực tế.</li>
+<li>Đúng → <b>✔ Duyệt</b> → xác nhận. Thùng phải còn Mã EO và ≥ 1 xác.</li>
+<li>Sai → <b>↩ Trả lại người gom thùng</b> → nhập lý do (bắt buộc) → Trả lại.</li>
+</ol>
+</td></tr>
+</table>
+<figure><img src="{{tx-06-cho-kt-chi-tiet}}" alt="Chờ KT duyệt"><figcaption>Chi tiết thùng đang chờ Kế toán — thông tin trả xác, tổng hợp theo linh kiện, danh sách xác, nhật ký; nút Huỷ gửi KT / Trả lại / Duyệt</figcaption></figure>
+<figure><img src="{{tx-07-tra-lai}}" alt="Trả lại"><figcaption>Kế toán trả lại thùng — lý do bắt buộc (vd sai mã EO, thiếu xác)</figcaption></figure>
+<figure><img src="{{tx-08-da-duyet}}" alt="Đã duyệt"><figcaption>Thùng đã duyệt — khoá, chỉ xem; nhật ký ghi người duyệt và ghi chú</figcaption></figure>
+<div class="note">Khi thùng đang chờ Kế toán, người gom vẫn thêm / bớt xác được (mọi thay đổi ghi nhật ký). Sau khi Kế toán duyệt thì không sửa được nữa.</div>
+</section>
+
+<section id="khac">
+<h2>5. Xác không trả qua thùng — tab "Đã xử lý khác"</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Admin BH, Trả xác (đối tác được gán). View xem được tab Đã xử lý khác.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Xác chờ gom nhưng thực tế: đã tiêu huỷ, thất lạc, không có xác, hoặc đã trả đối tác ngoài hệ thống.</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Tab Xác chờ gom → tích xác → các nút trên thanh thao tác. Xem lại / hoàn tác ở tab <b>Đã xử lý khác</b>.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>Ghi kết quả cho nhiều xác 1 lần (kèm ghi chú), xác rời danh sách chờ gom. Tab Đã xử lý khác còn hiện kết quả <b>Lưu kho</b> (ghi từ bước xác nhận tiêu hao) và xác đơn trước 01/11/2026.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Danh sách chờ gom chỉ còn xác thật sự cần giao; xác không giao được vẫn có dấu vết ai ghi, khi nào, vì sao.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>Tích xác → <b>🔥 Xác đã tiêu huỷ</b> / <b>❓ Xác thất lạc</b> / <b>∅ Không có xác</b> / <b>Đã trả ngoài hệ thống</b> → ghi chú (tuỳ chọn) → Xác nhận. Ghi nhầm: tab Đã xử lý khác → <b>↺ Đưa lại chờ gom</b> trên dòng đó.</td></tr>
+</table>
+<figure><img src="{{tx-03-ket-qua-ngoai}}" alt="Ghi kết quả"><figcaption>Ghi kết quả "Xác đã tiêu huỷ" cho xác đã chọn</figcaption></figure>
+<figure><img src="{{tx-09-da-xu-ly-khac}}" alt="Đã xử lý khác"><figcaption>Tab Đã xử lý khác — cột Kết quả (Lưu kho, Đã xử lý ngoài hệ thống…), nút Đưa lại chờ gom</figcaption></figure>
+</section>
+
+<section id="import">
+<h2>6. Import kết quả xác hàng loạt (Excel)</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Chỉ <b>Admin BH</b> / Admin hệ thống (vai trò Trả xác không import).</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Có nhiều xác cần xử lý 1 lần (đối chiếu sau kiểm kê, dồn đợt cũ, chia nhiều thùng).</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Tab Xác chờ gom → <b>⬆ Import kết quả</b>.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>Tối đa 1.000 dòng / lần. Mỗi dòng: Mã xác (đơn vị <code>DH-…-n</code> hoặc đề xuất <code>DX-…</code>), Kết quả, Mã thùng, Ghi chú. Kết quả: <code>vao_thung</code>, <code>tieu_huy</code>, <code>that_lac</code>, <code>khong_co</code>, <code>ngoai</code>, <code>dua_lai</code> (ghi chữ tiếng Việt cũng được).</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Tránh tích tay hàng trăm dòng; kiểm tra trước toàn bộ file, chỉ áp dụng dòng hợp lệ.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li><b>⬇ Tải file mẫu</b>: sheet <i>Nhap lieu</i> điền sẵn xác chờ gom theo bộ lọc đang chọn, <i>Huong dan</i>, <i>Thung dang mo</i> (mã thùng nháp / chờ KT).</li>
+<li>Điền cột Kết quả; với "Vào thùng" ghi mã thùng <code>TX-…</code> có sẵn, hoặc <code>MOI</code> / <code>MOI-A</code>, <code>MOI-B</code>… để tạo thùng mới (cùng tên = cùng thùng).</li>
+<li>Chọn file → xem bảng kiểm tra (dòng lỗi ghi rõ lý do) → <b>Áp dụng N dòng hợp lệ</b>.</li>
+</ol>
+Lỗi thường gặp: trùng mã trong file, xác không còn chờ gom, thùng đã duyệt, <b>xác khác miền</b> hoặc <b>khác đối tác</b> với thùng, "Đưa lại" xác không ở tab Đã xử lý khác.
+</td></tr>
+</table>
+<figure><img src="{{tx-10-import}}" alt="Import"><figcaption>Hộp Import kết quả xác hàng loạt</figcaption></figure>
+</section>
+
+<section id="quyen">
+<h2>7. Ai thấy / làm được gì</h2>
+<table>
+<thead><tr><th>Vai trò</th><th>Tab thấy</th><th>Thao tác</th></tr></thead>
+<tr><td>Admin BH (theo miền)</td><td>Cả 5 tab</td><td>Gom thùng, thêm / bớt xác, EO, gửi / huỷ gửi KT, xoá thùng rỗng, ghi kết quả khác, đưa lại, import</td></tr>
+<tr><td>Trả xác</td><td>Cả 5 tab (chỉ dữ liệu đối tác được gán)</td><td>Như Admin BH nhưng chỉ đối tác được gán; không import</td></tr>
+<tr><td>Kế toán</td><td>Chờ KT duyệt, Đã duyệt</td><td>Sửa Mã EO / ghi chú khi chờ duyệt, Duyệt, Trả lại</td></tr>
+<tr><td>View</td><td>Xác chờ gom, Đã duyệt, Đã xử lý khác</td><td>Chỉ xem, tải Excel</td></tr>
+<tr><td>Giám sát</td><td>Xác chờ gom, Đã duyệt</td><td>Chỉ xem</td></tr>
+<tr><td>Admin hệ thống</td><td>Tất cả</td><td>Tất cả; gán vai trò Trả xác + đối tác ở Quản trị › Người dùng</td></tr>
+</table>
+</section>
+
+<section id="loi">
+<h2>8. Thông báo lỗi &amp; cách xử lý</h2>
+<table>
+<thead><tr><th>Mã</th><th>Câu báo trên app</th><th>Xử lý</th></tr></thead>
+<tr><td><code>REQUIRE_MA_EO</code></td><td>Thùng cần có Mã EO trước khi gửi / duyệt</td><td>Mở thùng, nhập Mã EO</td></tr>
+<tr><td><code>THUNG_RONG</code></td><td>Thùng chưa có xác nào</td><td>Thêm xác, hoặc xoá thùng rỗng</td></tr>
+<tr><td><code>THUNG_CON_XAC</code></td><td>Thùng còn xác — bỏ hết rồi mới xoá</td><td>Bỏ từng xác khỏi thùng</td></tr>
+<tr><td><code>MIEN_MISMATCH</code></td><td>1 thùng chỉ chứa xác cùng miền</td><td>Tạo thùng riêng cho miền kia</td></tr>
+<tr><td><code>DOI_TAC_MISMATCH</code></td><td>1 thùng chỉ chứa xác của 1 đối tác</td><td>Tạo thùng riêng cho đối tác kia</td></tr>
+<tr><td><code>XAC_KHONG_CHO_GOM</code></td><td>Xác không còn ở danh sách chờ gom</td><td>Đã vào thùng khác / đã có kết quả — tải lại danh sách</td></tr>
+<tr><td><code>NGOAI_DOI_TAC_DUOC_GAN</code></td><td>Xác / thùng không thuộc đối tác bạn được gán</td><td>Nhờ Admin BH hoặc quản trị gán thêm đối tác</td></tr>
+<tr><td><code>XAC_TRONG_THUNG</code></td><td>Xác đã vào thùng — bỏ khỏi thùng trước</td><td>Bỏ xác khỏi thùng rồi sửa xử lý xác / xác nhận tiêu hao</td></tr>
+<tr><td><code>MISSING_LY_DO</code></td><td>Thiếu lý do</td><td>Kế toán nhập lý do trả lại</td></tr>
+<tr><td><code>WRONG_STATE</code></td><td>Trạng thái không cho phép</td><td>Thùng đã được người khác gửi / duyệt / trả lại — tải lại</td></tr>
+</table>
+</section>
+
+<section id="hoi">
+<h2>9. Tình huống thường gặp</h2>
+<table>
+<thead><tr><th>Tình huống</th><th>Xử lý</th></tr></thead>
+<tr><td>Không thấy xác cần trả trong danh sách chờ gom</td><td>Kiểm tra đơn đã phân loại Đổi mới + xử lý xác "Trả đối tác" chưa; với xác sau sửa chữa: Admin BH đã xác nhận tiêu hao với xác "Trả đối tác" và số đã dùng &gt; 0 chưa. Tài khoản Trả xác: đối tác của đơn có được gán cho mình không.</td></tr>
+<tr><td>Xác "Chưa có đối tác"</td><td>Đơn thiếu đối tác — mở chi tiết đơn › Phân loại chọn đối tác. Xác chưa có đối tác vẫn gom được, thùng lấy đối tác theo xác đầu tiên có đối tác.</td></tr>
+<tr><td>Gửi Kế toán rồi mới phát hiện thiếu xác</td><td>Mở thùng ở tab Chờ KT duyệt → Thêm xác (vẫn được khi chưa duyệt), hoặc ↩ Huỷ gửi KT để sửa thoải mái.</td></tr>
+<tr><td>Kế toán trả lại thùng</td><td>Thùng về Thùng nháp với nhãn đỏ "↩ KT trả lại" + lý do; sửa theo lý do rồi Gửi Kế toán lại.</td></tr>
+<tr><td>Muốn đổi xử lý xác của đơn đã vào thùng</td><td>Bỏ xác khỏi thùng trước (chỉ khi thùng chưa duyệt).</td></tr>
+<tr><td>Ghi nhầm "tiêu huỷ" / "thất lạc"</td><td>Tab Đã xử lý khác → ↺ Đưa lại chờ gom.</td></tr>
+</table>
+<p style="font-size:13px;color:#6b7280">Ảnh minh hoạ chụp từ app chạy thử với dữ liệu mẫu (tên người, case, linh kiện, đối tác không có thật). Bấm vào ảnh để phóng to.</p>
+</section>
+</main>
+<div id="hop" onclick="this.style.display='none'"><img id="hopimg" alt=""></div>
+<script>document.querySelectorAll("figure img").forEach(i=>i.addEventListener("click",()=>{document.getElementById("hopimg").src=i.src;document.getElementById("hop").style.display="flex"}));document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("hop").style.display="none"})</script>
+</body></html>

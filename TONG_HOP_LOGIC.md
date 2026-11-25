@@ -90,7 +90,10 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 
 Xác chờ gom (đơn vị Đổi mới / sửa có thay LK, xử lý xác "Trả đối tác", tính theo linh kiện B) → thùng trả xác `TX-…` (`nhap` →
 `cho_ke_toan` → `da_duyet`; bắt buộc mã EO + ≥ 1 xác; 1 thùng 1 miền, 1 đối tác) → Kế toán duyệt (hoặc trả lại có lý do). Thêm / bớt xác
-tới khi Kế toán duyệt; xác trong thùng thì không đổi xử lý xác / không lùi đơn. Có "Đã trả ngoài hệ thống"; đơn trước 01/11/2026 coi như đã xử lý ngoài.
+tới khi Kế toán duyệt (Kế toán không duyệt thùng rỗng); xác trong thùng thì không đổi xử lý xác / không lùi đơn. Luật 1 miền 1 đối tác áp cả bấm tay lẫn
+import Excel (thùng mới từ import lấy đối tác + miền của xác đầu). Người gom "Huỷ gửi KT" khi chưa duyệt; thùng nháp rỗng xoá được. Kết quả ngoài thùng:
+tiêu huỷ / thất lạc / không có xác / đã trả ngoài (+ "Lưu kho" ghi từ xác nhận tiêu hao) → tab "Đã xử lý khác", đưa lại chờ gom được; đơn trước
+01/11/2026 coi như đã xử lý ngoài. Hướng dẫn: `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
 
 ## 7. Lịch chạy tự động
 

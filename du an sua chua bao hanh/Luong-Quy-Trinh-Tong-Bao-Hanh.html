@@ -478,13 +478,21 @@
     </table>
   </div>
   <div class="note green">Một đơn cha ×N có thể có N hướng xử lý khác nhau. Mỗi phiếu trả chỉ chứa <b>1 người nhận + 1 loại đối trừ</b> (Đổi trả hoặc Trừ công nợ).</div>
+  <div class="card">
+    <b>♻️ Luồng trả xác linh kiện (menu Trả xác)</b> — chạy song song với phiếu trả, không chặn việc trả hàng cho KTV:<br>
+    Xác phát sinh (<b>Đổi mới</b> + xử lý xác "Trả đối tác", tính theo LK B; hoặc lần cấp LK sửa chữa Admin BH đã <b>xác nhận tiêu hao</b> với xác "Trả đối tác")
+    → <b>Xác chờ gom</b> → Admin BH / Trả xác tạo <b>thùng trả xác TX-…</b> (1 miền, 1 đối tác) → nhập <b>Mã EO</b> → <b>Gửi Kế toán</b> (bắt buộc EO + ≥ 1 xác)
+    → Kế toán <b>Duyệt</b> (xác = đã trả đối tác) hoặc <b>Trả lại</b> có lý do (thùng về Nháp).
+    Xác không trả qua thùng: tiêu huỷ / thất lạc / không có xác / đã trả ngoài hệ thống (tab "Đã xử lý khác", đưa lại được). Đơn trước 01/11/2026 coi như đã xử lý ngoài.
+    Hướng dẫn chi tiết 5W1H có ảnh: <a href="Huong-dan-Tra-xac-linh-kien_25-11-2026.html">Huong-dan-Tra-xac-linh-kien_25-11-2026.html</a>.
+  </div>
 </section>
 
 <!-- 7 -->
 <section id="trangthai">
   <h2><span class="n">7</span>Trạng thái theo từng đối tượng</h2>
   <div class="figure">
-    <svg viewBox="0 0 1100 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12.5">
+    <svg viewBox="0 0 1100 400" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12.5">
       <defs><marker id="s" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f7568"/></marker></defs>
       <text x="10" y="30" font-weight="700" fill="#14261b" font-size="14">📦 Thùng</text>
       <g font-weight="700">
@@ -533,8 +541,19 @@
       <line x1="720" y1="274" x2="736" y2="274" stroke="#dc2626" stroke-width="1.5" marker-end="url(#s)"/>
       <line x1="305" y1="237" x2="320" y2="257" stroke="#64748b" stroke-width="1.5" marker-end="url(#s)"/>
       <text x="130" y="315" fill="#5f7568" font-size="11.5">Phiếu còn Nháp / Chờ KT duyệt vẫn sửa được (thêm / bớt đơn, đổi LK C). KT / Kho có thể đẩy ngược phiếu đã duyệt về Nháp kèm lý do.</text>
+
+      <text x="10" y="363" font-weight="700" fill="#14261b" font-size="14">♻️ Thùng xác</text>
+      <g font-weight="700" font-size="12">
+        <rect x="130" y="345" width="110" height="30" rx="15" fill="#f1f5f9" stroke="#64748b"/><text x="185" y="365" text-anchor="middle" fill="#64748b">Nháp (+ EO)</text>
+        <rect x="270" y="345" width="130" height="30" rx="15" fill="#fdf6e3" stroke="#b7791f"/><text x="335" y="365" text-anchor="middle" fill="#b7791f">Chờ KT duyệt</text>
+        <rect x="430" y="345" width="190" height="30" rx="15" fill="#ecf8f0" stroke="#15803f" stroke-width="2"/><text x="525" y="365" text-anchor="middle" fill="#116a34">Đã duyệt — đã trả đối tác ✔</text>
+      </g>
+      <line x1="240" y1="360" x2="266" y2="360" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <line x1="400" y1="360" x2="426" y2="360" stroke="#5f7568" stroke-width="2" marker-end="url(#s)"/>
+      <path d="M 330 377 Q 260 395 190 377" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#s)"/>
+      <text x="650" y="365" fill="#5f7568" font-size="11.5">KT trả lại (lý do) / người gom huỷ gửi → về Nháp. 1 thùng 1 miền 1 đối tác.</text>
     </svg>
-    <div class="cap">Hình 4 — Vòng đời trạng thái của thùng, đơn vị và phiếu trả.</div>
+    <div class="cap">Hình 4 — Vòng đời trạng thái của thùng, đơn vị, phiếu trả và thùng trả xác.</div>
   </div>
   <div class="card">
     <b>Tiến trình KTV nhìn thấy (5 bước):</b> Gửi đi → Kho nhận → Xử lý → Trả về → Đã nhận. Nhãn hiển thị theo góc nhìn KTV: "Chưa gửi", "Đang trên xe về Kho", "Cần bạn bổ sung", "Đang xử lý", "Xử lý xong, đang chuẩn bị trả", "Đang trả về bạn", "Đã nhận lại", "Không bảo hành (đã huỷ)".

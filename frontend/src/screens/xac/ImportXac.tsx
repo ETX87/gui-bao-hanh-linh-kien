@@ -99,7 +99,7 @@ export function ImportXacModal({ listPath, onClose, onDone }: { listPath: string
         ["1", "Điền sheet \"Nhap lieu\" (sheet ĐẦU TIÊN — không đổi tên / thứ tự cột A–D). File mẫu đã điền sẵn các xác đang chờ gom theo bộ lọc lúc tải."],
         ["2", "Cột A \"Mã xác\": mã đơn vị Đổi mới (DH-000123-1) hoặc mã đề xuất linh kiện sửa chữa (DX-000045). Dòng không cần xử lý thì để trống cột B (hoặc xoá dòng)."],
         ["3", "Cột B \"Kết quả\": nhập 1 giá trị trong bảng bên dưới (nhập tên tiếng Việt hoặc mã đều được, không phân biệt dấu / hoa thường)."],
-        ["4", "Cột C \"Mã thùng\": chỉ điền khi Kết quả = Vào thùng. Ghi mã thùng có sẵn (sheet \"Thung dang mo\"), hoặc MOI để tạo 1 thùng mới; nhiều thùng mới thì đặt tên MOI-A, MOI-B… (cùng tên = cùng thùng). 1 thùng chỉ chứa xác cùng miền."],
+        ["4", "Cột C \"Mã thùng\": chỉ điền khi Kết quả = Vào thùng. Ghi mã thùng có sẵn (sheet \"Thung dang mo\"), hoặc MOI để tạo 1 thùng mới; nhiều thùng mới thì đặt tên MOI-A, MOI-B… (cùng tên = cùng thùng). 1 thùng chỉ chứa xác cùng miền và cùng đối tác."],
         ["5", "Cột D \"Ghi chú\": tuỳ chọn (lưu cùng kết quả tiêu huỷ / thất lạc / không có xác / trả ngoài)."],
         ["6", "Các cột từ E trở đi chỉ để tham khảo — hệ thống không đọc."],
         ["7", "Vào màn Trả xác linh kiện › \"⬆ Import kết quả\" › chọn file › xem trước từng dòng (dòng lỗi ghi rõ lý do) › \"Áp dụng\". Chỉ dòng hợp lệ được ghi; tối đa 1.000 dòng / lần."],

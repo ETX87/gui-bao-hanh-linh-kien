@@ -153,6 +153,12 @@ export const ERROR_MESSAGES: Record<string, string> = {
   DOI_TAC_KHONG_CO: "Đối tác không có trong danh mục.",
   NGOAI_DOI_TAC_DUOC_GAN: "Xác / thùng không thuộc đối tác bạn được gán.",
   DOI_TAC_MISMATCH: "1 thùng chỉ chứa xác của 1 đối tác.",
+  // v1.159: cac ma loi tra xac truoc day hien nguyen ma
+  REQUIRE_MA_EO: "Thùng trả xác cần có Mã EO trước khi gửi / duyệt.",
+  THUNG_RONG: "Thùng trả xác chưa có xác nào.",
+  THUNG_CON_XAC: "Thùng còn xác — bỏ hết xác khỏi thùng rồi mới xoá được.",
+  MIEN_MISMATCH: "1 thùng chỉ chứa xác cùng miền.",
+  XAC_KHONG_CHO_GOM: "Xác không còn ở danh sách chờ gom (đã vào thùng hoặc đã có kết quả).",
   XAC_TRONG_THUNG: "Xác đã vào thùng trả xác — bỏ khỏi thùng trước.",
   KE_TOAN_DA_CHOT: "Kế toán đã chốt phiếu trừ / trả công nợ — không sửa / hủy được nữa.",
   KHONG_PHAI_CONG_NO_SUA_CHUA: "Lần cấp MUA HÀNG SỬA CHỮA (hết bảo hành) không qua bước xác nhận xác / trừ công nợ.",

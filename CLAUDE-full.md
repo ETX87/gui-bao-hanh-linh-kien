@@ -7588,3 +7588,31 @@ menu `routes.ts` "🎯 BC KPIs", `App.tsx`. Bảng chi tiết dùng `Table` + `E
 **(e) Kiểm thử:** typecheck + build sạch. Hàm tính chạy trên `node:sqlite` dựng từ toàn bộ `migrations/` + dữ liệu mẫu: Kho 6h đúng hạn / 48h quá hạn /
 phiếu chưa gửi 27,2h "đang chờ quá 24h"; Admin 10h đạt, 58h − 48h chờ bổ sung = 10h đạt, 72h có giải trình "Không có linh kiện" → Không xét, 430h − 2
 Chủ nhật = 382h quá; NV 48h quá, đang sửa 100h. Tháng 10 trả 0 dòng (không có nhật ký). Chưa xem UI trên trình duyệt (cần đăng nhập Google).
+
+## Rà soát luồng trả xác + tài liệu HTML 5W1H (25/11/2026) — v1.159
+
+**(a) Nguyên văn:** *"rà soát lại luồng trả trả xác linh kiện, kiểm tra xem đã có tài liệu hướng dẫn, mô tả html chưa?" → sau báo cáo rà soát, chọn "Làm cả hai" (sửa lỗi + bổ sung tài liệu)*.
+
+**(b) Kết quả rà soát:** luồng thật (`routes/xac.ts`, `lib/xac.ts`, `screens/xac/*`) khớp `TONG_HOP_LOGIC.md` §6 và tài liệu v1.143 (code không đổi từ v1.143).
+Tài liệu thiếu: Huỷ gửi KT, Xoá thùng rỗng, tab Đã xử lý khác + Đưa lại, cách import, luật 1 miền, mã lỗi `REQUIRE_MA_EO` / `THUNG_RONG` / `THUNG_CON_XAC` /
+`MIEN_MISMATCH` / `XAC_KHONG_CHO_GOM`; chưa 5W1H; luồng tổng chưa có làn trả xác.
+
+**(c) Lỗi sửa (máy chạy sai luật đã chốt → làn nhanh):**
+1. FE `XAC_KQ_LABEL` (TraXacScreen) thiếu `luu_kho` dù BE `XAC_KQ` có → tab Đã xử lý khác, Excel, bộ lọc Kết quả hiện mã thô. Thêm nhãn "Lưu kho".
+2. `POST /api/tra-xac/import` kết quả `vao_thung` không kiểm đối tác (luật 1 thùng 1 đối tác chốt v1.142, `themXac` có kiểm) và thùng `MOI` không ghi
+   `doi_tac_id` → `layXac` lấy thêm `doi_tac_id` (`DOI_TAC_ID_SQL`), `dtNhom` theo từng thùng (khởi tạo từ thùng có sẵn), dòng khác đối tác báo lỗi;
+   thùng mới ghi `doi_tac_id` + `doi_tac`; thùng có sẵn chưa có đối tác được điền theo xác. Chưa đếm thùng đã lỡ trộn trên D1 thật (cần đồng ý).
+3. `kt-duyet` không kiểm thùng rỗng (thùng chờ KT vẫn bớt xác được) → `THUNG_RONG`.
+4. `huy-gui`, `DELETE /thung/:id` thiếu `mienAllowed` (các thao tác thùng khác đều có) → thêm.
+Thêm câu báo FE (`lib/api.ts`) cho 5 mã lỗi trên; sheet hướng dẫn import ghi "cùng miền và cùng đối tác".
+
+**(d) Tài liệu:** `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html` — 1 file tự chứa (ảnh base64), dựng bằng
+`Huong-dan-Tra-xac/build.py` từ `Huong-dan-Tra-xac/nguon.html` + `anh/*.png` (sửa nguồn rồi chạy lại `python -I build.py`). Ảnh chụp bằng Chrome headless
+(CDP, 1366×860) từ app local với dữ liệu mẫu dựng trên D1 local. Lưu ý khi chụp: wrangler dev local hay thoát khi trình duyệt cắt ngang request —
+chờ request xong rồi mới chuyển trang. Luồng tổng: Hình 4 thêm làn "♻️ Thùng xác", mục 6 thêm khối luồng trả xác; tài liệu cấp LK mục 4.4 thêm link.
+
+**(e) Kiểm thử:** local API: tạo thùng + gửi KT + duyệt; `MIEN_MISMATCH`, `REQUIRE_MA_EO`, `THUNG_CON_XAC`; import xem trước: dòng 2 khác đối tác với
+thùng MOI → lỗi, vào TX có sẵn khác đối tác → lỗi; áp dụng: thùng mới có đối tác + miền. Ảnh tab Đã xử lý khác hiện "Lưu kho". Typecheck + build sạch.
+
+**(f) Còn mở (không làm trong đợt này):** chi tiết thùng trả xác chưa có luồng ngang + "▾ Xem chi tiết"; bộ lọc tab Thùng nháp / Chờ KT / Đã duyệt
+(`ThungList`) còn ô `<select>` chọn 1 giá trị.
