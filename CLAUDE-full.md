@@ -7630,3 +7630,15 @@ phân loại Đổi mới + "Trả đối tác" sau đó lọt vào "Xác chờ 
 
 **(d) Kiểm thử:** sau UPDATE: 0 xác đơn cũ chờ gom, 44 đã đánh dấu, chờ gom còn 3.031. Typecheck + build sạch. Xác bị đánh dấu nhầm (thực tế còn xác cần trả):
 tab "Đã xử lý khác" → "↺ Đưa lại chờ gom" (tay hoặc import `dua_lai`) — cron bỏ qua đơn vị có nhật ký "đưa lại danh sách chờ gom", không đánh dấu lại.
+
+## Trả xác — luồng ngang chi tiết thùng + bảng thùng lọc Excel chọn nhiều (25/11/2026) — v1.161
+
+**(a) Nguyên văn:** *"Làm tiếp" (trả lời câu hỏi "Làm tiếp 2 chỗ giao diện Trả xác còn mở (luồng ngang, bộ lọc chọn nhiều)?")* — 2 điểm "còn mở" ghi ở v1.159 (vi phạm luật chung "UI chi tiết: luồng ngang + nút xổ" và "Bộ lọc mặc định chọn nhiều").
+
+**(b) Đã làm:** `frontend/src/ui/LuongNgang.tsx` (`LuongNgang`, `MocLuong`) — luồng ngang dạng đường dùng chung, màu đồng bộ thanh bước
+`UnitDetailModal` (thanh bước đơn vẫn để nguyên kiểu hộp, chưa chuyển sang component này). `ThungXacDetailModal`: 5 mốc (mốc 4 đổi thành "KT trả lại"
+đỏ khi thùng Nháp có `ly_do_tra_lai`), dòng "Đang chờ: …", state `mo` mặc định thu gọn; phần luôn hiện: luồng, SummaryBox, banner, ô Thông tin khi
+`suaTT`, footer nút. `ThungList`: `ExcelToolbar` + `Table flt` với cột lọc (`TT_THUNG_DEF`), bỏ `FilterBar`. BE `GET /thung`: `TXT_THUNG` (f_id, f_eo, f_gc),
+`NUM_THUNG` (n = số xác), `timeFilter` cn / kt, `SORT_THUNG`.
+
+**(c) Kiểm thử:** xem nhật ký làm việc. Ảnh mới trong `du an sua chua bao hanh/Huong-dan-Tra-xac/anh/` (tx-05, 06, 06b, 11, 12), tài liệu dựng lại.

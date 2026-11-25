@@ -6,7 +6,7 @@ import { nowVN } from "../lib/vnTime";
 import { nextSequentialId } from "../lib/idCounter";
 import { addLog } from "../lib/logs";
 import { parsePage } from "../lib/pagination";
-import { eqFilters, distinctOpts, timeFilter, joinF, textFilters, sortParam } from "../lib/filters";
+import { eqFilters, distinctOpts, timeFilter, joinF, textFilters, numFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
 import { mienScope, mienAllowed } from "../lib/mien";
 import { normVi } from "../lib/timKiem";
@@ -176,6 +176,11 @@ xac.post("/xac/ngoai", async (c) => {
 
 // ---- Thung tra xac ----
 const LOC_THUNG = { nguoi_tao: "t.nguoi_tao", doi_tac: "t.doi_tac", mien: "t.mien", kt_boi: "t.kt_boi" };
+// 25/11/2026 (v1.161): bang thung loc + sap xep kieu Excel tren tieu de cot (giong Xac cho gom).
+const SO_XAC_SQL = "((SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.thung_xac_id = t.id) + (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.thung_xac_id = t.id))";
+const TXT_THUNG = { f_id: "t.id", f_eo: "t.ma_eo", f_gc: "COALESCE(t.ly_do_tra_lai, '') || ' ' || COALESCE(t.ghi_chu, '')" };
+const NUM_THUNG = { n: SO_XAC_SQL };
+const SORT_THUNG: Record<string, string> = { id: "t.id", n: SO_XAC_SQL, dt: "t.doi_tac", eo: "t.ma_eo", mien: "t.mien", nt: "t.nguoi_tao", cn: "t.updated_at", kt: "t.kt_luc", tao: "t.created_at" };
 
 xac.get("/thung", async (c) => {
   const user = c.get("user");
@@ -198,13 +203,14 @@ xac.get("/thung", async (c) => {
   const trongDx = "(SELECT group_concat(d.id || ' ' || d.unit_id || ' ' || d.ma_lk, ' ') FROM de_xuat_linh_kien_bh d WHERE d.thung_xac_id = t.id)";
   const tk = "(SELECT group_concat(p.tim_kiem, ' ') FROM phieu_sua_chua_bh p WHERE p.id IN (SELECT u.parent_id FROM phieu_sua_chua_bh_ct u WHERE u.thung_xac_id = t.id))";
   const kw = kwClause(c.req.query("q"), ["t.id", "t.ma_eo", "t.doi_tac", "t.ghi_chu", "t.nguoi_tao", tenOf("t.nguoi_tao"), trong, trongDx], [tk]);
-  const f = joinF(eqFilters(c, LOC_THUNG), timeFilter(c, "t.created_at"));
+  const f = joinF(eqFilters(c, LOC_THUNG), timeFilter(c, "t.created_at"), timeFilter(c, "t.updated_at", "cn"), timeFilter(c, "t.kt_luc", "kt"), textFilters(c, TXT_THUNG), numFilters(c, NUM_THUNG));
+  const so = sortParam(c, SORT_THUNG);
   const where = `${base}${kw.sql}${f.sql}`;
   const binds = [...bb, ...kw.binds, ...f.binds];
   const [rows, tot] = await Promise.all([
     c.env.DB.prepare(
       `SELECT t.*, (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u WHERE u.thung_xac_id = t.id) + (SELECT COUNT(*) FROM de_xuat_linh_kien_bh d WHERE d.thung_xac_id = t.id) AS so_xac
-       ${where} ORDER BY t.updated_at DESC LIMIT ? OFFSET ?`,
+       ${where} ORDER BY ${so ? `${so.expr} ${so.dir}, ` : ""}t.updated_at DESC LIMIT ? OFFSET ?`,
     )
       .bind(...binds, limit, offset)
       .all(),

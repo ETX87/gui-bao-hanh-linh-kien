@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TabScreen, type TabDef } from "../../ui/TabScreen";
-import { FilterBar, useListFilters, withQuery, KHOANG_DEF, LK_A_DEF, LK_B_DEF, LK_C_DEF, type FilterDef } from "../../ui/FilterBar";
-import { ExcelToolbar, type FilterCol } from "../../ui/ColumnFilter";
+import { useListFilters, withQuery, KHOANG_DEF, LK_A_DEF, LK_B_DEF, LK_C_DEF, type FilterDef } from "../../ui/FilterBar";
+import { ExcelToolbar, colsFilterKeys, type FilterCol } from "../../ui/ColumnFilter";
 import { GroupedDonView, DonViewToggle, useDonViewMode, type GroupRow } from "../../ui/GroupedDonView";
 import { Card, Badge, Btn, Input, Textarea, Field, Spinner, EmptyState } from "../../ui/primitives";
 import { Modal } from "../../ui/Modal";
@@ -21,6 +21,7 @@ import type { AppUser } from "../../lib/types";
 import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
 import { ImportXacModal } from "./ImportXac";
 import { DoiTacSelect } from "../qtri/DoiTac";
+import { LuongNgang, type MocLuong } from "../../ui/LuongNgang";
 
 // 13/11/2026 - Module quan ly tra xac linh kien. Nguyen van: "linh kiện được gửi về bh, admin bh duyệt đổi mới =>
 // xác nhận trạng thái trả xác => admin bh định kỳ sẽ gom nhiều xác linh kiện và trả về 1 đợt cho nhà máy => tạo
@@ -503,34 +504,48 @@ function ChonThungNhapModal({ ids, onClose, onDone }: { ids: string[]; onClose: 
 }
 
 // ---- Danh sach thung ----
+// 25/11/2026 (v1.161): bang thung loc + sap xep kieu Excel tren tieu de cot (bo loc chon nhieu) thay thanh o <select> chon 1.
+const TT_THUNG_DEF: Record<string, FilterDef> = {
+  doi_tac: { key: "doi_tac", label: "Đối tác", noneLabel: "Chưa có đối tác" },
+  nguoi_tao: { key: "nguoi_tao", label: "Người tạo", kind: "person" },
+  mien: MIEN_DEF,
+  kt_boi: { key: "kt_boi", label: "KT duyệt", kind: "person" },
+};
 function ThungList({ user, tt, traLai, title, empty, onChanged }: { user: AppUser; tt: string; traLai?: boolean; title: string; empty: string; onChanged: () => void }) {
   const base = `/tra-xac/thung?trang_thai=${tt}${traLai ? "&tra_lai=1" : ""}`;
-  const DEFS: FilterDef[] = [
-    { key: "doi_tac", label: "Đối tác" },
-    { key: "nguoi_tao", label: "Người tạo", kind: "person" },
-    { key: "mien", label: "Miền", labels: { MB: "Miền Bắc", MN: "Miền Nam" }, kind: "map", noneLabel: "Chưa khai báo" },
-    ...(tt === "da_duyet" ? [{ key: "kt_boi", label: "KT duyệt", kind: "person" as const }] : []),
-    KHOANG_DEF,
+  const daDuyet = tt === "da_duyet";
+  const cols: Column<ThungXac>[] = [
+    { key: "id", header: "Mã thùng", filter: { type: "text", key: "f_id", placeholder: "Mã thùng…" }, sortKey: "id", render: (r) => <span className="font-mono font-semibold text-[var(--link)]">{r.id}</span> },
+    { key: "tt", header: "Trạng thái", render: (r) => <span className="inline-flex gap-1"><Badge tone={TT_TONE[r.trang_thai]}>{TT_LABEL[r.trang_thai]}</Badge>{r.ly_do_tra_lai && r.trang_thai === "nhap" && <Badge tone="red">↩ KT trả lại</Badge>}</span> },
+    { key: "n", header: "Số xác", filter: { type: "number", key: "n" }, sortKey: "n", render: (r) => <b>{r.so_xac ?? 0}</b> },
+    { key: "dt", header: "Đối tác", filter: { type: "multi", def: TT_THUNG_DEF.doi_tac }, sortKey: "dt", render: (r) => r.doi_tac || "—" },
+    { key: "eo", header: "Mã EO", filter: { type: "text", key: "f_eo", placeholder: "Mã EO…" }, sortKey: "eo", render: (r) => (r.ma_eo ? <span className="font-mono">{r.ma_eo}</span> : <span className="text-[var(--red-600)]">Chưa có</span>) },
+    { key: "mien", header: "Miền", filter: { type: "multi", def: TT_THUNG_DEF.mien }, sortKey: "mien", render: (r) => <MienBadge mien={r.mien} short /> },
+    { key: "nt", header: "Người tạo", filter: { type: "multi", def: TT_THUNG_DEF.nguoi_tao }, sortKey: "nt", render: (r) => <UserName email={r.nguoi_tao} /> },
+    ...(daDuyet ? [{ key: "ktb", header: "KT duyệt", filter: { type: "multi", def: TT_THUNG_DEF.kt_boi }, render: (r: ThungXac) => <UserName email={r.kt_boi} /> } as Column<ThungXac>] : []),
+    daDuyet
+      ? { key: "kt", header: "KT duyệt lúc", filter: { type: "date", key: "kt" }, sortKey: "kt", render: (r) => <span className="text-xs">{fmtDate(r.kt_luc)}</span> }
+      : { key: "cn", header: "Cập nhật", filter: { type: "date", key: "cn" }, sortKey: "cn", render: (r) => <span className="text-xs">{fmtDate(r.updated_at)}</span> },
+    { key: "ld", header: "Ghi chú", filter: { type: "text", key: "f_gc", placeholder: "Từ trong ghi chú / lý do…" }, render: (r) => <span className="block max-w-[260px] truncate text-xs" title={r.ly_do_tra_lai || r.ghi_chu || ""}>{(r.trang_thai === "nhap" && r.ly_do_tra_lai) || r.ghi_chu || "—"}</span> },
   ];
-  const flt = useListFilters(base, DEFS.map((d) => d.key));
+  const DEFS: FilterDef[] = [TT_THUNG_DEF.doi_tac, TT_THUNG_DEF.nguoi_tao, TT_THUNG_DEF.mien, ...(daDuyet ? [TT_THUNG_DEF.kt_boi] : []), { ...KHOANG_DEF, label: "Thời gian tạo" }];
+  const flt = useListFilters(base, [...new Set([...DEFS.map((d) => d.key), ...colsFilterKeys(cols)])]);
   const { items, total, page, pageCount, setPage, reload, loading } = usePagedApi<ThungXac>(withQuery(base, flt.query), "thung");
   const [open, setOpen] = useState<string | null>(null);
-  const cols: Column<ThungXac>[] = [
-    { key: "id", header: "Mã thùng", render: (r) => <span className="font-mono font-semibold text-[var(--link)]">{r.id}</span> },
-    { key: "tt", header: "Trạng thái", render: (r) => <span className="inline-flex gap-1"><Badge tone={TT_TONE[r.trang_thai]}>{TT_LABEL[r.trang_thai]}</Badge>{r.ly_do_tra_lai && r.trang_thai === "nhap" && <Badge tone="red">↩ KT trả lại</Badge>}</span> },
-    { key: "n", header: "Số xác", render: (r) => <b>{r.so_xac ?? 0}</b> },
-    { key: "dt", header: "Đối tác", render: (r) => r.doi_tac || "—" },
-    { key: "eo", header: "Mã EO", render: (r) => (r.ma_eo ? <span className="font-mono">{r.ma_eo}</span> : <span className="text-[var(--red-600)]">Chưa có</span>) },
-    { key: "mien", header: "Miền", render: (r) => <MienBadge mien={r.mien} short /> },
-    { key: "nt", header: "Người tạo", render: (r) => <UserName email={r.nguoi_tao} /> },
-    { key: "cn", header: tt === "da_duyet" ? "KT duyệt lúc" : "Cập nhật", render: (r) => <span className="text-xs">{fmtDate(tt === "da_duyet" ? r.kt_luc : r.updated_at)}</span> },
-    { key: "ld", header: "Ghi chú", render: (r) => <span className="block max-w-[260px] truncate text-xs" title={r.ly_do_tra_lai || r.ghi_chu || ""}>{(r.trang_thai === "nhap" && r.ly_do_tra_lai) || r.ghi_chu || "—"}</span> },
-  ];
   return (
     <Card className="p-3">
-      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">{title} ({total})</h3>
-      <FilterBar f={flt} defs={DEFS} placeholder="Tìm mã thùng, EO, đối tác, mã đơn / case / linh kiện bên trong…" extra={<ExcelExportButton file={`thung-tra-xac_${tt}`} disabled={!total} sources={[{ path: withQuery(base, flt.query), itemsKey: "thung", sheet: "Thung tra xac", cols: THUNG_EXPORT }]} />} />
-      {loading && !items.length ? <Spinner /> : <Table columns={cols} rows={items} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)} emptyText={empty} />}
+      <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)] mb-2">{title}</h3>
+      <ExcelToolbar
+        flt={flt}
+        cols={cols.map((c) => ({ key: c.key, label: c.header, filter: c.filter, sortKey: c.sortKey }))}
+        defs={DEFS}
+        placeholder="Tìm mã thùng, EO, đối tác, mã đơn / case / linh kiện bên trong…"
+        total={total}
+        unit="thùng"
+        compactSearch
+        extra={<ExcelExportButton file={`thung-tra-xac_${tt}`} disabled={!total} sources={[{ path: withQuery(base, flt.query), itemsKey: "thung", sheet: "Thung tra xac", cols: THUNG_EXPORT }]} />}
+      />
+      {loading && !items.length ? <Spinner /> : <Table flt={flt} columns={cols} rows={items} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)} emptyText={flt.active ? "Không có thùng nào khớp bộ lọc." : empty} />}
       <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
       {open && <ThungXacDetailModal id={open} user={user} onClose={() => setOpen(null)} onChanged={() => { reload(); onChanged(); }} />}
     </Card>
@@ -585,6 +600,8 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const [them, setThem] = useState(false);
   const [traLai, setTraLai] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
+  // 25/11/2026 (v1.161): mac dinh chi hien luong ngang + phan can thao tac; "▾ Xem chi tiết" xo tong hop, danh sach xac, nhat ky.
+  const [mo, setMo] = useState(false);
   const load = async () => {
     try {
       const r = await api.get<{ thung: ThungXac; xac: XacRow[]; logs: ThungLog[] }>(`/tra-xac/thung/${id}`);
@@ -606,6 +623,20 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const doiTT = !!t && (f.doi_tac_id !== (t.doi_tac_id ?? null) || f.ma_eo !== (t.ma_eo || "") || f.ghi_chu !== (t.ghi_chu || ""));
   const tt = useMemo(() => (d ? tomTat(d.xac, nameOf) : []), [d, nameOf]);
   const tomTatText = t && d ? `Thùng trả xác ${t.id}${t.ma_eo ? ` — EO ${t.ma_eo}` : ""}${t.doi_tac ? ` — ${t.doi_tac}` : ""}\nTổng: ${d.xac.length} xác (SL ${d.xac.reduce((a, r) => a + (Number(r.so_luong) || 1), 0)})\n${tt.map((x, i) => `${i + 1}) ${x.ten} × ${x.n}`).join("\n")}` : "";
+
+  const traLaiMoi = !!t && t.trang_thai === "nhap" && !!t.ly_do_tra_lai;
+  const moc: MocLuong[] = t
+    ? [
+        { label: "Tạo thùng", at: t.created_at, nguoi: <UserName email={t.nguoi_tao} />, nguoiText: displayName(t.nguoi_tao), done: true },
+        { label: `Gom xác (${d?.xac.length ?? 0})`, done: (d?.xac.length ?? 0) > 0, phu: (d?.xac.length ?? 0) ? undefined : "chưa có xác" },
+        { label: "Nhập mã EO", done: !!t.ma_eo, phu: t.ma_eo ? undefined : "chưa có EO" },
+        traLaiMoi
+          ? { label: "KT trả lại", at: t.tra_lai_luc, nguoiText: displayName(t.tra_lai_boi), done: false, red: true, phu: "sửa rồi gửi lại" }
+          : { label: "Gửi Kế toán", at: t.gui_kt_luc, nguoiText: t.gui_kt_boi ? displayName(t.gui_kt_boi) : null, done: t.trang_thai !== "nhap" },
+        { label: "KT duyệt — đã trả đối tác", at: t.kt_luc, nguoiText: t.kt_boi ? displayName(t.kt_boi) : null, done: t.trang_thai === "da_duyet" },
+      ]
+    : [];
+  const choAi = !t ? "" : t.trang_thai === "da_duyet" ? "Đã kết thúc" : t.trang_thai === "cho_ke_toan" ? "Đang chờ: Kế toán duyệt" : traLaiMoi ? "Đang chờ: người gom sửa theo lý do Kế toán trả lại" : !d?.xac.length ? "Đang chờ: thêm xác vào thùng" : !t.ma_eo ? "Đang chờ: nhập Mã EO" : "Đang chờ: gửi Kế toán";
 
   const run = async (fn: () => Promise<unknown>, msg: string, close?: boolean) => {
     setBusy(true);
@@ -647,20 +678,15 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   return (
     <Modal title={`Thùng trả xác ${id}`} onClose={onClose} maxWidthClass={DETAIL_MAX_W} footerActions={footer}>
       {loi ? <p className="text-sm text-[var(--red-700)]">Không mở được thùng: {loi}</p> : !d || !t ? <Spinner /> : (
-        <DetailGrid
-          side={
-            <Section title={`🕘 Nhật ký (${d.logs.length})`}>
-              <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
-                {d.logs.map((l) => (
-                  <div key={l.id} className="text-xs border-l-2 border-[var(--brand-200)] pl-2">
-                    <div className="text-[var(--ink-faint)]">{fmtDate(l.thoi_gian)} · {displayName(l.nguoi_thuc_hien)}</div>
-                    <div className="text-[var(--ink-body)]">{l.ghi_chu}</div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          }
-        >
+        <div className="space-y-3">
+          <div className="rounded-xl border border-[var(--line)] px-3 py-2">
+            <div className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px]">
+              <b className="text-[var(--ink)]">{choAi}</b>
+              <span className="text-[var(--ink-soft)]">· {d.xac.length} xác · {t.doi_tac || "chưa có đối tác"}{t.ma_eo ? ` · EO ${t.ma_eo}` : ""}</span>
+              <Btn size="sm" variant="ghost" className="ml-auto" onClick={() => setMo((v) => !v)}>{mo ? "▴ Thu gọn" : "▾ Xem chi tiết"}</Btn>
+            </div>
+            <LuongNgang moc={moc} ketThuc={t.trang_thai === "da_duyet"} />
+          </div>
           <SummaryBox>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-base font-bold text-[var(--accent-ink)]">{t.id}</span>
@@ -677,6 +703,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
           {t.trang_thai === "nhap" && t.ly_do_tra_lai && <Banner tone="red">↩ Kế toán trả lại ({displayName(t.tra_lai_boi)}, {fmtDate(t.tra_lai_luc)}): {t.ly_do_tra_lai}</Banner>}
           {t.trang_thai === "cho_ke_toan" && isA && <Banner tone="amber">Đang chờ Kế toán duyệt — vẫn thêm / bớt xác và sửa thông tin được, mọi thay đổi ghi nhật ký.</Banner>}
 
+          {suaTT && (
           <Section title="🧾 Thông tin trả xác" right={suaTT && doiTT ? <Btn size="sm" variant="primary" disabled={busy} onClick={() => run(luu, "Đã lưu thông tin thùng.")}>Lưu</Btn> : undefined}>
             {suaTT ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -693,6 +720,40 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
             )}
           </Section>
 
+          )}
+          {mo && (
+            <DetailGrid
+              side={
+                <Section title={`🕘 Nhật ký (${d.logs.length})`}>
+              <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+                {d.logs.map((l) => (
+                  <div key={l.id} className="text-xs border-l-2 border-[var(--brand-200)] pl-2">
+                    <div className="text-[var(--ink-faint)]">{fmtDate(l.thoi_gian)} · {displayName(l.nguoi_thuc_hien)}</div>
+                    <div className="text-[var(--ink-body)]">{l.ghi_chu}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+              }
+            >
+              {!suaTT && (
+          <Section title="🧾 Thông tin trả xác" right={suaTT && doiTT ? <Btn size="sm" variant="primary" disabled={busy} onClick={() => run(luu, "Đã lưu thông tin thùng.")}>Lưu</Btn> : undefined}>
+            {suaTT ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Đối tác">{isA ? <DoiTacSelect value={f.doi_tac_id} onChange={(v) => setF({ ...f, doi_tac_id: v })} /> : <Input value={t.doi_tac || ""} disabled />}</Field>
+                <Field label="Mã EO" required><Input value={f.ma_eo} onChange={(e) => setF({ ...f, ma_eo: e.target.value })} /></Field>
+                <div className="sm:col-span-2"><Field label="Ghi chú"><Textarea rows={2} value={f.ghi_chu} onChange={(e) => setF({ ...f, ghi_chu: e.target.value })} /></Field></div>
+              </div>
+            ) : (
+              <KvGrid>
+                <Kv k="Đối tác" v={t.doi_tac || "—"} />
+                <Kv k="Mã EO" v={t.ma_eo ? <span className="font-mono">{t.ma_eo}</span> : "—"} />
+                <Kv k="Ghi chú" v={t.ghi_chu || "—"} wide />
+              </KvGrid>
+            )}
+          </Section>
+
+              )}
           <Section title={`🔩 Tổng hợp theo linh kiện xác`} right={<CopyBtn text={tomTatText} title="Sao chép tổng hợp" />}>
             {tt.length ? (
               <div className="text-sm space-y-0.5">
@@ -710,7 +771,9 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
               extra={suaXac ? { key: "bo", header: "", render: (r) => <Btn size="sm" variant="ghost" disabled={busy} onClick={(e) => { e.stopPropagation(); run(() => api.delete(`/tra-xac/thung/${id}/xac/${r.id}`), `Đã bỏ ${r.id} khỏi thùng (về danh sách chờ gom).`); }}>✕ Bỏ</Btn> } : undefined}
             />
           </Section>
-        </DetailGrid>
+            </DetailGrid>
+          )}
+        </div>
       )}
       {them && t && <ThemXacModal thung={t} onClose={() => setThem(false)} onDone={() => { setThem(false); onChanged(); load(); }} />}
       {traLai && <TraLaiModal onClose={() => setTraLai(false)} onOk={(lyDo) => { setTraLai(false); run(() => api.post(`/tra-xac/thung/${id}/kt-tra-lai`, { ly_do: lyDo }), "Đã trả lại Admin BH."); }} />}

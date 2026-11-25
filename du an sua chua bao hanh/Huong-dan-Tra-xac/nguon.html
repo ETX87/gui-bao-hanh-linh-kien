@@ -41,7 +41,7 @@ ol li,ul li{margin:4px 0}
 <header>
 <h1>♻️ Hướng dẫn Trả xác linh kiện</h1>
 <p>Dành cho <b>Admin bảo hành</b>, vai trò <b>Trả xác</b>, <b>Kế toán</b> (và View / Giám sát để theo dõi) — app <b>Bảo hành đổi trả 3T</b>, menu <b>Trả xác</b>.</p>
-<p>Áp dụng từ 25/11/2026 · app v1.159 · bổ sung cho mục 4.4 / 5.2 / 6 của tài liệu <i>Hướng dẫn cấp linh kiện sửa chữa, xác nhận xác, trả xác &amp; trừ công nợ</i>.</p>
+<p>Áp dụng từ 25/11/2026 · app v1.161 · bổ sung cho mục 4.4 / 5.2 / 6 của tài liệu <i>Hướng dẫn cấp linh kiện sửa chữa, xác nhận xác, trả xác &amp; trừ công nợ</i>.</p>
 <p style="margin-top:10px"><nav><a href="#tq">Tổng quan 5W1H</a><a href="#nguon">Xác nào cần trả</a><a href="#gom">Gom thùng</a><a href="#nhap">Thùng nháp</a><a href="#kt">Kế toán duyệt</a><a href="#khac">Xử lý khác</a><a href="#import">Import</a><a href="#quyen">Phân quyền</a><a href="#loi">Mã lỗi</a><a href="#hoi">Tình huống</a></nav></p>
 </header>
 <main>
@@ -112,11 +112,12 @@ ol li,ul li{margin:4px 0}
 <table class="w5">
 <tr><th><span class="k">WHO</span></th><td>Người gom thùng (Admin BH / Trả xác).</td></tr>
 <tr><th><span class="k">WHEN</span></th><td>Thùng ở trạng thái <b>Nháp</b> (mới tạo hoặc bị Kế toán trả lại).</td></tr>
-<tr><th><span class="k">WHERE</span></th><td>Trả xác › <b>📦 Thùng nháp</b> → bấm mã thùng để mở chi tiết.</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Trả xác › <b>📦 Thùng nháp</b> → bấm mã thùng để mở chi tiết. Bảng thùng lọc / sắp xếp ngay trên tiêu đề cột (Đối tác, Miền, Người tạo chọn nhiều giá trị; Mã thùng, Mã EO, Ghi chú tìm theo chữ; Số xác từ – đến; Cập nhật theo ngày).</td></tr>
 <tr><th><span class="k">WHAT</span></th><td>Hoàn thiện thông tin thùng trước khi gửi duyệt: đối tác, <b>Mã EO</b> (bắt buộc), ghi chú, danh sách xác, bảng tổng hợp theo linh kiện (sao chép được), nhật ký thay đổi.</td></tr>
 <tr><th><span class="k">WHY</span></th><td>Kế toán chỉ duyệt khi có Mã EO khớp chứng từ và đúng xác thực giao.</td></tr>
 <tr><th><span class="k">HOW</span></th><td>
 <ol>
+<li>Đầu hộp chi tiết là <b>luồng ngang</b>: Tạo thùng → Gom xác → Nhập mã EO → Gửi Kế toán → KT duyệt. Mốc xong tô xanh kèm giờ (và "+khoảng cách" so với mốc trước), mốc đang chờ tô xanh dương đậm, mốc Kế toán trả lại tô đỏ; dòng trên cùng ghi rõ <b>"Đang chờ: …"</b>. Rê chuột vào mốc xem giờ, người. Bấm <b>▾ Xem chi tiết</b> để xổ tổng hợp linh kiện, danh sách xác, nhật ký; <b>▴ Thu gọn</b> để ẩn. Ô thông tin (đối tác, Mã EO) và nút thao tác luôn hiện, không phải xổ.</li>
 <li>Nhập / sửa <b>Mã EO</b>, ghi chú, đổi đối tác (chỉ khi mọi xác trong thùng cùng đối tác mới).</li>
 <li><b>＋ Thêm xác</b> (chỉ hiện xác cùng miền thùng) hoặc <b>✕ Bỏ</b> từng xác (xác về lại danh sách chờ gom).</li>
 <li><b>Gửi Kế toán</b>: nút chỉ bật khi đã có Mã EO và ≥ 1 xác.</li>
@@ -124,7 +125,9 @@ ol li,ul li{margin:4px 0}
 </ol>
 </td></tr>
 </table>
-<figure><img src="{{tx-04-thung-nhap}}" alt="Thùng nháp"><figcaption>Tab Thùng nháp — cột Mã EO đỏ "Chưa có" nhắc cần nhập trước khi gửi</figcaption></figure>
+<figure><img src="{{tx-04-thung-nhap}}" alt="Thùng nháp"><figcaption>Tab Thùng nháp — bảng lọc / sắp xếp trên tiêu đề cột; cột Mã EO đỏ "Chưa có" nhắc cần nhập trước khi gửi</figcaption></figure>
+<figure><img src="{{tx-11-loc-mien}}" alt="Lọc cột"><figcaption>Bấm biểu tượng phễu trên tiêu đề cột: sắp tăng / giảm, tick chọn nhiều giá trị (chọn tất cả / bỏ chọn) → Áp dụng</figcaption></figure>
+<figure><img src="{{tx-05-chi-tiet-nhap}}" alt="Chi tiết thùng nháp"><figcaption>Chi tiết thùng nháp (thu gọn) — luồng ngang đang dừng ở "Nhập mã EO"; nút Gửi Kế toán chỉ bật khi đã có EO</figcaption></figure>
 </section>
 
 <section id="kt">
@@ -143,9 +146,11 @@ ol li,ul li{margin:4px 0}
 </ol>
 </td></tr>
 </table>
-<figure><img src="{{tx-06-cho-kt-chi-tiet}}" alt="Chờ KT duyệt"><figcaption>Chi tiết thùng đang chờ Kế toán — thông tin trả xác, tổng hợp theo linh kiện, danh sách xác, nhật ký; nút Huỷ gửi KT / Trả lại / Duyệt</figcaption></figure>
+<figure><img src="{{tx-06b-cho-kt-gon}}" alt="Chờ KT duyệt thu gọn"><figcaption>Thùng chờ Kế toán (thu gọn) — luồng ngang dừng ở "KT duyệt", nút thao tác luôn ở chân hộp</figcaption></figure>
+<figure><img src="{{tx-06-cho-kt-chi-tiet}}" alt="Chờ KT duyệt"><figcaption>Sau khi bấm ▾ Xem chi tiết — Chi tiết thùng đang chờ Kế toán — thông tin trả xác, tổng hợp theo linh kiện, danh sách xác, nhật ký; nút Huỷ gửi KT / Trả lại / Duyệt</figcaption></figure>
 <figure><img src="{{tx-07-tra-lai}}" alt="Trả lại"><figcaption>Kế toán trả lại thùng — lý do bắt buộc (vd sai mã EO, thiếu xác)</figcaption></figure>
-<figure><img src="{{tx-08-da-duyet}}" alt="Đã duyệt"><figcaption>Thùng đã duyệt — khoá, chỉ xem; nhật ký ghi người duyệt và ghi chú</figcaption></figure>
+<figure><img src="{{tx-12-tra-lai-luong}}" alt="Bị trả lại"><figcaption>Thùng bị Kế toán trả lại — mốc đỏ "KT trả lại", dải đỏ ghi lý do; sửa rồi Gửi Kế toán lại</figcaption></figure>
+<figure><img src="{{tx-08-da-duyet}}" alt="Đã duyệt"><figcaption>Thùng đã duyệt — đủ 5 mốc xanh, thùng khoá, chỉ xem</figcaption></figure>
 <div class="note">Khi thùng đang chờ Kế toán, người gom vẫn thêm / bớt xác được (mọi thay đổi ghi nhật ký). Sau khi Kế toán duyệt thì không sửa được nữa.</div>
 </section>
 

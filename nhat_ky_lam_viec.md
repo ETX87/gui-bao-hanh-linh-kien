@@ -3,6 +3,18 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 25/11/2026 — v1.161: Trả xác — luồng ngang trong chi tiết thùng + bảng thùng lọc chọn nhiều kiểu Excel
+
+- Yêu cầu (nguyên văn): "Làm tiếp" (trả lời câu hỏi "Làm tiếp 2 chỗ giao diện Trả xác còn mở (luồng ngang, bộ lọc chọn nhiều)?").
+- Đã làm: (1) component dùng chung `ui/LuongNgang.tsx` (mốc nối 1 đường, màu như thanh bước chi tiết đơn: xong xanh + giờ + "+khoảng cách",
+  đang chờ xanh dương nổi, chưa tới xám, bỏ qua gạch, lỗi đỏ; rê chuột xem giờ / người). Chi tiết thùng trả xác: luồng 5 mốc Tạo thùng → Gom xác →
+  Nhập mã EO → Gửi Kế toán (hoặc mốc đỏ "KT trả lại") → KT duyệt, dòng "Đang chờ: …", nút "▾ Xem chi tiết / ▴ Thu gọn" xổ tổng hợp LK, danh sách
+  xác, nhật ký; ô thông tin (đối tác, EO) khi được sửa và nút thao tác luôn hiện. (2) Tab Thùng nháp / Chờ KT / Đã duyệt: bỏ thanh ô `<select>` chọn 1,
+  dùng `ExcelToolbar` + lọc trên tiêu đề cột (Đối tác, Miền, Người tạo, KT duyệt chọn nhiều; Mã thùng, EO, Ghi chú theo chữ; Số xác từ–đến;
+  Cập nhật / KT duyệt lúc theo ngày) + sắp xếp; BE `/api/tra-xac/thung` thêm `textFilters`, `numFilters`, lọc ngày `cn` / `kt`, `sort`.
+- Kiểm thử (local): API lọc nhiều miền (HOẶC), 1 miền, EO, số xác ≥ 2, 2 đối tác, sắp theo số xác giảm; ảnh chụp: chi tiết thùng nháp / chờ KT
+  (thu gọn + xổ) / bị trả lại (mốc đỏ) / đã duyệt, hộp lọc cột Miền. Typecheck + build sạch. Tài liệu trả xác cập nhật ảnh + mô tả.
+
 ## 25/11/2026 — v1.160: Đánh dấu 44 xác đơn trước 01/11/2026 "đã xử lý ngoài" + cron tự đánh dấu
 
 - Yêu cầu (nguyên văn): "Có, đánh dấu" (trả lời câu hỏi đánh dấu 44 xác đơn trước 01/11 là "đã xử lý ngoài hệ thống").
