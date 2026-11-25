@@ -14,6 +14,8 @@
   Cập nhật / KT duyệt lúc theo ngày) + sắp xếp; BE `/api/tra-xac/thung` thêm `textFilters`, `numFilters`, lọc ngày `cn` / `kt`, `sort`.
 - Kiểm thử (local): API lọc nhiều miền (HOẶC), 1 miền, EO, số xác ≥ 2, 2 đối tác, sắp theo số xác giảm; ảnh chụp: chi tiết thùng nháp / chờ KT
   (thu gọn + xổ) / bị trả lại (mốc đỏ) / đã duyệt, hộp lọc cột Miền. Typecheck + build sạch. Tài liệu trả xác cập nhật ảnh + mô tả.
+- Sửa dữ liệu (lỗi của đợt v1.160): lần đánh dấu tay 44 xác ghi giờ UTC (08:30:47) thay vì giờ VN → đã sửa 44 dòng nhật ký + 44 `xac_xl_luc`
+  thành 15:30:47 (D1 thật). Hàm cron dùng `nowVN()` nên không bị. Kiểm sau deploy: production trả bản 1.161; cron chưa phát sinh dòng mới (chưa có xác đơn cũ nào lọt thêm).
 
 ## 25/11/2026 — v1.160: Đánh dấu 44 xác đơn trước 01/11/2026 "đã xử lý ngoài" + cron tự đánh dấu
 
