@@ -3,6 +3,14 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 25/11/2026 — Đếm thùng trả xác trộn đối tác trên D1 thật (chỉ đọc, không đổi dữ liệu)
+
+- Yêu cầu (nguyên văn): "Có, đếm giúp" (đồng ý chạy truy vấn chỉ đọc trên D1 thật sau v1.159).
+- Kết quả: **0 thùng trả xác** từng được tạo (`thung_xac_bh` = 0, nhật ký thùng = 0, 0 lần import kết quả xác) → không có bản ghi nào bị lỗi import trộn đối tác.
+- Ghi nhận thêm: 3.075 xác Đổi mới "Trả đối tác" đang chờ gom (MB 1.356, MN 1.719; đơn từ 04/10 tới 25/11/2026) — module trả xác chưa được dùng thật.
+  Trong đó **44 xác thuộc đơn tạo trước 01/11/2026**, trái luật "đơn trước 01/11/2026 coi như đã xử lý ngoài" (migration 0031 / 0039 chỉ đánh dấu 1 lần
+  lúc chạy; các đơn này được gán xử lý xác "Trả đối tác" sau đó). Chưa sửa — sửa cần ghi D1 thật, chờ người dùng quyết.
+
 ## 25/11/2026 — v1.159: Rà soát luồng trả xác — sửa 4 lỗi nhỏ + tài liệu HTML 5W1H
 
 - Yêu cầu (nguyên văn): "rà soát lại luồng trả trả xác linh kiện, kiểm tra xem đã có tài liệu hướng dẫn, mô tả html chưa?" → sau báo cáo rà soát, chọn "Làm cả hai" (sửa lỗi + bổ sung tài liệu).
