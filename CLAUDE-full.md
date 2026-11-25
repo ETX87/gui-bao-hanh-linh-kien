@@ -7565,3 +7565,26 @@ ký "người tạo xác nhận tự chịu trách nhiệm"; D3333333 (lỗi) �
 **(c) Ghi nhận:** thùng bên khovan không được báo huỷ. Mở lại đặt `updated_at` = lúc mở lại (đồng hồ bước tính lại).
 
 **(d) Kiểm thử:** local API + giao diện (xem nhật ký làm việc).
+
+## BC KPIs nhân viên theo tháng (25/11/2026) — v1.158
+
+**(a) Nguyên văn:** *"@BC DVBH 2610 - bảo hành.xlsx đây là báo cáo kpis tháng 10 của tôi cho nhân viên. hãy phân tích các chỉ số => liệt kê các số
+liệu cần thiết => báo cáo các số liệu có trên hệ thống => đề xuất phương án triển khai => xây dựng trên app mục BC KPIs cho phép tải về (bc này
+không cần chạy liên tục, chỉ cần thêm nút load bc, thì mới load số liệu khi cần)"*.
+
+**(b) Phân tích:** file Excel có 3 KPI (sheet "Tốc độ gửi hàng", "KPIs Admin BH", "NS SUẤT NV SỬA CHỮA") tính từ sheet DATA (xuất AppSheet, 116 cột,
+hàm gốc ở sheet "Hàm gốc"). Chi tiết công thức, số T10, 2 lỗi công thức (Kho so ngày với 24; Admin dùng số giờ `DH` như ngày giờ) và bảng số liệu có /
+chưa có trên hệ thống: `du an sua chua bao hanh/BC-KPIs_Phan-tich_25-11-2026.md`.
+
+**(c) Đã chốt khi làm (theo yêu cầu, không hỏi thêm):** không cache / cron — chỉ tính khi bấm nút; giờ theo luật SLA hệ thống (bỏ Chủ nhật) thay luật
+cuối tuần 39h / 63h của Excel; ngưỡng 24h cả 3 KPI như Excel; Admin tính tới lúc rời tay Admin, trừ thời gian chờ KTV bổ sung; "Không xét" = giải trình
+bên `ngoai_canh` ở bước Admin (thay cột "NGUYÊN NHÂN CHẬM" + sheet "Ca bỏ ko tính 24h"); tháng theo lúc làm xong. Mở: B2B, loại trừ chờ LK cho NV,
+24h vs SLA bước NV 48h.
+
+**(d) Mã:** `backend/src/lib/baoCaoKpi.ts` (`tinhBaoCaoKpi`), `backend/src/routes/baoCaoKpi.ts` (`/api/bao-cao-kpi`), `frontend/src/screens/shared/BaoCaoKpi.tsx`,
+menu `routes.ts` "🎯 BC KPIs", `App.tsx`. Bảng chi tiết dùng `Table` + `ExcelToolbar` với `useListFilters(null, …)`, lọc / sắp xếp phía trình duyệt
+(số liệu đã tải hết về), hiện tối đa 300 dòng, Excel đủ dòng.
+
+**(e) Kiểm thử:** typecheck + build sạch. Hàm tính chạy trên `node:sqlite` dựng từ toàn bộ `migrations/` + dữ liệu mẫu: Kho 6h đúng hạn / 48h quá hạn /
+phiếu chưa gửi 27,2h "đang chờ quá 24h"; Admin 10h đạt, 58h − 48h chờ bổ sung = 10h đạt, 72h có giải trình "Không có linh kiện" → Không xét, 430h − 2
+Chủ nhật = 382h quá; NV 48h quá, đang sửa 100h. Tháng 10 trả 0 dòng (không có nhật ký). Chưa xem UI trên trình duyệt (cần đăng nhập Google).

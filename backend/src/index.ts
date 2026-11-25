@@ -31,6 +31,7 @@ import mienRoutes from "./routes/mien";
 import canhBaoRoutes from "./routes/canhBao";
 import lichSuRoutes from "./routes/lichSu";
 import baoCaoBoRoutes from "./routes/baoCaoBo";
+import baoCaoKpiRoutes from "./routes/baoCaoKpi";
 import deXuatRoutes from "./routes/deXuat";
 import xacRoutes from "./routes/xac";
 import thongBaoRoutes from "./routes/thongBao";
@@ -104,6 +105,7 @@ app.route("/api/mien", mienRoutes);
 app.route("/api/canh-bao", canhBaoRoutes);
 app.route("/api/lich-su", lichSuRoutes);
 app.route("/api/bao-cao-bo", baoCaoBoRoutes);
+app.route("/api/bao-cao-kpi", baoCaoKpiRoutes);
 app.route("/api/de-xuat", deXuatRoutes);
 // 13/11/2026: module tra xac linh kien (thung tra xac cho nha may) - routes/xac.ts.
 app.route("/api/tra-xac", xacRoutes);

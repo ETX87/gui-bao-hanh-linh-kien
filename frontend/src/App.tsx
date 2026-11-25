@@ -3,6 +3,7 @@ import { LichSuScreen } from "./screens/shared/LichSuBaoHanh";
 import { LogicHeThongScreen } from "./screens/shared/LogicHeThong";
 import { TraXacScreen } from "./screens/xac/TraXacScreen";
 import { BaoCaoBoScreen } from "./screens/shared/BaoCaoBo";
+import { BaoCaoKpiScreen } from "./screens/shared/BaoCaoKpi";
 import { BaoCaoNghenScreen } from "./screens/shared/BaoCaoNghen";
 import { GiaiTrinhHost } from "./screens/shared/QuanTriBuoc";
 import { useAuth } from "./auth/AuthContext";
@@ -48,6 +49,8 @@ function Routed({ user }: { user: AppUser }) {
   if (path === "/tra-xac" && (user.la_admin_bh || user.la_ke_toan || user.la_view || user.la_qtri || user.la_tra_xac)) return <TraXacScreen user={user} />;
   // 13/11/2026: bao cao ket qua lam viec BO theo thang.
   if (path === "/bao-cao-bo" && (user.la_admin_bh || user.la_view || user.la_qtri)) return <BaoCaoBoScreen />;
+  // 25/11/2026: BC KPIs nhan vien theo thang (chi tinh khi bam Tai so lieu).
+  if (path === "/bao-cao-kpi" && (user.la_admin_bh || user.la_view || user.la_qtri)) return <BaoCaoKpiScreen />;
   if (path === "/bao-cao-nghen" && (user.la_admin_bh || user.la_view || user.la_giam_sat || user.la_qtri)) return <BaoCaoNghenScreen user={user} />;
 
   // 31/10/2026: 4 man chung dung cho moi vai tro (tab theo giai doan, tu mo dung tab viec cua vai tro).

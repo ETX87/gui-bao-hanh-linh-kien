@@ -25,7 +25,7 @@ KTV / CTV / Trạm, KTV triển khai, Kho, Admin bảo hành, NV sửa chữa, K
 | Phiếu trả | Bảng nhóm theo KTV, sửa tới khi Kế toán duyệt, diễn giải MISA, file import Odoo, in phiếu |
 | Cấp linh kiện / Linh kiện của tôi | Đề xuất, NV đang giữ, chờ Admin xác nhận tiêu hao, sửa / huỷ xác nhận |
 | Trả xác linh kiện | Xác chờ gom (theo KTV / linh kiện, lọc Excel), thùng trả xác, import kết quả xác hàng loạt |
-| Báo cáo | Báo cáo BO theo tháng (gộp phòng ban / tách nhân viên), "Điểm nghẽn & trách nhiệm" |
+| Báo cáo | Báo cáo BO theo tháng (gộp phòng ban / tách nhân viên), "Điểm nghẽn & trách nhiệm"; **BC KPIs** theo tháng (Kho gửi hàng trả / Admin BH / NV sửa chữa ≤ 24h) — chỉ tính khi bấm "Tải số liệu", tải Excel |
 | Logic hệ thống | 2 tài liệu luồng (tổng + cấp linh kiện) cho mọi tài khoản không phải KTV thuần |
 | Quản trị | Người dùng (cờ vai trò, miền, đối tác trả xác), danh mục LK, đối tác, danh sách KTV, xem như người dùng |
 

@@ -3,6 +3,21 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 25/11/2026 — v1.158: BC KPIs nhân viên theo tháng (nút tải số liệu + tải Excel)
+
+- Yêu cầu (nguyên văn): "đây là báo cáo kpis tháng 10 của tôi cho nhân viên. hãy phân tích các chỉ số => liệt kê các số liệu cần thiết
+  => báo cáo các số liệu có trên hệ thống => đề xuất phương án triển khai => xây dựng trên app mục BC KPIs cho phép tải về (bc này không cần
+  chạy liên tục, chỉ cần thêm nút load bc, thì mới load số liệu khi cần)".
+- Phân tích file Excel KPI T10 (3 KPI: Kho gửi hàng trả, Admin BH < 24h, NV sửa chữa < 24h; 2 lỗi công thức) + bảng số liệu có / chưa có trên hệ thống:
+  `du an sua chua bao hanh/BC-KPIs_Phan-tich_25-11-2026.md`.
+- Đã làm: `backend/src/lib/baoCaoKpi.ts` + `GET /api/bao-cao-kpi?thang=` (không cache, không cron); màn `#/bao-cao-kpi` "🎯 BC KPIs"
+  (`screens/shared/BaoCaoKpi.tsx`): mở ra không tải, bấm "📥 Tải số liệu" mới tính; 3 thẻ tỷ lệ, 3 bảng tổng hợp, bảng chi tiết lọc / sắp xếp kiểu Excel,
+  "⬇ Tải Excel" 5 sheet. Quyền: Admin hệ thống / Admin BH / View. Không có migration.
+- Kiểm thử: typecheck + build sạch; chạy hàm tính trên SQLite dựng từ toàn bộ migration + dữ liệu mẫu (đúng hạn, quá hạn, trừ chờ KTV bổ sung 48h,
+  Không xét do giải trình ngoại cảnh, bỏ Chủ nhật, Kho chưa gửi / NV đang sửa quá 24h) — kết quả khớp tính tay. Chưa xem giao diện trên trình duyệt
+  (màn cần đăng nhập Google); chưa chạy trên dữ liệu thật.
+- Còn mở: đơn B2B chưa có trên hệ thống; NV có loại trừ ca chờ linh kiện không; KPI 24h vs SLA bước NV 48h.
+
 ## 24/11/2026 — Tách CLAUDE.md thành bản rút gọn + CLAUDE-full.md (không đổi code)
 
 - Yêu cầu (Trợ lý Mây theo lời Giám đốc): CLAUDE.md ~930 KB làm phiên Claude đám mây đầy bộ nhớ ngay khi mở → rút dưới ~10 KB, chi tiết sang tệp riêng.

@@ -109,6 +109,18 @@ theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, **đẩy vi�
 | ETX nhân sự | Tự duyệt / khoá tài khoản |
 | App Nhiệm vụ eOffice (Cổng nhiệm vụ `taskFeedNhan`, mã app `bao-hanh-quan-tri`, secret TASK_FEED_KEY) | Việc **quá SLA bước, chưa ai giải trình** (cùng luật màn "Cần giải trình"), gửi ảnh chụp đủ 30 phút / lần (`lib/viecGiaiTrinhCong.ts`). Người nhận: bước Kho / Admin BH / Kế toán → mọi tài khoản giữ vai đó cùng miền (chưa gán / Cả 2 miền thấy hết, đơn chưa khai báo miền hiện cho mọi miền); bước NV sửa → NV được giao (người kiêm Admin / Kho / KT nhận cả bước NV theo miền); bước KTV giữ quá SLA + thời gian chuyển GS → Giám sát khu vực của KTV. KTV và Admin hệ thống (chỉ cờ quản trị) không nhận. id việc = `GT-<mã thùng / đơn / phiếu trả>-<bước>`, link mở thẳng `/<mã>`, gấp (🔴) khi quá 3 × SLA. Ghi giải trình → gửi "xong" ngay. Cài đặt › "App Nhiệm vụ eOffice": xem trước, đẩy ngay |
 
+## BC KPIs nhân viên theo tháng (v1.158)
+
+`#/bao-cao-kpi` (Admin hệ thống / Admin BH / View) — chỉ tính khi bấm "📥 Tải số liệu" (`GET /api/bao-cao-kpi?thang=YYYY-MM`, `lib/baoCaoKpi.ts`,
+không cache, không cron), tải Excel 5 sheet. Ngưỡng 24 giờ SLA (liên tục, bỏ Chủ nhật); tháng theo lúc làm xong; dòng bắt đầu từ dữ liệu AppSheet
+chỉ đếm, không tính giờ; dòng đang chờ chỉ hiện ở tháng hiện tại, không vào tỷ lệ.
+
+| KPI | Từ → đến | Người chịu | Ghi chú |
+|---|---|---|---|
+| Kho gửi hàng trả | Kế toán duyệt (lần vào `da_duyet_ke_toan` gần nhất) → Kho bấm Gửi (`da_gui`) | người bấm gửi, gom theo miền phiếu trả | |
+| Admin BH xử lý | MIN(Kho nhận thùng + 2h, Admin xác nhận nhận thùng) (đơn không thùng: lúc tạo đơn) → lần đầu đơn vị rời tay Admin (sang trạng thái khác `cho_phan_loai` / `admin_can_xem_lai` / `cho_bo_sung_tt`) | người thao tác lần đó | Trừ giờ chờ KTV bổ sung; quá 24h mà có giải trình bên ngoại cảnh ở bước Admin → "Không xét"; SL xử lý = mọi đơn vị xong trong tháng |
+| NV sửa chữa | Vào `cho_chan_doan` → nộp kết quả (`cho_admin_xac_nhan` / `san_sang_gom_phieu_tra` / `admin_can_xem_lai`), mỗi lượt giao 1 dòng | NV được giao (`nguoi_sua_chua`) | Đơn B2B chưa có trên hệ thống |
+
 ## 9. Tài liệu liên quan
 
 `CLAUDE.md`, `DEPLOY.md`, `DESIGN_SYSTEM.md`, `SRS_tong_hop.md`, `nhat_ky_lam_viec.md`, thư mục `du an sua chua bao hanh/` (kế hoạch, phân tích,
