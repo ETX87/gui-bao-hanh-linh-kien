@@ -7660,3 +7660,7 @@ FE `lib/bbbgXlsx.ts`, `lib/xlsx.ts` (`XlsxSheet`: merges / style / số / height
 
 **(d) Kiểm thử:** xem nhật ký làm việc 26/11/2026 v1.162. Script kiểm với dữ liệu thật (không đưa JSON lên repo):
 `du an sua chua bao hanh/Doi-chieu-BBBG-tra-xac-KAROFI_18-11/thu_ghep.ts`, `thu_bbbg.mts`.
+
+**(e) v1.163 (26/11/2026, "Cập nhật hướng dẫn"):** hướng dẫn HTML trả xác thêm mục 6 (Ghi kiện + Tải BBBG) và 7 (Import BBBG), ảnh chụp bằng
+`Huong-dan-Tra-xac/chup.mjs` (Chrome headless qua CDP, không cần thư viện). Sửa `ghepBbbg`: sắp ứng viên chờ gom → xác trả đối tác (kể cả trong thùng)
+→ còn lại, tránh ghép dòng BBBG vào đơn vị không phải xác khi xác thật đã ở thùng khác.

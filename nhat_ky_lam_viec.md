@@ -3,6 +3,17 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 26/11/2026 — v1.163: Hướng dẫn HTML trả xác thêm Ghi kiện / Tải BBBG / Import BBBG + sửa ưu tiên ghép Import BBBG
+
+- Yêu cầu (nguyên văn): "Cập nhật hướng dẫn" (trả lời câu hỏi cập nhật hướng dẫn HTML trả xác — ảnh chụp, 5W1H — cho 3 tính năng mới).
+- Đã làm: `du an sua chua bao hanh/Huong-dan-Tra-xac/nguon.html` thêm mục 6 "Ghi số kiện & tải BBBG" (6.1 / 6.2 theo 5W1H) và mục 7 "Import BBBG lập tay"
+  (5W1H + bảng kết luận → việc cần làm), cập nhật tổng quan, phân quyền, mã lỗi, tình huống; 4 ảnh mới (tx-13…16) chụp Chrome headless 1366×860 từ app
+  local bằng `chup.mjs` (CDP), ảnh BBBG Excel dựng từ dữ liệu giả (`bbbg_mau.mts` + `xem_bbbg.py`); dựng lại `Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
+- Sửa mã (phát hiện khi chụp ảnh): Import BBBG ghép nhầm dòng vào đơn vị KHÔNG phải xác (vd đơn sửa chữa cùng case) khi xác thật của case đã nằm
+  trong thùng khác → báo sai "Không phải xác trả đối tác". `lib/ghepBbbg.ts` ưu tiên xác trả đối tác (kể cả đang trong thùng) trước đơn vị khác →
+  báo đúng "Đang trong thùng khác". Kiểm lại dữ liệu đợt 18/11: kết quả không đổi (467 / 15 / 16 / 9 / 3 / 1, 13 app thiếu).
+- Kiểm thử: typecheck BE; hướng dẫn mở bằng Chrome headless — 11 mục, 17 ảnh tải đủ, liên kết menu đúng.
+
 ## 26/11/2026 — v1.162: Trả xác — nút Tải BBBG theo thùng, số kiện từng xác, Import BBBG theo mã case + mã hàng
 
 - Yêu cầu (nguyên văn): "Làm cả 3" (trả lời câu hỏi làm phần bổ sung cho app: nút Tải BBBG, số kiện, import theo case).

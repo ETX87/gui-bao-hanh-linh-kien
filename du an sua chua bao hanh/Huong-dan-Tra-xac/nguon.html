@@ -41,8 +41,8 @@ ol li,ul li{margin:4px 0}
 <header>
 <h1>♻️ Hướng dẫn Trả xác linh kiện</h1>
 <p>Dành cho <b>Admin bảo hành</b>, vai trò <b>Trả xác</b>, <b>Kế toán</b> (và View / Giám sát để theo dõi) — app <b>Bảo hành đổi trả 3T</b>, menu <b>Trả xác</b>.</p>
-<p>Áp dụng từ 25/11/2026 · app v1.161 · bổ sung cho mục 4.4 / 5.2 / 6 của tài liệu <i>Hướng dẫn cấp linh kiện sửa chữa, xác nhận xác, trả xác &amp; trừ công nợ</i>.</p>
-<p style="margin-top:10px"><nav><a href="#tq">Tổng quan 5W1H</a><a href="#nguon">Xác nào cần trả</a><a href="#gom">Gom thùng</a><a href="#nhap">Thùng nháp</a><a href="#kt">Kế toán duyệt</a><a href="#khac">Xử lý khác</a><a href="#import">Import</a><a href="#quyen">Phân quyền</a><a href="#loi">Mã lỗi</a><a href="#hoi">Tình huống</a></nav></p>
+<p>Áp dụng từ 25/11/2026 · cập nhật 26/11/2026 (app v1.162: số kiện, Tải BBBG, Import BBBG) · bổ sung cho mục 4.4 / 5.2 / 6 của tài liệu <i>Hướng dẫn cấp linh kiện sửa chữa, xác nhận xác, trả xác &amp; trừ công nợ</i>.</p>
+<p style="margin-top:10px"><nav><a href="#tq">Tổng quan 5W1H</a><a href="#nguon">Xác nào cần trả</a><a href="#gom">Gom thùng</a><a href="#nhap">Thùng nháp</a><a href="#kt">Kế toán duyệt</a><a href="#khac">Xử lý khác</a><a href="#bbbg">Kiện &amp; BBBG</a><a href="#impbbbg">Import BBBG</a><a href="#import">Import kết quả</a><a href="#quyen">Phân quyền</a><a href="#loi">Mã lỗi</a><a href="#hoi">Tình huống</a></nav></p>
 </header>
 <main>
 
@@ -53,13 +53,14 @@ ol li,ul li{margin:4px 0}
  <div class="moc tu"><div class="c">1</div><b>Xác phát sinh</b><i>Đổi mới "Trả đối tác" / lần cấp LK đã xác nhận xác</i></div>
  <div class="moc tu"><div class="c">2</div><b>Xác chờ gom</b><i>tự vào danh sách</i></div>
  <div class="moc"><div class="c">3</div><b>Tạo thùng TX-…</b><i>1 miền · 1 đối tác</i></div>
- <div class="moc"><div class="c">4</div><b>Nhập Mã EO</b><i>thêm / bớt xác</i></div>
+ <div class="moc"><div class="c">4</div><b>Nhập Mã EO · ghi kiện</b><i>thêm / bớt xác</i></div>
  <div class="moc"><div class="c">5</div><b>Gửi Kế toán</b><i>cần EO + ≥ 1 xác</i></div>
  <div class="moc kt"><div class="c">6</div><b>Kế toán duyệt</b><i>hoặc trả lại (có lý do)</i></div>
- <div class="moc xong"><div class="c">✔</div><b>Đã trả đối tác</b><i>thùng khoá</i></div>
+ <div class="moc xong"><div class="c">✔</div><b>Tải BBBG · giao</b><i>in, ký, thùng khoá</i></div>
 </div>
 <div class="nhanh">
  <div><b>Nhánh trả lại:</b> Kế toán "Trả lại người gom thùng" (bắt buộc lý do) → thùng về <b>Thùng nháp</b>, có nhãn đỏ "↩ KT trả lại" → sửa → gửi lại. Người gom cũng tự <b>"↩ Huỷ gửi KT"</b> được khi Kế toán chưa duyệt.</div>
+ <div><b>Đã lỡ lập biên bản bàn giao (BBBG) bằng tay:</b> tab Xác chờ gom › <b>⬆ Import BBBG</b> → app đối chiếu từng mã case với xác trong app, chỉ đưa xác khớp vào thùng; phần lệch có file kết quả để kiểm.</div>
  <div><b>Nhánh không qua thùng:</b> xác đã tiêu huỷ / thất lạc / không có xác / đã trả ngoài hệ thống → ghi kết quả, xác chuyển sang tab <b>"Đã xử lý khác"</b>; ghi nhầm thì <b>"↺ Đưa lại chờ gom"</b>.</div>
 </div>
 
@@ -70,7 +71,7 @@ ol li,ul li{margin:4px 0}
 <tr><th><span class="k">WHERE</span>Ở đâu</th><td>Menu <b>Trả xác</b> (<code>#/tra-xac</code>), 5 tab: ♻️ Xác chờ gom · 📦 Thùng nháp · ⏳ Chờ KT duyệt · ✔ Đã duyệt · Đã xử lý khác. Trên điện thoại bảng chuyển thành thẻ.</td></tr>
 <tr><th><span class="k">WHAT</span>Làm gì</th><td>Theo dõi từng xác linh kiện từ lúc phát sinh tới khi đã giao đối tác: gom vào thùng trả xác <code>TX-…</code> kèm <b>Mã EO</b>, Kế toán kiểm tra và chốt. Xác không trả qua thùng thì ghi kết quả (tiêu huỷ / thất lạc / không có / trả ngoài). Có import Excel hàng loạt, tải Excel theo bộ lọc.</td></tr>
 <tr><th><span class="k">WHY</span>Tại sao</th><td>Đối tác / hãng chỉ đối trừ bảo hành khi nhận đủ xác. Không theo dõi thì xác thất lạc, không chứng minh được đã trả, mất tiền đối trừ; Kế toán không có chứng từ (EO) để khớp. Luật 1 thùng 1 miền 1 đối tác giúp mỗi thùng khớp đúng 1 chứng từ giao nhận.</td></tr>
-<tr><th><span class="k">HOW</span>Làm thế nào</th><td>Tích xác ở tab Xác chờ gom → <b>＋ Tạo thùng trả xác</b> (hoặc <b>Thêm vào thùng nháp…</b>) → mở thùng nhập <b>Mã EO</b> → <b>Gửi Kế toán</b> → Kế toán mở tab Chờ KT duyệt → <b>✔ Duyệt — kết thúc trả xác</b> hoặc <b>↩ Trả lại người gom thùng</b>. Chi tiết từng bước ở các mục dưới.</td></tr>
+<tr><th><span class="k">HOW</span>Làm thế nào</th><td>Tích xác ở tab Xác chờ gom → <b>＋ Tạo thùng trả xác</b> (hoặc <b>Thêm vào thùng nháp…</b>) → mở thùng nhập <b>Mã EO</b> → <b>Gửi Kế toán</b> → Kế toán mở tab Chờ KT duyệt → <b>✔ Duyệt — kết thúc trả xác</b> hoặc <b>↩ Trả lại người gom thùng</b> → mở thùng đã duyệt › <b>⬇ Tải BBBG</b> in ra ký, giao vận. Trong lúc đóng kiện dùng <b>📦 Ghi kiện</b>. Chi tiết từng bước ở các mục dưới.</td></tr>
 </table>
 </section>
 
@@ -168,8 +169,79 @@ ol li,ul li{margin:4px 0}
 <figure><img src="{{tx-09-da-xu-ly-khac}}" alt="Đã xử lý khác"><figcaption>Tab Đã xử lý khác — cột Kết quả (Lưu kho, Đã xử lý ngoài hệ thống…), nút Đưa lại chờ gom</figcaption></figure>
 </section>
 
+<section id="bbbg">
+<h2>6. Ghi số kiện &amp; tải Biên bản bàn giao (BBBG)</h2>
+<div class="ok"><b>Nguyên tắc:</b> BBBG được lập <b>TỪ thùng trả xác trên app</b>, không lập tay trước. Mỗi xác = 1 mã xác của app; mã hàng trên BBBG = <b>mã linh kiện B</b> (thực tế gửi về); mỗi mã hàng 1 dòng, không gộp ô.</div>
+<h3>6.1. Ghi số kiện (thùng carton thật) cho từng xác</h3>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Người gom thùng: Admin BH, Trả xác (đối tác được gán), Admin hệ thống.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Lúc đóng xác vào các kiện để giao — thùng đang <b>Nháp</b> hoặc <b>Chờ KT duyệt</b>.</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Mở thùng › <b>▾ Xem chi tiết</b> › mục <b>Xác trong thùng</b> › thanh <b>📦 Ghi kiện</b>; cột <b>Kiện</b> trong bảng xác.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>Ghi kiện cho nhiều xác 1 lần (vd <code>1</code>, <code>2</code>, <code>1+2</code>, <code>Để ngoài</code>; tối đa 40 ký tự, gõ "Thùng 3" app tự lưu "3"). Dòng trên cùng của thùng báo <b>"n xác chưa ghi kiện"</b>. Bỏ xác khỏi thùng thì kiện của xác đó bị xoá. Mỗi lần ghi có trong nhật ký thùng.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>Thay cột "Số thùng" gộp ô trên BBBG lập tay — biết chính xác món nào nằm kiện nào, nhà máy kiểm đếm theo kiện, thất lạc kiện nào khoanh được ngay.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li>Tích xác cần ghi (hoặc <b>Chọn tất cả</b> / <b>Chọn xác chưa có kiện</b>).</li>
+<li>Gõ số kiện vào ô → <b>Ghi kiện</b>. Ghi nhầm: chọn lại → <b>Xoá kiện</b> hoặc ghi đè kiện mới.</li>
+<li>Lặp lại cho từng kiện tới khi hết cảnh báo "chưa ghi kiện".</li>
+</ol>
+</td></tr>
+</table>
+<figure><img src="{{tx-15-ghi-kien}}" alt="Ghi kiện"><figcaption>Chi tiết thùng › Xem chi tiết — thanh 📦 Ghi kiện: đã chọn 1 xác, gõ "Thùng 3" → Ghi kiện; nhật ký ghi "Ghi kiện "3" cho 1 xác"</figcaption></figure>
+<h3>6.2. Tải BBBG</h3>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Ai xem được thùng đều tải được (Admin BH, Trả xác, Kế toán, View, Giám sát). Thường là người gom thùng tải để in, ký, giao vận.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Sau khi Kế toán <b>duyệt</b> thùng (bản chính thức). Thùng Nháp / Chờ KT vẫn tải được nhưng tiêu đề ghi <b>"BẢN NHÁP — thùng chưa được Kế toán duyệt"</b> (dùng để soát trước).</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Mở thùng › nút <b>⬇ Tải BBBG</b> ở góc phải dòng trạng thái (cạnh ▾ Xem chi tiết) — luôn nhìn thấy, không cần xổ.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>File Excel <code>BBBG_TX-…_&lt;đối tác&gt;_&lt;ngày&gt;.xlsx</code>, 3 sheet:
+<ul>
+<li><b>BBBG</b> — đúng mẫu công ty: tiêu đề, ngày (ngày Kế toán duyệt), bộ phận bàn giao (phòng bảo hành theo miền), bên nhận (đối tác), mã thùng, Mã EO, tổng xác; bảng <b>STT · Mã hàng · Tên vật tư · SL · Kiện · Mã case / Lada (MYC)</b> — 1 mã hàng 1 dòng, mã case lặp ghi "×n"; dòng Tổng cộng; khung ký Người lập / Giao vận / Bên nhận hàng.</li>
+<li><b>Chi tiet xac</b> — mỗi xác 1 dòng (mã xác, đơn vị, loại, case, mã B, tên, SL, kiện, khách hàng).</li>
+<li><b>Theo kien</b> — tổng theo từng kiện để đóng gói / kiểm đếm.</li>
+</ul></td></tr>
+<tr><th><span class="k">WHY</span></th><td>BBBG luôn khớp đúng thùng Kế toán đã duyệt — hết cảnh lập tay bị lệch số, gộp nhiều mã vào 1 dòng, ghi mã case thay mã xác, trộn đối tác (các lỗi tìm thấy ở BBBG lập tay đợt 18/11/2026).</td></tr>
+<tr><th><span class="k">HOW</span></th><td>Mở thùng đã duyệt → <b>⬇ Tải BBBG</b> → mở file, in sheet BBBG → các bên ký → giao kèm xác. App báo nếu còn xác chưa ghi kiện (cột Kiện ghi "Chưa ghi kiện").</td></tr>
+</table>
+<figure><img src="{{tx-14-chi-tiet-tai-bbbg}}" alt="Nút Tải BBBG"><figcaption>Chi tiết thùng — nút ⬇ Tải BBBG cạnh ▾ Xem chi tiết</figcaption></figure>
+<figure><img src="{{tx-16-bbbg-excel}}" alt="BBBG Excel"><figcaption>Sheet BBBG trong file tải về (dữ liệu mẫu) — 1 mã hàng 1 dòng, cột Kiện, mã case, tổng, khung ký</figcaption></figure>
+</section>
+
+<section id="impbbbg">
+<h2>7. Import BBBG lập tay (đối chiếu theo mã case + mã hàng)</h2>
+<table class="w5">
+<tr><th><span class="k">WHO</span></th><td>Admin BH, Trả xác (chỉ xác của đối tác được gán), Admin hệ thống.</td></tr>
+<tr><th><span class="k">WHEN</span></th><td>Đã lỡ lập BBBG bằng tay (Excel: cột Mã hàng + cột MYC chứa nhiều mã case) mà xác chưa được gom trên app; hoặc nhận BBBG từ nơi khác cần đối chiếu với app.</td></tr>
+<tr><th><span class="k">WHERE</span></th><td>Tab <b>♻️ Xác chờ gom</b> › nút <b>⬆ Import BBBG</b>.</td></tr>
+<tr><th><span class="k">WHAT</span></th><td>App đọc file, <b>mỗi mã case trong ô MYC = 1 xác</b>, ghép mỗi dòng với đúng 1 xác trong app (ưu tiên mã linh kiện B → mã A/C → còn lại là lệch mã; mỗi xác chỉ ghép 1 lần), xếp kết luận từng dòng và chỉ đưa các dòng <b>khớp</b> vào thùng (có sẵn hoặc tạo mới), ghi luôn số kiện theo cột "Số thùng". Tối đa 2.000 xác / lần.</td></tr>
+<tr><th><span class="k">WHY</span></th><td>BBBG lập tay không gắn với app → xác nằm mãi ở "chờ gom", Kế toán không duyệt được, dễ gom trùng. Đối chiếu tay hàng trăm mã case mất cả ngày và dễ sót.</td></tr>
+<tr><th><span class="k">HOW</span></th><td>
+<ol>
+<li><b>① Chọn file BBBG</b> (.xlsx, sheet đầu tiên). Cần dòng tiêu đề có cột <b>Mã hàng</b> và cột <b>MYC</b> (hoặc "Mã case"); cột <b>Số thùng</b> / <b>Kiện</b> tuỳ chọn — ô gộp được hiểu cho cả nhóm dòng, ô trống không gộp = chưa ghi kiện. App báo "n dòng mã hàng → N xác".</li>
+<li><b>② Thùng đích</b>: "Tạo thùng mới" (đối tác / miền theo xác khớp đầu tiên) hoặc chọn 1 thùng Nháp / Chờ KT. Tick <b>"Đưa cả dòng khớp theo mã A/C"</b> chỉ khi đã kiểm xác thật.</li>
+<li><b>③ Xem kết quả đối chiếu</b>: nhãn đếm theo kết luận (bấm nhãn để lọc, chọn nhiều nhãn), bảng từng dòng: dòng Excel, mã case, mã hàng, kiện, kết luận, mã xác app, mã B app (khác mã BBBG thì hiện mã), ghi chú / việc cần làm.</li>
+<li><b>⬇ Tải kết quả đối chiếu</b> (Tổng hợp · Chi tiết · App có – BBBG thiếu) để giao người kiểm.</li>
+<li><b>Đưa N xác vào thùng</b> → xác nhận → app mở thùng vừa đưa vào; nhập Mã EO, gửi Kế toán như bình thường.</li>
+</ol>
+</td></tr>
+</table>
+<figure><img src="{{tx-13-import-bbbg}}" alt="Import BBBG"><figcaption>Import BBBG — 5 dòng mã hàng → 6 xác; kết quả: 1 khớp (đưa vào thùng), 3 đang trong thùng khác, 1 không phải xác trả đối tác, 1 mã không có trong app</figcaption></figure>
+<h3>Kết luận từng dòng &amp; việc cần làm</h3>
+<table>
+<thead><tr><th>Kết luận</th><th>Nghĩa là</th><th>Việc cần làm</th></tr></thead>
+<tr><td><b>Khớp – chờ gom</b></td><td>Đúng case, đúng mã B, xác đang chờ gom</td><td>Được đưa vào thùng</td></tr>
+<tr><td><b>Khớp theo mã A/C</b></td><td>Đúng case, nhưng BBBG ghi mã A (khai lúc gửi) hoặc C (đổi mới), app tính xác theo mã B khác</td><td>Kiểm xác thật: đúng như BBBG → Admin BH sửa mã B trên đơn; đúng như app → sửa BBBG. Tick ô "khớp theo mã A/C" để gom luôn</td></tr>
+<tr><td><b>Lệch mã LK</b></td><td>Đúng case nhưng mã hàng khác mọi mã A/B/C của case</td><td>Mở kiện kiểm xác thật → sửa mã B hoặc rút xác khỏi BBBG</td></tr>
+<tr><td><b>Đã có kết quả ngoài thùng</b></td><td>Xác đã ghi tiêu huỷ / thất lạc / không có / trả ngoài / đơn trước 01/11/2026</td><td>Thật sự trả đợt này → tab Đã xử lý khác › Đưa lại chờ gom, rồi import lại</td></tr>
+<tr><td><b>Đang trong thùng khác</b> / <b>Đã trả</b></td><td>Xác đã nằm trong thùng khác / thùng đã duyệt</td><td>Kiểm trùng — rút khỏi BBBG</td></tr>
+<tr><td><b>Không phải xác trả đối tác</b></td><td>Đơn từ chối / xác nhận trừ nợ / sửa chữa / xử lý xác khác "Trả đối tác"</td><td>Rút khỏi BBBG, hoặc Admin BH sửa đơn nếu app ghi sai</td></tr>
+<tr><td><b>Chưa đủ ĐK gom</b></td><td>Đơn chưa phân loại xong</td><td>Xử lý đơn trước</td></tr>
+<tr><td><b>Thừa</b> / <b>Không có trong app</b></td><td>BBBG ghi nhiều xác hơn số xác của case / mã case không tồn tại</td><td>Kiểm lại mã case, số lượng</td></tr>
+</table>
+<div class="note">Dòng khớp nhưng khác miền / khác đối tác với thùng (hoặc ngoài đối tác bạn được gán) hiện nhãn đỏ kèm lý do và <b>không</b> được đưa vào — tạo thùng riêng cho miền / đối tác đó. Sheet "App có – BBBG thiếu" liệt kê xác chờ gom của chính các case trong file nhưng BBBG không ghi: kiểm kho, còn thì để đợt sau, đã gửi mà quên ghi thì bổ sung.</div>
+</section>
+
 <section id="import">
-<h2>6. Import kết quả xác hàng loạt (Excel)</h2>
+<h2>8. Import kết quả xác hàng loạt (Excel)</h2>
 <table class="w5">
 <tr><th><span class="k">WHO</span></th><td>Chỉ <b>Admin BH</b> / Admin hệ thống (vai trò Trả xác không import).</td></tr>
 <tr><th><span class="k">WHEN</span></th><td>Có nhiều xác cần xử lý 1 lần (đối chiếu sau kiểm kê, dồn đợt cũ, chia nhiều thùng).</td></tr>
@@ -189,20 +261,20 @@ Lỗi thường gặp: trùng mã trong file, xác không còn chờ gom, thùng
 </section>
 
 <section id="quyen">
-<h2>7. Ai thấy / làm được gì</h2>
+<h2>9. Ai thấy / làm được gì</h2>
 <table>
 <thead><tr><th>Vai trò</th><th>Tab thấy</th><th>Thao tác</th></tr></thead>
-<tr><td>Admin BH (theo miền)</td><td>Cả 5 tab</td><td>Gom thùng, thêm / bớt xác, EO, gửi / huỷ gửi KT, xoá thùng rỗng, ghi kết quả khác, đưa lại, import</td></tr>
-<tr><td>Trả xác</td><td>Cả 5 tab (chỉ dữ liệu đối tác được gán)</td><td>Như Admin BH nhưng chỉ đối tác được gán; không import</td></tr>
-<tr><td>Kế toán</td><td>Chờ KT duyệt, Đã duyệt</td><td>Sửa Mã EO / ghi chú khi chờ duyệt, Duyệt, Trả lại</td></tr>
-<tr><td>View</td><td>Xác chờ gom, Đã duyệt, Đã xử lý khác</td><td>Chỉ xem, tải Excel</td></tr>
-<tr><td>Giám sát</td><td>Xác chờ gom, Đã duyệt</td><td>Chỉ xem</td></tr>
+<tr><td>Admin BH (theo miền)</td><td>Cả 5 tab</td><td>Gom thùng, thêm / bớt xác, EO, ghi kiện, gửi / huỷ gửi KT, xoá thùng rỗng, ghi kết quả khác, đưa lại, import kết quả, Import BBBG, tải BBBG</td></tr>
+<tr><td>Trả xác</td><td>Cả 5 tab (chỉ dữ liệu đối tác được gán)</td><td>Như Admin BH nhưng chỉ đối tác được gán; Import BBBG được, không import kết quả</td></tr>
+<tr><td>Kế toán</td><td>Chờ KT duyệt, Đã duyệt</td><td>Sửa Mã EO / ghi chú khi chờ duyệt, Duyệt, Trả lại, tải BBBG</td></tr>
+<tr><td>View</td><td>Xác chờ gom, Đã duyệt, Đã xử lý khác</td><td>Chỉ xem, tải Excel, tải BBBG</td></tr>
+<tr><td>Giám sát</td><td>Xác chờ gom, Đã duyệt</td><td>Chỉ xem, tải BBBG</td></tr>
 <tr><td>Admin hệ thống</td><td>Tất cả</td><td>Tất cả; gán vai trò Trả xác + đối tác ở Quản trị › Người dùng</td></tr>
 </table>
 </section>
 
 <section id="loi">
-<h2>8. Thông báo lỗi &amp; cách xử lý</h2>
+<h2>10. Thông báo lỗi &amp; cách xử lý</h2>
 <table>
 <thead><tr><th>Mã</th><th>Câu báo trên app</th><th>Xử lý</th></tr></thead>
 <tr><td><code>REQUIRE_MA_EO</code></td><td>Thùng cần có Mã EO trước khi gửi / duyệt</td><td>Mở thùng, nhập Mã EO</td></tr>
@@ -214,12 +286,15 @@ Lỗi thường gặp: trùng mã trong file, xác không còn chờ gom, thùng
 <tr><td><code>NGOAI_DOI_TAC_DUOC_GAN</code></td><td>Xác / thùng không thuộc đối tác bạn được gán</td><td>Nhờ Admin BH hoặc quản trị gán thêm đối tác</td></tr>
 <tr><td><code>XAC_TRONG_THUNG</code></td><td>Xác đã vào thùng — bỏ khỏi thùng trước</td><td>Bỏ xác khỏi thùng rồi sửa xử lý xác / xác nhận tiêu hao</td></tr>
 <tr><td><code>MISSING_LY_DO</code></td><td>Thiếu lý do</td><td>Kế toán nhập lý do trả lại</td></tr>
+<tr><td><code>KHONG_CO_DONG_GOM</code></td><td>Không có dòng nào đủ điều kiện đưa vào thùng (Import BBBG)</td><td>Xem cột Kết luận, xử lý các dòng lệch rồi import lại</td></tr>
+<tr><td><code>IMPORT_QUA_NHIEU</code></td><td>Tối đa 2.000 xác / lần (Import BBBG)</td><td>Tách file theo kiện / mã hàng</td></tr>
+<tr><td>(chữ)</td><td>Không thấy dòng tiêu đề có cột "Mã hàng" và cột "MYC" / "Mã case"</td><td>Đặt đúng tên cột ở sheet đầu tiên</td></tr>
 <tr><td><code>WRONG_STATE</code></td><td>Trạng thái không cho phép</td><td>Thùng đã được người khác gửi / duyệt / trả lại — tải lại</td></tr>
 </table>
 </section>
 
 <section id="hoi">
-<h2>9. Tình huống thường gặp</h2>
+<h2>11. Tình huống thường gặp</h2>
 <table>
 <thead><tr><th>Tình huống</th><th>Xử lý</th></tr></thead>
 <tr><td>Không thấy xác cần trả trong danh sách chờ gom</td><td>Kiểm tra đơn đã phân loại Đổi mới + xử lý xác "Trả đối tác" chưa; với xác sau sửa chữa: Admin BH đã xác nhận tiêu hao với xác "Trả đối tác" và số đã dùng &gt; 0 chưa. Tài khoản Trả xác: đối tác của đơn có được gán cho mình không.</td></tr>
@@ -228,6 +303,10 @@ Lỗi thường gặp: trùng mã trong file, xác không còn chờ gom, thùng
 <tr><td>Kế toán trả lại thùng</td><td>Thùng về Thùng nháp với nhãn đỏ "↩ KT trả lại" + lý do; sửa theo lý do rồi Gửi Kế toán lại.</td></tr>
 <tr><td>Muốn đổi xử lý xác của đơn đã vào thùng</td><td>Bỏ xác khỏi thùng trước (chỉ khi thùng chưa duyệt).</td></tr>
 <tr><td>Ghi nhầm "tiêu huỷ" / "thất lạc"</td><td>Tab Đã xử lý khác → ↺ Đưa lại chờ gom.</td></tr>
+<tr><td>Nhân viên gửi BBBG lập tay (MYC nhiều mã case, gộp ô)</td><td>Không ký BBBG đó. Tab Xác chờ gom → ⬆ Import BBBG → tải kết quả đối chiếu → xử lý dòng lệch → Đưa xác khớp vào thùng → Mã EO → Kế toán duyệt → ⬇ Tải BBBG (bản app sinh) để ký.</td></tr>
+<tr><td>Một dòng BBBG gộp nhiều mã hàng (vd "trong đó 34 cái mã khác")</td><td>Import BBBG sẽ ra "Khớp theo mã A/C" / "Lệch mã" cho phần mã khác — kiểm xác thật, sửa mã B trên đơn hoặc tách dòng BBBG theo đúng mã.</td></tr>
+<tr><td>BBBG có mã case của đối tác khác (vd NSKX trong BBBG KAROFI)</td><td>Dòng đó báo khác đối tác, không vào thùng — tạo thùng riêng cho đối tác kia.</td></tr>
+<tr><td>Quên ghi kiện trước khi tải BBBG</td><td>Cột Kiện ghi "Chưa ghi kiện"; mở thùng (khi còn Nháp / Chờ KT) → 📦 Ghi kiện → tải lại.</td></tr>
 </table>
 <p style="font-size:13px;color:#6b7280">Ảnh minh hoạ chụp từ app chạy thử với dữ liệu mẫu (tên người, case, linh kiện, đối tác không có thật). Bấm vào ảnh để phóng to.</p>
 </section>

@@ -88,8 +88,10 @@ export function ghepBbbg(dongs: BbbgDong[], ungVien: XacUngVien[]): { rows: Dong
     const k = x.case_id.toUpperCase();
     theoCase.set(k, [...(theoCase.get(k) || []), x]);
   }
-  // Uu tien xac cho gom, roi xac tra doi tac khac, roi con lai; on dinh theo ma.
-  for (const l of theoCase.values()) l.sort((a, b) => b.cho_gom - a.cho_gom || Number(!!a.thung_xac_id) - Number(!!b.thung_xac_id) || a.id.localeCompare(b.id));
+  // Uu tien xac cho gom, roi xac tra doi tac khac (ke ca dang trong thung -> bao "Dang trong thung khac" thay vi ghep nham vao don vi
+  // khong phai xac), roi con lai; on dinh theo ma.
+  const laXacTra = (x: XacUngVien) => (x.id.startsWith("DX-") || (x.huong_xu_ly === "doi_moi" && x.xu_ly_xac === "tra_doi_tac") ? 1 : 0);
+  for (const l of theoCase.values()) l.sort((a, b) => b.cho_gom - a.cho_gom || laXacTra(b) - laXacTra(a) || Number(!!a.thung_xac_id) - Number(!!b.thung_xac_id) || a.id.localeCompare(b.id));
   const dung = new Set<string>();
   const kq = new Map<number, { x: XacUngVien | null; ac: boolean; lech: boolean }>();
   const luot = (khop: (x: XacUngVien, d: BbbgDong) => boolean, ac: boolean, lech: boolean) => {
