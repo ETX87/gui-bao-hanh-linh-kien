@@ -19,6 +19,7 @@ import { ChiTietDong, THIEU_HANG_MO, ThieuHangBadge, type ThieuHangRow } from ".
 const NHOM = [
   { k: "can_xem", label: "Có kết quả, chưa nắm" },
   { k: "mo", label: "Đang chờ hàng" },
+  { k: "cho_de_xuat", label: "Đã về — chờ đề xuất LK" },
   { k: "da_ve", label: "Hàng đã về" },
   { k: "dong", label: "Đã đóng" },
   { k: "tat_ca", label: "Tất cả" },
@@ -91,7 +92,7 @@ export function ThieuHangListScreen({ user }: { user: AppUser }) {
         </span>
       ),
     },
-    { key: "tt", header: "Trạng thái", render: (r) => <span className="inline-flex items-center gap-1"><ThieuHangBadge tt={r.trang_thai} />{coTheXem(r) && <Badge tone="red">Mới</Badge>}</span> },
+    { key: "tt", header: "Trạng thái", render: (r) => <span className="inline-flex items-center gap-1"><ThieuHangBadge tt={r.trang_thai} />{!!r.cho_de_xuat && <Badge tone="green">Chờ đề xuất LK</Badge>}{coTheXem(r) && <Badge tone="red">Mới</Badge>}</span> },
     { key: "lk", header: "Linh kiện thiếu", render: (r) => <span className="truncate block max-w-[260px]" title={r.ma_lk}>{r.ten_lk || nameOf(r.ma_lk)} × {r.so_luong}</span> },
     { key: "ticket", header: "Ticket / dự kiến", render: (r) => <ChiTietDong r={r} /> },
     { key: "ktv", header: "KTV", render: (r) => (r.ktv ? <UserName email={r.ktv} /> : "Khách lẻ") },

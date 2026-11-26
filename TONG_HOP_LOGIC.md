@@ -78,6 +78,12 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   dù đơn còn bảo hành. Đây là loại GỢI Ý — từ v1.152 (app Đặt LK v1.547) NV được chọn loại khác trên app Đặt LK (VD sản
   phẩm hết BH nhưng linh kiện bên trong còn BH); lần cấp chọn khác gợi ý lưu `lk_loai_goi_y` + lý do và hiện cảnh báo đỏ "Khác loại gợi ý".
 - Đối tác = danh mục `doi_tac_bh` (tự nạp từ CRM, đánh dấu Karofi); Hãng = chữ CRM, Admin BH sửa được.
+- **Thiếu hàng → hàng về → đề xuất** (v1.164): ticket thiếu hàng (THB, `lib/thieuHang.ts`) chỉ BÁO THIẾU, Kho xác nhận "Hàng đã về" **không tự tạo
+  đề xuất / đơn cấp LK**. Hệ thống CẢNH BÁO khi: ticket "Hàng đã về" + đơn vị còn đang sửa (`cho_chan_doan`, bước duy nhất tạo được đề xuất) + chưa có
+  đề xuất CÙNG mã LK (không huỷ / từ chối) tạo sau lúc báo thiếu (`HANG_VE_CHO_DX_SQL`). Báo cho: NV sửa chữa được giao (push ngay lúc hàng về + số việc
+  `nv_hang_ve_cho_dx` ở tab "Việc sửa của tôi") và Admin BH theo miền (`admin_hang_ve_cho_dx`, tab 📦 Thiếu hàng nhóm "Đã về — chờ đề xuất LK"); cả 2 vào
+  thông báo tổng hợp 12h. Chi tiết đơn: dòng xanh "Hàng đã về — có thể đặt linh kiện để sửa chữa" + nhãn "Chờ đề xuất LK". Tự hết khi đã đề xuất đúng mã
+  hoặc đơn vị rời bước đang sửa. Đề xuất bằng mã thay thế (khác mã đã báo thiếu) thì cảnh báo vẫn còn tới khi đơn vị rời bước sửa.
 
 ## 5. Xác nhận tiêu hao & trừ công nợ sửa chữa
 

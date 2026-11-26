@@ -1,6 +1,7 @@
 import type { Env } from "../types";
 import { nowVN } from "./vnTime";
 import { normVi } from "./timKiem";
+import { sendPushToUser } from "./webPush";
 
 // THIEU HANG BAO HANH -> ticket ben linh-kien-app (04/11/2026, migration 0026; ben kia migration 0106, routes/thieuHangBh.ts).
 //   - Tu dong: moi dong nhat ky co "Ly do cham: Khong co linh kien | Het hang ton kho" (addLog - xem lib/logs.ts) tren don vi / don cha /
@@ -21,6 +22,15 @@ export const THB_LABEL: Record<string, string> = {
   "Da huy": "Đã rút lại",
 };
 export const THB_MO_LOCAL = ["Cho gui", "Cho kho xu ly", "Kho da tiep nhan", "Cho mua hang", "Mua hang da dat"];
+
+// HANG DA VE -> CHO DE XUAT LINH KIEN (26/11/2026, v1.164). Nguyen van: "vậy thì phải tạo cảnh báo cho các bên biết đơn đó hàng đã về, có
+// thể đặt để sửa chữa". Ticket "Hang da ve" KHONG tu tao de xuat / don cap LK - chi canh bao: ticket da ve + don vi con dang sua
+// (cho_chan_doan - buoc duy nhat tao duoc de xuat, routes/deXuat.ts) + CHUA co de xuat CUNG ma LK (khong huy / tu choi) tao sau luc bao
+// thieu. Tu het canh bao khi da de xuat ma do, hoac don vi roi buoc dang sua (nop ket qua / doi huong). Dung chung: workload (menu + thong
+// bao 12h), routes/thieuHang.ts (nhom "cho_de_xuat", co cho_de_xuat tung dong). t = thieu_hang_bh, u = phieu_sua_chua_bh_ct.
+export const HANG_VE_CHO_DX_SQL = (t = "t", u = "u") =>
+  `(${t}.trang_thai = 'Kho xac nhan hang da ve' AND ${u}.trang_thai = 'cho_chan_doan' AND NOT EXISTS (SELECT 1 FROM de_xuat_linh_kien_bh dx
+    WHERE dx.unit_id = ${t}.unit_id AND dx.ma_lk = ${t}.ma_lk AND dx.trang_thai NOT IN ('huy', 'tu_choi') AND dx.created_at >= ${t}.ngay_bao))`;
 
 /** Ly do cham thuoc nhom thieu hang (so khop khong dau, chiu duoc ten danh muc co / khong dau). */
 export function laLyDoThieuHang(lyDo: string | null | undefined): boolean {
@@ -195,14 +205,32 @@ export interface TicketLk {
 }
 
 /** Ap ban tin ticket tu linh-kien-app vao dong local + ghi nhat ky don vi khi co thay doi. */
-export async function apDungTicketLk(db: D1Database, rows: TicketLk[]): Promise<number> {
+/** Push "hang da ve - de xuat linh kien de sua" cho NV sua chua cua don vi (chi khi don vi dang o buoc sua). */
+async function baoHangVe(env: Env, unitId: string, maLk: string): Promise<number> {
+  const u = await env.DB
+    .prepare(
+      `SELECT u.nguoi_sua_chua, u.trang_thai, p.case_id, (SELECT ten_lk FROM linh_kien_bh WHERE ma_lk = ?) AS ten
+       FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id = ?`,
+    )
+    .bind(maLk, unitId)
+    .first<{ nguoi_sua_chua: string | null; trang_thai: string; case_id: string | null; ten: string | null }>();
+  if (!u?.nguoi_sua_chua || u.trang_thai !== "cho_chan_doan") return 0;
+  return sendPushToUser(env, u.nguoi_sua_chua, {
+    title: `📦 Hàng đã về — ${unitId}`,
+    body: `${u.ten ?? maLk}${u.case_id ? ` (case ${u.case_id})` : ""} đã về kho. Vào đơn bấm "+ Đề xuất linh kiện" để đặt sửa chữa.`,
+    url: "/don?tab=nv",
+  });
+}
+
+export async function apDungTicketLk(env: Env, rows: TicketLk[]): Promise<number> {
+  const db = env.DB;
   let n = 0;
   for (const t of rows) {
     if (!t?.id || !t.trang_thai) continue;
     const cur = await db
-      .prepare("SELECT id, unit_id, trang_thai, ngay_du_kien, ma_eo_mua, cap_nhat_lk FROM thieu_hang_bh WHERE ticket_id = ?")
+      .prepare("SELECT id, unit_id, ma_lk, trang_thai, ngay_du_kien, ma_eo_mua, cap_nhat_lk FROM thieu_hang_bh WHERE ticket_id = ?")
       .bind(t.id)
-      .first<{ id: number; unit_id: string; trang_thai: string; ngay_du_kien: string | null; ma_eo_mua: string | null; cap_nhat_lk: string | null }>();
+      .first<{ id: number; unit_id: string; ma_lk: string; trang_thai: string; ngay_du_kien: string | null; ma_eo_mua: string | null; cap_nhat_lk: string | null }>();
     if (!cur) continue;
     if (cur.cap_nhat_lk && t.ngay_cap_nhat && cur.cap_nhat_lk > t.ngay_cap_nhat) continue; // ban tin cu den muon
     const doi = cur.trang_thai !== t.trang_thai || (cur.ngay_du_kien ?? "") !== (t.ngay_du_kien ?? "") || (cur.ma_eo_mua ?? "") !== (t.ma_eo_mua ?? "");
@@ -223,6 +251,8 @@ export async function apDungTicketLk(db: D1Database, rows: TicketLk[]): Promise<
       ].filter(Boolean);
       await logDonVi(db, cur.unit_id, t.nguoi_xu_ly_ten || t.nguoi_xu_ly || "Kho (app Đặt mua LK)", parts.join(" | "));
       n++;
+      // v1.164: vua chuyen sang "Hang da ve" -> push ngay cho NV sua chua duoc giao (don vi con dang sua) de vao de xuat linh kien.
+      if (t.trang_thai === "Kho xac nhan hang da ve" && cur.trang_thai !== t.trang_thai) await baoHangVe(env, cur.unit_id, cur.ma_lk).catch(() => 0);
     }
   }
   return n;
@@ -247,7 +277,7 @@ export async function dongBoThieuHang(env: Env): Promise<{ da_gui: number; cap_n
       if (!res.ok) throw new Error(`HTTP_${res.status}`);
       const data = (await res.json()) as { rows?: TicketLk[]; het?: boolean };
       const rows = data.rows ?? [];
-      capNhat += await apDungTicketLk(env.DB, rows);
+      capNhat += await apDungTicketLk(env, rows);
       if (rows.length) {
         since = rows[rows.length - 1].ngay_cap_nhat;
         after = rows[rows.length - 1].id;
@@ -285,7 +315,7 @@ export async function huyThieuHang(env: Env, id: number, actor: string, lyDo: st
       if (data.error === "WRONG_STATE") await dongBoThieuHang(env).catch(() => undefined);
       return { error: data.error === "WRONG_STATE" ? "TICKET_DA_DONG" : data.error ?? `HTTP_${res.status}` };
     }
-    await apDungTicketLk(env.DB, data.rows ?? []);
+    await apDungTicketLk(env, data.rows ?? []);
   } else {
     await env.DB.prepare("UPDATE thieu_hang_bh SET trang_thai = 'Da huy', ghi_chu_xu_ly = ?, nguoi_xu_ly = ?, updated_at = ?, da_xem = 1 WHERE id = ?").bind(lyDo || null, actor, now, id).run();
     await logDonVi(env.DB, row.unit_id, actor, `📦 Rút lại báo thiếu hàng (chưa gửi sang Kho)${lyDo ? `: ${lyDo}` : ""}`);

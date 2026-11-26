@@ -36,6 +36,8 @@ export interface ThieuHangRow {
   case_id: string | null;
   ktv: string | null;
   mien: string | null;
+  // v1.164: 1 = hang da ve, don vi dang sua, chua de xuat dung ma LK nay (backend HANG_VE_CHO_DX_SQL).
+  cho_de_xuat?: number;
 }
 
 const TT: Record<string, { label: string; tone: "amber" | "blue" | "green" | "red" | "gray" | "orange" }> = {
@@ -101,6 +103,7 @@ export function ThieuHangSection({ unitId, defaultLk, user, nguoiSuaChua, onChan
       toast(errorMessage(e), "error");
     }
   };
+  const choDx = rows.filter((r) => r.cho_de_xuat);
   const chuaXem = rows.filter((r) => !r.da_xem && !THIEU_HANG_MO.includes(r.trang_thai) && r.trang_thai !== "Da huy");
   return (
     <Section
@@ -120,6 +123,12 @@ export function ThieuHangSection({ unitId, defaultLk, user, nguoiSuaChua, onChan
         </>
       }
     >
+      {choDx.length > 0 && (
+        <div className="mb-2 rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] text-[var(--green-700)] px-3 py-2 text-[13px]">
+          <b>✅ Hàng đã về — có thể đặt linh kiện để sửa chữa:</b> {choDx.map((r) => `${r.ten_lk || nameOf(r.ma_lk)} × ${r.so_luong}`).join(", ")}.
+          <span className="text-[var(--ink-soft)]"> Bấm "+ Đề xuất linh kiện" (khối Đề xuất linh kiện ở trên) để tạo đơn cấp linh kiện. Cảnh báo tự hết khi đã đề xuất đúng mã này.</span>
+        </div>
+      )}
       {rows.length === 0 ? (
         <p className="text-[13px] text-[var(--ink-soft)]">Chưa báo thiếu hàng. Khi chọn lý do chậm "Không có linh kiện" / "Hết hàng tồn kho", hệ thống tự gửi yêu cầu sang Kho / Mua hàng.</p>
       ) : (
@@ -130,6 +139,7 @@ export function ThieuHangSection({ unitId, defaultLk, user, nguoiSuaChua, onChan
                 {r.ten_lk || nameOf(r.ma_lk)} <span className="text-[var(--ink-soft)] font-normal">× {r.so_luong}</span>
               </span>
               <ThieuHangBadge tt={r.trang_thai} />
+              {!!r.cho_de_xuat && <Badge tone="green">Chờ đề xuất LK</Badge>}
               {!r.da_xem && !THIEU_HANG_MO.includes(r.trang_thai) && r.trang_thai !== "Da huy" && <Badge tone="red">Mới</Badge>}
               {quanLy && THIEU_HANG_MO.includes(r.trang_thai) && (
                 <Btn size="sm" variant="ghost" className="ml-auto" onClick={() => setHuy(r)}>

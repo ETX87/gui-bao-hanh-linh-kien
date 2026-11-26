@@ -166,7 +166,7 @@ sync.post("/linh-kien", async (c) => {
 sync.post("/thieu-hang", async (c) => {
   const body = await c.req.json<{ rows?: TicketLk[] }>().catch(() => ({}) as { rows?: TicketLk[] });
   if (!Array.isArray(body.rows) || body.rows.length > 500) return c.json({ error: "INVALID_BODY" }, 400);
-  return c.json({ cap_nhat: await apDungTicketLk(c.env.DB, body.rows) });
+  return c.json({ cap_nhat: await apDungTicketLk(c.env, body.rows) });
 });
 
 

@@ -3,6 +3,19 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 26/11/2026 — v1.164: Cảnh báo "Hàng đã về — đề xuất linh kiện để sửa chữa" cho ticket thiếu hàng
+
+- Yêu cầu (nguyên văn): "mã "SC2611090581" này đã tạo đơn linh kiện, nhưng bên app linh kiện lại không tìm thấy =>> check bug"; "logic đơn thiếu hàng này
+  có tự động sau khi hàng về sẽ đẩy sang đặt hàng sửa chữa không?"; "vậy thì phải tạo cảnh báo cho các bên biết đơn đó hàng đã về, có thể đặt để sửa chữa".
+- Tra D1 thật (chỉ đọc): DH-006253-1 không có đề xuất / đơn đặt nào, chỉ 4 ticket THB-000144 → 147 (mã case đúng cả 2 bên) → không phải lỗi dữ liệu;
+  app Đặt LK v1.566 thêm gợi ý ticket THB khi danh sách Đơn hàng tìm ra 0 đơn. Ticket "Hàng đã về" không tự tạo đề xuất (đúng logic hiện có).
+- Đã làm: `HANG_VE_CHO_DX_SQL` (lib/thieuHang.ts) = hàng đã về + đơn vị đang sửa + chưa đề xuất cùng mã LK; số việc `nv_hang_ve_cho_dx` (NV được giao)
+  và `admin_hang_ve_cho_dx` (Admin BH theo miền) trên menu / trang chủ / thông báo 12h; push ngay cho NV khi ticket chuyển "Hàng đã về"
+  (`apDungTicketLk` nhận `env`); `/api/thieu-hang` thêm nhóm `cho_de_xuat` + cờ `cho_de_xuat` từng dòng; chi tiết đơn có dòng xanh + nhãn "Chờ đề xuất LK".
+- Kiểm thử: typecheck BE + FE, build xanh; chạy điều kiện trên D1 thật (chỉ đọc): 12 đơn vị đang thuộc diện cảnh báo (MN, cùng 1 NV, mã 2013100243),
+  8 đơn vị hàng về khác đã đề xuất nên không bị báo. Chưa thử push trên điện thoại thật.
+- Mở: hàng về khi đơn vị chưa giao NV (`cho_phan_loai`) chỉ có cảnh báo cũ "đã có kết quả" cho Admin BH; đề xuất bằng mã thay thế không tắt cảnh báo.
+
 ## 26/11/2026 — v1.163: Hướng dẫn HTML trả xác thêm Ghi kiện / Tải BBBG / Import BBBG + sửa ưu tiên ghép Import BBBG
 
 - Yêu cầu (nguyên văn): "Cập nhật hướng dẫn" (trả lời câu hỏi cập nhật hướng dẫn HTML trả xác — ảnh chụp, 5W1H — cho 3 tính năng mới).

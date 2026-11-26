@@ -7664,3 +7664,17 @@ FE `lib/bbbgXlsx.ts`, `lib/xlsx.ts` (`XlsxSheet`: merges / style / số / height
 **(e) v1.163 (26/11/2026, "Cập nhật hướng dẫn"):** hướng dẫn HTML trả xác thêm mục 6 (Ghi kiện + Tải BBBG) và 7 (Import BBBG), ảnh chụp bằng
 `Huong-dan-Tra-xac/chup.mjs` (Chrome headless qua CDP, không cần thư viện). Sửa `ghepBbbg`: sắp ứng viên chờ gom → xác trả đối tác (kể cả trong thùng)
 → còn lại, tránh ghép dòng BBBG vào đơn vị không phải xác khi xác thật đã ở thùng khác.
+
+## Thiếu hàng đã về → cảnh báo đề xuất linh kiện (26/11/2026) — v1.164
+
+Nguyên văn: "mã "SC2611090581" này đã tạo đơn linh kiện, nhưng bên app linh kiện lại không tìm thấy =>> check bug" → tra D1 thật: chỉ có 4 ticket THB,
+không có đề xuất / DDH; dữ liệu 2 bên khớp (app Đặt LK v1.566 thêm gợi ý THB khi danh sách Đơn hàng tìm ra 0 đơn). "logic đơn thiếu hàng này có tự động sau khi
+hàng về sẽ đẩy sang đặt hàng sửa chữa không?" → KHÔNG (ticket chỉ báo thiếu). "vậy thì phải tạo cảnh báo cho các bên biết đơn đó hàng đã về, có thể đặt để sửa chữa".
+
+Đã chốt (làm theo yêu cầu trên, không tự tạo đề xuất): điều kiện `HANG_VE_CHO_DX_SQL(t, u)` ở `lib/thieuHang.ts` — `t.trang_thai = 'Kho xac nhan hang da ve'`
+AND `u.trang_thai = 'cho_chan_doan'` AND không có `de_xuat_linh_kien_bh` cùng `unit_id` + `ma_lk`, trạng thái khác `huy` / `tu_choi`, `created_at >= t.ngay_bao`.
+Người nhận: NV sửa chữa (`u.nguoi_sua_chua`) — push `baoHangVe()` ngay trong `apDungTicketLk` khi trạng thái vừa đổi sang "Hàng đã về" (đổi chữ ký nhận `env`;
+gọi từ cron kéo, đẩy về `routes/sync.ts`, đồng bộ tay) + `nv_hang_ve_cho_dx`; Admin BH theo miền `admin_hang_ve_cho_dx`. Hai ô mới có trong `lib/thongBao.ts`
+(gấp), `useWorkload`, `routes.ts`, `Home.tsx`, tab "Việc sửa của tôi" / "📦 Thiếu hàng". FE: `ThieuHang.tsx` dòng xanh + nhãn "Chờ đề xuất LK";
+`ThieuHangList.tsx` nhóm "Đã về — chờ đề xuất LK". Kiểm: D1 thật 12 đơn vị đang thuộc diện (đúng dữ liệu). Mở: hàng về khi chưa giao NV; đề xuất mã thay thế.
+

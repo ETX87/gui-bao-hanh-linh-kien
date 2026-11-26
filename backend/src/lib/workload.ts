@@ -2,6 +2,7 @@ import { DX_XAC_NHAN_SQL, DOI_TAC_ID_SQL } from "./doiTac";
 import type { AppUser } from "../types";
 import { mienScope } from "./mien";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM } from "./xac";
+import { HANG_VE_CHO_DX_SQL } from "./thieuHang";
 
 // GET /api/workload - dem "viec can lam" cho tung nhom vai tro trong 1 request duy nhat.
 //
@@ -38,8 +39,10 @@ export const EMPTY_COUNTS = {
   admin_de_xuat_cho_cap: 0,
   admin_xn_tieu_hao: 0,
   admin_thieu_hang_da_ve: 0,
+  admin_hang_ve_cho_dx: 0,
   admin_phieu_tra_tu_choi: 0,
   nv_cho_chan_doan: 0,
+  nv_hang_ve_cho_dx: 0,
   ketoan_cho_duyet: 0,
   ketoan_de_xuat_lk: 0,
   admin_xac_cho_gom: 0,
@@ -204,6 +207,13 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
       ).then((r) => {
         counts.admin_thieu_hang_da_ve = r?.cnt ?? 0;
       }),
+      // 26/11/2026 (v1.164): don vi co ticket thieu hang "Hang da ve", con dang sua, chua de xuat dung ma LK do (lib/thieuHang.ts HANG_VE_CHO_DX_SQL).
+      one(
+        `SELECT COUNT(DISTINCT t.unit_id) as cnt FROM thieu_hang_bh t JOIN phieu_sua_chua_bh_ct u ON u.id = t.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${HANG_VE_CHO_DX_SQL()}${mp.sql}`,
+        ...mp.binds,
+      ).then((r) => {
+        counts.admin_hang_ve_cho_dx = r?.cnt ?? 0;
+      }),
       // 13/11/2026: tra xac linh kien - xac cho gom thung, thung nhap, thung KT tra lai.
       one(
         `SELECT (SELECT COUNT(*) FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE ${XAC_CHO_GOM}${mp.sql})
@@ -253,6 +263,12 @@ export async function demWorkload(db: D1Database, user: AppUser): Promise<Counts
     jobs.push(
       one(`SELECT COUNT(*) as cnt FROM phieu_sua_chua_bh_ct WHERE trang_thai = 'cho_chan_doan' AND nguoi_sua_chua = ?`, user.email).then((r) => {
         counts.nv_cho_chan_doan = r?.cnt ?? 0;
+      }),
+      one(
+        `SELECT COUNT(DISTINCT t.unit_id) as cnt FROM thieu_hang_bh t JOIN phieu_sua_chua_bh_ct u ON u.id = t.unit_id WHERE u.nguoi_sua_chua = ? AND ${HANG_VE_CHO_DX_SQL()}`,
+        user.email,
+      ).then((r) => {
+        counts.nv_hang_ve_cho_dx = r?.cnt ?? 0;
       }),
     );
   }

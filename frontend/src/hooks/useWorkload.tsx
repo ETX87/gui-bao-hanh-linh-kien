@@ -35,8 +35,10 @@ export interface WorkloadCounts {
   admin_de_xuat_cho_cap: number;
   admin_xn_tieu_hao: number;
   admin_thieu_hang_da_ve: number;
+  admin_hang_ve_cho_dx: number;
   admin_phieu_tra_tu_choi: number;
   nv_cho_chan_doan: number;
+  nv_hang_ve_cho_dx: number;
   ketoan_cho_duyet: number;
   ketoan_de_xuat_lk: number;
   admin_xac_cho_gom: number;
@@ -69,8 +71,10 @@ const EMPTY: WorkloadCounts = {
   admin_de_xuat_cho_cap: 0,
   admin_xn_tieu_hao: 0,
   admin_thieu_hang_da_ve: 0,
+  admin_hang_ve_cho_dx: 0,
   admin_phieu_tra_tu_choi: 0,
   nv_cho_chan_doan: 0,
+  nv_hang_ve_cho_dx: 0,
   ketoan_cho_duyet: 0,
   ketoan_de_xuat_lk: 0,
   admin_xac_cho_gom: 0,

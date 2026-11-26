@@ -4,7 +4,7 @@ import { verifySessionMiddleware } from "../middleware/session";
 import { loadUser } from "../middleware/loadUser";
 import { mienScope } from "../lib/mien";
 import { parsePage } from "../lib/pagination";
-import { dongBoThieuHang, guiThieuHangCho, huyThieuHang, taoYeuCauThieuHang, THB_MO_LOCAL } from "../lib/thieuHang";
+import { dongBoThieuHang, guiThieuHangCho, HANG_VE_CHO_DX_SQL, huyThieuHang, taoYeuCauThieuHang, THB_MO_LOCAL } from "../lib/thieuHang";
 
 // /api/thieu-hang (04/11/2026) - yeu cau thieu linh kien gui sang linh-kien-app (lib/thieuHang.ts, migration 0026).
 const r = new Hono<{ Bindings: Env }>();
@@ -14,7 +14,8 @@ const xemDuoc = (u: AppUser) => u.la_admin_bh || u.la_qtri || u.la_kho || u.la_k
 const quanLy = (u: AppUser) => u.la_admin_bh || u.la_qtri;
 const DONG_CAN_XEM = ["Kho xac nhan hang da ve", "Kho tu choi", "Mua hang tu choi"];
 
-const SELECT = `SELECT t.*, l.ten_lk, p.case_id, p.id AS parent_id, p.mien, g.nguoi_tao AS ktv, u.trang_thai AS unit_trang_thai,
+const SELECT = `SELECT t.*, l.ten_lk, p.case_id, p.id AS parent_id, p.mien, g.nguoi_tao AS ktv, u.trang_thai AS unit_trang_thai, u.nguoi_sua_chua,
+    CASE WHEN ${HANG_VE_CHO_DX_SQL()} THEN 1 ELSE 0 END AS cho_de_xuat,
     (SELECT ten FROM users WHERE email = t.nguoi_bao) AS nguoi_bao_ten
   FROM thieu_hang_bh t
   JOIN phieu_sua_chua_bh_ct u ON u.id = t.unit_id
@@ -22,7 +23,7 @@ const SELECT = `SELECT t.*, l.ten_lk, p.case_id, p.id AS parent_id, p.mien, g.ng
   LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
   LEFT JOIN linh_kien_bh l ON l.ma_lk = t.ma_lk`;
 
-// GET /api/thieu-hang?nhom=mo|da_ve|can_xem|dong|tat_ca&q=&limit=&offset=
+// GET /api/thieu-hang?nhom=mo|da_ve|cho_de_xuat|can_xem|dong|tat_ca&q=&limit=&offset=
 r.get("/", async (c) => {
   const user = c.get("user");
   if (!xemDuoc(user)) return c.json({ error: "FORBIDDEN" }, 403);
@@ -41,6 +42,7 @@ r.get("/", async (c) => {
   const nhomSql: Record<string, string> = {
     mo: `t.trang_thai IN (${THB_MO_LOCAL.map((x) => `'${x}'`).join(",")})`,
     da_ve: "t.trang_thai = 'Kho xac nhan hang da ve'",
+    cho_de_xuat: HANG_VE_CHO_DX_SQL(), // v1.164: hang da ve, don vi dang sua, chua de xuat dung ma LK
     can_xem: `t.da_xem = 0 AND t.trang_thai IN (${DONG_CAN_XEM.map((x) => `'${x}'`).join(",")})`,
     dong: `t.trang_thai NOT IN (${THB_MO_LOCAL.map((x) => `'${x}'`).join(",")})`,
     tat_ca: "1=1",
