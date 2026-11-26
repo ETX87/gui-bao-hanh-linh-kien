@@ -3,6 +3,21 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 26/11/2026 — v1.162: Trả xác — nút Tải BBBG theo thùng, số kiện từng xác, Import BBBG theo mã case + mã hàng
+
+- Yêu cầu (nguyên văn): "Làm cả 3" (trả lời câu hỏi làm phần bổ sung cho app: nút Tải BBBG, số kiện, import theo case).
+- Đã làm: (1) migration `0047_xac_kien.sql` (`xac_kien` trên đơn vị + đề xuất); `PATCH /api/tra-xac/thung/:id/kien` ghi / xoá kiện hàng loạt
+  (thùng Nháp / Chờ KT), bỏ xác khỏi thùng thì xoá kiện; chi tiết thùng có thanh "📦 Ghi kiện" + cột Kiện + cảnh báo "n xác chưa ghi kiện".
+  (2) Nút "⬇ Tải BBBG" (`lib/bbbgXlsx.ts`): Excel 3 sheet — BBBG theo mẫu công ty (1 mã B 1 dòng, Kiện, mã case ×n, tổng, khung ký; chưa duyệt ghi
+  BẢN NHÁP), Chi tiết xác, Theo kiện; `lib/xlsx.ts` thêm ô số, gộp ô, kiểu ô. (3) "⬆ Import BBBG" (tab Xác chờ gom, `ImportBbbg.tsx` +
+  `POST /api/tra-xac/import-bbbg` + `lib/ghepBbbg.ts`): đọc BBBG lập tay (cột Mã hàng + MYC nhiều mã, ô Số thùng gộp), ghép 1–1 qua 3 lượt
+  B → A/C → lệch, xem trước theo kết luận (lọc chọn nhiều), tải file kết quả đối chiếu, chỉ đưa dòng khớp (+ A/C nếu tick) vào thùng có sẵn / mới,
+  ghi kiện. `lib/xlsxRead.ts` thêm `readSheetFileFull` (giữ đúng số dòng Excel + vùng gộp ô).
+- Kiểm thử: typecheck BE + FE sạch; logic ghép chạy trên dữ liệu thật đợt 18/11 (fixture tra D1) ra đúng 467 khớp / 15 A/C / 16 lệch / 9 đã có kết quả /
+  3 không phải xác trả / 1 thừa / 13 app thiếu, không ghép trùng xác; local: import file BBBG thử (dòng 8–12, ô gộp kiện, khác miền, từ chối, không có mã)
+  → tạo TX-000005, ghi kiện, nhật ký thùng; Tải BBBG local + dựng BBBG 54 mã hàng từ dữ liệu thật, mở bằng openpyxl đúng bố cục.
+- Còn mở: chưa đưa 482 xác đợt 18/11 vào thùng trên app thật (chờ người dùng kiểm 29 xác lệch rồi tự Import BBBG); chu kỳ gom thùng chưa chốt.
+
 ## 26/11/2026 — Đối chiếu BBBG trả xác KAROFI 18/11 với D1 thật + logic / quy trình BBBG (tài liệu, không đổi mã)
 
 - Yêu cầu (nguyên văn): "nhân viên gửi cho tôi mẫu duyệt trả xác như sau, phân tích vấn đề,=> đưa ra phương án phù hợp";

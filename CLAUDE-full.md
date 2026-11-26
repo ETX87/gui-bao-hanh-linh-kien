@@ -7642,3 +7642,21 @@ tab "Đã xử lý khác" → "↺ Đưa lại chờ gom" (tay hoặc import `du
 `NUM_THUNG` (n = số xác), `timeFilter` cn / kt, `SORT_THUNG`.
 
 **(c) Kiểm thử:** xem nhật ký làm việc. Ảnh mới trong `du an sua chua bao hanh/Huong-dan-Tra-xac/anh/` (tx-05, 06, 06b, 11, 12), tài liệu dựng lại.
+
+## Trả xác — Tải BBBG theo thùng, số kiện, Import BBBG theo mã case + mã hàng (26/11/2026) — v1.162
+
+**(a) Nguyên văn:** *"nhân viên gửi cho tôi mẫu duyệt trả xác như sau, phân tích vấn đề,=> đưa ra phương án phù hợp"* → *"tách các mã "MYC" thành từng ID
+rồi gắn với linh kiện trả tại cột B rồi đối chiếu với data thật để đánh giá"* → *"tôi cần logic và cách xử lý sau này"* → *"Làm cả 3"*.
+
+**(b) Đã chốt:** BBBG lập TỪ thùng TX (không lập tay trước); 1 xác = 1 mã xác app; mã hàng BBBG = mã B; 1 mã 1 dòng; số kiện ghi theo từng xác.
+Import BBBG: mỗi mã case trong ô MYC = 1 xác; ghép 3 lượt (B → A/C → lệch) để dòng khớp đúng không bị dòng lệch lấy mất xác; mặc định chỉ dòng
+"Khớp – chờ gom" vào thùng, "Khớp theo mã A/C" chỉ khi người import tick (đã kiểm xác thật). Ô "Số thùng" gộp → áp cho cả vùng gộp; ô trống không gộp
+= chưa ghi kiện (không tự kéo kiện dòng trên). Kiện bỏ tiền tố "Thùng"/"Kiện", ≤ 40 ký tự. Quyền: Import BBBG + ghi kiện = Admin BH / qtri / Trả xác
+(trong phạm vi đối tác được gán); Tải BBBG = ai xem được thùng.
+
+**(c) Mã:** `migrations/0047_xac_kien.sql`; BE `routes/xac.ts` (`xacFrom` + `x.kien`, `PATCH /thung/:id/kien`, `POST /import-bbbg`, `chuanKien`), `lib/ghepBbbg.ts`;
+FE `lib/bbbgXlsx.ts`, `lib/xlsx.ts` (`XlsxSheet`: merges / style / số / heights), `lib/xlsxRead.ts` (`readSheetFileFull`), `screens/xac/ImportBbbg.tsx`,
+`TraXacScreen.tsx` (nút Import BBBG, Tải BBBG, thanh Ghi kiện, cột Kiện).
+
+**(d) Kiểm thử:** xem nhật ký làm việc 26/11/2026 v1.162. Script kiểm với dữ liệu thật (không đưa JSON lên repo):
+`du an sua chua bao hanh/Doi-chieu-BBBG-tra-xac-KAROFI_18-11/thu_ghep.ts`, `thu_bbbg.mts`.

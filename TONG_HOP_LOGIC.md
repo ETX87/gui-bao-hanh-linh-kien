@@ -94,8 +94,12 @@ tới khi Kế toán duyệt (Kế toán không duyệt thùng rỗng); xác tro
 import Excel (thùng mới từ import lấy đối tác + miền của xác đầu). Người gom "Huỷ gửi KT" khi chưa duyệt; thùng nháp rỗng xoá được. Kết quả ngoài thùng:
 tiêu huỷ / thất lạc / không có xác / đã trả ngoài (+ "Lưu kho" ghi từ xác nhận tiêu hao) → tab "Đã xử lý khác", đưa lại chờ gom được; đơn trước
 01/11/2026 coi như đã xử lý ngoài (cron 15 phút tự đánh dấu cả đơn cũ phân loại muộn). Hướng dẫn: `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
-BBBG (biên bản bàn giao) phải lập TỪ thùng TX đã duyệt, đếm theo mã xác (`DH-…-n` / `DX-…`), mã hàng = mã B, 1 mã 1 dòng; BBBG lập tay thì ghép
-1–1 theo case + mã hàng (ưu tiên B, rồi A/C) trước khi gom: `du an sua chua bao hanh/Quy-trinh-doi-chieu-BBBG-tra-xac_26-11-2026.md`.
+BBBG (biên bản bàn giao): nút "⬇ Tải BBBG" trong chi tiết thùng sinh Excel 3 sheet (BBBG theo mẫu công ty — 1 mã B 1 dòng, cột Kiện, mã case ×n,
+chữ ký; Chi tiết xác; Theo kiện); thùng chưa KT duyệt ghi "BẢN NHÁP". Mỗi xác trong thùng có **số kiện** (`xac_kien`, ghi hàng loạt trong chi tiết
+thùng khi Nháp / Chờ KT; bỏ khỏi thùng thì xoá kiện). BBBG lập tay → "⬆ Import BBBG" (tab Xác chờ gom; Admin BH + Trả xác trong phạm vi đối tác):
+mỗi mã case = 1 xác, ghép 1–1 qua 3 lượt mã B → mã A/C → lệch mã (`lib/ghepBbbg.ts`), kết luận theo trạng thái xác (khớp chờ gom / khớp A/C /
+lệch mã / trong thùng khác / đã trả / đã có kết quả / không phải xác trả / chưa đủ ĐK / thừa / không có); chỉ dòng khớp (+ A/C nếu tick) qua được
+luật thùng mới vào thùng (có sẵn hoặc tạo mới), ghi kiện theo ô "Số thùng" (ô gộp áp cho cả nhóm). Quy trình: `du an sua chua bao hanh/Quy-trinh-doi-chieu-BBBG-tra-xac_26-11-2026.md`.
 
 ## 7. Lịch chạy tự động
 

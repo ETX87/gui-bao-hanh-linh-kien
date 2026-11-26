@@ -22,6 +22,8 @@ import { ExcelExportButton, type ExportCol } from "../../ui/ExcelExport";
 import { ImportXacModal } from "./ImportXac";
 import { DoiTacSelect } from "../qtri/DoiTac";
 import { LuongNgang, type MocLuong } from "../../ui/LuongNgang";
+import { taiBbbg } from "../../lib/bbbgXlsx";
+import { ImportBbbgModal } from "./ImportBbbg";
 
 // 13/11/2026 - Module quan ly tra xac linh kien. Nguyen van: "linh kiện được gửi về bh, admin bh duyệt đổi mới =>
 // xác nhận trạng thái trả xác => admin bh định kỳ sẽ gom nhiều xác linh kiện và trả về 1 đợt cho nhà máy => tạo
@@ -53,6 +55,7 @@ export interface XacRow {
   updated_at: string;
   doi_tac_id?: number | null; // 16/11/2026 (v1.142): doi tac cua don bao hanh (Admin chot > CRM)
   doi_tac?: string | null;
+  kien?: string | null; // 26/11/2026 (v1.162): so kien (thung vat ly) khi xac nam trong thung TX
 }
 interface ThungXac {
   id: string;
@@ -212,9 +215,9 @@ function LoaiBadge({ r }: { r: XacRow }) {
 }
 
 // ---- Bang xac don gian (chi tiet thung) ----
-function XacTable({ rows, selected, onToggle, onOpen, extra }: { rows: XacRow[]; selected?: Set<string>; onToggle?: (id: string) => void; onOpen?: (r: XacRow) => void; extra?: Column<XacRow> }) {
+function XacTable({ rows, selected, onToggle, onOpen, extra, extras }: { rows: XacRow[]; selected?: Set<string>; onToggle?: (id: string) => void; onOpen?: (r: XacRow) => void; extra?: Column<XacRow>; extras?: Column<XacRow>[] }) {
   const cols = useXacCols(selected, onToggle);
-  return <Table columns={extra ? [...cols, extra] : cols} rows={rows} rowKey={(r) => r.id} onRowClick={onOpen} emptyText="Không có xác nào." />;
+  return <Table columns={[...cols, ...(extras || []), ...(extra ? [extra] : [])]} rows={rows} rowKey={(r) => r.id} onRowClick={onOpen} emptyText="Không có xác nào." />;
 }
 
 type SetSel = (fn: (s: Set<string>) => Set<string>) => void;
@@ -350,6 +353,7 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
   const reload = () => reloadRef.current?.();
   const pathRef = useRef(base);
   const [imp, setImp] = useState(false);
+  const [impBbbg, setImpBbbg] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [tao, setTao] = useState(false);
@@ -364,13 +368,19 @@ function XacChoGom({ user, onChanged }: { user: AppUser; onChanged: () => void }
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <h3 className="text-[15px] lg:text-sm font-bold text-[var(--ink)]">♻️ Xác chờ gom thùng</h3>
         <span className="text-xs text-[var(--ink-soft)]">Xác KTV gửi về (đơn Đổi mới, "Trả đối tác") + xác linh kiện thay khi sửa chữa (linh kiện cấp đã xuất) — chưa vào thùng trả xác.</span>
+        {isA && (
+          <Btn size="sm" variant="secondary" className="ml-auto" onClick={() => setImpBbbg(true)} title="Đối chiếu biên bản bàn giao lập tay (mã case + mã hàng) với xác trong app rồi đưa các xác khớp vào thùng trả xác">
+            ⬆ Import BBBG
+          </Btn>
+        )}
         {quanTri(user) && (
-          <Btn size="sm" variant="secondary" className="ml-auto" onClick={() => setImp(true)} title="Ghi kết quả / đưa vào thùng cho nhiều xác bằng file Excel">
+          <Btn size="sm" variant="secondary" className={isA ? "" : "ml-auto"} onClick={() => setImp(true)} title="Ghi kết quả / đưa vào thùng cho nhiều xác bằng file Excel">
             ⬆ Import kết quả
           </Btn>
         )}
       </div>
       {imp && <ImportXacModal listPath={pathRef.current} onClose={() => setImp(false)} onDone={() => { setImp(false); done(); }} />}
+      {impBbbg && <ImportBbbgModal onClose={() => setImpBbbg(false)} onDone={(tid) => { setImpBbbg(false); done(); setOpenThung(tid); }} />}
       {isA && sel.size > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 mb-2 rounded-lg px-2.5 py-1.5 bg-[var(--brand-50)] border border-[var(--brand-200)]">
           {(
@@ -602,6 +612,9 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const [openUnit, setOpenUnit] = useState<string | null>(null);
   // 25/11/2026 (v1.161): mac dinh chi hien luong ngang + phan can thao tac; "▾ Xem chi tiết" xo tong hop, danh sach xac, nhat ky.
   const [mo, setMo] = useState(false);
+  // 26/11/2026 (v1.162): chon xac trong thung de ghi so kien (thung vat ly).
+  const [selK, setSelK] = useState<Set<string>>(new Set());
+  const [kien, setKien] = useState("");
   const load = async () => {
     try {
       const r = await api.get<{ thung: ThungXac; xac: XacRow[]; logs: ThungLog[] }>(`/tra-xac/thung/${id}`);
@@ -623,6 +636,14 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   const doiTT = !!t && (f.doi_tac_id !== (t.doi_tac_id ?? null) || f.ma_eo !== (t.ma_eo || "") || f.ghi_chu !== (t.ghi_chu || ""));
   const tt = useMemo(() => (d ? tomTat(d.xac, nameOf) : []), [d, nameOf]);
   const tomTatText = t && d ? `Thùng trả xác ${t.id}${t.ma_eo ? ` — EO ${t.ma_eo}` : ""}${t.doi_tac ? ` — ${t.doi_tac}` : ""}\nTổng: ${d.xac.length} xác (SL ${d.xac.reduce((a, r) => a + (Number(r.so_luong) || 1), 0)})\n${tt.map((x, i) => `${i + 1}) ${x.ten} × ${x.n}`).join("\n")}` : "";
+
+  const thieuKien = d ? d.xac.filter((x) => !x.kien).length : 0;
+  const taiBienBan = () => {
+    if (!t || !d) return;
+    const r = taiBbbg(t, d.xac, nameOf, displayName(user.email));
+    toast(`Đã tải BBBG ${t.id}: ${r.tong} xác, ${r.maHang} mã hàng${r.thieuKien ? ` — ${r.thieuKien} xác chưa ghi kiện` : ""}${t.trang_thai !== "da_duyet" ? " (bản nháp — thùng chưa được Kế toán duyệt)" : ""}.`, "ok");
+  };
+  const toggleK = (xid: string) => setSelK((s) => { const n = new Set(s); if (n.has(xid)) n.delete(xid); else n.add(xid); return n; });
 
   const traLaiMoi = !!t && t.trang_thai === "nhap" && !!t.ly_do_tra_lai;
   const moc: MocLuong[] = t
@@ -653,6 +674,11 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
     }
   };
   const luu = () => api.patch(`/tra-xac/thung/${id}`, f);
+  const ghiKien = (xoa?: boolean) =>
+    run(async () => {
+      await api.patch(`/tra-xac/thung/${id}/kien`, { ids: [...selK], kien: xoa ? "" : kien });
+      setSelK(new Set());
+    }, xoa ? `Đã xoá kiện của ${selK.size} xác.` : `Đã ghi kiện "${kien.trim()}" cho ${selK.size} xác.`);
   const luuNeuDoi = async () => { if (doiTT) await luu(); };
 
   const footer = t && (
@@ -683,7 +709,11 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
             <div className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px]">
               <b className="text-[var(--ink)]">{choAi}</b>
               <span className="text-[var(--ink-soft)]">· {d.xac.length} xác · {t.doi_tac || "chưa có đối tác"}{t.ma_eo ? ` · EO ${t.ma_eo}` : ""}</span>
-              <Btn size="sm" variant="ghost" className="ml-auto" onClick={() => setMo((v) => !v)}>{mo ? "▴ Thu gọn" : "▾ Xem chi tiết"}</Btn>
+              {d.xac.length > 0 && thieuKien > 0 && <span className="text-[var(--amber-700)]">· {thieuKien} xác chưa ghi kiện</span>}
+              <span className="ml-auto flex gap-1.5">
+                <Btn size="sm" variant="secondary" disabled={!d.xac.length} onClick={taiBienBan} title={t.trang_thai === "da_duyet" ? "Tải biên bản bàn giao (Excel) để in, ký, giao vận" : "Tải bản nháp biên bản — bản chính thức sau khi Kế toán duyệt"}>⬇ Tải BBBG</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => setMo((v) => !v)}>{mo ? "▴ Thu gọn" : "▾ Xem chi tiết"}</Btn>
+              </span>
             </div>
             <LuongNgang moc={moc} ketThuc={t.trang_thai === "da_duyet"} />
           </div>
@@ -765,8 +795,22 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
           </Section>
 
           <Section title={`♻️ Xác trong thùng (${d.xac.length})`} right={suaXac ? <Btn size="sm" variant="secondary" onClick={() => setThem(true)}>＋ Thêm xác</Btn> : undefined}>
+            {suaXac && d.xac.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--brand-200)] bg-[var(--brand-50)] px-2.5 py-1.5 text-sm">
+                <span className="font-semibold">📦 Ghi kiện</span>
+                <Btn size="sm" variant="ghost" onClick={() => setSelK(selK.size === d.xac.length ? new Set() : new Set(d.xac.map((x) => x.id)))}>{selK.size === d.xac.length ? "Bỏ chọn" : "Chọn tất cả"}</Btn>
+                <Btn size="sm" variant="ghost" disabled={!thieuKien} onClick={() => setSelK(new Set(d.xac.filter((x) => !x.kien).map((x) => x.id)))}>Chọn xác chưa có kiện ({thieuKien})</Btn>
+                <span className="text-xs text-[var(--ink-soft)]">Đã chọn {selK.size}</span>
+                <span className="w-32"><Input value={kien} onChange={(e) => setKien(e.target.value)} placeholder="VD 1, 2, Để ngoài" /></span>
+                <Btn size="sm" variant="primary" disabled={busy || !selK.size || !kien.trim()} onClick={() => ghiKien()}>Ghi kiện</Btn>
+                <Btn size="sm" variant="ghost" disabled={busy || !selK.size} onClick={() => ghiKien(true)}>Xoá kiện</Btn>
+              </div>
+            )}
             <XacTable
               rows={d.xac}
+              selected={suaXac ? selK : undefined}
+              onToggle={suaXac ? toggleK : undefined}
+              extras={[{ key: "kien", header: "Kiện", render: (r) => (r.kien ? <b>{r.kien}</b> : <span className="text-[var(--ink-faint)]">—</span>) }]}
               onOpen={(r) => setOpenUnit(r.unit_id)}
               extra={suaXac ? { key: "bo", header: "", render: (r) => <Btn size="sm" variant="ghost" disabled={busy} onClick={(e) => { e.stopPropagation(); run(() => api.delete(`/tra-xac/thung/${id}/xac/${r.id}`), `Đã bỏ ${r.id} khỏi thùng (về danh sách chờ gom).`); }}>✕ Bỏ</Btn> } : undefined}
             />

@@ -58,7 +58,10 @@ function textOf(el: Element | null): string {
     .join("");
 }
 
-async function readXlsx(buf: ArrayBuffer): Promise<string[][]> {
+// 26/11/2026 (v1.162): giuNguyenDong = chen dong trong theo thuoc tinh r cua <row> (so dong trung so dong Excel); merges = vung gop o
+// (0-based, dung cho BBBG tra xac: o "Số Thùng" gop cho ca nhom dong). Mac dinh giu hanh vi cu (bo dong khong co trong XML).
+export interface SheetMerge { r1: number; c1: number; r2: number; c2: number }
+async function readXlsx(buf: ArrayBuffer, giuNguyenDong = false, merges?: SheetMerge[]): Promise<string[][]> {
   const files = await unzip(buf, (n) => n === "xl/sharedStrings.xml" || n === "xl/workbook.xml" || n === "xl/_rels/workbook.xml.rels" || /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
   const parser = new DOMParser();
   // Sheet dau tien theo thu tu trong workbook.xml (khong mac dinh sheet1.xml - Excel co the danh so khac).
@@ -80,6 +83,8 @@ async function readXlsx(buf: ArrayBuffer): Promise<string[][]> {
   const doc = parser.parseFromString(sheetXml, "application/xml");
   const rows: string[][] = [];
   for (const row of Array.from(doc.getElementsByTagName("row"))) {
+    const rn = Number(row.getAttribute("r") || 0);
+    if (giuNguyenDong && rn > 0) while (rows.length < rn - 1) rows.push([]);
     const r: string[] = [];
     for (const c of Array.from(row.getElementsByTagName("c"))) {
       const ref = c.getAttribute("r");
@@ -92,6 +97,12 @@ async function readXlsx(buf: ArrayBuffer): Promise<string[][]> {
     }
     rows.push(r);
   }
+  if (merges)
+    for (const m of Array.from(doc.getElementsByTagName("mergeCell"))) {
+      const [a, b] = (m.getAttribute("ref") || "").split(":");
+      if (!a || !b) continue;
+      merges.push({ r1: Number(a.replace(/[A-Z]/gi, "")) - 1, c1: colIndex(a), r2: Number(b.replace(/[A-Z]/gi, "")) - 1, c2: colIndex(b) });
+    }
   return rows;
 }
 
@@ -135,4 +146,14 @@ export async function readSheetFile(file: File): Promise<string[][]> {
   if (name.endsWith(".csv") || name.endsWith(".txt")) return readCsv(await file.text());
   if (name.endsWith(".xls")) throw new Error("XLS_CU");
   return readXlsx(await file.arrayBuffer());
+}
+
+// Doc sheet dau tien giu dung so dong Excel (dong i = dong Excel i + 1) + danh sach vung gop o. CSV: khong co gop o.
+export async function readSheetFileFull(file: File): Promise<{ rows: string[][]; merges: SheetMerge[] }> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".csv") || name.endsWith(".txt")) return { rows: readCsv(await file.text()), merges: [] };
+  if (name.endsWith(".xls")) throw new Error("XLS_CU");
+  const merges: SheetMerge[] = [];
+  const rows = await readXlsx(await file.arrayBuffer(), true, merges);
+  return { rows, merges };
 }

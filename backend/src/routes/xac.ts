@@ -12,6 +12,7 @@ import { mienScope, mienAllowed } from "../lib/mien";
 import { normVi } from "../lib/timKiem";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM, XAC_KQ, XAC_KQ_LABEL, XAC_KQ_SQL, laDx } from "../lib/xac";
 import { DOI_TAC_ID_SQL, doiTacXacCuaToi } from "../lib/doiTac";
+import { ghepBbbg, KL_NHAN, moTaXac, type BbbgDong, type XacUngVien } from "../lib/ghepBbbg";
 
 // 13/11/2026 - Module quan ly tra xac linh kien (xem migrations/0031_thung_tra_xac.sql).
 // Luong: don vi Doi moi + xu ly xac "Tra doi tac" -> danh sach "Xac cho gom" -> Admin BH tao thung tra xac,
@@ -45,14 +46,14 @@ function xacFrom(condU: string, condD: string): string {
     SELECT u.id, 'doi_moi' AS loai, u.id AS unit_id, u.parent_id, 1 AS so_luong, p.ma_lk, u.ma_lk_nhan, ${LK_XAC} AS ma_lk_xac,
       u.ma_lk_thuc_te, ${LK_DOI} AS ma_lk_doi, p.case_id, p.mien, p.mo_ta_loi, p.tim_kiem, g.nguoi_tao AS ktv, ${KH_CASE} AS khach_hang,
       u.trang_thai, u.xac_tt, u.thung_xac_id, u.xac_xl_boi, u.xac_xl_luc, u.xac_xl_ghi_chu, u.nguoi_sua_chua,
-      u.created_at, u.updated_at, COALESCE(u.xac_xl_luc, u.updated_at) AS ngay_xl, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id
+      u.created_at, u.updated_at, COALESCE(u.xac_xl_luc, u.updated_at) AS ngay_xl, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id, u.xac_kien AS kien
     FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE ${condU}
     UNION ALL
     SELECT d.id, 'sua_chua', d.unit_id, u.parent_id, COALESCE(d.sl_dung, d.so_luong), p.ma_lk, u.ma_lk_nhan, d.ma_lk,
       d.ma_lk, d.ma_lk, p.case_id, p.mien, p.mo_ta_loi, p.tim_kiem, g.nguoi_tao, ${KH_CASE},
       u.trang_thai, d.xac_tt, d.thung_xac_id, d.xac_xl_boi, d.xac_xl_luc, d.xac_xl_ghi_chu, u.nguoi_sua_chua,
-      d.created_at, COALESCE(d.kho_xuat_luc, d.updated_at), COALESCE(d.xac_xl_luc, d.kho_xuat_luc, d.updated_at), ${DOI_TAC_ID_SQL("p")}
+      d.created_at, COALESCE(d.kho_xuat_luc, d.updated_at), COALESCE(d.xac_xl_luc, d.kho_xuat_luc, d.updated_at), ${DOI_TAC_ID_SQL("p")}, d.xac_kien
     FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
       LEFT JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
     WHERE ${condD}
@@ -60,7 +61,7 @@ function xacFrom(condU: string, condD: string): string {
 }
 const XAC_COLS = `x.id, x.loai, x.unit_id, x.parent_id, x.so_luong, x.ma_lk, x.ma_lk_nhan, x.ma_lk_xac, x.ma_lk_thuc_te, x.ma_lk_doi,
   x.case_id, x.mien, x.mo_ta_loi, x.ktv, x.khach_hang, x.trang_thai, x.xac_tt, x.thung_xac_id, x.xac_xl_boi, x.xac_xl_luc,
-  x.xac_xl_ghi_chu, x.nguoi_sua_chua, x.created_at, x.updated_at, x.ngay_xl, x.doi_tac_id,
+  x.xac_xl_ghi_chu, x.nguoi_sua_chua, x.created_at, x.updated_at, x.ngay_xl, x.doi_tac_id, x.kien,
   (SELECT dt.ten FROM doi_tac_bh dt WHERE dt.id = x.doi_tac_id) AS doi_tac`;
 const XAC_NGOAI_U = `u.huong_xu_ly = 'doi_moi' AND u.xac_tt IN (${XAC_KQ_SQL})`;
 const XAC_NGOAI_D = `d.xac_tt IN (${XAC_KQ_SQL})`;
@@ -92,6 +93,11 @@ async function getThung(db: D1Database, id: string) {
   return db.prepare("SELECT * FROM thung_xac_bh WHERE id = ?").bind(id).first<Thung>();
 }
 const SUA_DUOC = ["nhap", "cho_ke_toan"]; // Admin them / bot xac toi khi KT duyet
+// So kien: chuoi ngan, bo tien to "Thùng" / "Kiện" (VD "Thùng 1 + 2" -> "1 + 2"); rong -> NULL.
+function chuanKien(raw: string | null | undefined): string | null {
+  const v = String(raw ?? "").replace(/\s+/g, " ").trim().replace(/^(thùng|thung|kiện|kien)\s*/i, "").trim().slice(0, 40);
+  return v || null;
+}
 
 // So xac (dong) trong thung - ca 2 nguon.
 async function demXac(db: D1Database, thungId: string): Promise<number> {
@@ -383,8 +389,8 @@ xac.delete("/thung/:id/xac/:unitId", async (c) => {
   if (!SUA_DUOC.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
   const uid = c.req.param("unitId");
   const r = laDx(uid)
-    ? await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET thung_xac_id = NULL, xac_tt = NULL WHERE id = ? AND thung_xac_id = ?").bind(uid, t.id).run()
-    : await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET thung_xac_id = NULL, xac_tt = NULL, updated_at = updated_at WHERE id = ? AND thung_xac_id = ?").bind(uid, t.id).run();
+    ? await c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET thung_xac_id = NULL, xac_tt = NULL, xac_kien = NULL WHERE id = ? AND thung_xac_id = ?").bind(uid, t.id).run()
+    : await c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET thung_xac_id = NULL, xac_tt = NULL, xac_kien = NULL, updated_at = updated_at WHERE id = ? AND thung_xac_id = ?").bind(uid, t.id).run();
   if (!r.meta.changes) return c.json({ error: "NOT_FOUND" }, 404);
   await logXac(c.env.DB, uid, user.email, `bỏ khỏi thùng trả xác ${t.id} (về danh sách chờ gom)`);
   const con = await demXac(c.env.DB, t.id);
@@ -392,6 +398,33 @@ xac.delete("/thung/:id/xac/:unitId", async (c) => {
   await c.env.DB.prepare(`UPDATE thung_xac_bh SET updated_at = ?${con === 0 ? ", mien = NULL" : ""} WHERE id = ?`).bind(nowVN(), t.id).run();
   await logThung(c.env.DB, t.id, t.trang_thai, t.trang_thai, user.email, `Bỏ xác ${uid}`);
   return c.json({ ok: true });
+});
+
+// 26/11/2026 (v1.162): gan so kien (thung vat ly) cho nhieu xac trong thung - thay cot "Số Thùng" gop o tren BBBG lap tay.
+// Body {ids, kien}: kien rong = xoa. Quyen nhu them / bot xac (Admin BH / Tra xac cua doi tac duoc gan, thung nhap / cho KT).
+xac.patch("/thung/:id/kien", async (c) => {
+  const user = c.get("user");
+  const t = await getThung(c.env.DB, c.req.param("id"));
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  if ((await quyenThung(c.env.DB, user, t)) === false) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!mienAllowed(user, t.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+  if (!SUA_DUOC.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE" }, 400);
+  const body = await c.req.json<{ ids?: string[]; kien?: string | null }>().catch(() => ({}) as { ids?: string[]; kien?: string | null });
+  const ids = [...new Set((body.ids || []).filter(Boolean))].slice(0, 1000);
+  if (!ids.length) return c.json({ error: "MISSING_IDS" }, 400);
+  const kien = chuanKien(body.kien);
+  const stmts = ids.map((id) =>
+    laDx(id)
+      ? c.env.DB.prepare("UPDATE de_xuat_linh_kien_bh SET xac_kien = ? WHERE id = ? AND thung_xac_id = ?").bind(kien, id, t.id)
+      : c.env.DB.prepare("UPDATE phieu_sua_chua_bh_ct SET xac_kien = ?, updated_at = updated_at WHERE id = ? AND thung_xac_id = ?").bind(kien, id, t.id),
+  );
+  let ok = 0;
+  for (let i = 0; i < stmts.length; i += 100) for (const r of await c.env.DB.batch(stmts.slice(i, i + 100))) ok += r.meta.changes ? 1 : 0;
+  if (ok) {
+    await c.env.DB.prepare("UPDATE thung_xac_bh SET updated_at = ? WHERE id = ?").bind(nowVN(), t.id).run();
+    await logThung(c.env.DB, t.id, t.trang_thai, t.trang_thai, user.email, `${kien ? `Ghi kiện "${kien}"` : "Xoá kiện"} cho ${ok} xác`);
+  }
+  return c.json({ ok });
 });
 
 xac.delete("/thung/:id", async (c) => {
@@ -666,6 +699,128 @@ xac.post("/import", async (c) => {
     await logThung(db, tid, null, null, user.email, `Thêm ${mas.length} xác từ file import: ${mas.slice(0, 30).join(", ")}${mas.length > 30 ? "…" : ""}`);
   }
   return c.json({ ok, bo_qua: tom.hop_le - ok, loi: tom.loi, thung_moi: [...moiId.values()] });
+});
+
+// ---- Import Bien ban ban giao (BBBG) theo ma case + ma hang (26/11/2026, v1.162) ----
+// Nguyen van: "Làm cả 3" - phuong an (3) "Import BBBG theo mã case + mã hàng: app ghép tự động theo logic §2, hiện bảng xem trước theo
+// kết luận, chỉ đưa vào thùng các dòng Khớp". Logic ghep: lib/ghepBbbg.ts. Body {rows:[{dong, ma, ma_hang, kien}], thung: "MOI" | "TX-..",
+// gom_ac (dua ca dong khop theo ma A/C), ten_file, ap_dung}. Xem truoc: tung dong + ket luan + xac app; ap dung: chi dong "khop"
+// (+ "khop_ac" neu gom_ac) qua duoc luat thung (1 mien, 1 doi tac, pham vi doi tac cua Tra xac) -> vao thung, ghi so kien.
+xac.post("/import-bbbg", async (c) => {
+  const user = c.get("user");
+  const pv = await doiTacXacCuaToi(c.env.DB, user);
+  if (pv === undefined) return c.json({ error: "FORBIDDEN" }, 403);
+  type BR = { dong?: number; ma?: string; ma_hang?: string; kien?: string };
+  type BB = { rows?: BR[]; thung?: string; gom_ac?: boolean; ten_file?: string; ap_dung?: boolean };
+  const body = await c.req.json<BB>().catch(() => ({}) as BB);
+  const dongs: BbbgDong[] = (body.rows || [])
+    .map((r, i) => ({ dong: Number(r.dong) || i + 2, ma: String(r.ma ?? "").replace(/\s+/g, "").toUpperCase(), ma_hang: String(r.ma_hang ?? "").replace(/\s+/g, ""), kien: chuanKien(r.kien) }))
+    .filter((r) => r.ma || r.ma_hang);
+  if (!dongs.length) return c.json({ error: "MISSING_ROWS" }, 400);
+  if (dongs.length > 2000) return c.json({ error: "IMPORT_QUA_NHIEU", message: "Tối đa 2.000 xác / lần." }, 400);
+  const db = c.env.DB;
+
+  // Thung dich: co san (nhap / cho KT, dung quyen) hoac tao moi.
+  const thungRaw = (body.thung || "MOI").trim().toUpperCase();
+  const moi = !thungRaw || thungRaw === "MOI";
+  let t: Thung | null = null;
+  if (!moi) {
+    t = await getThung(db, thungRaw);
+    if (!t) return c.json({ error: "NOT_FOUND", message: `Không tìm thấy thùng ${thungRaw}` }, 404);
+    if ((await quyenThung(db, user, t)) === false || !mienAllowed(user, t.mien)) return c.json({ error: "FORBIDDEN" }, 403);
+    if (!SUA_DUOC.includes(t.trang_thai)) return c.json({ error: "WRONG_STATE", message: `Thùng ${t.id} đã được Kế toán duyệt` }, 400);
+  }
+
+  // Ung vien: moi xac (don vi + de xuat cap LK sua chua da la xac) cua cac case trong file.
+  const cases = [...new Set(dongs.map((d) => d.ma).filter(Boolean))];
+  const uv: XacUngVien[] = [];
+  for (let i = 0; i < cases.length; i += 90) {
+    const part = cases.slice(i, i + 90);
+    const ph = part.map(() => "?").join(",");
+    const [u, d] = await db.batch<XacUngVien>([
+      db.prepare(`SELECT u.id, UPPER(p.case_id) AS case_id, COALESCE(u.ma_lk_nhan, p.ma_lk) AS lk_b, p.ma_lk AS lk_a, u.ma_lk_thuc_te AS lk_c, u.huong_xu_ly, u.xu_ly_xac,
+          u.trang_thai, u.xac_tt, u.thung_xac_id, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, p.mien, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id
+        FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE UPPER(p.case_id) IN (${ph})`).bind(...part),
+      db.prepare(`SELECT d.id, UPPER(p.case_id) AS case_id, d.ma_lk AS lk_b, NULL AS lk_a, NULL AS lk_c, 'sua_chua_cap_lk' AS huong_xu_ly, 'tra_doi_tac' AS xu_ly_xac,
+          d.trang_thai, d.xac_tt, d.thung_xac_id, (CASE WHEN ${XAC_DX_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, p.mien, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id
+        FROM de_xuat_linh_kien_bh d JOIN phieu_sua_chua_bh_ct u ON u.id = d.unit_id JOIN phieu_sua_chua_bh p ON p.id = u.parent_id
+        WHERE UPPER(p.case_id) IN (${ph}) AND (d.thung_xac_id IS NOT NULL OR d.xac_tt IS NOT NULL OR (${XAC_DX_CHO_GOM}))`).bind(...part),
+    ]);
+    uv.push(...u.results, ...d.results);
+  }
+  const { rows, conLai } = ghepBbbg(dongs, uv);
+
+  // Luat thung cho cac dong se gom: 1 mien + 1 doi tac (theo thung co san / xac dau tien), pham vi mien + doi tac cua nguoi import.
+  let mien = t?.mien ?? null;
+  let dtId = t?.doi_tac_id ?? null;
+  type Ra = { dong: number; ma: string; ma_hang: string; kien: string | null; kl: string; kl_nhan: string; xac_id: string | null; lk_b: string | null; lk_a: string | null; mo_ta: string; gom: boolean; loi?: string };
+  const out: Ra[] = rows.map((r) => {
+    const x = r.xac;
+    const base: Ra = { dong: r.dong, ma: r.ma, ma_hang: r.ma_hang, kien: r.kien, kl: r.kl, kl_nhan: KL_NHAN[r.kl], xac_id: x?.id ?? null, lk_b: x?.lk_b ?? null, lk_a: x?.lk_a ?? null, mo_ta: x ? moTaXac(x) : "", gom: false };
+    if (x && t && x.thung_xac_id === t.id) return { ...base, kl_nhan: "Đã có trong thùng này" };
+    const seGom = r.kl === "khop" || (r.kl === "khop_ac" && !!body.gom_ac);
+    if (!x || !seGom) return base;
+    if (!mienAllowed(user, x.mien)) return { ...base, loi: "Xác thuộc miền khác miền bạn phụ trách" };
+    if (Array.isArray(pv) && !trongPv(pv, x.doi_tac_id)) return { ...base, loi: "Xác không thuộc đối tác bạn được gán" };
+    if (mien && x.mien && x.mien !== mien) return { ...base, loi: `Xác miền ${x.mien} khác miền thùng (${mien})` };
+    if (dtId && x.doi_tac_id && x.doi_tac_id !== dtId) return { ...base, loi: "Khác đối tác của thùng (1 thùng 1 đối tác)" };
+    if (!mien && x.mien) mien = x.mien;
+    if (!dtId && x.doi_tac_id) dtId = x.doi_tac_id;
+    return { ...base, gom: true };
+  });
+  const dem: Record<string, number> = {};
+  for (const r of out) dem[r.kl] = (dem[r.kl] || 0) + 1;
+  const seGom = out.filter((r) => r.gom);
+  const dtTen = dtId ? (await db.prepare("SELECT ten FROM doi_tac_bh WHERE id = ?").bind(dtId).first<{ ten: string }>())?.ten ?? null : null;
+  const tom = { tong: out.length, se_gom: seGom.length, loi_thung: out.filter((r) => r.loi).length, dem, mien, doi_tac: dtTen, thung: t?.id ?? null };
+  const appThieu = conLai.map((x) => ({ id: x.id, case_id: x.case_id, lk_b: x.lk_b, mien: x.mien }));
+  if (!body.ap_dung) return c.json({ rows: out, app_thieu: appThieu, ...tom });
+  if (!seGom.length) return c.json({ error: "KHONG_CO_DONG_GOM", message: "Không có dòng nào đủ điều kiện đưa vào thùng." }, 400);
+
+  // ---- Ap dung ----
+  const now = nowVN();
+  const tenFile = (body.ten_file || "").trim().slice(0, 120);
+  let tid = t?.id;
+  if (!tid) {
+    tid = await nextSequentialId(db, "thung_xac_bh", "TX");
+    await db
+      .prepare("INSERT INTO thung_xac_bh (id, trang_thai, mien, doi_tac_id, doi_tac, ghi_chu, nguoi_tao, created_at, updated_at) VALUES (?, 'nhap', ?, ?, ?, ?, ?, ?, ?)")
+      .bind(tid, mien, dtId, dtTen, `Tạo từ BBBG${tenFile ? ` ${tenFile}` : ""}`, user.email, now, now)
+      .run();
+    await logThung(db, tid, null, "nhap", user.email, `Tạo thùng trả xác từ BBBG${tenFile ? ` (${tenFile})` : ""}`);
+  }
+  const stmts: D1PreparedStatement[] = [];
+  const kind: ("upd" | "log")[] = [];
+  for (const r of seGom) {
+    const dx = laDx(r.xac_id!);
+    stmts.push(
+      dx
+        ? db.prepare(`UPDATE de_xuat_linh_kien_bh AS d SET thung_xac_id = ?, xac_tt = 'trong_thung', xac_kien = ? WHERE d.id = ? AND ${XAC_DX_CHO_GOM}`).bind(tid, r.kien, r.xac_id)
+        : db.prepare(`UPDATE phieu_sua_chua_bh_ct AS u SET thung_xac_id = ?, xac_tt = 'trong_thung', xac_kien = ?, updated_at = updated_at WHERE u.id = ? AND ${XAC_CHO_GOM}`).bind(tid, r.kien, r.xac_id),
+    );
+    kind.push("upd");
+    const unitExpr = dx ? "(SELECT unit_id FROM de_xuat_linh_kien_bh WHERE id = ?1)" : "?1";
+    const ghi = `đưa vào thùng trả xác ${tid} (import BBBG, dòng ${r.dong}${r.kien ? `, kiện ${r.kien}` : ""})`;
+    stmts.push(
+      db
+        .prepare(`INSERT INTO logs_bh (entity_type, entity_id, tu_trang_thai, den_trang_thai, nguoi_thuc_hien, thoi_gian, ghi_chu)
+          SELECT 'phieu_sc_ct', ${unitExpr}, u.trang_thai, u.trang_thai, ?2, ?3, ?4 FROM phieu_sua_chua_bh_ct u WHERE u.id = ${unitExpr} AND changes() > 0`)
+        .bind(r.xac_id, user.email, now, dx ? `Xác sửa chữa ${r.xac_id}: ${ghi}` : `Xác: ${ghi}`),
+    );
+    kind.push("log");
+  }
+  let ok = 0;
+  for (let i = 0; i < stmts.length; i += 100) {
+    const res = await db.batch(stmts.slice(i, i + 100));
+    res.forEach((x, j) => {
+      if (kind[i + j] === "upd" && x.meta.changes) ok++;
+    });
+  }
+  await db.prepare("UPDATE thung_xac_bh SET updated_at = ?, mien = COALESCE(mien, ?) WHERE id = ?").bind(now, mien, tid).run();
+  if (dtId) await db.prepare("UPDATE thung_xac_bh SET doi_tac_id = ?1, doi_tac = COALESCE(doi_tac, (SELECT ten FROM doi_tac_bh WHERE id = ?1)) WHERE id = ?2 AND doi_tac_id IS NULL").bind(dtId, tid).run();
+  const demTxt = Object.entries(dem).map(([k, n]) => `${KL_NHAN[k as keyof typeof KL_NHAN] || k}: ${n}`).join(" · ");
+  await logThung(db, tid, null, null, user.email, `Import BBBG${tenFile ? ` ${tenFile}` : ""}: ${out.length} dòng → đưa vào thùng ${ok} xác. Đối chiếu: ${demTxt}`);
+  return c.json({ ok, bo_qua: seGom.length - ok, thung: tid, tao_moi: !t });
 });
 
 export default xac;

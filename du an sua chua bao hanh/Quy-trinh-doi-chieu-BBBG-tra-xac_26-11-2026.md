@@ -41,10 +41,10 @@
 |---|---|---|
 | 1 | (tự động) | Đơn vị Đổi mới có xử lý xác "Trả đối tác" (và LK sửa chữa đã xuất) tự vào **Trả xác › Xác chờ gom**. |
 | 2 | Admin BH / Trả xác | Định kỳ (đề xuất: cuối tuần hoặc khi đủ hàng — **mở**, chờ chốt), lọc chờ gom theo **đối tác + miền**, tạo thùng TX nháp. |
-| 3 | Admin BH / Trả xác | Đóng kiện thật: **đưa từng xác vào thùng TX theo mã xác** (tick trên app hoặc Import Excel cột "Mã xác" + "Vào thùng"). Xác cầm trên tay khác mã B → sửa B trước. Xác không tìm thấy → ghi kết quả "Thất lạc / Không có xác". |
+| 3 | Admin BH / Trả xác | Đóng kiện thật: **đưa từng xác vào thùng TX theo mã xác** (tick trên app, Import Excel cột "Mã xác" + "Vào thùng", hoặc **⬆ Import BBBG** theo mã case + mã hàng), rồi **📦 Ghi kiện** cho từng nhóm xác trong chi tiết thùng. Xác cầm trên tay khác mã B → sửa B trước. Xác không tìm thấy → ghi kết quả "Thất lạc / Không có xác". |
 | 4 | Admin BH / Trả xác | Nhập **Mã EO**, ghi chú số kiện → **Gửi Kế toán**. |
 | 5 | Kế toán | Đối chiếu Mã EO + danh sách xác → **Duyệt** (hoặc Trả lại có lý do). |
-| 6 | Admin BH / Trả xác | Lập **BBBG từ danh sách xác của thùng đã duyệt** (mục "Tổng hợp LK" trong chi tiết thùng) → ký Người lập / Giao vận / Nhà máy → giao hàng. Hiện app CHƯA có nút tải BBBG riêng cho 1 thùng — xem §5. |
+| 6 | Admin BH / Trả xác | Chi tiết thùng đã duyệt › **⬇ Tải BBBG** (Excel: BBBG theo mẫu + Chi tiết xác + Theo kiện) → in, ký Người lập / Giao vận / Bên nhận → giao hàng. |
 
 Không được: lập BBBG tay trước rồi mới nhập app; gộp nhiều mã hàng 1 dòng; ghi mã case thay mã xác; trộn đối tác trong 1 thùng.
 
@@ -57,7 +57,7 @@ Kết quả đối chiếu 511 xác (D1 thật, 26/11/2026): **467** khớp · *
 2. Lấy cột "Mã xác app" của các dòng đã chốt → Import Excel (Kết quả = Vào thùng, Mã thùng = MOI) → 1 thùng TX KAROFI miền Bắc → nhập Mã EO → gửi Kế toán.
 3. Tồn đọng: còn **799** xác KAROFI miền Bắc chờ gom không có trong BBBG (614 đơn tạo trước 18/11) → kiểm kho, gom ở đợt sau theo quy trình §3.
 
-## 5. Đề xuất bổ sung app (làn thường — **mở**, chờ Giám đốc duyệt)
+## 5. Bổ sung app — ĐÃ LÀM v1.162 (26/11/2026, nguyên văn duyệt: "Làm cả 3")
 
 1. Nút **"Tải BBBG"** trong chi tiết thùng TX: sheet 1 đúng mẫu công ty (tổng hợp theo mã B, 1 mã 1 dòng, đối tác / miền / Mã EO / mã TX / chữ ký); sheet 2 mỗi xác 1 dòng (mã xác, case, mã B, kiện).
 2. Trường **số kiện** cho từng xác trong thùng (thay cột "Số Thùng" gộp ô).

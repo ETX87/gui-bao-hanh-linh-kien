@@ -81,22 +81,46 @@ function colName(i: number): string {
   return s;
 }
 
-function sheetXml(rows: string[][], widths?: number[]): string {
+// 26/11/2026 (v1.162): them tuy chon cho bieu mau (BBBG tra xac): o so (number), gop o (merges), kieu o theo (dong, cot),
+// do cao dong. Khong truyen style -> nhu cu (dong dau dam).
+// Kieu o (cellXfs): 0 thuong · 1 dam · 2 tieu de bang (dam, vien, giua, xuong dong) · 3 o bang (vien, xuong dong, can tren)
+// 4 tieu de lon (dam 14, giua) · 5 nghieng giua · 6 o bang so (vien, giua) · 7 dam giua · 8 o bang dam (vien).
+export type XlsxCell = string | number | null | undefined;
+export interface XlsxSheet {
+  name: string;
+  rows: XlsxCell[][];
+  widths?: number[];
+  merges?: string[];
+  style?: (r: number, c: number) => number;
+  heights?: Record<number, number>;
+}
+
+function sheetXml(s: XlsxSheet): string {
+  const { rows, widths, merges, style, heights } = s;
   const cols = widths?.length
     ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>`
     : "";
   const body = rows
-    .map(
-      (r, ri) =>
-        `<row r="${ri + 1}">${r
-          .map((v, ci) => `<c r="${colName(ci)}${ri + 1}" t="inlineStr"${ri === 0 ? ' s="1"' : ""}><is><t xml:space="preserve">${esc(v ?? "")}</t></is></c>`)
-          .join("")}</row>`,
-    )
+    .map((r, ri) => {
+      const ht = heights?.[ri] ? ` ht="${heights[ri]}" customHeight="1"` : "";
+      return `<row r="${ri + 1}"${ht}>${r
+        .map((v, ci) => {
+          const st = style ? style(ri, ci) : ri === 0 ? 1 : 0;
+          const sa = st ? ` s="${st}"` : "";
+          const ref = `${colName(ci)}${ri + 1}`;
+          if (typeof v === "number" && Number.isFinite(v)) return `<c r="${ref}"${sa}><v>${v}</v></c>`;
+          return `<c r="${ref}" t="inlineStr"${sa}><is><t xml:space="preserve">${esc(v == null ? "" : String(v))}</t></is></c>`;
+        })
+        .join("")}</row>`;
+    })
     .join("");
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${body}</sheetData></worksheet>`;
+  const mg = merges?.length ? `<mergeCells count="${merges.length}">${merges.map((m) => `<mergeCell ref="${m}"/>`).join("")}</mergeCells>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${body}</sheetData>${mg}</worksheet>`;
 }
 
-export function buildXlsx(sheets: { name: string; rows: string[][]; widths?: number[] }[]): Blob {
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font><font><b/><sz val="14"/><name val="Arial"/></font><font><i/><sz val="11"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="2"><border/><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/><diagonal/></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="9"><xf fontId="0"/><xf fontId="1" applyFont="1"/><xf fontId="1" borderId="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf fontId="0" borderId="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf fontId="2" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf fontId="3" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf fontId="0" borderId="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf><xf fontId="1" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf fontId="1" borderId="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf></cellXfs></styleSheet>`;
+
+export function buildXlsx(sheets: XlsxSheet[]): Blob {
   const files = [
     {
       name: "[Content_Types].xml",
@@ -122,9 +146,9 @@ export function buildXlsx(sheets: { name: string; rows: string[][]; widths?: num
     },
     {
       name: "xl/styles.xml",
-      xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf fontId="0"/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>`,
+      xml: STYLES,
     },
-    ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, xml: sheetXml(s.rows, s.widths) })),
+    ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, xml: sheetXml(s) })),
   ];
   const bytes = zip(files.map((f) => ({ name: f.name, data: enc.encode(f.xml) })));
   return new Blob([bytes.buffer as ArrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
