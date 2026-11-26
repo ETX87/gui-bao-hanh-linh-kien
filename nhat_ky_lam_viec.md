@@ -3,6 +3,16 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 26/11/2026 — v1.165: Đề xuất điền sẵn linh kiện đã về + nộp kết quả hỏi lý do không dùng
+
+- Yêu cầu (nguyên văn): "mà thay thế là thế nào? nv báo thiếu, hàng về thì họ phải chọn lại theo mã hàng đã về chứ?"; "làm điền sẵn, những vẫn cho chọn mã
+  khác, nếu khi xác nhận sửa xong mà không chọn lk báo thiếu (đã về) thì hiện cảnh báo nhắc nhở và hỏi lý do lk A báo thiếu đã được đặt về, tại sao không sử dụng?"
+- Đã làm: `DeXuatFormModal` tự điền các ticket "Hàng đã về" chưa đề xuất (mã + SL + ghi chú mã ticket), vẫn đổi / xoá / thêm được; `ChanDoanModal` hiện cảnh
+  báo đỏ + ô bắt buộc "Lý do không sử dụng linh kiện đã về" (chặn cả nút Nộp kết quả lẫn Bàn giao máy); backend `POST /nv/don-vi/:id/chan-doan` kiểm
+  `lkDaVeChuaDung()` trước mọi bước ghi → `409 LK_DA_VE_CHUA_DUNG` nếu thiếu lý do (≥ 5 ký tự), nộp xong ghi nhật ký đơn vị "⚠ Không dùng linh kiện báo thiếu ĐÃ VỀ".
+- Kiểm thử: typecheck BE + FE, build xanh. Chưa thử thao tác trên giao diện thật (cần tài khoản NV có đơn thuộc diện — hiện 12 đơn MN).
+- Ghi chú: "mã thay thế" ở mục v1.164 = NV chọn mã khác mã đã về; nay được phép nhưng phải ghi lý do lúc nộp kết quả.
+
 ## 26/11/2026 — v1.164: Cảnh báo "Hàng đã về — đề xuất linh kiện để sửa chữa" cho ticket thiếu hàng
 
 - Yêu cầu (nguyên văn): "mã "SC2611090581" này đã tạo đơn linh kiện, nhưng bên app linh kiện lại không tìm thấy =>> check bug"; "logic đơn thiếu hàng này

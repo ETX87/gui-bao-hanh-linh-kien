@@ -205,6 +205,18 @@ export interface TicketLk {
 }
 
 /** Ap ban tin ticket tu linh-kien-app vao dong local + ghi nhat ky don vi khi co thay doi. */
+/** Ticket "Hang da ve" cua don vi CHUA de xuat dung ma (dang o buoc sua) - NV nop ket qua phai ghi ly do khong dung (routes/nvSuaChua.ts). */
+export async function lkDaVeChuaDung(db: D1Database, unitId: string): Promise<{ ticket_id: string | null; ma_lk: string; ten_lk: string | null; so_luong: number }[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT t.ticket_id, t.ma_lk, l.ten_lk, t.so_luong FROM thieu_hang_bh t JOIN phieu_sua_chua_bh_ct u ON u.id = t.unit_id
+       LEFT JOIN linh_kien_bh l ON l.ma_lk = t.ma_lk WHERE t.unit_id = ? AND ${HANG_VE_CHO_DX_SQL()} ORDER BY t.id`,
+    )
+    .bind(unitId)
+    .all<{ ticket_id: string | null; ma_lk: string; ten_lk: string | null; so_luong: number }>();
+  return results;
+}
+
 /** Push "hang da ve - de xuat linh kien de sua" cho NV sua chua cua don vi (chi khi don vi dang o buoc sua). */
 async function baoHangVe(env: Env, unitId: string, maLk: string): Promise<number> {
   const u = await env.DB

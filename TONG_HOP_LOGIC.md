@@ -83,7 +83,10 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   đề xuất CÙNG mã LK (không huỷ / từ chối) tạo sau lúc báo thiếu (`HANG_VE_CHO_DX_SQL`). Báo cho: NV sửa chữa được giao (push ngay lúc hàng về + số việc
   `nv_hang_ve_cho_dx` ở tab "Việc sửa của tôi") và Admin BH theo miền (`admin_hang_ve_cho_dx`, tab 📦 Thiếu hàng nhóm "Đã về — chờ đề xuất LK"); cả 2 vào
   thông báo tổng hợp 12h. Chi tiết đơn: dòng xanh "Hàng đã về — có thể đặt linh kiện để sửa chữa" + nhãn "Chờ đề xuất LK". Tự hết khi đã đề xuất đúng mã
-  hoặc đơn vị rời bước đang sửa. Đề xuất bằng mã thay thế (khác mã đã báo thiếu) thì cảnh báo vẫn còn tới khi đơn vị rời bước sửa.
+  hoặc đơn vị rời bước đang sửa.
+- **Điền sẵn + hỏi lý do không dùng** (v1.165): form "+ Đề xuất linh kiện" tự điền các mã đã về chưa đề xuất (đúng số lượng, vẫn đổi / xoá / thêm được).
+  NV (hoặc Admin BH nộp hộ) nộp kết quả / bàn giao máy mà còn linh kiện đã về chưa đề xuất đúng mã → form hiện cảnh báo đỏ + **bắt buộc lý do không sử dụng**
+  (≥ 5 ký tự; backend chặn `409 LK_DA_VE_CHUA_DUNG`, `lkDaVeChuaDung()`); lý do ghi nhật ký đơn vị "⚠ Không dùng linh kiện báo thiếu ĐÃ VỀ …".
 
 ## 5. Xác nhận tiêu hao & trừ công nợ sửa chữa
 

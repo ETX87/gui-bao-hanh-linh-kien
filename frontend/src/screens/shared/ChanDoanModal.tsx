@@ -9,6 +9,7 @@ import { Btn, Field, Select, Textarea } from "../../ui/primitives";
 import { KET_QUA_NV_OPTIONS } from "../../lib/constants";
 import { useSlaGate, LyDoChamGateField } from "./LyDoChamGateField";
 import type { DeXuatLk, DonVi } from "../../lib/types";
+import type { ThieuHangRow } from "./ThieuHang";
 
 // NV nop ket qua chan doan - anh truoc/sau/loi thuc te luu base64 data URL truc tiep (KHONG dung R2 -
 // quyet dinh da chot cho he nay). Anh KHONG bat buoc (form goc chua tung danh dau bat buoc - xem
@@ -35,6 +36,19 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
   const [chuaNhan, setChuaNhan] = useState<DeXuatLk[]>([]);
   const [canhBaoNhan, setCanhBaoNhan] = useState<{ banGiao: boolean } | null>(null);
   const { nameOf } = useLkName();
+  // 26/11/2026 (v1.165): linh kien bao thieu DA VE ma chua de xuat dung ma -> nhac + bat buoc ly do khong su dung (backend 409 LK_DA_VE_CHUA_DUNG).
+  const [lkVe, setLkVe] = useState<ThieuHangRow[]>([]);
+  const [lyDoKhongDung, setLyDoKhongDung] = useState("");
+  const taiLkVe = () =>
+    api
+      .get<{ rows: ThieuHangRow[] }>(`/thieu-hang/don-vi/${encodeURIComponent(unit.id)}`)
+      .then((r) => setLkVe(r.rows.filter((x) => x.cho_de_xuat)))
+      .catch(() => undefined);
+  useEffect(() => {
+    taiLkVe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit.id]);
+  const thieuLyDo = lkVe.length > 0 && lyDoKhongDung.trim().length < 5;
   useEffect(() => {
     api
       .get<{ de_xuat: DeXuatLk[] }>(`/de-xuat/don-vi/${unit.id}`)
@@ -55,7 +69,7 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     setBusy(true);
     try {
       const [anh_truoc, anh_sau, anh_loi_thuc_te] = await Promise.all([filesToDataUrls(anhTruoc), filesToDataUrls(anhSau), filesToDataUrls(anhLoi)]);
-      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: banGiao ? "da_sua_xong" : ketQua, ban_giao: banGiao || undefined, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined, tu_xac_nhan_nhan: tuXacNhan || undefined });
+      const r = await api.post<{ phieu_tra_id?: string | null }>(`/nv/don-vi/${unit.id}/chan-doan`, { ket_qua_chan_doan: banGiao ? "da_sua_xong" : ketQua, ban_giao: banGiao || undefined, anh_truoc, anh_sau, anh_loi_thuc_te, ly_do_cham: overdue ? lyDoCham : undefined, ghi_chu: ghiChu.trim() || undefined, tu_xac_nhan_nhan: tuXacNhan || undefined, ly_do_khong_dung_lk: lkVe.length ? lyDoKhongDung.trim() : undefined });
       setXacNhanBanGiao(false);
       setCanhBaoNhan(null);
       toast(banGiao ? "Đã bàn giao máy — đơn đã kết thúc." : r.phieu_tra_id ? `Đã nộp kết quả — đã đẩy thẳng sang Kho (phiếu trả ${r.phieu_tra_id}).` : "Đã nộp kết quả sửa chữa.", "ok");
@@ -63,14 +77,19 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     } catch (e) {
       // Danh sach tren may chua kip cap nhat (NV vua duoc giao linh kien) -> hoi lai.
       if (e instanceof ApiError && e.code === "CHUA_XAC_NHAN_NHAN" && !tuXacNhan) setCanhBaoNhan({ banGiao });
-      else toast(errorMessage(e), "error");
+      else if (e instanceof ApiError && e.code === "LK_DA_VE_CHUA_DUNG") {
+        setCanhBaoNhan(null);
+        setXacNhanBanGiao(false);
+        taiLkVe();
+        toast("Còn linh kiện báo thiếu đã về chưa được sử dụng — ghi lý do không sử dụng rồi nộp lại.", "error");
+      } else toast(errorMessage(e), "error");
     } finally {
       setBusy(false);
     }
   };
 
-  const valid = ketQua && (!overdue || lyDoCham);
-  const validBanGiao = !overdue || lyDoCham;
+  const valid = ketQua && (!overdue || lyDoCham) && !thieuLyDo;
+  const validBanGiao = (!overdue || lyDoCham) && !thieuLyDo;
 
   return (
     <Modal
@@ -91,6 +110,21 @@ export function ChanDoanModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
     >
       <div className="space-y-4">
         <LyDoChamGateField gd="cho_chan_doan" overdue={overdue} value={lyDoCham} onChange={setLyDoCham} />
+        {lkVe.length > 0 && (
+          <div className="rounded-lg border border-[var(--red-200)] bg-[var(--red-50)] px-3 py-2 space-y-2">
+            <p className="text-[13px] font-semibold text-[var(--red-700)]">
+              ⚠ Linh kiện báo thiếu đã được đặt về nhưng đơn chưa đề xuất sử dụng:{" "}
+              {lkVe.map((x) => `${x.ten_lk || nameOf(x.ma_lk)} × ${x.so_luong}${x.ticket_id ? ` (${x.ticket_id})` : ""}`).join(", ")}.
+            </p>
+            <p className="text-xs text-[var(--ink-body)]">
+              Nếu cần dùng: bấm Huỷ, vào khối Đề xuất linh kiện bấm "+ Đề xuất linh kiện" (đã điền sẵn mã đã về). Nếu không dùng: ghi rõ lý do bên dưới —
+              lý do được lưu vào nhật ký đơn để Admin BH / Kho nắm.
+            </p>
+            <Field label="Lý do không sử dụng linh kiện đã về" required>
+              <Textarea rows={2} value={lyDoKhongDung} onChange={(e) => setLyDoKhongDung(e.target.value)} placeholder="VD: Kiểm tra lại lỗi do dây nguồn, không cần thay bo mạch" />
+            </Field>
+          </div>
+        )}
         <Field label="Kết quả" required>
           <Select value={ketQua} onChange={(e) => setKetQua(e.target.value)}>
             <option value="">— Chọn —</option>

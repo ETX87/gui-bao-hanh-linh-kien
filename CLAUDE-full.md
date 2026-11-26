@@ -7678,3 +7678,10 @@ gọi từ cron kéo, đẩy về `routes/sync.ts`, đồng bộ tay) + `nv_hang
 (gấp), `useWorkload`, `routes.ts`, `Home.tsx`, tab "Việc sửa của tôi" / "📦 Thiếu hàng". FE: `ThieuHang.tsx` dòng xanh + nhãn "Chờ đề xuất LK";
 `ThieuHangList.tsx` nhóm "Đã về — chờ đề xuất LK". Kiểm: D1 thật 12 đơn vị đang thuộc diện (đúng dữ liệu). Mở: hàng về khi chưa giao NV; đề xuất mã thay thế.
 
+**(b) v1.165 (26/11/2026):** nguyên văn "mà thay thế là thế nào? nv báo thiếu, hàng về thì họ phải chọn lại theo mã hàng đã về chứ?" → trả lời: ticket không đổi
+mã, "thay thế" chỉ là NV tự chọn mã khác. Tiếp: "làm điền sẵn, những vẫn cho chọn mã khác, nếu khi xác nhận sửa xong mà không chọn lk báo thiếu (đã về) thì hiện
+cảnh báo nhắc nhở và hỏi lý do lk A báo thiếu đã được đặt về, tại sao không sử dụng?". Đã chốt: điền sẵn ở `DeXuatFormModal` (chỉ khi form còn trống, dữ liệu
+`/thieu-hang/don-vi/:id` cờ `cho_de_xuat`); nộp kết quả (`routes/nvSuaChua.ts` chan-doan, gồm cả bàn giao máy, cả Admin nộp hộ) bắt buộc `ly_do_khong_dung_lk`
+≥ 5 ký tự khi `lkDaVeChuaDung()` còn dòng, kiểm trước tự xác nhận đã nhận / tải ảnh; lý do chỉ lưu nhật ký `logs_bh` (không thêm cột, không migration).
+Nhật ký này không chứa "Lý do chậm" nên không kích hoạt tự tạo thiếu hàng (`ghiNhanThieuHangTuLog`).
+

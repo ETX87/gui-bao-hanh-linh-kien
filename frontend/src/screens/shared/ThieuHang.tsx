@@ -126,7 +126,7 @@ export function ThieuHangSection({ unitId, defaultLk, user, nguoiSuaChua, onChan
       {choDx.length > 0 && (
         <div className="mb-2 rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] text-[var(--green-700)] px-3 py-2 text-[13px]">
           <b>✅ Hàng đã về — có thể đặt linh kiện để sửa chữa:</b> {choDx.map((r) => `${r.ten_lk || nameOf(r.ma_lk)} × ${r.so_luong}`).join(", ")}.
-          <span className="text-[var(--ink-soft)]"> Bấm "+ Đề xuất linh kiện" (khối Đề xuất linh kiện ở trên) để tạo đơn cấp linh kiện. Cảnh báo tự hết khi đã đề xuất đúng mã này.</span>
+          <span className="text-[var(--ink-soft)]"> Bấm "+ Đề xuất linh kiện" (khối Đề xuất linh kiện ở trên) — form tự điền sẵn mã đã về. Cảnh báo tự hết khi đã đề xuất đúng mã này; không dùng thì lúc nộp kết quả phải ghi lý do.</span>
         </div>
       )}
       {rows.length === 0 ? (

@@ -60,6 +60,27 @@ export function DeXuatFormModal({ unitId, ldx, onClose, onDone }: { unitId: stri
   const opts = lkOptions(items);
   const [rows, setRows] = useState<Row[]>([{ ma_lk: "", so_luong: "1", ghi_chu: "" }]);
   const [busy, setBusy] = useState(false);
+  // 26/11/2026 (v1.165): dien SAN linh kien bao thieu DA VE chua de xuat (van doi / xoa / them ma khac duoc). Chi dien khi NV chua sua dong nao.
+  const [soDienSan, setSoDienSan] = useState(0);
+  useEffect(() => {
+    let huy = false;
+    api
+      .get<{ rows: { ma_lk: string; so_luong: number; ticket_id: string | null; cho_de_xuat?: number }[] }>(`/thieu-hang/don-vi/${encodeURIComponent(unitId)}`)
+      .then((r) => {
+        const ve = r.rows.filter((x) => x.cho_de_xuat);
+        if (huy || !ve.length) return;
+        setRows((cu) =>
+          cu.length === 1 && !cu[0].ma_lk
+            ? ve.map((x) => ({ ma_lk: x.ma_lk, so_luong: String(x.so_luong || 1), ghi_chu: `Hàng báo thiếu đã về${x.ticket_id ? ` (${x.ticket_id})` : ""}` }))
+            : cu,
+        );
+        setSoDienSan(ve.length);
+      })
+      .catch(() => undefined);
+    return () => {
+      huy = true;
+    };
+  }, [unitId]);
   const set = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const valid = rows.some((r) => r.ma_lk) && rows.every((r) => !r.ma_lk || Number(r.so_luong) >= 1);
 
@@ -104,6 +125,12 @@ export function DeXuatFormModal({ unitId, ldx, onClose, onDone }: { unitId: stri
           Kế toán duyệt và Kho xuất hàng trên app đó, trạng thái tự cập nhật về đây.
           Sửa được linh kiện / số lượng cho tới khi Kế toán xử lý. Có thể đề xuất nhiều lần cho tới khi sửa xong.
         </p>
+        {soDienSan > 0 && (
+          <p className="rounded-lg border border-[var(--green-200)] bg-[var(--green-50)] px-3 py-2 text-[13px] text-[var(--green-700)]">
+            ✅ Đã điền sẵn {soDienSan} linh kiện báo thiếu <b>đã về kho</b>. Có thể đổi mã, sửa số lượng, xoá dòng hoặc thêm linh kiện khác — nếu không dùng
+            linh kiện đã về, lúc nộp kết quả sẽ phải ghi lý do.
+          </p>
+        )}
         {rows.map((r, i) => (
           <div key={i} className="rounded-lg border border-[var(--line)] p-2.5 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px] gap-2">

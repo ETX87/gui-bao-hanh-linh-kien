@@ -14,6 +14,7 @@ import { nextSequentialId } from "../lib/idCounter";
 import { syncPhieuTraMien } from "../lib/mien";
 import { pushBoxToKhovan } from "../lib/khovanPushClient";
 import { dxChuaNhan, xacNhanDaNhan } from "../lib/daNhanLk";
+import { lkDaVeChuaDung } from "../lib/thieuHang";
 
 // Man hinh NV sua chua - "Viec cua toi" + Chan doan. Anh luu dang data URL (base64) truc tiep trong
 // cot TEXT - dung quyet dinh "KHONG dung R2" da chot cho he nay (giong prototype fileToBase64()).
@@ -62,6 +63,8 @@ nvSuaChua.get("/viec-cua-toi", async (c) => {
 });
 
 interface ChanDoanBody {
+  // v1.165: ly do KHONG dung linh kien bao thieu da ve (bat buoc khi con ticket "Hang da ve" chua de xuat dung ma - lib/thieuHang.ts lkDaVeChuaDung).
+  ly_do_khong_dung_lk?: string;
   // 12/10/2026: 4 ket qua moi (KET_QUA_NV_VALUES). Giu ten truong ket_qua_chan_doan cho API.
   ket_qua_chan_doan?: KetQuaNv;
   anh_truoc?: string[];
@@ -91,6 +94,13 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (body.ban_giao) body.ket_qua_chan_doan = "da_sua_xong";
   if (!body.ket_qua_chan_doan || !KET_QUA_NV_VALUES.includes(body.ket_qua_chan_doan)) return c.json({ error: "INVALID_KET_QUA" }, 400);
   if ((await quaHanBuoc(c.env.DB, "cho_chan_doan", u.updated_at)) && !body.ly_do_cham?.trim()) return c.json({ error: "REQUIRE_LY_DO_CHAM" }, 400);
+
+  // 26/11/2026 (v1.165): nguyen van "nếu khi xác nhận sửa xong mà không chọn lk báo thiếu (đã về) thì hiện cảnh báo nhắc nhở và hỏi lý do lk A báo
+  // thiếu đã được đặt về, tại sao không sử dụng?". Con ticket thieu hang "Hang da ve" chua de xuat dung ma -> bat buoc ly do (409, FE hoi truoc);
+  // ly do ghi nhat ky don vi sau khi nop xong. Kiem TRUOC moi buoc ghi (ke ca tu xac nhan da nhan ben duoi).
+  const lkVe = await lkDaVeChuaDung(c.env.DB, id);
+  const lyDoKhongDung = (body.ly_do_khong_dung_lk ?? "").trim().slice(0, 1000);
+  if (lkVe.length && lyDoKhongDung.length < 5) return c.json({ error: "LK_DA_VE_CHUA_DUNG", ds: lkVe }, 409);
 
   // 16/11/2026 (v1.140): "YC phải xác nhận đã nhận mới cho đóng đơn sửa chữa (nếu chưa xác nhận mà đóng đơn sẽ hiện cảnh báo tự động xác nhận
   // tất cả các linh kiện đều chuyển sang trạng thái đã nhận đủ)". Con lan cap qua app Dat LK chua xac nhan -> 409 CHUA_XAC_NHAN_NHAN (FE hien
@@ -135,6 +145,10 @@ nvSuaChua.post("/don-vi/:id/chan-doan", async (c) => {
   if (statements.length) await c.env.DB.batch(statements);
 
   await addLog(c.env.DB, "phieu_sc_ct", id, "cho_chan_doan", "cho_admin_xac_nhan", user.email, (hoNv ? `Admin BH nộp kết quả hộ NV ${u.nguoi_sua_chua || "(chưa gán)"}: ` : "NV nộp kết quả: ") + (LBL[body.ket_qua_chan_doan] || body.ket_qua_chan_doan) + (ghiChu ? ` | Ghi chú: ${ghiChu}` : "") + (huy.meta.changes ? ` | Tự huỷ ${huy.meta.changes} đề xuất linh kiện chưa cấp` : "") + (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : ""));
+  if (lkVe.length) {
+    await addLog(c.env.DB, "phieu_sc_ct", id, "cho_admin_xac_nhan", "cho_admin_xac_nhan", user.email,
+      `⚠ Không dùng linh kiện báo thiếu ĐÃ VỀ: ${lkVe.map((x) => `${x.ten_lk ?? x.ma_lk} × ${x.so_luong}${x.ticket_id ? ` (${x.ticket_id})` : ""}`).join(", ")} — Lý do không sử dụng: ${lyDoKhongDung}`);
+  }
 
   // 20/10/2026: "ktv sửa chữa sửa xong => đẩy sang kho luôn (tự tạo 1 phiếu trả hàng và đẩy qua kho, bỏ qua
   // admin bh xác nhận, bỏ qua kế toán duyệt)". Ket qua "Đã sửa xong" -> tu hoan tat + vao phieu tra trang
