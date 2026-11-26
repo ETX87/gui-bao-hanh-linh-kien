@@ -94,6 +94,8 @@ tới khi Kế toán duyệt (Kế toán không duyệt thùng rỗng); xác tro
 import Excel (thùng mới từ import lấy đối tác + miền của xác đầu). Người gom "Huỷ gửi KT" khi chưa duyệt; thùng nháp rỗng xoá được. Kết quả ngoài thùng:
 tiêu huỷ / thất lạc / không có xác / đã trả ngoài (+ "Lưu kho" ghi từ xác nhận tiêu hao) → tab "Đã xử lý khác", đưa lại chờ gom được; đơn trước
 01/11/2026 coi như đã xử lý ngoài (cron 15 phút tự đánh dấu cả đơn cũ phân loại muộn). Hướng dẫn: `du an sua chua bao hanh/Huong-dan-Tra-xac-linh-kien_25-11-2026.html`.
+BBBG (biên bản bàn giao) phải lập TỪ thùng TX đã duyệt, đếm theo mã xác (`DH-…-n` / `DX-…`), mã hàng = mã B, 1 mã 1 dòng; BBBG lập tay thì ghép
+1–1 theo case + mã hàng (ưu tiên B, rồi A/C) trước khi gom: `du an sua chua bao hanh/Quy-trinh-doi-chieu-BBBG-tra-xac_26-11-2026.md`.
 
 ## 7. Lịch chạy tự động
 

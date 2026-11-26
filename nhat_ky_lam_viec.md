@@ -3,6 +3,17 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 26/11/2026 — Đối chiếu BBBG trả xác KAROFI 18/11 với D1 thật + logic / quy trình BBBG (tài liệu, không đổi mã)
+
+- Yêu cầu (nguyên văn): "nhân viên gửi cho tôi mẫu duyệt trả xác như sau, phân tích vấn đề,=> đưa ra phương án phù hợp";
+  "tách các mã "MYC" thành từng ID rồi gắn với linh kiện trả tại cột B rồi đối chiếu với data thật để đánh giá"; "tôi cần logic và cách xử lý sau này".
+- Đã làm: tách 511 dòng (451 mã case / Lada) từ BBBG lập tay, tra D1 thật CHỈ ĐỌC, ghép 1–1 với xác app (ưu tiên mã B, rồi A/C).
+  Kết quả: 467 khớp chờ gom · 15 khớp theo A/C · 16 lệch mã · 9 đã xử lý ngoài · 3 đơn trừ nợ · 1 thừa; 13 xác app có mà BBBG thiếu;
+  1 case đối tác NSKX; 799 xác KAROFI MB chờ gom không có trong BBBG; app chưa có thùng TX nào.
+- Tài liệu: `du an sua chua bao hanh/Quy-trinh-doi-chieu-BBBG-tra-xac_26-11-2026.md` (nguyên tắc, logic ghép, bảng xử lý theo kết luận, quy trình chuẩn,
+  xử lý chuyển tiếp) + thư mục `Doi-chieu-BBBG-tra-xac-KAROFI_18-11/` (script + Excel kết quả; JSON dữ liệu thật không đưa lên repo).
+- Còn mở: chu kỳ gom thùng; đề xuất app (nút tải BBBG theo thùng, số kiện, import BBBG theo case + mã hàng) chờ duyệt; chưa đưa 482 xác khớp vào thùng.
+
 ## 25/11/2026 — v1.161: Trả xác — luồng ngang trong chi tiết thùng + bảng thùng lọc chọn nhiều kiểu Excel
 
 - Yêu cầu (nguyên văn): "Làm tiếp" (trả lời câu hỏi "Làm tiếp 2 chỗ giao diện Trả xác còn mở (luồng ngang, bộ lọc chọn nhiều)?").
