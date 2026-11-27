@@ -81,6 +81,11 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [nhanVaiTro, setNhanVaiTro] = useState<"kho" | "admin" | null>(null);
   const [nhanGhiChu, setNhanGhiChu] = useState("");
   const [nhanTuSl, setNhanTuSl] = useState(true);
+  // 27/11/2026: nhom / sap xep don trong thung (nho lua chon tren may).
+  const [nhomTheo, setNhomTheo] = useState<"" | "case" | "lk">(() => (localStorage.getItem("pg_nhom_don") as "" | "case" | "lk") || "");
+  const [sapTheo, setSapTheo] = useState<string>(() => localStorage.getItem("pg_sap_don") || "");
+  const doiNhom = (v: "" | "case" | "lk") => { setNhomTheo(v); localStorage.setItem("pg_nhom_don", v); };
+  const doiSap = (v: string) => { setSapTheo(v); localStorage.setItem("pg_sap_don", v); };
   useUserNames();
   // O van chuyen chi khoi tao 1 LAN khi mo phieu - cac lan tai lai sau thao tac (them don, xoa don...)
   // khong ghi de thong tin KTV dang go do (truoc 12/10/2026 them 1 don la mat thong tin chua luu).
@@ -310,6 +315,174 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
     });
   const xoaDon = (donId: string) => run(async () => { await api.delete(`/phieu-gui/don/${donId}`); toast("Đã xoá đơn.", "ok"); });
 
+  // 27/11/2026: nhom / sap xep danh sach don theo ma su co (case) hoac ma linh kien + tong so don / tong LK.
+  const tongLk = data.don_cha.reduce((s, d) => s + (Number(d.so_luong_khai) || 0), 0);
+  const khoaCase = (d: DonCha) => (d.case_id || "").trim();
+  const khoaLk = (d: DonCha) => (d.ma_lk || "").trim();
+  const ssChuoi = (a: string, b: string) => (!a && b ? 1 : a && !b ? -1 : a.localeCompare(b, "vi", { numeric: true }));
+  const donSapXep = (() => {
+    const arr = [...data.don_cha];
+    const [truong, chieu] = sapTheo.split(":") as ["" | "case" | "lk", "asc" | "desc" | undefined];
+    const khoaSap = truong === "case" ? khoaCase : truong === "lk" ? khoaLk : null;
+    const khoaNhom = nhomTheo === "case" ? khoaCase : nhomTheo === "lk" ? khoaLk : null;
+    const dau = chieu === "desc" ? -1 : 1;
+    arr.sort((a, b) => {
+      if (khoaNhom) {
+        const c = ssChuoi(khoaNhom(a), khoaNhom(b));
+        if (c) return truong === nhomTheo ? c * dau : c;
+      }
+      if (khoaSap) {
+        const c = ssChuoi(khoaSap(a), khoaSap(b));
+        if (c) return c * dau;
+      }
+      return a.id.localeCompare(b.id, "vi", { numeric: true });
+    });
+    return arr;
+  })();
+  const nhomDon: { key: string; ds: DonCha[] }[] = [];
+  if (nhomTheo) {
+    const fk = nhomTheo === "case" ? khoaCase : khoaLk;
+    for (const d of donSapXep) {
+      const k = fk(d);
+      const last = nhomDon[nhomDon.length - 1];
+      if (last && last.key === k) last.ds.push(d);
+      else nhomDon.push({ key: k, ds: [d] });
+    }
+  }
+  const renderDon = (d: DonCha) => {
+    const td = tienDoOf(d.id);
+    const clickable = (canOpenUnit && td.length > 0) || isNhap;
+    return (
+      <div
+        key={d.id}
+        onClick={clickable ? () => (isNhap ? setSuaDon(d) : onOpenUnit ? onOpenUnit(`${d.id}-1`) : setOpenUnit(`${d.id}-1`)) : undefined}
+        className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
+        title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
+      >
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
+          <span className="min-w-0 max-w-full truncate font-medium text-[var(--ink)]" title={lkName(d.ma_lk)}>
+            {lkName(d.ma_lk)}
+          </span>
+          <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
+          {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
+          {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
+          {td.map((x) => (
+            <Badge key={x.trang_thai} tone="gray" className="!font-medium">
+              {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
+            </Badge>
+          ))}
+          {isNhap && (
+            <span className="ml-auto text-xs font-semibold text-[var(--link)]">✎ Sửa</span>
+          )}
+          {isNhap && (
+            <Btn
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                xoaDon(d.id);
+              }}
+              disabled={busy}
+              className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]"
+            >
+              ✕ Xoá
+            </Btn>
+          )}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-[var(--ink-soft)]" title={d.mo_ta_loi || ""}>
+          {d.case_id && <span className="font-mono">{d.case_id} · </span>}
+          {d.mo_ta_loi}
+        </p>
+        {d.loai_ma === "lada" && (
+          <p className={`mt-0.5 text-[11px] font-semibold ${d.lada_tim_thay ? "text-[var(--ink-soft)]" : "text-[var(--red-700)]"}`}>
+            {d.lada_tim_thay ? "🧾 Mã Lada (đã tìm thấy trên hệ Lada)" : "⚠ Mã Lada không tìm thấy trên hệ Lada — người tạo tự chịu trách nhiệm"}
+          </p>
+        )}
+        {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (lúc tạo DVBH chưa có case / không phản hồi) — hệ thống sẽ tự kiểm tra lại</p>}
+        {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
+        {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
+      </div>
+    );
+  };
+  const tieuDeDon = `📦 ${gon ? "Đơn trong thùng" : "Đơn bảo hành trong phiếu"} (${data.don_cha.length} đơn / tổng ${tongLk} LK)`;
+  const SEL = "h-7 rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs text-[var(--ink-body)]";
+  const donSection = (
+    <Section
+      title={tieuDeDon}
+      right={
+        isNhap ? (
+          <>
+            {nutIn}
+            <Btn size="sm" onClick={() => setOdooOpen(true)}>
+              🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
+            </Btn>
+            <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
+              + Thêm<span className="hidden sm:inline"> đơn</span>
+            </Btn>
+          </>
+        ) : (
+          nutIn ?? undefined
+        )
+      }
+    >
+      {data.don_cha.length === 0 ? (
+        <p className="text-[13px] text-[var(--ink-faint)]">Chưa có đơn nào — bấm “+ Thêm đơn” hoặc “Chọn đơn Odoo” trước khi xác nhận gửi.</p>
+      ) : (
+        <>
+          {data.don_cha.length > 1 && (
+            <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-soft)]">
+              <label className="flex items-center gap-1">
+                Nhóm theo
+                <select className={`${SEL} ${nhomTheo ? "!border-[var(--accent)] font-semibold" : ""}`} value={nhomTheo} onChange={(e) => doiNhom(e.target.value as "" | "case" | "lk")}>
+                  <option value="">Không nhóm</option>
+                  <option value="case">Mã sự cố</option>
+                  <option value="lk">Mã linh kiện</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-1">
+                Sắp xếp
+                <select className={`${SEL} ${sapTheo ? "!border-[var(--accent)] font-semibold" : ""}`} value={sapTheo} onChange={(e) => doiSap(e.target.value)}>
+                  <option value="">Thứ tự thêm vào thùng</option>
+                  <option value="lk:asc">Mã linh kiện ↑ (A→Z)</option>
+                  <option value="lk:desc">Mã linh kiện ↓ (Z→A)</option>
+                  <option value="case:asc">Mã sự cố ↑ (A→Z)</option>
+                  <option value="case:desc">Mã sự cố ↓ (Z→A)</option>
+                </select>
+              </label>
+              {(nhomTheo || sapTheo) && (
+                <button type="button" className="font-semibold text-[var(--link)] hover:underline" onClick={() => { doiNhom(""); doiSap(""); }}>
+                  × Bỏ nhóm / sắp xếp
+                </button>
+              )}
+              {nhomTheo && <span className="ml-auto">{nhomDon.length} nhóm</span>}
+            </div>
+          )}
+          {nhomTheo ? (
+            <div className="space-y-2">
+              {nhomDon.map((nh) => (
+                <div key={nh.key || "__rong"} className="rounded-lg border border-[var(--line)]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-t-lg bg-[var(--surface-2)] px-2 py-1 text-xs">
+                    <span className="font-mono font-semibold text-[var(--ink)]">
+                      {nh.key || (nhomTheo === "case" ? "(Không có mã sự cố)" : "(Cả sản phẩm)")}
+                    </span>
+                    {nhomTheo === "lk" && nh.key && <span className="min-w-0 truncate text-[var(--ink-soft)]">{lkName(nh.key)}</span>}
+                    <span className="ml-auto shrink-0 font-semibold text-[var(--ink-soft)]">
+                      {nh.ds.length} đơn · {nh.ds.reduce((s, d) => s + (Number(d.so_luong_khai) || 0), 0)} LK
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[var(--line)] px-1">{nh.ds.map(renderDon)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-[var(--line)] -mx-1">{donSapXep.map(renderDon)}</div>
+          )}
+        </>
+      )}
+    </Section>
+  );
+
   return (
     <>
       <Modal
@@ -380,8 +553,8 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               👷 <UserName email={g.nguoi_tao} />
             </p>
             <div className="flex flex-wrap gap-1.5">
-              <Chip icon="📦" title="Số đơn trong phiếu">
-                {data.don_cha.length} đơn
+              <Chip icon="📦" title="Số đơn / tổng số linh kiện trong phiếu">
+                {data.don_cha.length} đơn / tổng {tongLk} LK
               </Chip>
               <Chip icon="🕒" title="Tạo lúc">
                 Tạo {fmtDate(g.created_at)}
@@ -422,87 +595,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
 
           {gon ? (
             <>
-          <Section
-            title={gon ? `📦 Đơn trong thùng (${data.don_cha.length})` : `📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
-            right={
-              isNhap ? (
-                <>
-                  {nutIn}
-                  <Btn size="sm" onClick={() => setOdooOpen(true)}>
-                    🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
-                  </Btn>
-                  <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
-                    + Thêm<span className="hidden sm:inline"> đơn</span>
-                  </Btn>
-                </>
-              ) : (
-                nutIn ?? undefined
-              )
-            }
-          >
-            {data.don_cha.length === 0 ? (
-              <p className="text-[13px] text-[var(--ink-faint)]">Chưa có đơn nào — bấm “+ Thêm đơn” hoặc “Chọn đơn Odoo” trước khi xác nhận gửi.</p>
-            ) : (
-              <div className="divide-y divide-[var(--line)] -mx-1">
-                {data.don_cha.map((d) => {
-                  const td = tienDoOf(d.id);
-                  const clickable = (canOpenUnit && td.length > 0) || isNhap;
-                  return (
-                    <div
-                      key={d.id}
-                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : onOpenUnit ? onOpenUnit(`${d.id}-1`) : setOpenUnit(`${d.id}-1`)) : undefined}
-                      className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
-                      title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
-                    >
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
-                        <span className="min-w-0 max-w-full truncate font-medium text-[var(--ink)]" title={lkName(d.ma_lk)}>
-                          {lkName(d.ma_lk)}
-                        </span>
-                        <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
-                        {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
-                        {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
-                        {td.map((x) => (
-                          <Badge key={x.trang_thai} tone="gray" className="!font-medium">
-                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
-                          </Badge>
-                        ))}
-                        {isNhap && (
-                          <span className="ml-auto text-xs font-semibold text-[var(--link)]">✎ Sửa</span>
-                        )}
-                        {isNhap && (
-                          <Btn
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              xoaDon(d.id);
-                            }}
-                            disabled={busy}
-                            className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]"
-                          >
-                            ✕ Xoá
-                          </Btn>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-[var(--ink-soft)]" title={d.mo_ta_loi || ""}>
-                        {d.case_id && <span className="font-mono">{d.case_id} · </span>}
-                        {d.mo_ta_loi}
-                      </p>
-                      {d.loai_ma === "lada" && (
-                        <p className={`mt-0.5 text-[11px] font-semibold ${d.lada_tim_thay ? "text-[var(--ink-soft)]" : "text-[var(--red-700)]"}`}>
-                          {d.lada_tim_thay ? "🧾 Mã Lada (đã tìm thấy trên hệ Lada)" : "⚠ Mã Lada không tìm thấy trên hệ Lada — người tạo tự chịu trách nhiệm"}
-                        </p>
-                      )}
-                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (lúc tạo DVBH chưa có case / không phản hồi) — hệ thống sẽ tự kiểm tra lại</p>}
-                      {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
-                      {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
+          {donSection}
           <Section
             title="🚚 Vận chuyển"
             right={
@@ -738,87 +831,7 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             )}
           </Section>
 
-          <Section
-            title={gon ? `📦 Đơn trong thùng (${data.don_cha.length})` : `📦 Đơn bảo hành trong phiếu (${data.don_cha.length})`}
-            right={
-              isNhap ? (
-                <>
-                  {nutIn}
-                  <Btn size="sm" onClick={() => setOdooOpen(true)}>
-                    🧾 <span className="hidden sm:inline">Chọn đơn </span>Odoo
-                  </Btn>
-                  <Btn size="sm" variant="primary" onClick={() => setAddDonOpen(true)}>
-                    + Thêm<span className="hidden sm:inline"> đơn</span>
-                  </Btn>
-                </>
-              ) : (
-                nutIn ?? undefined
-              )
-            }
-          >
-            {data.don_cha.length === 0 ? (
-              <p className="text-[13px] text-[var(--ink-faint)]">Chưa có đơn nào — bấm “+ Thêm đơn” hoặc “Chọn đơn Odoo” trước khi xác nhận gửi.</p>
-            ) : (
-              <div className="divide-y divide-[var(--line)] -mx-1">
-                {data.don_cha.map((d) => {
-                  const td = tienDoOf(d.id);
-                  const clickable = (canOpenUnit && td.length > 0) || isNhap;
-                  return (
-                    <div
-                      key={d.id}
-                      onClick={clickable ? () => (isNhap ? setSuaDon(d) : onOpenUnit ? onOpenUnit(`${d.id}-1`) : setOpenUnit(`${d.id}-1`)) : undefined}
-                      className={`px-1 py-1.5 text-[13px] ${clickable ? "cursor-pointer rounded-md hover:bg-[var(--surface-2)]" : ""}`}
-                      title={isNhap ? "Bấm để sửa linh kiện, số lượng, mô tả lỗi, loại đối trừ" : clickable ? "Mở chi tiết đơn" : undefined}
-                    >
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-mono text-xs font-semibold text-[var(--link)]">{d.id}</span>
-                        <span className="min-w-0 max-w-full truncate font-medium text-[var(--ink)]" title={lkName(d.ma_lk)}>
-                          {lkName(d.ma_lk)}
-                        </span>
-                        <span className="text-xs text-[var(--ink-soft)]">×{d.so_luong_khai}</span>
-                        {!!d.odoo_id && <Badge tone="blue">Odoo</Badge>}
-                        {d.loai_doi_tru_de_xuat && !ktvView && <Badge tone="gray">{LOAI_DOI_TRU_LABELS[d.loai_doi_tru_de_xuat]}</Badge>}
-                        {td.map((x) => (
-                          <Badge key={x.trang_thai} tone="gray" className="!font-medium">
-                            {x.n} {ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : TRANG_THAI_UNIT_LABELS[x.trang_thai] ?? x.trang_thai}
-                          </Badge>
-                        ))}
-                        {isNhap && (
-                          <span className="ml-auto text-xs font-semibold text-[var(--link)]">✎ Sửa</span>
-                        )}
-                        {isNhap && (
-                          <Btn
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              xoaDon(d.id);
-                            }}
-                            disabled={busy}
-                            className="!text-[var(--red-600)] hover:!bg-[var(--red-50)]"
-                          >
-                            ✕ Xoá
-                          </Btn>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-[var(--ink-soft)]" title={d.mo_ta_loi || ""}>
-                        {d.case_id && <span className="font-mono">{d.case_id} · </span>}
-                        {d.mo_ta_loi}
-                      </p>
-                      {d.loai_ma === "lada" && (
-                        <p className={`mt-0.5 text-[11px] font-semibold ${d.lada_tim_thay ? "text-[var(--ink-soft)]" : "text-[var(--red-700)]"}`}>
-                          {d.lada_tim_thay ? "🧾 Mã Lada (đã tìm thấy trên hệ Lada)" : "⚠ Mã Lada không tìm thấy trên hệ Lada — người tạo tự chịu trách nhiệm"}
-                        </p>
-                      )}
-                      {d.case_xac_minh === 1 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⏳ Mã case chưa xác minh (lúc tạo DVBH chưa có case / không phản hồi) — hệ thống sẽ tự kiểm tra lại</p>}
-                      {d.case_xac_minh === 2 && <p className="mt-0.5 text-[11px] font-semibold text-[var(--red-700)]">✖ Xác minh mã case thất bại: {d.case_xac_minh_loi || "sai mã case"}</p>}
-                      {d.xac_nhan_khac_ktv && <p className="mt-0.5 text-[11px] font-semibold text-[var(--amber-800)]">⚠ Tạo thay — case thuộc KTV khác ({d.ktv_tren_case || "không xác định"})</p>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
+          {donSection}
             </>
           )}
         </DetailGrid>

@@ -3,6 +3,16 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 27/11/2026 — v1.167: Chi tiết thùng — nhóm / sắp xếp đơn theo mã sự cố, mã linh kiện + tổng đơn / tổng LK
+
+- Yêu cầu (nguyên văn): "thêm chức năng nhóm theo mã sự cố, nhóm theo mã linh kiện, sort theo mã linh kiện, sort theo mã sự cố. hiện tổng đơn (24 đơn/tổng 26 LK)"
+  (kèm ảnh chi tiết thùng BH-001206).
+- Đã làm (`PhieuGuiDetailModal.tsx`): gộp 2 bản sao danh sách đơn (bố cục KTV/điện thoại và bố cục máy tính) thành 1 khối dùng chung; tiêu đề + chip tóm tắt
+  hiện "N đơn / tổng M LK"; thanh công cụ "Nhóm theo" (Không nhóm / Mã sự cố / Mã linh kiện) + "Sắp xếp" (thứ tự thêm vào thùng / Mã linh kiện ↑↓ / Mã sự cố ↑↓)
+  + nút "× Bỏ nhóm / sắp xếp"; nhóm có đầu nhóm "mã · tên LK · x đơn · y LK", đơn không có mã xếp cuối. Lựa chọn nhớ trên máy (localStorage). Thanh chỉ hiện khi
+  thùng ≥ 2 đơn. Thao tác cũ (bấm đơn mở chi tiết, sửa / xoá đơn nháp) giữ nguyên.
+- Kiểm thử: typecheck BE + FE, build xanh. Chưa thử trên giao diện thật với dữ liệu thùng (cần đăng nhập).
+
 ## 27/11/2026 — v1.166: Đơn "Xác nhận trừ công nợ" cũng có xác — bắt buộc chọn xử lý xác, xác "Trả đối tác" vào Quản lý xác
 
 - Yêu cầu (nguyên văn): "logic các đơn này là như nào nhỉ" (6 dòng Import BBBG ra "Không phải xác trả đối tác"); "trừ công nợ là trừ công nợ của kTV, còn xác

@@ -7703,3 +7703,14 @@ Nguyên văn: "logic các đơn này là như nào nhỉ" (ảnh Import BBBG: 6 
 Dữ liệu thật lúc làm: 298 đơn vị trừ nợ `xu_ly_xac` trống (109 trước 01/11, 189 sau). Nguyên văn duyệt: "Điền hàng loạt" → đã điền "Trả đối tác" cả 298
 (nhật ký từng đơn, người thực hiện `he-thong`), chạy ngay đánh dấu đơn trước 01/11 → 109 "đã xử lý ngoài"; còn 189 chờ gom.
 Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy trên D1 thật (chỉ đọc).
+
+## Chi tiết thùng — nhóm / sắp xếp đơn + tổng đơn / tổng LK (27/11/2026) — v1.167
+
+- Nguyên văn: "thêm chức năng nhóm theo mã sự cố, nhóm theo mã linh kiện, sort theo mã linh kiện, sort theo mã sự cố. hiện tổng đơn (24 đơn/tổng 26 LK)".
+- Đã chốt: "mã sự cố" = `don_bh_cha.case_id` (mã case DVBH hoặc mã Lada); "mã linh kiện" = `ma_lk` (so sánh tự nhiên `localeCompare("vi", numeric)`); "tổng LK" =
+  tổng `so_luong_khai` các đơn cha trong thùng. Nhóm + sắp xếp chỉ ở giao diện (FE), không đổi API, không đổi phiếu in / PDF. Ô "Nhóm theo" / "Sắp xếp" là ô chọn
+  CHẾ ĐỘ (ngoại lệ chọn 1 của luật bộ lọc chọn nhiều). Khi nhóm và sắp cùng trường → chiều sắp áp cho thứ tự nhóm; khác trường → nhóm A→Z, trong nhóm theo chiều sắp.
+  Mã rỗng xếp cuối. Lựa chọn nhớ ở localStorage `pg_nhom_don`, `pg_sap_don`.
+- Kỹ thuật: `PhieuGuiDetailModal.tsx` trước có 2 bản JSX danh sách đơn giống hệt (nhánh `gon` và nhánh máy tính) → gộp thành `donSection` + `renderDon`.
+- Kiểm thử: typecheck + build xanh.
+
