@@ -10,6 +10,7 @@ import {
   GIAI_DOAN_VI,
 } from "../lib/partnerCaseLabels";
 import { LBL, coXac } from "../lib/constants";
+import { XAC_DX_CHO_GOM, XAC_KQ_LABEL } from "../lib/xac";
 import { tinhLuong, logThuocDon, type RawLog } from "../lib/partnerCaseFlow";
 
 // 06/11/2026: API doi tac cho dvbh (CaseDetail tab "Gui BH") - "lien ket luong thong tin gui bao hanh,
@@ -25,12 +26,9 @@ import { tinhLuong, logThuocDon, type RawLog } from "../lib/partnerCaseFlow";
 const partnerCase = new Hono<{ Bindings: Env }>();
 
 const XAC_TT_VI: Record<string, string> = {
+  ...XAC_KQ_LABEL, // ngoai / tieu_huy / that_lac / khong_co / luu_kho
   trong_thung: "Trong thùng trả xác",
   da_tra: "Đã trả xác cho đối tác",
-  ngoai: "Đã xử lý ngoài hệ thống",
-  tieu_huy: "Xác đã tiêu huỷ",
-  that_lac: "Xác thất lạc",
-  khong_co: "Không có xác",
 };
 const THUNG_XAC_TT_VI: Record<string, string> = { nhap: "Đang gom (nháp)", cho_ke_toan: "Chờ kế toán duyệt", da_duyet: "Kế toán đã duyệt" };
 
@@ -122,8 +120,20 @@ partnerCase.get("/case-timeline", async (c) => {
 
   const traIds = [...new Set(units.map((u) => s(u.phieu_tra_id)).filter((x): x is string => !!x))];
   const unitIds = units.map((u) => String(u.id));
+  // 27/11/2026 (v1.170): xac SUA CHUA cua ca = de xuat cap LK da xuat (cung dinh nghia "Xac" o routes/xac.ts: da vao thung / da co ket qua /
+  // du dieu kien cho gom). Theo idx de xuat theo unit_id - vai dong/lan mo ca.
+  const xacSc = unitIds.length
+    ? await allIn<Row>(
+        db,
+        (ph) => `SELECT d.id, d.unit_id, d.ma_lk, lk.ten_lk, COALESCE(d.sl_dung, d.so_luong) AS so_luong, d.xac_tt, d.thung_xac_id, d.xac_xl_luc,
+                        d.xac_xl_ghi_chu, COALESCE(d.kho_xuat_luc, d.xn_luc, d.updated_at) AS xuat_luc
+                 FROM de_xuat_linh_kien_bh d LEFT JOIN linh_kien_bh lk ON lk.ma_lk = d.ma_lk
+                 WHERE d.unit_id IN (${ph}) AND (d.xac_tt IS NOT NULL OR d.thung_xac_id IS NOT NULL OR (${XAC_DX_CHO_GOM}))`,
+        unitIds,
+      )
+    : [];
   // 27/11/2026: tien do tra xac cho dvbh (Chi tiet ca buoc 7-8). Thung tra xac theo PK - vai dong/lan mo ca.
-  const thungXacIds = [...new Set(units.map((u) => s(u.thung_xac_id)).filter((x): x is string => !!x))];
+  const thungXacIds = [...new Set([...units, ...xacSc].map((u) => s(u.thung_xac_id)).filter((x): x is string => !!x))];
   const thungXacs = thungXacIds.length
     ? await allIn<Row>(
         db,
@@ -132,6 +142,21 @@ partnerCase.get("/case-timeline", async (c) => {
       )
     : [];
   const thungXacMap = new Map(thungXacs.map((t) => [String(t.id), t]));
+  const thungOf = (id: unknown) => {
+    const tx = id ? thungXacMap.get(String(id)) : undefined;
+    return tx
+      ? {
+          id: String(tx.id),
+          trang_thai: String(tx.trang_thai),
+          trang_thai_label: THUNG_XAC_TT_VI[String(tx.trang_thai)] ?? String(tx.trang_thai),
+          doi_tac: s(tx.doi_tac),
+          ma_eo: s(tx.ma_eo),
+          tao_luc: s(tx.created_at),
+          gui_kt_luc: s(tx.gui_kt_luc),
+          kt_luc: s(tx.kt_luc),
+        }
+      : null;
+  };
   const [tras, logs] = await Promise.all([
     traIds.length
       ? allIn<Row>(
@@ -250,6 +275,21 @@ partnerCase.get("/case-timeline", async (c) => {
         xu_ly_xac: lbl({}, u.xu_ly_xac),
         // Tien do tra xac (27/11/2026, dvbh buoc 7-8). co_xac = huong co xac (Doi moi / Tru cong no) hoac da co xu ly / trang thai xac.
         // tt: null = cho xu ly xac (cho gom) | trong_thung | da_tra (KT da duyet thung) | ngoai | tieu_huy | that_lac | khong_co.
+        // Xac linh kien sau sua chua (de xuat cap LK da xuat) cua don vi nay.
+        xac_sua_chua: xacSc
+          .filter((d) => d.unit_id === u.id)
+          .map((d) => ({
+            id: String(d.id),
+            ma_lk: s(d.ma_lk),
+            ten_lk: s(d.ten_lk),
+            so_luong: Number(d.so_luong) || 0,
+            tt: s(d.xac_tt),
+            tt_label: lbl(XAC_TT_VI, d.xac_tt) ?? "Chờ xử lý xác",
+            xuat_luc: s(d.xuat_luc),
+            xl_luc: s(d.xac_xl_luc),
+            xl_ghi_chu: s(d.xac_xl_ghi_chu),
+            thung: thungOf(d.thung_xac_id),
+          })),
         xac: (() => {
           const tx = u.thung_xac_id ? thungXacMap.get(String(u.thung_xac_id)) : undefined;
           return {

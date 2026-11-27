@@ -7729,4 +7729,6 @@ Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy tr�
 `xac: { co_xac, xu_ly_xac, tt, tt_label, xl_luc, xl_ghi_chu, thung: { id, trang_thai, trang_thai_label, doi_tac, ma_eo, tao_luc, gui_kt_luc, kt_luc } | null }`.
 `co_xac` = `coXac(huong_xu_ly)` hoặc đã có `xu_ly_xac` / `xac_tt`. DVBH (`lib/buocQuyTrinh.ts`) dùng: chưa có đơn → "chưa có xác"; có đơn chưa có xác → bước 7 "Chờ xử lý
 xác"; mọi xác có `tt` → bước 7 xong; bước 8 theo thùng (da_tra hết → xong, còn trong_thung → chờ; kết thúc ngoài thùng → bỏ qua). Xác sửa chữa (`de_xuat_linh_kien_bh`) chưa đưa vào.
+- v1.170: thêm `xac_sua_chua[]` mỗi đơn vị (de_xuat_linh_kien_bh theo `unit_id`, điều kiện = có `xac_tt` / `thung_xac_id` / `XAC_DX_CHO_GOM`; SL = `COALESCE(sl_dung, so_luong)`;
+  `xuat_luc` = `COALESCE(kho_xuat_luc, xn_luc, updated_at)`), nhãn trạng thái xác lấy `XAC_KQ_LABEL` (có `luu_kho`). DVBH cộng cả 2 nguồn xác ở bước 7–8.
 

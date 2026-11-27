@@ -3,6 +3,14 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 27/11/2026 — v1.170: case-timeline trả thêm xác linh kiện sau sửa chữa (cho DVBH bước 7–8)
+
+- Yêu cầu (nguyên văn, bên DVBH): "kéo thông tin xác lk vào bước 7-8".
+- Đã làm (`routes/partnerCase.ts`): mỗi đơn vị thêm `xac_sua_chua[]` = đề xuất cấp linh kiện đã xuất của đơn vị (cùng định nghĩa "xác sửa chữa" ở
+  `routes/xac.ts`: đã vào thùng / đã có kết quả / đủ điều kiện chờ gom — `XAC_DX_CHO_GOM`): mã + tên LK, SL (SL dùng nếu có), trạng thái xác, giờ xuất,
+  giờ xử lý, thùng trả xác. Nhãn trạng thái xác dùng chung `XAC_KQ_LABEL` (thêm "Lưu kho" còn thiếu ở v1.169). 1 truy vấn theo `unit_id`.
+- Kiểm thử: typecheck BE + FE; câu SQL chạy trên D1 local.
+
 ## 27/11/2026 — v1.169: API case-timeline trả thêm tiến độ trả xác (cho DVBH Chi tiết ca bước 7–8)
 
 - Yêu cầu (nguyên văn, bên DVBH): "Bước 7 và 8 là tiến độ trả xác linh kiện từ app đổi trả bảo hành. (trường hợp có gửi bh mới có trả xác - chưa có thì hiện
