@@ -9,7 +9,7 @@ import {
   TRANG_THAI_UNIT_VI,
   GIAI_DOAN_VI,
 } from "../lib/partnerCaseLabels";
-import { LBL } from "../lib/constants";
+import { LBL, coXac } from "../lib/constants";
 import { tinhLuong, logThuocDon, type RawLog } from "../lib/partnerCaseFlow";
 
 // 06/11/2026: API doi tac cho dvbh (CaseDetail tab "Gui BH") - "lien ket luong thong tin gui bao hanh,
@@ -23,6 +23,16 @@ import { tinhLuong, logThuocDon, type RawLog } from "../lib/partnerCaseFlow";
 // Chi phi D1: 1 lan tra theo idx_psc_case_id + don vi theo idx_psc_ct_parent + phieu gui/tra theo PK +
 // log theo idx_logs_bh_entity - vai chuc dong/lan mo ca.
 const partnerCase = new Hono<{ Bindings: Env }>();
+
+const XAC_TT_VI: Record<string, string> = {
+  trong_thung: "Trong thùng trả xác",
+  da_tra: "Đã trả xác cho đối tác",
+  ngoai: "Đã xử lý ngoài hệ thống",
+  tieu_huy: "Xác đã tiêu huỷ",
+  that_lac: "Xác thất lạc",
+  khong_co: "Không có xác",
+};
+const THUNG_XAC_TT_VI: Record<string, string> = { nhap: "Đang gom (nháp)", cho_ke_toan: "Chờ kế toán duyệt", da_duyet: "Kế toán đã duyệt" };
 
 function safeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -83,6 +93,7 @@ partnerCase.get("/case-timeline", async (c) => {
       (ph) => `SELECT u.id, u.parent_id, u.so_thu_tu, COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan) AS ma_lk_thuc_te, lk.ten_lk AS ten_lk_thuc_te,
                       u.loai_bao_hanh, u.huong_xu_ly, u.loai_doi_tru, u.ket_qua_nv, u.ket_qua_chan_doan, u.xu_ly_xac, u.trang_thai,
                       u.ly_do_tu_choi, u.ghi_chu_admin, u.ghi_chu_nv, u.phieu_tra_id, u.that_lac, u.updated_at, u.created_at,
+                      u.thung_xac_id, u.xac_tt, u.xac_xl_luc, u.xac_xl_ghi_chu,
                       COALESCE(nv.ten, CASE WHEN u.nguoi_sua_chua IS NOT NULL THEN 'NV sửa chữa' END) AS nv_sua_chua
                FROM phieu_sua_chua_bh_ct u
                LEFT JOIN linh_kien_bh lk ON lk.ma_lk = COALESCE(u.ma_lk_thuc_te, u.ma_lk_nhan)
@@ -111,6 +122,16 @@ partnerCase.get("/case-timeline", async (c) => {
 
   const traIds = [...new Set(units.map((u) => s(u.phieu_tra_id)).filter((x): x is string => !!x))];
   const unitIds = units.map((u) => String(u.id));
+  // 27/11/2026: tien do tra xac cho dvbh (Chi tiet ca buoc 7-8). Thung tra xac theo PK - vai dong/lan mo ca.
+  const thungXacIds = [...new Set(units.map((u) => s(u.thung_xac_id)).filter((x): x is string => !!x))];
+  const thungXacs = thungXacIds.length
+    ? await allIn<Row>(
+        db,
+        (ph) => `SELECT t.id, t.trang_thai, t.doi_tac, t.ma_eo, t.created_at, t.gui_kt_luc, t.kt_luc FROM thung_xac_bh t WHERE t.id IN (${ph})`,
+        thungXacIds,
+      )
+    : [];
+  const thungXacMap = new Map(thungXacs.map((t) => [String(t.id), t]));
   const [tras, logs] = await Promise.all([
     traIds.length
       ? allIn<Row>(
@@ -227,6 +248,31 @@ partnerCase.get("/case-timeline", async (c) => {
         loai_doi_tru: lbl({}, u.loai_doi_tru),
         ket_qua: lbl({}, u.ket_qua_nv ?? u.ket_qua_chan_doan),
         xu_ly_xac: lbl({}, u.xu_ly_xac),
+        // Tien do tra xac (27/11/2026, dvbh buoc 7-8). co_xac = huong co xac (Doi moi / Tru cong no) hoac da co xu ly / trang thai xac.
+        // tt: null = cho xu ly xac (cho gom) | trong_thung | da_tra (KT da duyet thung) | ngoai | tieu_huy | that_lac | khong_co.
+        xac: (() => {
+          const tx = u.thung_xac_id ? thungXacMap.get(String(u.thung_xac_id)) : undefined;
+          return {
+            co_xac: coXac(s(u.huong_xu_ly)) || u.xu_ly_xac != null || u.xac_tt != null,
+            xu_ly_xac: s(u.xu_ly_xac),
+            tt: s(u.xac_tt),
+            tt_label: lbl(XAC_TT_VI, u.xac_tt) ?? "Chờ xử lý xác",
+            xl_luc: s(u.xac_xl_luc),
+            xl_ghi_chu: s(u.xac_xl_ghi_chu),
+            thung: tx
+              ? {
+                  id: String(tx.id),
+                  trang_thai: String(tx.trang_thai),
+                  trang_thai_label: lbl(THUNG_XAC_TT_VI, tx.trang_thai),
+                  doi_tac: s(tx.doi_tac),
+                  ma_eo: s(tx.ma_eo),
+                  tao_luc: s(tx.created_at),
+                  gui_kt_luc: s(tx.gui_kt_luc),
+                  kt_luc: s(tx.kt_luc),
+                }
+              : null,
+          };
+        })(),
         nv_sua_chua: s(u.nv_sua_chua),
         ly_do_tu_choi: s(u.ly_do_tu_choi),
         ghi_chu_admin: s(u.ghi_chu_admin),

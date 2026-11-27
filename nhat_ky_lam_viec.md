@@ -3,6 +3,17 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 27/11/2026 — v1.169: API case-timeline trả thêm tiến độ trả xác (cho DVBH Chi tiết ca bước 7–8)
+
+- Yêu cầu (nguyên văn, bên DVBH): "Bước 7 và 8 là tiến độ trả xác linh kiện từ app đổi trả bảo hành. (trường hợp có gửi bh mới có trả xác - chưa có thì hiện
+  chưa có linh kiện bảo hành gửi nên chưa có xác - nếu có link kiện gửi về đổi trả thì mới chuyển sang dạng trạng thái chờ xử lý xác."
+- Đã làm (`routes/partnerCase.ts`): mỗi đơn vị trong `GET /api/partner/v1/case-timeline` thêm khối `xac` — `co_xac` (hướng Đổi mới / Trừ công nợ hoặc đã có
+  xử lý / trạng thái xác), `xu_ly_xac`, `tt` + `tt_label` (chờ xử lý xác / trong thùng / đã trả / xử lý ngoài / tiêu huỷ / thất lạc / không có xác), `xl_luc`,
+  `xl_ghi_chu`, `thung` (thùng trả xác TX-: trạng thái nháp / chờ kế toán / kế toán đã duyệt, đối tác, mã EO, giờ tạo / gửi KT / KT duyệt). Chỉ ĐỌC, thêm
+  1 truy vấn theo khoá chính `thung_xac_bh` (vài dòng / lần mở ca). Trường cũ giữ nguyên.
+- Chưa gồm xác sửa chữa (`de_xuat_linh_kien_bh`) — chỉ xác của đơn vị gửi BH.
+- Kiểm thử: typecheck BE + FE.
+
 ## 27/11/2026 — v1.168: Chi tiết thùng — nhóm đơn theo trạng thái LK thực tế
 
 - Yêu cầu (nguyên văn): "thêm nhóm theo trạng thái của lk (chờ tiếp nhận, đang sửa, bị từ chối... theo trạng thái thực tế)".

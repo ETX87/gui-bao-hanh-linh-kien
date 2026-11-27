@@ -127,7 +127,7 @@ theo vai trò (push + chuông), tự đóng phiếu trả 14 ngày, tự đánh 
 | Hệ | Nội dung |
 |---|---|
 | App Đặt linh kiện (`linh-kien-app`) | Danh mục LK / danh bạ KTV / khu vực (kéo về), phân loại LK (đẩy ngược), ticket thiếu hàng bảo hành, cấp linh kiện + trừ công nợ sửa chữa, gợi ý đơn BH (Service Binding + khoá đồng bộ) |
-| DVBH | Tra case CRM, API luồng gửi bảo hành của 1 ca (case-timeline), đẩy trạng thái đơn Odoo + tóm tắt gửi BH theo ca (`lib/tomTatCa.ts`: số LK, giai đoạn thấp nhất, lần gửi xe cuối, thời gian xử lý lâu nhất; bỏ đơn huỷ / từ chối; chỉ ca có thay đổi, cùng request 15 phút) |
+| DVBH | Tra case CRM, API luồng gửi bảo hành của 1 ca (case-timeline — từ v1.169 kèm tiến độ trả xác từng đơn vị: trạng thái xác + thùng TX, DVBH hiện ở bước 7–8 Chi tiết ca), đẩy trạng thái đơn Odoo + tóm tắt gửi BH theo ca (`lib/tomTatCa.ts`: số LK, giai đoạn thấp nhất, lần gửi xe cuối, thời gian xử lý lâu nhất; bỏ đơn huỷ / từ chối; chỉ ca có thay đổi, cùng request 15 phút) |
 | Odoo | Kéo đơn bảo hành về, xuất file import kết quả |
 | khovan | Đẩy thùng khi gửi thật |
 | ETX nhân sự | Tự duyệt / khoá tài khoản |

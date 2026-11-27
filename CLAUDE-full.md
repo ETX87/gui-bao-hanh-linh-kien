@@ -7723,3 +7723,10 @@ Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy tr�
   Dữ liệu lấy từ `tien_do` sẵn có của `GET /phieu-gui/:id` — không đổi API. KTV thấy nhãn rút gọn kiểu KTV (gộp theo nhãn).
 - Kiểm thử: typecheck + build xanh.
 
+## v1.169 (27/11/2026) — case-timeline trả tiến độ trả xác cho DVBH
+
+`routes/partnerCase.ts`: thêm `u.thung_xac_id, u.xac_tt, u.xac_xl_luc, u.xac_xl_ghi_chu` vào truy vấn đơn vị + 1 truy vấn `thung_xac_bh` theo PK; mỗi đơn vị có
+`xac: { co_xac, xu_ly_xac, tt, tt_label, xl_luc, xl_ghi_chu, thung: { id, trang_thai, trang_thai_label, doi_tac, ma_eo, tao_luc, gui_kt_luc, kt_luc } | null }`.
+`co_xac` = `coXac(huong_xu_ly)` hoặc đã có `xu_ly_xac` / `xac_tt`. DVBH (`lib/buocQuyTrinh.ts`) dùng: chưa có đơn → "chưa có xác"; có đơn chưa có xác → bước 7 "Chờ xử lý
+xác"; mọi xác có `tt` → bước 7 xong; bước 8 theo thùng (da_tra hết → xong, còn trong_thung → chờ; kết thúc ngoài thùng → bỏ qua). Xác sửa chữa (`de_xuat_linh_kien_bh`) chưa đưa vào.
+
