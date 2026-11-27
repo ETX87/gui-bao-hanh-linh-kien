@@ -31,7 +31,7 @@
 | 🟩 Khớp theo A/C | Đúng case, mã hàng = A hoặc C | Kiểm xác thật: đúng như BBBG → **sửa B** trên app; đúng như app → sửa BBBG. Rồi đưa vào thùng |
 | ❌ Lệch mã LK | Đúng case, mã khác cả A/B/C | Mở thùng kiểm xác thật → sửa B hoặc rút xác khỏi BBBG |
 | 🟨 Đã xử lý ngoài | `xac_tt = ngoai` (đơn trước 01/11/2026) | Thật sự trả đợt này → "Đưa lại chờ gom" rồi gom; không thì bỏ khỏi BBBG |
-| ❌ Không phải xác trả | Đơn Từ chối / Xác nhận trừ nợ / xử lý xác ≠ Trả đối tác | Rút xác khỏi thùng (không thuộc diện trả nhà máy), hoặc Admin BH sửa hướng xử lý nếu app ghi sai |
+| ❌ Không phải xác trả | Đơn Từ chối / Trả lại KTV / … hoặc xử lý xác ≠ Trả đối tác (từ v1.166 đơn **Xác nhận trừ nợ** có xử lý xác như Đổi mới — chọn "Trả đối tác" là khớp) | Rút xác khỏi thùng (không thuộc diện trả nhà máy), hoặc Admin BH sửa hướng xử lý nếu app ghi sai |
 | ❌ Thừa / Không có trong app | Case hết đơn vị / không tìm thấy | Rút xác, hoặc tạo đơn bổ sung nếu là xác thật hợp lệ |
 | ⚠ App có – BBBG thiếu | Xác chờ gom của case trong BBBG nhưng không có dòng nào | Kiểm kho: còn → để đợt sau; đã gửi mà quên ghi → bổ sung vào thùng |
 

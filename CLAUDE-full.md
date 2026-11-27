@@ -7685,3 +7685,20 @@ cảnh báo nhắc nhở và hỏi lý do lk A báo thiếu đã được đặt
 ≥ 5 ký tự khi `lkDaVeChuaDung()` còn dòng, kiểm trước tự xác nhận đã nhận / tải ảnh; lý do chỉ lưu nhật ký `logs_bh` (không thêm cột, không migration).
 Nhật ký này không chứa "Lý do chậm" nên không kích hoạt tự tạo thiếu hàng (`ghiNhanThieuHangTuLog`).
 
+## Xác của đơn "Xác nhận trừ công nợ" (27/11/2026) — v1.166
+
+Nguyên văn: "logic các đơn này là như nào nhỉ" (ảnh Import BBBG: 6 dòng DH-001936-1 … DH-001942-1 "Không phải xác trả đối tác", ghi chú "Hướng xử lý: Xác nhận trừ nợ")
+→ trả lời: 6 đơn vị phân loại `xac_nhan_tru_no`, `ghepBbbg.ketLuan` chỉ coi `DX-…` hoặc `doi_moi` + `tra_doi_tac` là xác trả. Người dùng chốt:
+"trừ công nợ là trừ công nợ của kTV, còn xác thì vẫn có, vẫn phải xác định có trả đối tác hay không".
+
+Đã chốt (thay luật cũ "chỉ Đổi mới có xử lý xác", 05/10/2026 + 21/08/2026 vòng 3 (b) "trả xác linh kiện lỗi về" — nay rõ: trừ nợ có xác ở kho như Đổi mới):
+- `HUONG_CO_XAC = ["doi_moi", "xac_nhan_tru_no"]`, `coXac()`, `HUONG_CO_XAC_SQL` (BE `lib/constants.ts`; FE `lib/constants.ts` bản sao).
+- `routes/adminBH.ts`: `applyPhanLoaiToUnit` bắt buộc `xu_ly_xac` (`REQUIRE_XU_LY_XAC`) + lưu + ghi nhật ký; FAST "Trừ công nợ" / "Trừ công nợ có phê duyệt"
+  mặc định `tra_doi_tac`; `xacNhanHoanTat`, `PATCH /don-vi/:id/xu-ly-xac` nhận cả hướng trừ nợ.
+- `lib/xac.ts` `XAC_CHO_GOM`, `XAC_CU_CHUA_DANH_DAU` (đơn trước 01/11 → tự "đã xử lý ngoài"); `routes/xac.ts` nguồn xác đơn vị có `loai = 'tru_no'` cho đơn trừ nợ,
+  `XAC_NGOAI_U`, import xác; `lib/ghepBbbg.ts` `laXacTraDoiTac()` + mô tả "Xác nhận trừ nợ, xử lý xác: …".
+- FE: `PhanLoaiModal`, `BulkPhanLoaiModal`, `XacNhanHoanTatModal`, `BulkXacNhanHoanTatModal`, `UnitDetailModal` dùng `coXac`; `TraXacScreen` / `ImportXac` nhãn "Trừ công nợ".
+- Không đổi: phiếu trả KTV, trừ công nợ KTV, trạng thái đơn vị (vẫn `san_sang_gom_phieu_tra`).
+
+Dữ liệu thật lúc làm: 298 đơn vị trừ nợ `xu_ly_xac` trống (109 trước 01/11, 189 sau) — **mở**: điền hàng loạt hay để Admin BH chọn từng đơn.
+Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy trên D1 thật (chỉ đọc).

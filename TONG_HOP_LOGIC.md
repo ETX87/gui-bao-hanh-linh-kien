@@ -97,7 +97,8 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 
 ## 6. Trả xác linh kiện
 
-Xác chờ gom (đơn vị Đổi mới / sửa có thay LK, xử lý xác "Trả đối tác", tính theo linh kiện B) → thùng trả xác `TX-…` (`nhap` →
+Xác chờ gom (đơn vị Đổi mới **hoặc Xác nhận trừ công nợ** (v1.166 — trừ nợ là trừ công nợ KTV, xác vẫn có; hai hướng này bắt buộc chọn xử lý xác khi phân loại,
+nút nhanh mặc định "Trả đối tác") / sửa có thay LK, xử lý xác "Trả đối tác", tính theo linh kiện B) → thùng trả xác `TX-…` (`nhap` →
 `cho_ke_toan` → `da_duyet`; bắt buộc mã EO + ≥ 1 xác; 1 thùng 1 miền, 1 đối tác) → Kế toán duyệt (hoặc trả lại có lý do). Thêm / bớt xác
 tới khi Kế toán duyệt (Kế toán không duyệt thùng rỗng); xác trong thùng thì không đổi xử lý xác / không lùi đơn. Luật 1 miền 1 đối tác áp cả bấm tay lẫn
 import Excel (thùng mới từ import lấy đối tác + miền của xác đầu). Người gom "Huỷ gửi KT" khi chưa duyệt; thùng nháp rỗng xoá được. Kết quả ngoài thùng:

@@ -33,6 +33,7 @@ KTV / CTV / Trạm, KTV triển khai, Kho, Admin bảo hành, NV sửa chữa, K
 
 - Mã case bắt buộc mỗi đơn, phải khớp KTV (lệch KTV thì tạo thay có ghi nhận); không trùng case + linh kiện đang mở.
 - Giao NV sửa: bắt buộc Hãng, Đối tác, còn / hết bảo hành. Huỷ / từ chối / trả lại: bắt buộc lý do.
+- Phân loại hướng **Đổi mới** hoặc **Xác nhận trừ công nợ** bắt buộc chọn xử lý xác (Trả đối tác / Tiêu huỷ / Lưu kho); xác "Trả đối tác" của cả hai hướng vào Xác chờ gom (v1.166 — trừ nợ là trừ công nợ KTV, xác vẫn có).
 - Thùng trả xác gửi Kế toán / Kế toán duyệt: bắt buộc mã EO + ≥ 1 xác; 1 thùng 1 miền 1 đối tác (cả khi import Excel).
 - Biên bản bàn giao (BBBG) trả xác lập TỪ thùng TX (nút Tải BBBG): 1 mã hàng (mã B) 1 dòng, cột Kiện, mã case; thùng chưa KT duyệt → ghi "BẢN NHÁP".
   BBBG lập tay → Import BBBG: mỗi mã case = 1 xác, ghép 1–1 theo mã B → A/C; chỉ dòng "Khớp" (và "Khớp theo A/C" khi người import tick) vào thùng; số kiện ≤ 40 ký tự.

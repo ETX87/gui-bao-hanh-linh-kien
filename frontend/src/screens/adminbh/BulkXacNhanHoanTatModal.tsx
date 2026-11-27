@@ -4,7 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Select } from "../../ui/primitives";
 import { isOverdue } from "../../lib/format";
-import { HUONG_XU_LY_LABELS, XU_LY_XAC_LABELS } from "../../lib/constants";
+import { coXac, HUONG_XU_LY_LABELS, XU_LY_XAC_LABELS } from "../../lib/constants";
 import { LyDoChamGateField } from "../shared/LyDoChamGateField";
 import type { DonVi } from "../../lib/types";
 
@@ -16,7 +16,7 @@ export function BulkXacNhanHoanTatModal({ units, onClose, onDone }: { units: Don
   const [xuLyXac, setXuLyXac] = useState("");
   const [lyDoCham, setLyDoCham] = useState("");
   const [busy, setBusy] = useState(false);
-  const thieuXac = units.filter((u) => u.huong_xu_ly === "doi_moi" && !u.xu_ly_xac).length;
+  const thieuXac = units.filter((u) => coXac(u.huong_xu_ly) && !u.xu_ly_xac).length;
   const soQuaHan = units.filter((u) => isOverdue(u.updated_at, "cho_admin_xac_nhan")).length;
   const valid = (!thieuXac || xuLyXac) && (!soQuaHan || lyDoCham);
 

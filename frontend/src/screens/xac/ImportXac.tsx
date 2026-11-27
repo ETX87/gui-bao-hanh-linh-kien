@@ -80,7 +80,7 @@ export function ImportXacModal({ listPath, onClose, onDone }: { listPath: string
         { header: H_KQ, value: () => "", width: 20 },
         { header: H_THUNG, value: () => "", width: 14 },
         { header: H_GC, value: () => "", width: 30 },
-        { header: "Loại (tham khảo)", value: (r) => (r.loai === "sua_chua" ? "Sau sửa chữa" : "Đổi mới"), width: 14 },
+        { header: "Loại (tham khảo)", value: (r) => (r.loai === "sua_chua" ? "Sau sửa chữa" : r.loai === "tru_no" ? "Trừ công nợ" : "Đổi mới"), width: 14 },
         { header: "Đơn vị BH", value: (r) => r.unit_id, width: 16 },
         { header: "Linh kiện xác", value: (r) => nameOf(r.ma_lk_xac), width: 34 },
         { header: "SL", value: (r) => r.so_luong, width: 6 },

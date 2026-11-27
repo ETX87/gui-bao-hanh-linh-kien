@@ -31,6 +31,12 @@ export const HUONG_CAN_NV: readonly HuongXuLy[] = ["sua_chua", "dich_vu_tinh_phi
 // Huong xu ly di THANG toi san_sang_gom_phieu_tra (khong qua NV chan doan) - tu tao/gop phieu tra.
 export const HUONG_TAO_PHIEU_TRA: readonly HuongXuLy[] = ["doi_moi", "tra_lai_ktv", "xac_nhan_tru_no"];
 
+// 27/11/2026 (v1.166): huong co XAC linh kien loi o kho -> BAT BUOC chon xu ly xac (tra doi tac / tieu huy / luu kho), xac "Tra doi tac"
+// vao Quan ly xac. Nguyen van: "trừ công nợ là trừ công nợ của kTV, còn xác thì vẫn có, vẫn phải xác định có trả đối tác hay không".
+export const HUONG_CO_XAC: readonly HuongXuLy[] = ["doi_moi", "xac_nhan_tru_no"];
+export const coXac = (h: string | null | undefined): boolean => !!h && (HUONG_CO_XAC as readonly string[]).includes(h);
+export const HUONG_CO_XAC_SQL = HUONG_CO_XAC.map((h) => `'${h}'`).join(",");
+
 // Ma dinh danh "khach le" dung lam khoa nhom trong danh sach tao phieu tra (KHONG phai email that).
 export const KHACH_LE_KEY = "__khach_le__";
 

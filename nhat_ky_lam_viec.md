@@ -3,6 +3,19 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 27/11/2026 — v1.166: Đơn "Xác nhận trừ công nợ" cũng có xác — bắt buộc chọn xử lý xác, xác "Trả đối tác" vào Quản lý xác
+
+- Yêu cầu (nguyên văn): "logic các đơn này là như nào nhỉ" (6 dòng Import BBBG ra "Không phải xác trả đối tác"); "trừ công nợ là trừ công nợ của kTV, còn xác
+  thì vẫn có, vẫn phải xác định có trả đối tác hay không".
+- Nguyên nhân: app chỉ coi đơn vị **Đổi mới** + xử lý xác "Trả đối tác" là xác trả nhà máy; hướng **Xác nhận trừ công nợ** không có ô xử lý xác nên xác không
+  bao giờ vào "Xác chờ gom" (D1 thật: 298 đơn vị trừ nợ, tất cả `xu_ly_xac` trống — 109 đơn trước 01/11, 189 đơn sau).
+- Đã làm: thêm `HUONG_CO_XAC = doi_moi + xac_nhan_tru_no` (BE + FE `lib/constants.ts`). Phân loại đơn lẻ / hàng loạt hướng trừ nợ bắt buộc chọn xử lý xác;
+  nút nhanh "Trừ công nợ" mặc định "Trả đối tác" (giống Đổi mới nhanh); chi tiết đơn sửa được xử lý xác + dòng "Trả xác"; `XAC_CHO_GOM`, xác đã xử lý ngoài,
+  import xác, đánh dấu đơn trước 01/11, Import BBBG (`ghepBbbg`) tính cả đơn trừ nợ. Màn Trả xác thêm loại xác "Trừ công nợ (KTV gửi về)".
+- Kiểm thử: typecheck BE + FE, build xanh; thử `ghepBbbg` (trừ nợ + Trả đối tác → "Khớp – chờ gom"; chưa chọn / lưu kho → "Không phải xác trả"); điều kiện
+  chờ gom mới chạy được trên D1 thật (chỉ đọc).
+- Mở: 298 đơn vị trừ nợ cũ chưa có xử lý xác → chưa vào Quản lý xác cho tới khi Admin BH chọn trong chi tiết đơn hoặc được điền hàng loạt (chờ người dùng chốt).
+
 ## 26/11/2026 — v1.165: Đề xuất điền sẵn linh kiện đã về + nộp kết quả hỏi lý do không dùng
 
 - Yêu cầu (nguyên văn): "mà thay thế là thế nào? nv báo thiếu, hàng về thì họ phải chọn lại theo mã hàng đã về chứ?"; "làm điền sẵn, những vẫn cho chọn mã

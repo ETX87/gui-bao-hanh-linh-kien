@@ -32,7 +32,7 @@ import { ImportBbbgModal } from "./ImportBbbg";
 
 export interface XacRow {
   id: string; // ma don vi (xac Doi moi) hoac ma de xuat DX-... (xac sua chua)
-  loai: "doi_moi" | "sua_chua";
+  loai: "doi_moi" | "tru_no" | "sua_chua"; // v1.166: tru_no = don Xac nhan tru cong no
   unit_id: string; // don vi bao hanh chua xac (mo UI chi tiet)
   so_luong: number;
   xac_xl_boi: string | null;
@@ -112,7 +112,7 @@ const LK_XAC_DEF: FilterDef = { ...LK_B_DEF, label: "LK xác (B)" };
 // 16/11/2026: loc giong Don BH - LK A (KTV chon) / B (xac thuc te gui ve) / C (doi moi), KTV gui, mien, thoi gian
 // + loc chu tren cot ID / case / mo ta loi + sap xep (backend routes/xac.ts TXT_UNIT / SORT_UNIT).
 export const XAC_KQ_LABEL: Record<string, string> = { ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác", luu_kho: "Lưu kho" }; // v1.159: them luu_kho (= BE lib/xac.ts XAC_KQ_LABEL)
-const LOAI_DEF: FilterDef = { key: "loai", label: "Loại xác", kind: "map", labels: { doi_moi: "Đổi mới (KTV gửi về)", sua_chua: "Sau sửa chữa (LK cấp)" } };
+const LOAI_DEF: FilterDef = { key: "loai", label: "Loại xác", kind: "map", labels: { doi_moi: "Đổi mới (KTV gửi về)", tru_no: "Trừ công nợ (KTV gửi về)", sua_chua: "Sau sửa chữa (LK cấp)" } };
 const KQ_DEF: FilterDef = { key: "kq", label: "Kết quả", kind: "map", labels: XAC_KQ_LABEL };
 const NV_DEF: FilterDef = { key: "nv", label: "NV sửa chữa", kind: "person", noneLabel: "Chưa gán" };
 // 16/11/2026 ("Bộ lọc nhanh thêm lọc theo từ ngày đến ngày xử lý"): ngay xu ly = luc danh dau ket qua (tieu huy / that lac...)
@@ -174,7 +174,7 @@ function xacExportCols(nameOf: (m: string | null | undefined) => string): Export
   const mienTxt = (v: string | null) => (v === "MB" ? "Miền Bắc" : v === "MN" ? "Miền Nam" : "Chưa khai báo");
   return [
     { header: "Mã xác", value: (r) => r.id, width: 16 },
-    { header: "Loại", value: (r) => (r.loai === "sua_chua" ? "Sau sửa chữa" : "Đổi mới"), width: 14 },
+    { header: "Loại", value: (r) => (r.loai === "sua_chua" ? "Sau sửa chữa" : r.loai === "tru_no" ? "Trừ công nợ" : "Đổi mới"), width: 14 },
     { header: "Đơn vị BH", value: (r) => r.unit_id, width: 16 },
     { header: "Mã LK xác (B)", value: (r) => r.ma_lk_xac, width: 14 },
     { header: "Linh kiện xác (B)", value: (r) => nameOf(r.ma_lk_xac), width: 34 },
@@ -211,7 +211,7 @@ const THUNG_EXPORT: ExportCol<ThungXac>[] = [
 ];
 
 function LoaiBadge({ r }: { r: XacRow }) {
-  return r.loai === "sua_chua" ? <Badge tone="violet">Sau sửa chữa</Badge> : <Badge tone="blue">Đổi mới</Badge>;
+  return r.loai === "sua_chua" ? <Badge tone="violet">Sau sửa chữa</Badge> : r.loai === "tru_no" ? <Badge tone="amber">Trừ công nợ</Badge> : <Badge tone="blue">Đổi mới</Badge>;
 }
 
 // ---- Bang xac don gian (chi tiet thung) ----
@@ -272,7 +272,7 @@ function XacBrowser({
         caseId: r.case_id,
         slDat: r.so_luong ?? 1,
         moTa: [r.khach_hang, r.mo_ta_loi].filter(Boolean).join(" · ") || null,
-        status: r.loai === "sua_chua" ? <span className="text-xs text-[var(--ink-soft)]">Sửa chữa · {r.unit_id}</span> : r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title="Linh kiện đổi mới (C)">Đổi: {r.ma_lk_thuc_te}</span> : <span className="text-xs text-[var(--ink-faint)]">Đổi mới = B</span>,
+        status: r.loai === "sua_chua" ? <span className="text-xs text-[var(--ink-soft)]">Sửa chữa · {r.unit_id}</span> : r.loai === "tru_no" ? <span className="text-xs text-[var(--ink-faint)]">Trừ công nợ KTV</span> : r.ma_lk_thuc_te && r.ma_lk_thuc_te !== r.ma_lk_xac ? <span className="text-xs" title="Linh kiện đổi mới (C)">Đổi: {r.ma_lk_thuc_te}</span> : <span className="text-xs text-[var(--ink-faint)]">Đổi mới = B</span>,
         sla: <span className="text-xs">{r.ngay_xl ? fmtDate(r.ngay_xl) : "—"}</span>,
         actions: extra ? extra.render(r) : undefined,
         selectable: !!sel,

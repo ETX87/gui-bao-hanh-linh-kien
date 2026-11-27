@@ -19,6 +19,7 @@ import {
   TRANG_THAI_PHIEU_GUI_LABELS,
   TRANG_THAI_PHIEU_TRA_LABELS,
   HINH_THUC_GUI_LABELS,
+  coXac,
 } from "../../lib/constants";
 import { LogTimeline } from "./LogTimeline";
 import { useLkName, useLinhKien, lkOptions } from "../../hooks/useLinhKien";
@@ -656,13 +657,13 @@ export function UnitDetailModal({ unitId, user, onClose, onChanged, nested }: { 
                   )}
                   {ketQuaLabel(u) && <Kv k="Kết quả NV" v={ketQuaLabel(u)} />}
                   {u.ghi_chu_nv && <Kv k="Ghi chú NV" v={<span className="whitespace-pre-wrap">{u.ghi_chu_nv}</span>} wide />}
-                  {u.huong_xu_ly === "doi_moi" && (user.la_admin_bh || user.la_qtri) ? (
+                  {coXac(u.huong_xu_ly) && (user.la_admin_bh || user.la_qtri) ? (
                     <Kv k="Xử lý xác" v={<XuLyXacInline unitId={u.id} value={u.xu_ly_xac} onSaved={load} />} />
                   ) : (
                     u.xu_ly_xac && <Kv k="Xử lý xác" v={XU_LY_XAC_LABELS[u.xu_ly_xac] ?? u.xu_ly_xac} />
                   )}
                   {/* 13/11/2026: trang thai tra xac (module Tra xac linh kien, #/tra-xac). */}
-                  {u.huong_xu_ly === "doi_moi" && u.xu_ly_xac === "tra_doi_tac" && (
+                  {coXac(u.huong_xu_ly) && u.xu_ly_xac === "tra_doi_tac" && (
                     <Kv
                       k="Trả xác"
                       v={u.thung_xac_id ? `${u.xac_tt === "da_tra" ? "Đã trả đối tác" : "Trong thùng"} ${u.thung_xac_id}` : ({ ngoai: "Đã xử lý ngoài hệ thống", tieu_huy: "Xác đã tiêu huỷ", that_lac: "Xác thất lạc", khong_co: "Không có xác" } as Record<string, string>)[u.xac_tt || ""] || "Chờ gom thùng trả xác"}

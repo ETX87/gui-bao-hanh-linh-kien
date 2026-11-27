@@ -62,10 +62,14 @@ export interface DongGhep extends BbbgDong {
 }
 
 const maList = (v: string | null) => (v || "").split(",").map((x) => x.trim()).filter(Boolean);
-const HUONG: Record<string, string> = { tu_choi: "Từ chối", xac_nhan_tru_no: "Xác nhận trừ nợ", sua_chua: "Sửa chữa", tra_lai_ktv: "Trả lại KTV", dich_vu_tinh_phi: "Dịch vụ tính phí", chuyen_kho: "Chuyển kho" };
+const XL: Record<string, string> = { tra_doi_tac: "Trả đối tác", tieu_huy: "Tiêu huỷ", luu_kho: "Lưu kho" };
+const HUONG: Record<string, string> = { doi_moi: "Đổi mới", tu_choi: "Từ chối", xac_nhan_tru_no: "Xác nhận trừ nợ", sua_chua: "Sửa chữa", tra_lai_ktv: "Trả lại KTV", dich_vu_tinh_phi: "Dịch vụ tính phí", chuyen_kho: "Chuyển kho" };
+
+// v1.166: xac don vi = huong Doi moi hoac Xac nhan tru cong no, xu ly xac "Tra doi tac".
+const laXacTraDoiTac = (x: XacUngVien) => x.id.startsWith("DX-") || ((x.huong_xu_ly === "doi_moi" || x.huong_xu_ly === "xac_nhan_tru_no") && x.xu_ly_xac === "tra_doi_tac");
 
 export function ketLuan(x: XacUngVien, theoAc: boolean): KetLuan {
-  const laXacTra = x.id.startsWith("DX-") || (x.huong_xu_ly === "doi_moi" && x.xu_ly_xac === "tra_doi_tac");
+  const laXacTra = laXacTraDoiTac(x);
   if (x.thung_xac_id) return x.xac_tt === "da_tra" ? "da_tra" : "trong_thung";
   if (!laXacTra) return "khong_tra";
   if (x.xac_tt) return "da_ket_qua";
@@ -75,8 +79,8 @@ export function ketLuan(x: XacUngVien, theoAc: boolean): KetLuan {
 
 export function moTaXac(x: XacUngVien): string {
   if (x.thung_xac_id) return `Thùng ${x.thung_xac_id}`;
-  if (!(x.id.startsWith("DX-") || (x.huong_xu_ly === "doi_moi" && x.xu_ly_xac === "tra_doi_tac")))
-    return x.huong_xu_ly === "doi_moi" ? `Đổi mới, xử lý xác: ${x.xu_ly_xac || "chưa chọn"}` : `Hướng xử lý: ${HUONG[x.huong_xu_ly || ""] || x.huong_xu_ly || "chưa phân loại"}`;
+  if (!laXacTraDoiTac(x))
+    return x.huong_xu_ly === "doi_moi" || x.huong_xu_ly === "xac_nhan_tru_no" ? `${HUONG[x.huong_xu_ly] || "Đổi mới"}, xử lý xác: ${XL[x.xu_ly_xac || ""] || x.xu_ly_xac || "chưa chọn"}` : `Hướng xử lý: ${HUONG[x.huong_xu_ly || ""] || x.huong_xu_ly || "chưa phân loại"}`;
   if (x.xac_tt) return `Kết quả: ${x.xac_tt}`;
   if (!x.cho_gom) return `Trạng thái: ${x.trang_thai || ""}`;
   return "";
@@ -90,7 +94,7 @@ export function ghepBbbg(dongs: BbbgDong[], ungVien: XacUngVien[]): { rows: Dong
   }
   // Uu tien xac cho gom, roi xac tra doi tac khac (ke ca dang trong thung -> bao "Dang trong thung khac" thay vi ghep nham vao don vi
   // khong phai xac), roi con lai; on dinh theo ma.
-  const laXacTra = (x: XacUngVien) => (x.id.startsWith("DX-") || (x.huong_xu_ly === "doi_moi" && x.xu_ly_xac === "tra_doi_tac") ? 1 : 0);
+  const laXacTra = (x: XacUngVien) => (laXacTraDoiTac(x) ? 1 : 0);
   for (const l of theoCase.values()) l.sort((a, b) => b.cho_gom - a.cho_gom || laXacTra(b) - laXacTra(a) || Number(!!a.thung_xac_id) - Number(!!b.thung_xac_id) || a.id.localeCompare(b.id));
   const dung = new Set<string>();
   const kq = new Map<number, { x: XacUngVien | null; ac: boolean; lech: boolean }>();

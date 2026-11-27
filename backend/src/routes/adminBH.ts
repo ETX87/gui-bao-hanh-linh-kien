@@ -10,7 +10,7 @@ import { addLog } from "../lib/logs";
 import { gsListOfKtv } from "../lib/gs";
 import { slaCutoffVn } from "../lib/sla";
 import { quaHanBuoc } from "../lib/buoc";
-import { LBL, HUONG_CAN_NV, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
+import { LBL, HUONG_CAN_NV, coXac, HUONG_TAO_PHIEU_TRA, KHACH_LE_KEY, type HuongXuLy, type LoaiBaoHanh, type LoaiDoiTru } from "../lib/constants";
 import { parsePage } from "../lib/pagination";
 import { syncCaseSnapshots } from "../lib/caseSnapshot";
 import { nhanHoThung } from "../lib/nhanHo";
@@ -646,7 +646,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
   if (body.loai_bao_hanh === "ngoai_bh" && !body.thong_tin_mail_pd?.trim()) return { error: "REQUIRE_MAIL_PD" };
   if (HUONG_CAN_NV.includes(body.huong_xu_ly) && !body.nguoi_sua_chua) return { error: "REQUIRE_NV" };
   if (body.huong_xu_ly === "tu_choi" && !body.ly_do_tu_choi) return { error: "REQUIRE_LY_DO_TU_CHOI" };
-  if (body.huong_xu_ly === "doi_moi" && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return { error: "REQUIRE_XU_LY_XAC" };
+  if (coXac(body.huong_xu_ly) && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return { error: "REQUIRE_XU_LY_XAC" };
   if ((await quaHanBuoc(db, unit.trang_thai, unit.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
   // 16/11/2026 (v1.142): "khi đẩy 1 đơn sang nv sửa chữa, bắt buộc phải chọn đủ Hãng, Đối tác, còn bảo hành/hết bảo hành" (con / het bao hanh =
   // loai_bao_hanh, da bat buoc o tren). Huong khac: chi ghi neu Admin co gui.
@@ -690,7 +690,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
       body.ma_lk_thuc_te ?? null,
       body.ma_lk_nhan ?? null,
       body.ma_lk_nhan ?? null,
-      body.huong_xu_ly === "doi_moi" ? body.xu_ly_xac : null,
+      coXac(body.huong_xu_ly) ? body.xu_ly_xac : null,
       trangThaiMoi,
       nowVN(),
       unit.id,
@@ -705,7 +705,7 @@ async function applyPhanLoaiToUnit(db: D1Database, unit: UnitRow, body: PhanLoai
     actor,
     `Admin BH phân loại: ${LBL[body.loai_bao_hanh] || body.loai_bao_hanh} / ${LBL[body.huong_xu_ly] || body.huong_xu_ly} / Đối trừ: ${LBL[body.loai_doi_tru] || body.loai_doi_tru}` +
       (body.huong_xu_ly === "tu_choi" ? ` | Lý do huỷ: ${body.ly_do_tu_choi}` + (body.ghi_chu_huy?.trim() ? ` | Ghi chú: ${body.ghi_chu_huy.trim().slice(0, 2000)}` : "") : "") +
-      (body.huong_xu_ly === "doi_moi" ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
+      (coXac(body.huong_xu_ly) ? ` | Xử lý xác: ${LBL[body.xu_ly_xac ?? ""] || body.xu_ly_xac}` : "") +
       (body.ma_lk_nhan ? ` | LK thực tế gửi về: ${body.ma_lk_nhan}` : "") +
       (body.ma_lk_thuc_te ? ` | LK đổi mới: ${body.ma_lk_thuc_te}` : "") +
       (body.ly_do_cham ? ` | Lý do chậm: ${body.ly_do_cham}` : "") +
@@ -889,10 +889,10 @@ async function xacNhanHoanTat(db: D1Database, id: string, body: { ly_do_cham?: s
   // Huong "doi_moi" BAT BUOC co cach xu ly xac truoc khi hoan tat - neu da chon luc phan loai
   // (05/10/2026) thi khong hoi lai; gui gia tri moi hop le thi ghi de (chi ap cho don doi_moi).
   if (body.xu_ly_xac && !XU_LY_XAC_VALUES.includes(body.xu_ly_xac)) return { error: "REQUIRE_XU_LY_XAC" };
-  if (u.huong_xu_ly === "doi_moi" && !u.xu_ly_xac && !body.xu_ly_xac) return { error: "REQUIRE_XU_LY_XAC" };
+  if (coXac(u.huong_xu_ly) && !u.xu_ly_xac && !body.xu_ly_xac) return { error: "REQUIRE_XU_LY_XAC" };
   if ((await quaHanBuoc(db, "cho_admin_xac_nhan", u.updated_at)) && !body.ly_do_cham?.trim()) return { error: "REQUIRE_LY_DO_CHAM" };
   // Hang loat (giuXacCu): chi dien xu ly xac cho don Doi moi CHUA co, khong ghi de lua chon da chot.
-  const xlx = u.huong_xu_ly === "doi_moi" && !(giuXacCu && u.xu_ly_xac) ? body.xu_ly_xac || null : null;
+  const xlx = coXac(u.huong_xu_ly) && !(giuXacCu && u.xu_ly_xac) ? body.xu_ly_xac || null : null;
   const now = nowVN();
   await db.prepare("UPDATE phieu_sua_chua_bh_ct SET admin_xac_nhan_hoan_tat = 1, xu_ly_xac = COALESCE(?, xu_ly_xac), trang_thai = 'san_sang_gom_phieu_tra', updated_at = ? WHERE id = ?")
     .bind(xlx, now, id)
@@ -945,7 +945,7 @@ adminBH.patch("/don-vi/:id/xu-ly-xac", async (c) => {
   if (!XU_LY_XAC_VALUES.includes(body.xu_ly_xac || "")) return c.json({ error: "REQUIRE_XU_LY_XAC" }, 400);
   const u = await c.env.DB.prepare("SELECT trang_thai, huong_xu_ly, xu_ly_xac, thung_xac_id FROM phieu_sua_chua_bh_ct WHERE id = ?").bind(id).first<{ trang_thai: string; huong_xu_ly: string | null; xu_ly_xac: string | null; thung_xac_id: string | null }>();
   if (!u) return c.json({ error: "NOT_FOUND" }, 404);
-  if (u.huong_xu_ly !== "doi_moi") return c.json({ error: "WRONG_STATE" }, 400);
+  if (!coXac(u.huong_xu_ly)) return c.json({ error: "WRONG_STATE" }, 400);
   // 13/11/2026: xac da vao thung tra xac -> bo khoi thung truoc moi doi duoc xu ly xac.
   if (u.thung_xac_id && u.xu_ly_xac !== body.xu_ly_xac) return c.json({ error: "XAC_TRONG_THUNG" }, 400);
   if (u.xu_ly_xac === body.xu_ly_xac) return c.json({ ok: true });
@@ -1326,8 +1326,8 @@ async function applyFastToUnit(db: D1Database, meta: FastActionMeta, unitId: str
       ly_do_tu_choi: body.ly_do_tu_choi?.trim() || meta.lyDoTuChoi,
       ghi_chu_huy: body.ghi_chu_huy,
       ly_do_cham: body.ly_do_cham,
-      // 20/10/2026: FAST Doi moi khong hoi xu ly xac - mac dinh "tra doi tac", Admin doi lai sau.
-      xu_ly_xac: meta.huong === "doi_moi" ? body.xu_ly_xac || "tra_doi_tac" : body.xu_ly_xac,
+      // 20/10/2026: FAST Doi moi khong hoi xu ly xac - mac dinh "tra doi tac", Admin doi lai sau. v1.166: ca FAST Tru cong no.
+      xu_ly_xac: coXac(meta.huong) ? body.xu_ly_xac || "tra_doi_tac" : body.xu_ly_xac,
       hang: body.hang,
       doi_tac_id: body.doi_tac_id,
     },

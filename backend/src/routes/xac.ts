@@ -8,6 +8,7 @@ import { addLog } from "../lib/logs";
 import { parsePage } from "../lib/pagination";
 import { eqFilters, distinctOpts, timeFilter, joinF, textFilters, numFilters, sortParam } from "../lib/filters";
 import { kwClause, tenOf, tenLkOf } from "../lib/search";
+import { HUONG_CO_XAC_SQL } from "../lib/constants";
 import { mienScope, mienAllowed } from "../lib/mien";
 import { normVi } from "../lib/timKiem";
 import { XAC_CHO_GOM, XAC_DX_CHO_GOM, XAC_KQ, XAC_KQ_LABEL, XAC_KQ_SQL, laDx } from "../lib/xac";
@@ -39,11 +40,12 @@ const KH_CASE = "(SELECT json_extract(cs.data, '$.khach_hang') FROM case_lookup_
 
 // 16/11/2026: 1 "xac" = 1 dong cua 2 nguon gop chung (UNION ALL), cung bo cot:
 //   - loai 'doi_moi'  : don vi Doi moi + xu ly xac "Tra doi tac" (xac = LK B, SL 1)       - bang phieu_sua_chua_bh_ct
+//   - loai 'tru_no'   : (v1.166) don vi Xac nhan tru cong no + "Tra doi tac" - cung bang, cung cach tinh nhu 'doi_moi'
 //   - loai 'sua_chua' : linh kien cap cho sua chua da xuat (xac = LK cu thao ra, SL de xuat) - bang de_xuat_linh_kien_bh
 // condU (alias u, p, g) / condD (alias d, u, p, g) = dieu kien rieng tung nguon; ben ngoai loc theo cot x.*.
 function xacFrom(condU: string, condD: string): string {
   return `FROM (
-    SELECT u.id, 'doi_moi' AS loai, u.id AS unit_id, u.parent_id, 1 AS so_luong, p.ma_lk, u.ma_lk_nhan, ${LK_XAC} AS ma_lk_xac,
+    SELECT u.id, CASE WHEN u.huong_xu_ly = 'xac_nhan_tru_no' THEN 'tru_no' ELSE 'doi_moi' END AS loai, u.id AS unit_id, u.parent_id, 1 AS so_luong, p.ma_lk, u.ma_lk_nhan, ${LK_XAC} AS ma_lk_xac,
       u.ma_lk_thuc_te, ${LK_DOI} AS ma_lk_doi, p.case_id, p.mien, p.mo_ta_loi, p.tim_kiem, g.nguoi_tao AS ktv, ${KH_CASE} AS khach_hang,
       u.trang_thai, u.xac_tt, u.thung_xac_id, u.xac_xl_boi, u.xac_xl_luc, u.xac_xl_ghi_chu, u.nguoi_sua_chua,
       u.created_at, u.updated_at, COALESCE(u.xac_xl_luc, u.updated_at) AS ngay_xl, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id, u.xac_kien AS kien
@@ -63,7 +65,7 @@ const XAC_COLS = `x.id, x.loai, x.unit_id, x.parent_id, x.so_luong, x.ma_lk, x.m
   x.case_id, x.mien, x.mo_ta_loi, x.ktv, x.khach_hang, x.trang_thai, x.xac_tt, x.thung_xac_id, x.xac_xl_boi, x.xac_xl_luc,
   x.xac_xl_ghi_chu, x.nguoi_sua_chua, x.created_at, x.updated_at, x.ngay_xl, x.doi_tac_id, x.kien,
   (SELECT dt.ten FROM doi_tac_bh dt WHERE dt.id = x.doi_tac_id) AS doi_tac`;
-const XAC_NGOAI_U = `u.huong_xu_ly = 'doi_moi' AND u.xac_tt IN (${XAC_KQ_SQL})`;
+const XAC_NGOAI_U = `u.huong_xu_ly IN (${HUONG_CO_XAC_SQL}) AND u.xac_tt IN (${XAC_KQ_SQL})`;
 const XAC_NGOAI_D = `d.xac_tt IN (${XAC_KQ_SQL})`;
 
 // 16/11/2026: loc kieu Excel giong Don BH - loai xac, ket qua, LK A / B / C, KTV gui, NV sua, mien + loc chu tren cot + sap xep.
@@ -552,7 +554,7 @@ async function layXac(db: D1Database, ids: string[]): Promise<Map<string, XacInf
   for (let i = 0; i < units.length; i += 90) {
     const part = units.slice(i, i + 90);
     const { results } = await db
-      .prepare(`SELECT u.id, p.mien, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, u.xac_tt, u.thung_xac_id, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id IN (${part.map(() => "?").join(",")}) AND u.huong_xu_ly = 'doi_moi'`)
+      .prepare(`SELECT u.id, p.mien, (CASE WHEN ${XAC_CHO_GOM} THEN 1 ELSE 0 END) AS cho_gom, u.xac_tt, u.thung_xac_id, ${DOI_TAC_ID_SQL("p")} AS doi_tac_id FROM phieu_sua_chua_bh_ct u JOIN phieu_sua_chua_bh p ON p.id = u.parent_id WHERE u.id IN (${part.map(() => "?").join(",")}) AND u.huong_xu_ly IN (${HUONG_CO_XAC_SQL})`)
       .bind(...part)
       .all<XacInfo>();
     for (const r of results) out.set(r.id, r);

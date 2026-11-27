@@ -1,5 +1,7 @@
-// Xac du dieu kien gom (chua vao thung, chua xu ly ngoai). Alias u = don vi.
-export const XAC_CHO_GOM = `u.huong_xu_ly = 'doi_moi' AND u.xu_ly_xac = 'tra_doi_tac' AND u.thung_xac_id IS NULL AND u.xac_tt IS NULL
+import { HUONG_CO_XAC_SQL } from "./constants";
+
+// Xac du dieu kien gom (chua vao thung, chua xu ly ngoai). Alias u = don vi. v1.166: ca don Xac nhan tru cong no (HUONG_CO_XAC).
+export const XAC_CHO_GOM = `u.huong_xu_ly IN (${HUONG_CO_XAC_SQL}) AND u.xu_ly_xac = 'tra_doi_tac' AND u.thung_xac_id IS NULL AND u.xac_tt IS NULL
   AND u.trang_thai NOT IN ('ket_thuc_tu_choi','ket_thuc_chuyen_kho','cho_phan_loai','admin_can_xem_lai','cho_bo_sung_tt')`;
 
 // 16/11/2026: xac linh kien sau sua chua - de xuat cap linh kien da xuat (luong cu: Kho da xuat; luong CÔNG NỢ SỬA CHỮA
@@ -25,7 +27,7 @@ export const laDx = (id: string) => id.startsWith("DX-");
 // 25/11/2026 (v1.160): luat chot 13/11/2026 "xac don tao truoc 01/11/2026 coi nhu da xu ly ngoai he thong" - migration 0031 chi danh dau 1 lan,
 // don cu phan loai Doi moi + "Tra doi tac" SAU do van lot vao "Xac cho gom" (44 xac da sua tay 25/11). Cron 15 phut danh dau lai, ghi nhat ky don.
 // Khong doi updated_at (khong lam lech dong ho buoc / SLA).
-const XAC_CU_CHUA_DANH_DAU = `huong_xu_ly = 'doi_moi' AND xu_ly_xac = 'tra_doi_tac' AND thung_xac_id IS NULL AND xac_tt IS NULL
+const XAC_CU_CHUA_DANH_DAU = `huong_xu_ly IN (${HUONG_CO_XAC_SQL}) AND xu_ly_xac = 'tra_doi_tac' AND thung_xac_id IS NULL AND xac_tt IS NULL
   AND parent_id IN (SELECT id FROM phieu_sua_chua_bh WHERE created_at < '2026-11-01')
   AND NOT EXISTS (SELECT 1 FROM logs_bh l WHERE l.entity_type = 'phieu_sc_ct' AND l.entity_id = phieu_sua_chua_bh_ct.id AND l.ghi_chu LIKE '%đưa lại danh sách chờ gom%')`;
 // ^ nguoi da bam "Dua lai cho gom" (thuc te con xac can tra) thi ton trong, khong danh dau lai.

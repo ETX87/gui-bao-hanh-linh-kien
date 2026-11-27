@@ -3,7 +3,7 @@ import { api, errorMessage } from "../../lib/api";
 import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, SectionLabel, Textarea } from "../../ui/primitives";
-import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV } from "../../lib/constants";
+import { coXac, HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV } from "../../lib/constants";
 import { useLyDoTuChoi, useLyDoCham } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
 import { XuLyXacField } from "../shared/XuLyXacField";
@@ -40,7 +40,7 @@ export function BulkPhanLoaiModal({ unitIds, units = [], onClose, onDone }: { un
 
   const needsNv = HUONG_CAN_NV.includes(huongXuLy);
   const needsTuChoi = huongXuLy === "tu_choi";
-  const needsXuLyXac = huongXuLy === "doi_moi";
+  const needsXuLyXac = coXac(huongXuLy);
   const valid = huongXuLy && loaiDoiTru && (loaiBaoHanh !== "ngoai_bh" || mailPd.trim()) && (!needsNv || nguoiSuaChua) && (!needsTuChoi || lyDoTuChoi) && (!needsXuLyXac || xuLyXac);
 
   const submit = async () => {

@@ -21,6 +21,10 @@ export const LOAI_DOI_TRU_LABELS: Record<string, string> = {
   tru_cong_no: "Trừ công nợ",
 };
 
+// 27/11/2026 (v1.166) - huong co xac linh kien loi o kho, BAT BUOC chon xu ly xac (= BE lib/constants.ts HUONG_CO_XAC).
+export const HUONG_CO_XAC = ["doi_moi", "xac_nhan_tru_no"];
+export const coXac = (h: string | null | undefined): boolean => !!h && HUONG_CO_XAC.includes(h);
+
 export const XU_LY_XAC_LABELS: Record<string, string> = {
   tra_doi_tac: "Trả đối tác",
   tieu_huy: "Tiêu huỷ",

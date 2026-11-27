@@ -4,7 +4,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, SectionLabel, Textarea } from "../../ui/primitives";
 import { SearchableSelect } from "../../ui/SearchableSelect";
-import { HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS, loaiDeXuatSuaChua } from "../../lib/constants";
+import { coXac, HUONG_XU_LY_LABELS, LOAI_BAO_HANH_LABELS, LOAI_DOI_TRU_LABELS, HUONG_CAN_NV, LY_DO_BO_SUNG_OPTIONS, loaiDeXuatSuaChua } from "../../lib/constants";
 import { DoiTacSelect, useDoiTac } from "../qtri/DoiTac";
 import { useLyDoTuChoi } from "../../hooks/useSettings";
 import { useNvList } from "../../hooks/useNvList";
@@ -52,7 +52,7 @@ export function PhanLoaiModal({ unit, onClose, onDone }: { unit: DonVi; onClose:
 
   const needsNv = HUONG_CAN_NV.includes(huongXuLy);
   const needsTuChoi = huongXuLy === "tu_choi";
-  const needsXuLyXac = huongXuLy === "doi_moi";
+  const needsXuLyXac = coXac(huongXuLy);
   const lkName = (ma: string) => lkLabel(linhKien.find((l) => l.ma_lk === ma)?.ten_lk, ma);
   const karofi = doiTacId ? (dsDoiTac.find((d) => d.id === doiTacId)?.la_karofi ?? unit.doi_tac_karofi ?? null) : null;
   const ldxSc = needsNv ? loaiDeXuatSuaChua(loaiBaoHanh, karofi, huongXuLy) : null;
