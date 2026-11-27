@@ -3,6 +3,14 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 27/11/2026 — v1.168: Chi tiết thùng — nhóm đơn theo trạng thái LK thực tế
+
+- Yêu cầu (nguyên văn): "thêm nhóm theo trạng thái của lk (chờ tiếp nhận, đang sửa, bị từ chối... theo trạng thái thực tế)".
+- Đã làm (`PhieuGuiDetailModal.tsx`): ô "Nhóm theo" thêm "Trạng thái LK". Giai đoạn mỗi đơn vị tính giống `routes/traCuu.ts` (`tra_` + trạng thái phiếu trả nếu
+  đã vào phiếu trả, không thì trạng thái đơn vị; đơn chưa tách theo trạng thái thùng). Nhóm xếp theo thứ tự `GIAI_DOAN`, đầu nhóm "icon nhãn · x đơn · y LK";
+  đơn có LK ở nhiều trạng thái hiện ở mỗi nhóm. KTV: nhóm theo nhãn rút gọn (`ktvUnitStage` / `ktvDonStage`).
+- Kiểm thử: typecheck BE + FE, build xanh. Chưa thử trên giao diện thật (cần đăng nhập).
+
 ## 27/11/2026 — v1.167: Chi tiết thùng — nhóm / sắp xếp đơn theo mã sự cố, mã linh kiện + tổng đơn / tổng LK
 
 - Yêu cầu (nguyên văn): "thêm chức năng nhóm theo mã sự cố, nhóm theo mã linh kiện, sort theo mã linh kiện, sort theo mã sự cố. hiện tổng đơn (24 đơn/tổng 26 LK)"

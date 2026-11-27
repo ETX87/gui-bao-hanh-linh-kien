@@ -9,7 +9,7 @@ import { useToast } from "../../ui/Toast";
 import { Modal } from "../../ui/Modal";
 import { Btn, Field, Input, Select, Badge, Spinner, Textarea } from "../../ui/primitives";
 import { SlaBadge } from "../../ui/SlaBadge";
-import { LOAI_DOI_TRU_LABELS, HINH_THUC_GUI_OPTIONS, TRANG_THAI_UNIT_LABELS } from "../../lib/constants";
+import { LOAI_DOI_TRU_LABELS, HINH_THUC_GUI_OPTIONS, TRANG_THAI_UNIT_LABELS, GIAI_DOAN, GIAI_DOAN_MAP } from "../../lib/constants";
 import { GhiChuLogPanel } from "../shared/GhiChuLogPanel";
 import { LogTimeline } from "../shared/LogTimeline";
 import { UnitDetailModal } from "../shared/UnitDetailModal";
@@ -24,7 +24,7 @@ import type { DonCha, LogRow, PhieuGui } from "../../lib/types";
 import { UserName, displayName, useUserNames } from "../../hooks/useUserNames";
 import { readNhaXe, saveNhaXe, sortHinhThuc } from "../../lib/nhaXeCache";
 import { isPureKtv } from "../../layout/routes";
-import { ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
+import { ktvDonStage, ktvGuiStage, ktvUnitStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
 import { moPhieuThung, taiPdfPhieuThung } from "../../lib/inPhieuThung";
 import { TuChoiInfo } from "../shared/TuChoiThung";
@@ -40,6 +40,7 @@ interface DetailResponse {
   tien_do?: { parent_id: string; trang_thai: string; tra_trang_thai?: string | null; n: number }[];
   mien_ktv?: string | null;
 }
+type NhomDonTheo = "" | "case" | "lk" | "tt";
 const MIEN_TEN = (m: string | null | undefined) => (m === "MB" ? "Miền Bắc" : m === "MN" ? "Miền Nam" : "Chưa khai báo");
 
 // Chi tiet phieu gui: sua thong tin van chuyen (khi con "nhap"), them/xoa don, xac nhan gui xe, xoa
@@ -82,9 +83,9 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
   const [nhanGhiChu, setNhanGhiChu] = useState("");
   const [nhanTuSl, setNhanTuSl] = useState(true);
   // 27/11/2026: nhom / sap xep don trong thung (nho lua chon tren may).
-  const [nhomTheo, setNhomTheo] = useState<"" | "case" | "lk">(() => (localStorage.getItem("pg_nhom_don") as "" | "case" | "lk") || "");
+  const [nhomTheo, setNhomTheo] = useState<NhomDonTheo>(() => (localStorage.getItem("pg_nhom_don") as NhomDonTheo) || "");
   const [sapTheo, setSapTheo] = useState<string>(() => localStorage.getItem("pg_sap_don") || "");
-  const doiNhom = (v: "" | "case" | "lk") => { setNhomTheo(v); localStorage.setItem("pg_nhom_don", v); };
+  const doiNhom = (v: NhomDonTheo) => { setNhomTheo(v); localStorage.setItem("pg_nhom_don", v); };
   const doiSap = (v: string) => { setSapTheo(v); localStorage.setItem("pg_sap_don", v); };
   useUserNames();
   // O van chuyen chi khoi tao 1 LAN khi mo phieu - cac lan tai lai sau thao tac (them don, xoa don...)
@@ -339,15 +340,50 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
     });
     return arr;
   })();
-  const nhomDon: { key: string; ds: DonCha[] }[] = [];
-  if (nhomTheo) {
+  const nhomDon: { key: string; label: string; lk: number; ds: DonCha[] }[] = [];
+  if (nhomTheo === "case" || nhomTheo === "lk") {
     const fk = nhomTheo === "case" ? khoaCase : khoaLk;
     for (const d of donSapXep) {
       const k = fk(d);
       const last = nhomDon[nhomDon.length - 1];
-      if (last && last.key === k) last.ds.push(d);
-      else nhomDon.push({ key: k, ds: [d] });
+      if (last && last.key === k) {
+        last.ds.push(d);
+        last.lk += Number(d.so_luong_khai) || 0;
+      } else nhomDon.push({ key: k, label: k, lk: Number(d.so_luong_khai) || 0, ds: [d] });
     }
+  } else if (nhomTheo === "tt") {
+    // 27/11/2026: nhom theo trang thai THUC TE cua tung LK (don vi) - cung cach tinh giai doan man Tra cuu (routes/traCuu.ts):
+    // don vi da vao phieu tra -> "tra_" + trang thai phieu tra, chua -> trang thai don vi; don chua tach -> theo trang thai thung.
+    // 1 don co LK o nhieu trang thai -> hien o moi nhom (dem LK theo so don vi o trang thai do). KTV thay nhan rut gon kieu KTV.
+    const gdThung = (d: DonCha) =>
+      g.trang_thai === "nhap" ? "thung_nhap" : g.trang_thai === "da_gui" ? "thung_dang_gui"
+      : (d.trang_thai_cha as string) === "huy_thung" ? "thung_da_huy"
+      : g.tu_choi_tt === "cho_kho" || g.tu_choi_tt === "cho_ktv" ? "thung_tu_choi"
+      : g.trang_thai === "da_tiep_nhan" && !g.admin_tiep_nhan ? "thung_cho_admin_nhan" : "cho_xac_nhan_so_luong";
+    const thuTu = (k: string) => { const i = GIAI_DOAN.findIndex((x) => x.key === k); return i < 0 ? 999 : i; };
+    const map = new Map<string, { key: string; label: string; lk: number; ds: DonCha[]; ord: number }>();
+    const them = (gd: string, label: string, d: DonCha, n: number) => {
+      const key = ktvView ? label : gd;
+      let nh = map.get(key);
+      if (!nh) map.set(key, (nh = { key, label, lk: 0, ds: [], ord: thuTu(gd) }));
+      nh.ord = Math.min(nh.ord, thuTu(gd));
+      nh.lk += n;
+      if (!nh.ds.includes(d)) nh.ds.push(d);
+    };
+    for (const d of donSapXep) {
+      const td = tienDoOf(d.id);
+      if (!td.length) {
+        const gd = gdThung(d);
+        them(gd, ktvView ? ktvDonStage(g.trang_thai, []).label : GIAI_DOAN_MAP[gd]?.label ?? gd, d, Number(d.so_luong_khai) || 0);
+        continue;
+      }
+      for (const x of td) {
+        const gd = x.tra_trang_thai ? `tra_${x.tra_trang_thai}` : x.trang_thai;
+        const label = ktvView ? ktvUnitStage({ id: "", trang_thai: x.trang_thai, tra_trang_thai: x.tra_trang_thai }).label : GIAI_DOAN_MAP[gd]?.label ?? TRANG_THAI_UNIT_LABELS[gd] ?? gd;
+        them(gd, label, d, Number(x.n) || 0);
+      }
+    }
+    nhomDon.push(...[...map.values()].sort((a, b) => a.ord - b.ord));
   }
   const renderDon = (d: DonCha) => {
     const td = tienDoOf(d.id);
@@ -434,10 +470,11 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
             <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-soft)]">
               <label className="flex items-center gap-1">
                 Nhóm theo
-                <select className={`${SEL} ${nhomTheo ? "!border-[var(--accent)] font-semibold" : ""}`} value={nhomTheo} onChange={(e) => doiNhom(e.target.value as "" | "case" | "lk")}>
+                <select className={`${SEL} ${nhomTheo ? "!border-[var(--accent)] font-semibold" : ""}`} value={nhomTheo} onChange={(e) => doiNhom(e.target.value as NhomDonTheo)}>
                   <option value="">Không nhóm</option>
                   <option value="case">Mã sự cố</option>
                   <option value="lk">Mã linh kiện</option>
+                  <option value="tt">Trạng thái LK</option>
                 </select>
               </label>
               <label className="flex items-center gap-1">
@@ -463,12 +500,12 @@ export function PhieuGuiDetailModal({ guiId, onClose, onChanged, nested, actions
               {nhomDon.map((nh) => (
                 <div key={nh.key || "__rong"} className="rounded-lg border border-[var(--line)]">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-t-lg bg-[var(--surface-2)] px-2 py-1 text-xs">
-                    <span className="font-mono font-semibold text-[var(--ink)]">
-                      {nh.key || (nhomTheo === "case" ? "(Không có mã sự cố)" : "(Cả sản phẩm)")}
+                    <span className={`font-semibold text-[var(--ink)] ${nhomTheo === "tt" ? "" : "font-mono"}`}>
+                      {nhomTheo === "tt" ? `${GIAI_DOAN_MAP[nh.key]?.icon ?? "•"} ${nh.label}` : nh.label || (nhomTheo === "case" ? "(Không có mã sự cố)" : "(Cả sản phẩm)")}
                     </span>
                     {nhomTheo === "lk" && nh.key && <span className="min-w-0 truncate text-[var(--ink-soft)]">{lkName(nh.key)}</span>}
                     <span className="ml-auto shrink-0 font-semibold text-[var(--ink-soft)]">
-                      {nh.ds.length} đơn · {nh.ds.reduce((s, d) => s + (Number(d.so_luong_khai) || 0), 0)} LK
+                      {nh.ds.length} đơn · {nh.lk} LK
                     </span>
                   </div>
                   <div className="divide-y divide-[var(--line)] px-1">{nh.ds.map(renderDon)}</div>

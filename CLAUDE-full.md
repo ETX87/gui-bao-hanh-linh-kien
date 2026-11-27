@@ -7714,3 +7714,12 @@ Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy tr�
 - Kỹ thuật: `PhieuGuiDetailModal.tsx` trước có 2 bản JSX danh sách đơn giống hệt (nhánh `gon` và nhánh máy tính) → gộp thành `donSection` + `renderDon`.
 - Kiểm thử: typecheck + build xanh.
 
+## Chi tiết thùng — nhóm theo trạng thái LK thực tế (27/11/2026) — v1.168
+
+- Nguyên văn: "thêm nhóm theo trạng thái của lk (chờ tiếp nhận, đang sửa, bị từ chối... theo trạng thái thực tế)".
+- Đã chốt: "trạng thái thực tế" = giai đoạn chi tiết `GIAI_DOAN` (cùng công thức màn Tra cứu `routes/traCuu.ts`, không gom 9 nhóm `NHOM_GD`) để thấy rõ
+  từng bước; đơn chưa tách dùng trạng thái thùng (`thung_nhap` / `thung_dang_gui` / `thung_da_huy` / `thung_tu_choi` / `thung_cho_admin_nhan` /
+  `cho_xac_nhan_so_luong`). 1 đơn nhiều đơn vị khác trạng thái → hiện ở mỗi nhóm, "LK" của nhóm = số đơn vị ở trạng thái đó (đơn chưa tách = SL khai).
+  Dữ liệu lấy từ `tien_do` sẵn có của `GET /phieu-gui/:id` — không đổi API. KTV thấy nhãn rút gọn kiểu KTV (gộp theo nhãn).
+- Kiểm thử: typecheck + build xanh.
+

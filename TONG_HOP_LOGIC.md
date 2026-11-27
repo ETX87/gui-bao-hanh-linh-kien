@@ -50,7 +50,9 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
 - 3 linh kiện của 1 đơn: **A** KTV chọn, **B** thực tế gửi về, **C** đổi mới — có đánh giá lệch A/B/C.
 - **Chi tiết thùng — nhóm / sắp xếp đơn** (v1.167): khối "Đơn trong thùng" ghi "N đơn / tổng M LK" (M = tổng số lượng khai các đơn); chọn
   "Nhóm theo" mã sự cố (mã case / Lada) hoặc mã linh kiện (mỗi nhóm có đầu nhóm "x đơn · y LK") và "Sắp xếp" theo mã linh kiện / mã sự cố
-  tăng hoặc giảm (mặc định thứ tự thêm vào thùng). Chỉ đổi cách hiển thị trên máy (nhớ lựa chọn trong trình duyệt), không đổi dữ liệu / phiếu in.
+  tăng hoặc giảm (mặc định thứ tự thêm vào thùng). Nhóm "Trạng thái LK" (v1.168): mỗi LK (đơn vị) xếp theo giai đoạn thực tế giống màn Tra cứu
+  (đã vào phiếu trả → trạng thái phiếu trả; chưa → trạng thái đơn vị; đơn chưa tách → theo thùng: nháp / đang gửi / chờ Admin nhận / bị từ chối /
+  huỷ / chờ xác nhận SL), nhóm xếp theo thứ tự quy trình; đơn có LK ở nhiều trạng thái hiện ở mỗi nhóm, đếm LK theo số đơn vị; KTV thấy nhãn rút gọn kiểu KTV. Chỉ đổi cách hiển thị trên máy (nhớ lựa chọn trong trình duyệt), không đổi dữ liệu / phiếu in.
 - Huỷ / từ chối đơn: bắt buộc lý do. "Lùi lại" đơn, đổi linh kiện hàng loạt, tách SL đơn vị có sẵn cho Admin BH.
 - **Kho từ chối thùng chưa về** (v1.145): thùng "Đang gửi về Kho" mà thực tế chưa nhận được → Kho (hoặc Admin BH làm hộ) bấm
   "⛔ Chưa nhận được", lý do bắt buộc → thùng về **nháp** của KTV (rời danh sách chờ Kho), cột `phieu_gui_bh.kho_tc_*` lưu lý do / người /
