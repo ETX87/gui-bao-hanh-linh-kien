@@ -7700,5 +7700,6 @@ Nguyên văn: "logic các đơn này là như nào nhỉ" (ảnh Import BBBG: 6 
 - FE: `PhanLoaiModal`, `BulkPhanLoaiModal`, `XacNhanHoanTatModal`, `BulkXacNhanHoanTatModal`, `UnitDetailModal` dùng `coXac`; `TraXacScreen` / `ImportXac` nhãn "Trừ công nợ".
 - Không đổi: phiếu trả KTV, trừ công nợ KTV, trạng thái đơn vị (vẫn `san_sang_gom_phieu_tra`).
 
-Dữ liệu thật lúc làm: 298 đơn vị trừ nợ `xu_ly_xac` trống (109 trước 01/11, 189 sau) — **mở**: điền hàng loạt hay để Admin BH chọn từng đơn.
+Dữ liệu thật lúc làm: 298 đơn vị trừ nợ `xu_ly_xac` trống (109 trước 01/11, 189 sau). Nguyên văn duyệt: "Điền hàng loạt" → đã điền "Trả đối tác" cả 298
+(nhật ký từng đơn, người thực hiện `he-thong`), chạy ngay đánh dấu đơn trước 01/11 → 109 "đã xử lý ngoài"; còn 189 chờ gom.
 Kiểm: typecheck + build; thử `ghepBbbg` 3 ca; SQL chờ gom mới chạy trên D1 thật (chỉ đọc).

@@ -14,7 +14,10 @@
   import xác, đánh dấu đơn trước 01/11, Import BBBG (`ghepBbbg`) tính cả đơn trừ nợ. Màn Trả xác thêm loại xác "Trừ công nợ (KTV gửi về)".
 - Kiểm thử: typecheck BE + FE, build xanh; thử `ghepBbbg` (trừ nợ + Trả đối tác → "Khớp – chờ gom"; chưa chọn / lưu kho → "Không phải xác trả"); điều kiện
   chờ gom mới chạy được trên D1 thật (chỉ đọc).
-- Mở: 298 đơn vị trừ nợ cũ chưa có xử lý xác → chưa vào Quản lý xác cho tới khi Admin BH chọn trong chi tiết đơn hoặc được điền hàng loạt (chờ người dùng chốt).
+- Dữ liệu cũ — nguyên văn duyệt: "Điền hàng loạt". Đã ghi D1 thật (27/11/2026): 298 đơn vị trừ nợ `xu_ly_xac` trống → "Trả đối tác" (298 dòng nhật ký đơn,
+  không đổi `updated_at`); chạy ngay bước đánh dấu đơn trước 01/11 (giống cron): 109 đơn → "Đã xử lý ngoài hệ thống". Kết quả: 189 xác trừ nợ chờ gom,
+  109 xác "đã xử lý ngoài". 6 đơn trong ảnh Import BBBG (DH-001936-1 … DH-001942-1) thuộc nhóm trước 01/11 → nếu thật sự đã giao KAROFI đợt BBBG thì
+  "Đưa lại chờ gom" rồi gom (đúng quy trình §2 tài liệu BBBG).
 
 ## 26/11/2026 — v1.165: Đề xuất điền sẵn linh kiện đã về + nộp kết quả hỏi lý do không dùng
 
