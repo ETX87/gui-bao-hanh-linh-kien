@@ -49,12 +49,12 @@ export function LuongNgang({ moc, tre, ketThuc }: { moc: MocLuong[]; tre?: boole
         const day = m.done || m.red ? "bg-[var(--brand-400)]" : "bg-[var(--line)]";
         const tip = [m.label, m.at ? fmtDate(m.at) : null, m.nguoiText, m.phu].filter(Boolean).join(" · ");
         return (
-          <li key={i} className="relative min-w-[92px] flex-1 text-center" title={tip}>
+          <li key={i} className="relative min-w-[62px] flex-1 text-center sm:min-w-[92px]" title={tip}>
             {i > 0 && <span className={`absolute right-1/2 top-[11px] h-[3px] w-full ${day}`} aria-hidden />}
             <span className={`relative z-[1] mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${cham}`}>
               {m.red ? "!" : m.done ? "✓" : m.skip ? "–" : i + 1}
             </span>
-            <p className={`mt-1 truncate px-0.5 text-[11.5px] leading-tight ${dangXl ? "font-bold text-[var(--ink)]" : m.red ? "font-bold text-[var(--red-700)]" : m.skip ? "text-[var(--ink-faint)] line-through" : m.done ? "text-[var(--ink-body)]" : "text-[var(--ink-faint)]"}`}>{m.label}</p>
+            <p className={`mt-1 line-clamp-2 break-words px-0.5 text-[11.5px] leading-tight sm:truncate ${dangXl ? "font-bold text-[var(--ink)]" : m.red ? "font-bold text-[var(--red-700)]" : m.skip ? "text-[var(--ink-faint)] line-through" : m.done ? "text-[var(--ink-body)]" : "text-[var(--ink-faint)]"}`}>{m.label}</p>
             <p className={`truncate px-0.5 text-[10.5px] ${dangXl && tre ? "font-bold text-[var(--red-700)]" : m.red ? "text-[var(--red-700)]" : "text-[var(--ink-faint)]"}`}>
               {(dangXl || m.red) && m.phu ? m.phu : m.done ? (m.at ? `${fmtDate(m.at).slice(0, 11)}${kc ? ` · ${kc}` : ""}` : "xong") : m.skip ? "bỏ qua" : dangXl ? "đang chờ" : "chưa tới"}
             </p>

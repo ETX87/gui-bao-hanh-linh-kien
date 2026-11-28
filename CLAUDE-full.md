@@ -7732,3 +7732,11 @@ xác"; mọi xác có `tt` → bước 7 xong; bước 8 theo thùng (da_tra h�
 - v1.170: thêm `xac_sua_chua[]` mỗi đơn vị (de_xuat_linh_kien_bh theo `unit_id`, điều kiện = có `xac_tt` / `thung_xac_id` / `XAC_DX_CHO_GOM`; SL = `COALESCE(sl_dung, so_luong)`;
   `xuat_luc` = `COALESCE(kho_xuat_luc, xn_luc, updated_at)`), nhãn trạng thái xác lấy `XAC_KQ_LABEL` (có `luu_kho`). DVBH cộng cả 2 nguồn xác ở bước 7–8.
 
+## Chi tiết thùng trả xác trên điện thoại (28/11/2026) — v1.171
+
+Nguyên văn: "hoàn thiện lại giao diện UI chi tiết cho bản mobile" (hỏi lại màn nào → người dùng chọn "Thùng trả xác (suachua)").
+Đã chốt: chỉ đổi khi `useIsMobile()` (< 768px), máy tính giữ nguyên bảng Excel. `ThungXacDetailModal` (`screens/xac/TraXacScreen.tsx`): khối trạng thái
++ luồng ngang thành thẻ trắng bóng mềm (theo skill giao-dien-apple, dùng token sẵn có của app), 2 nút viên thuốc dưới luồng; `XacListMobile` thay `Table`
+dạng thẻ (3 dòng / xác, viên kiện, ✕ Bỏ hỏi lại); thanh Ghi kiện riêng cho điện thoại; chân trang có dòng lý do chưa gửi KT. `ui/LuongNgang.tsx`:
+`min-w-[62px] sm:min-w-[92px]`, nhãn `line-clamp-2` trên điện thoại (áp dụng mọi màn dùng luồng ngang). Không đổi logic / API.
+Mở: chưa đổi bảng màu toàn app sang phong cách Apple (skill giao-dien-apple) — việc riêng, chưa được yêu cầu.

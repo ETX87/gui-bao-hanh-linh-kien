@@ -3,6 +3,19 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 28/11/2026 — v1.171: Chi tiết thùng trả xác — hoàn thiện giao diện điện thoại
+
+- Yêu cầu (nguyên văn): "hoàn thiện lại giao diện UI chi tiết cho bản mobile" → chọn màn "Thùng trả xác (suachua)".
+- Hiện trạng (chụp 390px): luồng 5 bước bị cắt phải cuộn ngang; dòng trạng thái + 2 nút chen nhau; mỗi xác là thẻ 10 ô nhãn–giá trị (~350px / xác);
+  thanh Ghi kiện vỡ hàng, ô nhập rất hẹp; nút "Gửi Kế toán duyệt" mờ không rõ lý do (chỉ có tooltip, điện thoại không rê chuột được).
+- Đã làm (chỉ điện thoại < 768px, bản máy tính giữ nguyên): `LuongNgang` mốc tối thiểu 62px + nhãn 2 dòng trên điện thoại (5 mốc vừa 1 màn, dùng chung
+  mọi màn có luồng ngang); khối trạng thái chữ lớn tô màu theo tình trạng, 2 nút "⬇ Tải BBBG" / "▾ Xem chi tiết" viên thuốc cao 40px dưới luồng;
+  danh sách xác dạng danh sách gọn (`XacListMobile`: mã + loại, tên linh kiện B, case · khách · KTV, viên "Kiện n" / "Chưa kiện", ✕ Bỏ có hỏi lại);
+  thanh Ghi kiện 2 hàng (Chọn tất cả / Chưa có kiện (n), ô số kiện rộng + "Ghi", "Xoá kiện của n xác" khi có chọn); chân trang ghi lý do khi chưa gửi
+  Kế toán được ("Nhập Mã EO…" / "Thêm xác…", cả máy tính).
+- Kiểm thử: typecheck FE, build xanh; chạy local (dữ liệu mẫu, thùng TX-000005) ở 390px: luồng 5 mốc không cuộn ngang, xác ~85px, chọn xác / đếm
+  "Đã chọn 1/1" / hiện "Xoá kiện" đúng; khung máy tính vẫn bảng + thanh cũ, không lỗi console. Chưa thử với thùng nhiều xác thật trên điện thoại.
+
 ## 27/11/2026 — v1.170: case-timeline trả thêm xác linh kiện sau sửa chữa (cho DVBH bước 7–8)
 
 - Yêu cầu (nguyên văn, bên DVBH): "kéo thông tin xác lk vào bước 7-8".

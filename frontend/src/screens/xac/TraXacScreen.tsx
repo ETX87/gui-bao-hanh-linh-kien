@@ -24,6 +24,7 @@ import { DoiTacSelect } from "../qtri/DoiTac";
 import { LuongNgang, type MocLuong } from "../../ui/LuongNgang";
 import { taiBbbg } from "../../lib/bbbgXlsx";
 import { ImportBbbgModal } from "./ImportBbbg";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 // 13/11/2026 - Module quan ly tra xac linh kien. Nguyen van: "linh kiện được gửi về bh, admin bh duyệt đổi mới =>
 // xác nhận trạng thái trả xác => admin bh định kỳ sẽ gom nhiều xác linh kiện và trả về 1 đợt cho nhà máy => tạo
@@ -599,6 +600,50 @@ function XacNgoai({ user, onChanged }: { user: AppUser; onChanged: () => void })
 }
 
 // ---- Chi tiet thung tra xac ----
+// 28/11/2026 (v1.167) - danh sach xac trong thung tren DIEN THOAI: "grouped list" iOS gon (3 dong / xac) thay the 10 o nhan-gia tri
+// (~350px / xac). Nguyen van: "hoàn thiện lại giao diện UI chi tiết cho bản mobile" (man Thùng trả xác).
+function XacListMobile({ rows, selected, onToggle, onOpen, onBo, busy }: { rows: XacRow[]; selected?: Set<string>; onToggle?: (id: string) => void; onOpen: (r: XacRow) => void; onBo?: (r: XacRow) => void; busy?: boolean }) {
+  const { nameOf } = useLkName();
+  if (!rows.length) return <EmptyState text="Không có xác nào." />;
+  return (
+    <ul className="overflow-hidden rounded-2xl bg-[var(--surface)] shadow-card divide-y divide-[var(--line)]">
+      {rows.map((r) => {
+        const chon = !!selected?.has(r.id);
+        return (
+          <li key={r.id} className={`flex items-start gap-2.5 px-3 py-2.5 ${chon ? "bg-[var(--accent-soft)]" : ""}`}>
+            {selected && onToggle && (
+              <label className="-m-2 flex shrink-0 items-center p-2" onClick={(e) => e.stopPropagation()}>
+                <input type="checkbox" className="h-5 w-5 accent-[var(--accent)]" checked={chon} onChange={() => onToggle(r.id)} aria-label={`Chọn ${r.id}`} />
+              </label>
+            )}
+            <button type="button" className="min-w-0 flex-1 text-left active:opacity-70" onClick={() => onOpen(r)}>
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono text-[13.5px] font-semibold text-[var(--link)]">{r.id}</span>
+                <LoaiBadge r={r} />
+                {(r.so_luong ?? 1) > 1 && <span className="text-xs font-semibold text-[var(--ink-body)]">× {r.so_luong}</span>}
+              </span>
+              <span className="mt-0.5 block truncate text-[14px] text-[var(--ink)]">{nameOf(r.ma_lk_xac)}</span>
+              <span className="block truncate text-[12px] text-[var(--ink-soft)]">
+                {[r.case_id, r.khach_hang, r.ktv ? displayName(r.ktv) : "Khách lẻ"].filter(Boolean).join(" · ")}
+              </span>
+            </button>
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold tabular-nums ${r.kien ? "bg-[var(--surface-2)] text-[var(--ink)]" : "bg-[var(--amber-100)] text-[var(--amber-800)]"}`}>
+                {r.kien ? `Kiện ${r.kien}` : "Chưa kiện"}
+              </span>
+              {onBo && (
+                <button type="button" disabled={busy} className="rounded-full px-2 py-1 text-[12px] text-[var(--red-700)] active:bg-[var(--red-50)] disabled:opacity-40" onClick={() => onBo(r)}>
+                  ✕ Bỏ
+                </button>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: string; user: AppUser; onClose: () => void; onChanged: () => void }) {
   const toast = useToast();
   const { nameOf } = useLkName();
@@ -615,6 +660,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
   // 26/11/2026 (v1.162): chon xac trong thung de ghi so kien (thung vat ly).
   const [selK, setSelK] = useState<Set<string>>(new Set());
   const [kien, setKien] = useState("");
+  const isMobile = useIsMobile();
   const load = async () => {
     try {
       const r = await api.get<{ thung: ThungXac; xac: XacRow[]; logs: ThungLog[] }>(`/tra-xac/thung/${id}`);
@@ -685,6 +731,9 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
     <>
       {isA && t.trang_thai === "nhap" && d && d.xac.length === 0 && <Btn variant="danger" disabled={busy} onClick={() => confirm(`Xoá thùng rỗng ${t.id}?`) && run(() => api.delete(`/tra-xac/thung/${id}`), `Đã xoá ${t.id}.`, true)}>🗑 Xoá thùng rỗng</Btn>}
       {isA && t.trang_thai === "cho_ke_toan" && <Btn variant="ghost" disabled={busy} onClick={() => run(() => api.post(`/tra-xac/thung/${id}/huy-gui`), "Đã huỷ gửi Kế toán.")}>↩ Huỷ gửi KT</Btn>}
+      {isA && t.trang_thai === "nhap" && (!d?.xac.length || !f.ma_eo.trim()) && (
+        <span className="mr-auto text-[12px] text-[var(--amber-800)]">{!d?.xac.length ? "Thêm xác vào thùng để gửi Kế toán" : "Nhập Mã EO để gửi Kế toán"}</span>
+      )}
       {isA && t.trang_thai === "nhap" && (
         <Btn variant="primary" disabled={busy || !d?.xac.length || !f.ma_eo.trim()} title={!f.ma_eo.trim() ? "Cần nhập mã EO" : ""} onClick={() => run(async () => { await luuNeuDoi(); await api.post(`/tra-xac/thung/${id}/gui-kt`); }, `Đã gửi ${t.id} cho Kế toán duyệt.`)}>
           📤 Gửi Kế toán duyệt
@@ -705,17 +754,24 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
     <Modal title={`Thùng trả xác ${id}`} onClose={onClose} maxWidthClass={DETAIL_MAX_W} footerActions={footer}>
       {loi ? <p className="text-sm text-[var(--red-700)]">Không mở được thùng: {loi}</p> : !d || !t ? <Spinner /> : (
         <div className="space-y-3">
-          <div className="rounded-xl border border-[var(--line)] px-3 py-2">
-            <div className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px]">
-              <b className="text-[var(--ink)]">{choAi}</b>
-              <span className="text-[var(--ink-soft)]">· {d.xac.length} xác · {t.doi_tac || "chưa có đối tác"}{t.ma_eo ? ` · EO ${t.ma_eo}` : ""}</span>
+          <div className="rounded-2xl bg-[var(--surface)] px-3 py-2.5 shadow-card sm:rounded-xl sm:border sm:border-[var(--line)] sm:py-2 sm:shadow-none">
+            <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+              <b className={`text-[14px] sm:text-[12.5px] ${t.trang_thai === "da_duyet" ? "text-[var(--brand-700)]" : traLaiMoi ? "text-[var(--red-700)]" : "text-[var(--amber-800)] sm:text-[var(--ink)]"}`}>{choAi}</b>
+              <span className="text-[var(--ink-soft)]">
+                <span className="hidden sm:inline">· </span>{d.xac.length} xác · {t.doi_tac || "chưa có đối tác"}{t.ma_eo ? ` · EO ${t.ma_eo}` : ""}
+              </span>
               {d.xac.length > 0 && thieuKien > 0 && <span className="text-[var(--amber-700)]">· {thieuKien} xác chưa ghi kiện</span>}
-              <span className="ml-auto flex gap-1.5">
+              <span className="hidden sm:ml-auto sm:flex sm:gap-1.5">
                 <Btn size="sm" variant="secondary" disabled={!d.xac.length} onClick={taiBienBan} title={t.trang_thai === "da_duyet" ? "Tải biên bản bàn giao (Excel) để in, ký, giao vận" : "Tải bản nháp biên bản — bản chính thức sau khi Kế toán duyệt"}>⬇ Tải BBBG</Btn>
                 <Btn size="sm" variant="ghost" onClick={() => setMo((v) => !v)}>{mo ? "▴ Thu gọn" : "▾ Xem chi tiết"}</Btn>
               </span>
             </div>
             <LuongNgang moc={moc} ketThuc={t.trang_thai === "da_duyet"} />
+            {/* Dien thoai: 2 nut chia doi, cao 40px, nam duoi luong (khong chen dong trang thai). */}
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:hidden">
+              <button type="button" disabled={!d.xac.length} onClick={taiBienBan} className="h-10 rounded-full bg-[var(--surface-2)] text-[14px] font-medium text-[var(--ink)] active:scale-[.97] disabled:opacity-40">⬇ Tải BBBG</button>
+              <button type="button" onClick={() => setMo((v) => !v)} className="h-10 rounded-full bg-[var(--accent-soft)] text-[14px] font-semibold text-[var(--accent-ink)] active:scale-[.97]">{mo ? "▴ Thu gọn" : "▾ Xem chi tiết"}</button>
+            </div>
           </div>
           <SummaryBox>
             <div className="flex flex-wrap items-center gap-2">
@@ -795,7 +851,30 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
           </Section>
 
           <Section title={`♻️ Xác trong thùng (${d.xac.length})`} right={suaXac ? <Btn size="sm" variant="secondary" onClick={() => setThem(true)}>＋ Thêm xác</Btn> : undefined}>
-            {suaXac && d.xac.length > 0 && (
+            {suaXac && d.xac.length > 0 && isMobile && (
+              <div className="mb-2.5 space-y-2 rounded-2xl bg-[var(--surface-2)] p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] font-semibold">📦 Ghi kiện</span>
+                  <span className="text-[12px] tabular-nums text-[var(--ink-soft)]">Đã chọn {selK.size}/{d.xac.length}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => setSelK(selK.size === d.xac.length ? new Set() : new Set(d.xac.map((x) => x.id)))} className="h-9 flex-1 rounded-full bg-[var(--surface)] text-[13px] font-medium shadow-card active:scale-[.97]">
+                    {selK.size === d.xac.length ? "Bỏ chọn" : "Chọn tất cả"}
+                  </button>
+                  <button type="button" disabled={!thieuKien} onClick={() => setSelK(new Set(d.xac.filter((x) => !x.kien).map((x) => x.id)))} className="h-9 flex-1 rounded-full bg-[var(--surface)] text-[13px] font-medium shadow-card active:scale-[.97] disabled:opacity-40">
+                    Chưa có kiện ({thieuKien})
+                  </button>
+                </div>
+                <div className="flex gap-1.5">
+                  <Input className="min-w-0 flex-1" value={kien} onChange={(e) => setKien(e.target.value)} placeholder="Số kiện: 1, 2, Để ngoài…" />
+                  <Btn variant="primary" disabled={busy || !selK.size || !kien.trim()} onClick={() => ghiKien()}>Ghi</Btn>
+                </div>
+                {selK.size > 0 && (
+                  <button type="button" disabled={busy} onClick={() => ghiKien(true)} className="text-[12.5px] text-[var(--red-700)] disabled:opacity-40">Xoá kiện của {selK.size} xác đã chọn</button>
+                )}
+              </div>
+            )}
+            {suaXac && d.xac.length > 0 && !isMobile && (
               <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--brand-200)] bg-[var(--brand-50)] px-2.5 py-1.5 text-sm">
                 <span className="font-semibold">📦 Ghi kiện</span>
                 <Btn size="sm" variant="ghost" onClick={() => setSelK(selK.size === d.xac.length ? new Set() : new Set(d.xac.map((x) => x.id)))}>{selK.size === d.xac.length ? "Bỏ chọn" : "Chọn tất cả"}</Btn>
@@ -806,6 +885,16 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
                 <Btn size="sm" variant="ghost" disabled={busy || !selK.size} onClick={() => ghiKien(true)}>Xoá kiện</Btn>
               </div>
             )}
+            {isMobile ? (
+              <XacListMobile
+                rows={d.xac}
+                selected={suaXac ? selK : undefined}
+                onToggle={suaXac ? toggleK : undefined}
+                onOpen={(r) => setOpenUnit(r.unit_id)}
+                busy={busy}
+                onBo={suaXac ? (r) => { if (confirm(`Bỏ ${r.id} khỏi thùng (về danh sách chờ gom)?`)) run(() => api.delete(`/tra-xac/thung/${id}/xac/${r.id}`), `Đã bỏ ${r.id} khỏi thùng (về danh sách chờ gom).`); } : undefined}
+              />
+            ) : (
             <XacTable
               rows={d.xac}
               selected={suaXac ? selK : undefined}
@@ -814,6 +903,7 @@ export function ThungXacDetailModal({ id, user, onClose, onChanged }: { id: stri
               onOpen={(r) => setOpenUnit(r.unit_id)}
               extra={suaXac ? { key: "bo", header: "", render: (r) => <Btn size="sm" variant="ghost" disabled={busy} onClick={(e) => { e.stopPropagation(); run(() => api.delete(`/tra-xac/thung/${id}/xac/${r.id}`), `Đã bỏ ${r.id} khỏi thùng (về danh sách chờ gom).`); }}>✕ Bỏ</Btn> } : undefined}
             />
+            )}
           </Section>
             </DetailGrid>
           )}
