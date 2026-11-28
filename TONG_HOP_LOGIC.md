@@ -65,6 +65,10 @@ KTV tạo thùng (nháp) → thêm đơn (mã case bắt buộc, chặn trùng c
   "↺ Mở lại" ở Thùng hàng › Từ chối › "Thùng đã huỷ" (Kho / Admin BH, lý do bắt buộc) áp cho mọi thùng đã huỷ: thùng về trạng thái trước
   khi huỷ (đọc nhật ký: đang gửi về Kho / Kho đã nhận chờ Admin), đơn về "Chờ xác nhận SL", gắn lại đơn Odoo cũ nếu chưa gắn đơn khác và chưa
   bị "Hủy đơn lỗi".
+- **Popup cảnh báo tồn quá 7 ngày cho KTV** (v1.172): mỗi lần KTV / CTV / Trạm mở app (1 lần / phiên) mà còn linh kiện nằm trên hệ thống quá 7 ngày
+  chưa gửi — đơn Odoo chờ gửi chưa vào thùng (tính từ ngày tạo trên Odoo) hoặc đơn trong thùng nháp chưa gửi (tính từ ngày tạo đơn Odoo gốc / lúc
+  thêm vào thùng) — hiện popup "cần xử lý gấp" (`GET /api/odoo-don/canh-bao-7-ngay`). Đơn **hãng khác** (hãng không phải Karofi / Livotec / Korihome;
+  hãng Admin chốt, chưa chốt theo case CRM; chưa rõ hãng thì không gắn cờ) tô đỏ, lên đầu. Link: danh sách đơn Odoo tick sẵn đơn quá hạn; mở thẳng thùng nháp.
 - **Thời gian tồn của thùng** (v1.146): thanh "⏱ Tồn N thùng" trên danh sách thùng đang về Kho (Kho, Admin BH) và thùng Kho đã nhận
   chờ Admin nhận nội bộ: 4 mức Dưới 1 ngày / 1–2 / 2–3 / Trên 3 ngày (giờ bỏ Chủ nhật, `GET /api/kho/thung-ton`), bấm mức để lọc
   (`?ton=`, `tonFilter`), kèm thùng tồn lâu nhất. Danh sách xếp thùng cũ nhất lên đầu; huy hiệu ghi "Tồn x ngày y giờ" màu theo SLA

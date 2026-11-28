@@ -17,6 +17,7 @@ import type { AppUser, OdooDon, PhieuGui } from "../../lib/types";
 import { UserName } from "../../hooks/useUserNames";
 import { ktvGuiStage } from "../../lib/ktvStage";
 import { StageBadge } from "./KtvCards";
+import { useRoute } from "../../router/Router";
 
 // Man "Gui hang bao hanh" (KTV) - port dung renderKtvTaoPhieu(): danh sach phieu gui cua chinh minh,
 // tao phieu nhap moi, mo chi tiet de them don/xac nhan gui. Phan trang that (server LIMIT/OFFSET, xem
@@ -64,6 +65,19 @@ export function KtvTaoPhieuScreen({ user }: { user: AppUser }) {
   // 30/10/2026 (UX mobile KTV, de xuat 3): KTV thay 2 tab "Đơn Odoo mới" / "Thùng của tôi" thay vi 2 danh
   // sach chong len nhau. Mac dinh mo tab Odoo neu con don chua gui, khong thi tab Thung.
   const [mainTab, setMainTab] = useState<"odoo" | "thung" | null>(null);
+  // 28/11/2026 (v1.172): link tu popup "Tồn quá 7 ngày" - #/ktv/tao-phieu?tab=odoo&chon=1,2,3 -> mo tab Odoo, tick san cac don qua han.
+  const { query } = useRoute();
+  const qTab = query.get("tab");
+  const qChon = query.get("chon") || "";
+  useEffect(() => {
+    if (qTab === "odoo" || qTab === "thung") setMainTab(qTab);
+  }, [qTab]);
+  useEffect(() => {
+    if (!qChon || !odoo.don) return;
+    const co = new Set(odoo.don.map((d) => d.odoo_id));
+    const ids = qChon.split(",").map(Number).filter((n) => co.has(n));
+    if (ids.length) sel.setSelected(new Set(ids));
+  }, [qChon, odoo.don]); // eslint-disable-line react-hooks/exhaustive-deps
   const tab = !isSelfKtv ? "thung" : mainTab ?? (odoo.don && odoo.don.length > 0 ? "odoo" : "thung");
   const reloadOdoo = () => {
     odoo.reload();

@@ -9,6 +9,7 @@ import { buildOdooImportRows } from "../lib/odooImportExport";
 import { nowVN } from "../lib/vnTime";
 import { kwClause } from "../lib/search";
 import { parsePage } from "../lib/pagination";
+import { syncCaseSnapshots } from "../lib/caseSnapshot";
 
 // Don bao hanh tao tren Odoo, keo ve qua dvbh (cron 15 phut - lib/odooSync.ts). KTV thay "don cua
 // minh dang cho gui sua" (Odoo new/repairing, chua dua vao thung nao) qua ma KTV phu trach tren case.
@@ -116,6 +117,67 @@ async function loadOwnedOdoo(db: D1Database, user: AppUser, odooId: number, ktvE
   if (row.da_gan) return { error: "DA_GAN_THUNG", status: 400 } as const;
   return { row } as const;
 }
+
+// 28/11/2026 (v1.172): "với linh kiện gửi bảo hành đã có trên hệ thống quá 7 ngày (đơn kéo từ odoo) hoặc tạo nháp
+// trong thùng chưa gửi. mỗi lần ktv vào sẽ hiện popup cảnh báo nhắc nhở. yêu cầu xử lý gấp. Đặc biệt lưu ý với các
+// đơn hãng không phải Karofi, Livotec, Korihome (là hãng khác). có link ấn đến vị trí các vùng cần xử lý"
+// GET /api/odoo-don/canh-bao-7-ngay?ktv_email= - 2 nhom LK ton > 7 ngay cua KTV:
+//   odoo: don Odoo cho gui (new/repairing, chua vao thung, chua "khong gui") co ngay_tao qua 7 ngay;
+//   nhap: don trong thung NHAP chua gui, moc = ngay tao don Odoo goc (neu keo tu Odoo) hoac luc them vao thung.
+// Hang lay tu bang chung case CRM (case_lookup_snapshot.$.hang) - hang_khac = co hang ma khong phai 3 hang chinh.
+export const SO_NGAY_TON_CANH_BAO = 7;
+const HANG_CHINH = ["karofi", "livotec", "korihome"];
+const laHangKhac = (h: string | null | undefined) => {
+  const s = (h || "").trim().toLowerCase();
+  return !!s && !HANG_CHINH.some((k) => s.includes(k));
+};
+odooDon.get("/canh-bao-7-ngay", async (c) => {
+  const user = c.get("user");
+  const t = await resolveKtvTarget(c.env.DB, user, c.req.query("ktv_email"));
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  const cutoff = new Date(Date.now() + 7 * 3600_000 - SO_NGAY_TON_CANH_BAO * 86400_000).toISOString().slice(0, 19).replace("T", " ");
+  const HANG = (col: string) => `(SELECT json_extract(cs.data, '$.hang') FROM case_lookup_snapshot cs WHERE cs.case_id = ${col} AND json_valid(cs.data))`;
+  const NGAY = (col: string) => `substr(replace(${col}, 'T', ' '), 1, 19)`;
+  const maCuaKtv = await maKtvCuaEmail(c.env.DB, t.email);
+  const ph = maCuaKtv.map(() => "?").join(",");
+  const [odooRows, nhapRows] = await Promise.all([
+    maCuaKtv.length
+      ? c.env.DB.prepare(
+          `SELECT o.odoo_id, o.ma_don, o.case_id, o.ma_linh_kien, o.ten_linh_kien, o.so_luong, ${NGAY("o.ngay_tao")} AS moc, ${HANG("o.case_id")} AS hang
+           FROM don_bh_odoo o
+           WHERE (o.ma_ktv IN (${ph}) OR o.ma_ktv_tk IN (${ph})) AND o.con_hieu_luc = 1 AND o.trang_thai IN ('new','repairing')
+             AND o.khong_gui_boi IS NULL AND COALESCE(o.ngay_tao, '') <> '' AND ${NGAY("o.ngay_tao")} < ?
+             AND NOT EXISTS (SELECT 1 FROM phieu_sua_chua_bh p WHERE p.odoo_id = o.odoo_id)
+           ORDER BY o.ngay_tao LIMIT 300`,
+        )
+          .bind(...maCuaKtv, ...maCuaKtv, cutoff)
+          .all<{ odoo_id: number; ma_don: string | null; case_id: string | null; ma_linh_kien: string | null; ten_linh_kien: string | null; so_luong: number | null; moc: string; hang: string | null }>()
+      : Promise.resolve({ results: [] as never[] }),
+    c.env.DB.prepare(
+      `SELECT * FROM (
+         SELECT p.id, p.phieu_gui_id, p.case_id, p.ma_lk, l.ten_lk, p.so_luong_khai,
+                CASE WHEN o.ngay_tao IS NOT NULL AND ${NGAY("o.ngay_tao")} < p.created_at THEN ${NGAY("o.ngay_tao")} ELSE p.created_at END AS moc,
+                ${HANG("p.case_id")} AS hang, p.hang AS hang_chot
+         FROM phieu_sua_chua_bh p
+         JOIN phieu_gui_bh g ON g.id = p.phieu_gui_id
+         LEFT JOIN linh_kien_bh l ON l.ma_lk = p.ma_lk
+         LEFT JOIN don_bh_odoo o ON o.odoo_id = p.odoo_id
+         WHERE g.trang_thai = 'nhap' AND (g.nguoi_tao = ? OR g.nguoi_tao_ho = ?)
+       ) WHERE moc < ? ORDER BY moc LIMIT 300`,
+    )
+      .bind(t.email, t.email, cutoff)
+      .all<{ id: string; phieu_gui_id: string; case_id: string | null; ma_lk: string | null; ten_lk: string | null; so_luong_khai: number; moc: string; hang: string | null; hang_chot: string | null }>(),
+  ]);
+  const odoo = odooRows.results.map((r) => ({ ...r, hang_khac: laHangKhac(r.hang) }));
+  const nhap = nhapRows.results.map(({ hang_chot, ...r }) => {
+    const hang = (hang_chot || "").trim() || r.hang;
+    return { ...r, hang, hang_khac: laHangKhac(hang) };
+  });
+  // Don Odoo chua co bang chung case (chua biet hang) -> lam bang chung ngam, lan mo sau hien duoc hang.
+  const thieu = odoo.filter((r) => !r.hang && r.case_id).map((r) => r.case_id).slice(0, 15);
+  if (thieu.length) c.executionCtx.waitUntil(syncCaseSnapshots(c.env, thieu).then(() => undefined).catch(() => undefined));
+  return c.json({ so_ngay: SO_NGAY_TON_CANH_BAO, odoo, nhap, ktv_email: t.email });
+});
 
 // POST /api/odoo-don/:id/khong-gui {ly_do?, ktv_email?} - xac nhan don Odoo khong can gui bao hanh.
 odooDon.post("/:id/khong-gui", async (c) => {

@@ -18,7 +18,7 @@ KTV / CTV / Trạm, KTV triển khai, Kho, Admin bảo hành, NV sửa chữa, K
 | Màn | Yêu cầu chính |
 |---|---|
 | Trang chủ / Tổng quan | Thẻ đếm theo 9 nhóm giai đoạn (bấm → danh sách đã lọc), "Việc của tôi" nổi bật |
-| Đơn của tôi (KTV) | Tạo thùng / đơn (mobile-first, chụp ảnh, lưu nháp gửi sau, % tải ảnh), theo dõi, xác nhận nhận hàng; tab Đã xong / Huỷ - từ chối |
+| Đơn của tôi (KTV) | Tạo thùng / đơn (mobile-first, chụp ảnh, lưu nháp gửi sau, % tải ảnh), theo dõi, xác nhận nhận hàng; tab Đã xong / Huỷ - từ chối; popup cảnh báo mỗi lần mở app khi có linh kiện tồn > 7 ngày chưa gửi (đơn Odoo / thùng nháp), hãng khác Karofi / Livotec / Korihome tô đỏ, có link tới đúng chỗ xử lý |
 | Đơn bảo hành (BO) | 3 chế độ xem Danh sách / Theo KTV / Theo linh kiện; tab Mọi giai đoạn bảng kiểu Excel + Tải Excel; "Bước đang dừng" (tải khi mở) |
 | Chi tiết đơn / thùng | Popup 95% màn hình, luồng quy trình ngang + "Xem chi tiết", nút thao tác ở tiêu đề / footer, nhật ký gộp các nguồn |
 | Tiếp nhận (Kho, Admin BH) | Thùng chờ tiếp nhận, mở xem và tiếp nhận ngay trong chi tiết, từ chối thùng; Kho từ chối thùng chưa nhận được hàng (lý do bắt buộc, cảnh báo đỏ cho KTV) |

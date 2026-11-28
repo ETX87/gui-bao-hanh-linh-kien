@@ -23,6 +23,7 @@ import { legacyTarget } from "./lib/legacyRoutes";
 import { KtvTaoPhieuScreen } from "./screens/ktv/TaoPhieu";
 import { KtvDonCuaToiScreen } from "./screens/ktv/DonCuaToi";
 import { KtvHomeScreen } from "./screens/ktv/KtvHome";
+import { CanhBaoTon7Ngay } from "./screens/ktv/CanhBaoTon7Ngay";
 import { isPureKtv } from "./layout/routes";
 import { KtvNhanHangScreen } from "./screens/ktv/NhanHang";
 import { AdminDeXuatScreen } from "./screens/adminbh/DeXuatLinhKien";
@@ -95,6 +96,7 @@ function AuthedApp({ user }: { user: AppUser }) {
         <Routed user={user} />
         <MoTheoId user={user} />
         <GiaiTrinhHost />
+        <CanhBaoTon7Ngay user={user} />
       </Shell>
     </WorkloadProvider>
   );

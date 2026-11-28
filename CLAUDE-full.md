@@ -7740,3 +7740,16 @@ Nguyên văn: "hoàn thiện lại giao diện UI chi tiết cho bản mobile" (
 dạng thẻ (3 dòng / xác, viên kiện, ✕ Bỏ hỏi lại); thanh Ghi kiện riêng cho điện thoại; chân trang có dòng lý do chưa gửi KT. `ui/LuongNgang.tsx`:
 `min-w-[62px] sm:min-w-[92px]`, nhãn `line-clamp-2` trên điện thoại (áp dụng mọi màn dùng luồng ngang). Không đổi logic / API.
 Mở: chưa đổi bảng màu toàn app sang phong cách Apple (skill giao-dien-apple) — việc riêng, chưa được yêu cầu.
+
+## Popup cảnh báo KTV — linh kiện tồn quá 7 ngày (28/11/2026) — v1.172
+
+- Nguyên văn: "với linh kiện gửi bảo hành đã có trên hệ thống quá 7 ngày (đơn kéo từ odoo) hoặc tạo nháp trong thùng chưa gửi. mỗi lần ktv vào sẽ hiện popup cảnh báo nhắc nhở. yêu cầu xử lý gấp. Đặc biệt lưu ý với các đơn hãng không phải Karofi, Livotec, Korihome (là hãng khác). có link ấn đến vị trí các vùng cần xử lý)"
+- Đã chốt khi làm (suy từ yêu cầu, chưa hỏi lại): "quá 7 ngày" tính theo ngày lịch (khác SLA bỏ Chủ nhật); "mỗi lần vào" = mỗi phiên trình duyệt / lần mở PWA
+  (`sessionStorage`), không lặp khi chuyển màn trong cùng phiên; "hãng khác" = có hãng mà tên không chứa karofi / livotec / korihome (không phân biệt hoa thường),
+  chưa rõ hãng → hiện "Chưa rõ hãng", không gắn cờ; chỉ áp cho tài khoản có cờ `la_ktv_dvbh` / `la_ve_tinh` (kể cả khi Admin "xem như" KTV).
+- API `GET /api/odoo-don/canh-bao-7-ngay?ktv_email=` (quyền như `/cho-gui`, `resolveKtvTarget`): `odoo[]` (đơn Odoo `con_hieu_luc=1`, new/repairing, chưa gắn
+  đơn cha, `khong_gui_boi IS NULL`, `ngay_tao` < hiện tại − 7 ngày), `nhap[]` (đơn cha trong thùng `nhap` có `nguoi_tao` hoặc `nguoi_tao_ho` = KTV, mốc =
+  min(ngày Odoo gốc, `created_at`)), mỗi dòng có `hang`, `hang_khac`. Tối đa 300 / nhóm. Case Odoo chưa có `case_lookup_snapshot` → `syncCaseSnapshots`
+  ngầm (`waitUntil`, ≤ 15 case).
+- FE: `screens/ktv/CanhBaoTon7Ngay.tsx` (gắn `App.tsx` trong `AuthedApp`); `TaoPhieu.tsx` nhận `?tab=odoo|thung&chon=id,id`.
+- Kiểm thử: xem `nhat_ky_lam_viec.md` mục v1.172.

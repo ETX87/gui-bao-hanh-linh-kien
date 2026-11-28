@@ -3,6 +3,23 @@
 > Mỗi đợt làm việc 1 mục, **mới nhất ở trên**: ngày, phiên bản, yêu cầu, đã làm gì, kiểm thử gì, việc còn dở. Chỉ ghi thêm, không xoá mục cũ.
 > Không ghi tài khoản, mật khẩu, khoá hay mô tả lỗ hổng bảo mật vào file này (repo có thể công khai).
 
+## 28/11/2026 — v1.172: Popup cảnh báo KTV — linh kiện tồn quá 7 ngày chưa gửi
+
+- Yêu cầu (nguyên văn): "với linh kiện gửi bảo hành đã có trên hệ thống quá 7 ngày (đơn kéo từ odoo) hoặc tạo nháp trong thùng chưa gửi. mỗi lần ktv vào sẽ hiện popup cảnh báo nhắc nhở. yêu cầu xử lý gấp. Đặc biệt lưu ý với các đơn hãng không phải Karofi, Livotec, Korihome (là hãng khác). có link ấn đến vị trí các vùng cần xử lý)"
+- Đã làm:
+  - API `GET /api/odoo-don/canh-bao-7-ngay` (`routes/odooDon.ts`): 2 nhóm của KTV đang đăng nhập — (1) đơn Odoo chờ gửi (new / repairing, chưa vào thùng,
+    chưa bấm "Không gửi") có ngày tạo Odoo quá 7 ngày; (2) đơn trong thùng **nháp** chưa gửi (thùng KTV tạo hoặc tạo hộ), mốc = ngày tạo đơn Odoo gốc nếu
+    kéo từ Odoo, không thì lúc thêm vào thùng. Hãng = hãng Admin đã chốt, chưa chốt thì theo case CRM; **hãng khác** = có hãng mà không chứa Karofi /
+    Livotec / Korihome. Đơn Odoo chưa có bản lưu case (chưa biết hãng) → làm bản lưu ngầm (tối đa 15 case / lần), lần mở sau hiện hãng.
+  - Popup `CanhBaoTon7Ngay` (gắn ở `App.tsx`, mọi tài khoản có vai KTV / CTV / Trạm): hiện 1 lần mỗi phiên mở app khi có ≥ 1 linh kiện tồn; 3 ô đếm
+    (đơn Odoo · đơn trong thùng nháp · hãng khác), dòng đỏ "Đặc biệt lưu ý … HÃNG KHÁC", hãng khác xếp lên đầu + tô đỏ. Link: "Đến danh sách đơn Odoo ›
+    chọn sẵn" → `#/ktv/tao-phieu?tab=odoo&chon=…` (mở tab Đơn Odoo mới, tick sẵn các đơn quá hạn để bấm "Tạo thùng"); mỗi thùng nháp có nút
+    "Mở thùng & gửi" mở thẳng chi tiết thùng (đóng chi tiết thì popup tải lại số liệu). Nút "Để sau" đóng.
+  - `TaoPhieu.tsx` đọc `?tab=` / `?chon=` trên đường dẫn.
+- Kiểm thử: typecheck BE + FE; local (dữ liệu mẫu tạm, đã xoá): đơn 2 ngày tuổi không vào, Karofi không gắn cờ, Sunhouse gắn "Hãng khác", đơn Odoo trong
+  thùng nháp lấy mốc ngày Odoo; popup hiện ở 800px và 375px; link Odoo tick đúng 2 đơn quá hạn; "Mở thùng & gửi" mở đúng thùng.
+- Còn mở: popup hiện lại mỗi lần mở app (mỗi phiên trình duyệt), chưa có cách "tắt hôm nay"; số ngày tính theo lịch (có Chủ nhật).
+
 ## 28/11/2026 — v1.171: Chi tiết thùng trả xác — hoàn thiện giao diện điện thoại
 
 - Yêu cầu (nguyên văn): "hoàn thiện lại giao diện UI chi tiết cho bản mobile" → chọn màn "Thùng trả xác (suachua)".
